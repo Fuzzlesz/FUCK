@@ -1,0 +1,26 @@
+set(headers ${headers}
+	src/FUCKHost.h
+	src/FUCKMan.h
+	src/FUCK_API.h
+	src/ImGui/Backend/imgui_impl_win32.h
+	src/ImGui/FormComboBox.h
+	src/ImGui/Graphics.h
+	src/ImGui/IconsFontAwesome6.h
+	src/ImGui/IconsFonts.h
+	src/ImGui/Overlays.h
+	src/ImGui/Renderer.h
+	src/ImGui/Styles.h
+	src/ImGui/Util.h
+	src/ImGui/Widgets.h
+	src/PCH.h
+	src/System/Compat.h
+	src/System/Console.h
+	src/System/Hooks.h
+	src/System/Hotkeys.h
+	src/System/Input.h
+	src/System/InputMap.h
+	src/System/Papyrus.h
+	src/System/Settings.h
+	src/System/Translation.h
+	src/System/Utils.h
+)

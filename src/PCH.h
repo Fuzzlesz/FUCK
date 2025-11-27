@@ -1,0 +1,135 @@
+#pragma once
+
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#define DIRECTINPUT_VERSION 0x0800
+#define IMGUI_DEFINE_MATH_OPERATORS
+#define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
+
+#define MANAGER(T) T::Manager::GetSingleton()
+
+#include "RE/Skyrim.h"
+#include "REX/REX/Singleton.h"
+#include "SKSE/SKSE.h"
+
+#include <codecvt>
+#include <dxgi.h>
+#include <shlobj.h>
+#include <wrl/client.h>
+
+#include <ClibUtil/RNG.hpp>
+#include <ClibUtil/editorID.hpp>
+#include <ClibUtil/hash.hpp>
+#include <ClibUtil/simpleINI.hpp>
+#include <ClibUtil/string.hpp>
+
+#include <DirectXMath.h>
+#include <DirectXTex.h>
+#include <ankerl/unordered_dense.h>
+#include <freetype/freetype.h>
+#include <glaze/glaze.hpp>
+#include <rapidfuzz/rapidfuzz_all.hpp>
+#include <spdlog/sinks/basic_file_sink.h>
+#include <srell.hpp>
+#include <xbyak/xbyak.h>
+
+#include "ImGui/Backend/imgui_impl_win32.h"
+#include "imgui_internal.h"
+#include <imgui.h>
+#include <imgui_freetype.h>
+#include <imgui_impl_dx11.h>
+#include <imgui_impl_win32.h>
+#include <imgui_stdlib.h>
+
+#define DLLEXPORT __declspec(dllexport)
+
+using namespace std::literals;
+using namespace clib_util;
+using namespace string::literals;
+using namespace RE::literals;
+
+namespace logger = SKSE::log;
+
+using EventResult = RE::BSEventNotifyControl;
+
+using KEY = RE::BSWin32KeyboardDevice::Key;
+using GAMEPAD_DIRECTX = RE::BSWin32GamepadDevice::Key;
+using GAMEPAD_ORBIS = RE::BSPCOrbisGamepadDevice::Key;
+using MOUSE = RE::BSWin32MouseDevice::Key;
+
+template <class T>
+using ComPtr = Microsoft::WRL::ComPtr<T>;
+
+template <class K, class D>
+using Map = ankerl::unordered_dense::map<K, D>;
+
+struct string_hash
+{
+	using is_transparent = void;  // enable heterogeneous overloads
+	using is_avalanching = void;  // mark class as high quality avalanching hash
+
+	[[nodiscard]] std::uint64_t operator()(std::string_view str) const noexcept
+	{
+		return ankerl::unordered_dense::hash<std::string_view>{}(str);
+	}
+};
+
+template <class D>
+using StringMap = ankerl::unordered_dense::map<std::string, D, string_hash, std::equal_to<>>;
+
+namespace stl
+{
+	using namespace SKSE::stl;
+
+	template <class T>
+	void write_thunk_call(std::uintptr_t a_src)
+	{
+		auto& trampoline = SKSE::GetTrampoline();
+		T::func = trampoline.write_call<5>(a_src, T::thunk);
+	}
+
+	template <class F, class T>
+	void write_vfunc()
+	{
+		REL::Relocation<std::uintptr_t> vtbl{ F::VTABLE[0] };
+		T::func = vtbl.write_vfunc(T::idx, T::thunk);
+	}
+
+	template <class T, std::size_t BYTES>
+	void hook_function_prologue(std::uintptr_t a_src)
+	{
+		struct Patch : Xbyak::CodeGenerator
+		{
+			Patch(std::uintptr_t a_originalFuncAddr, std::size_t a_originalByteLength)
+			{
+				// Hook returns here. Execute the restored bytes and jump back to the original function.
+				for (size_t i = 0; i < a_originalByteLength; ++i) {
+					db(*reinterpret_cast<std::uint8_t*>(a_originalFuncAddr + i));
+				}
+
+				jmp(ptr[rip]);
+				dq(a_originalFuncAddr + a_originalByteLength);
+			}
+		};
+
+		Patch p(a_src, BYTES);
+		p.ready();
+
+		auto& trampoline = SKSE::GetTrampoline();
+		trampoline.write_branch<5>(a_src, T::thunk);
+
+		auto alloc = trampoline.allocate(p.getSize());
+		std::memcpy(alloc, p.getCode(), p.getSize());
+
+		T::func = reinterpret_cast<std::uintptr_t>(alloc);
+	}
+}
+
+#ifdef SKYRIM_AE
+#	define OFFSET(se, ae) ae
+#else
+#	define OFFSET(se, ae) se
+#endif
+
+#include "System/Translation.h"
+#include "Version.h"

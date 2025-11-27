@@ -1,0 +1,24 @@
+{
+  "name": "fuck",
+  "version-string": "1.0.0",
+  "description": "",
+  "homepage": "",
+  "license": "MIT",
+  "dependencies": [
+    "clib-util",
+    "directxtex",
+    "freetype",
+    {
+      "name": "imgui",
+      "features": [ "dx11-binding", "win32-binding", "freetype", "wchar32" ]
+    },
+    "glaze",
+    "rapidfuzz",
+    "rsm-binary-io",
+    "spdlog",
+    "srell",
+    "unordered-dense",
+    "xbyak"
+  ],
+  "builtin-baseline": "edffab1bcd2cb5b8c17d6ba34d5651ea0bf82979"
+}
