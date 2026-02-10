@@ -369,6 +369,7 @@ namespace FUCK
 		}
 
 		GetInterface() = iface;
+		logger::info("Connected to FUCK API version {}", iface->version);
 
 		return true;
 	}
@@ -960,60 +961,60 @@ namespace FUCK
 		auto i = GetInterface();
 		if (!i)
 			return;
-		va_list a;
-		va_start(a, fmt);
-		char b[1024];
-		vsnprintf(b, 1024, fmt, a);
-		va_end(a);
-		i->TextColored(color, b);
+		va_list args;
+		va_start(args, fmt);
+		char buf[1024];
+		vsnprintf(buf, 1024, fmt, args);
+		va_end(args);
+		i->TextColored(color, buf);
 	}
 	inline void TextColoredWrapped(const ImVec4& col, const char* fmt, ...)
 	{
 		auto i = GetInterface();
 		if (!i)
 			return;
-		va_list a;
-		va_start(a, fmt);
-		char b[1024];
-		vsnprintf(b, 1024, fmt, a);
-		va_end(a);
-		i->TextColoredWrapped(col, b);
+		va_list args;
+		va_start(args, fmt);
+		char buf[1024];
+		vsnprintf(buf, 1024, fmt, args);
+		va_end(args);
+		i->TextColoredWrapped(col, buf);
 	}
 	inline void TextDisabled(const char* fmt, ...)
 	{
 		auto i = GetInterface();
 		if (!i)
 			return;
-		va_list a;
-		va_start(a, fmt);
-		char b[1024];
-		vsnprintf(b, 1024, fmt, a);
-		va_end(a);
-		i->TextDisabled(b);
+		va_list args;
+		va_start(args, fmt);
+		char buf[1024];
+		vsnprintf(buf, 1024, fmt, args);
+		va_end(args);
+		i->TextDisabled(buf);
 	}
 	inline void Text(const char* fmt, ...)
 	{
 		auto i = GetInterface();
 		if (!i)
 			return;
-		va_list a;
-		va_start(a, fmt);
-		char b[1024];
-		vsnprintf(b, 1024, fmt, a);
-		va_end(a);
-		i->Text(b);
+		va_list args;
+		va_start(args, fmt);
+		char buf[1024];
+		vsnprintf(buf, 1024, fmt, args);
+		va_end(args);
+		i->Text(buf);
 	}
 	inline void TextWrapped(const char* fmt, ...)
 	{
 		auto i = GetInterface();
 		if (!i)
 			return;
-		va_list a;
-		va_start(a, fmt);
-		char b[1024];
-		vsnprintf(b, 1024, fmt, a);
-		va_end(a);
-		i->TextWrapped(b);
+		va_list args;
+		va_start(args, fmt);
+		char buf[1024];
+		vsnprintf(buf, 1024, fmt, args);
+		va_end(args);
+		i->TextWrapped(buf);
 	}
 	inline void TextUnformatted(const char* text, const char* text_end = nullptr)
 	{
@@ -1266,4 +1267,7 @@ namespace FUCK
 	}
 }
 
-inline const char* operator""_T(const char* str, std::size_t) { return FUCK::Translate(str); }
+inline const char* operator""_T(const char* str, std::size_t)
+{
+	return FUCK::Translate(str);
+}

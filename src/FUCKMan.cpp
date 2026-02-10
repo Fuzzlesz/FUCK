@@ -1,16 +1,16 @@
 #include "FUCKMan.h"
 #include "FUCKHost.h"
 
-#include "System/Compat.h"
-#include "System/Hotkeys.h"
-#include "System/Input.h"
-#include "System/Settings.h"
 #include "ImGui/IconsFontAwesome6.h"
 #include "ImGui/IconsFonts.h"
 #include "ImGui/Renderer.h"
 #include "ImGui/Styles.h"
 #include "ImGui/Util.h"
 #include "ImGui/Widgets.h"
+#include "System/Compat.h"
+#include "System/Hotkeys.h"
+#include "System/Input.h"
+#include "System/Settings.h"
 
 static std::unordered_map<std::string, bool> s_windowCollapseStates;
 static std::unordered_map<std::string, bool> s_windowWasCollapsed;
