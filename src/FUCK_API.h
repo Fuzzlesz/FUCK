@@ -1060,7 +1060,27 @@ namespace FUCK
 
 	inline bool InputText(const char* label, std::string* str, int flags = 0)
 	{
-		return InputText(label, str->data(), str->capacity() + 1, flags | ImGuiInputTextFlags_CallbackResize);
+		// Ensure the string has a reasonable minimum capacity
+		constexpr size_t kMinCapacity = 256;
+		if (str->capacity() < kMinCapacity)
+			str->reserve(kMinCapacity);
+
+		// Resize to capacity to provide full buffer
+		const size_t oldSize = str->size();
+		str->resize(str->capacity());
+
+		// Call the base InputText with the expanded buffer
+		const bool changed = InputText(label, str->data(), str->capacity() + 1, flags);
+
+		if (changed) {
+			// Trim to actual string length
+			str->resize(std::strlen(str->c_str()));
+		} else {
+			// Restore original size if unchanged
+			str->resize(oldSize);
+		}
+
+		return changed;
 	}
 
 	// ==========================================
