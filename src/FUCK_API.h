@@ -667,20 +667,20 @@ namespace FUCK
 	inline float GetFrameHeightWithSpacing() { return GetInterface() ? GetInterface()->GetFrameHeightWithSpacing() : 0.0f; }
 
 	// --- IO & Game State ---
-	inline float GetDeltaTime() { return GetInterface() ? GetInterface()->GetDeltaTime() : 0.016f; }
+	inline float GetDeltaTime() { return GetInterface() ? GetInterface()->GetDeltaTime() : 0.0f; }
 	inline ImVec2 GetMouseDelta()
 	{
-		ImVec2 s;
+		ImVec2 p(0, 0);
 		if (auto i = GetInterface())
-			i->GetMouseDelta(&s.x, &s.y);
-		return s;
+			i->GetMouseDelta(&p.x, &p.y);
+		return p;
 	}
 	inline ImVec2 GetMousePos()
 	{
-		ImVec2 s;
+		ImVec2 p(0, 0);
 		if (auto i = GetInterface())
-			i->GetMousePos(&s.x, &s.y);
-		return s;
+			i->GetMousePos(&p.x, &p.y);
+		return p;
 	}
 	inline void SetGameTimeFrozen(bool frozen)
 	{
@@ -713,7 +713,7 @@ namespace FUCK
 	inline bool IsInputDown(std::uint32_t keyId) { return GetInterface() ? GetInterface()->IsInputDown(keyId) : false; }
 	inline float GetAnalogInput(std::uint32_t keyId) { return GetInterface() ? GetInterface()->GetAnalogInput(keyId) : 0.0f; }
 	inline bool IsModifierPressed(Modifier mod) { return GetInterface() ? GetInterface()->IsModifierPressed(mod) : false; }
-	inline InputDevice GetInputDevice() { return GetInterface() ? (InputDevice)GetInterface()->GetInputDevice() : InputDevice::kMouseKeyboard; }
+	inline InputDevice GetInputDevice() { return GetInterface() ? static_cast<InputDevice>(GetInterface()->GetInputDevice()) : InputDevice::kMouseKeyboard; }
 	inline const char* GetKeyName(std::uint32_t k) { return GetInterface() ? GetInterface()->GetKeyName(k) : ""; }
 	inline bool IsGamepadKey(std::uint32_t k) { return GetInterface() ? GetInterface()->IsGamepadKey(k) : false; }
 
@@ -856,17 +856,21 @@ namespace FUCK
 	}
 	inline ImVec2 GetWindowPos()
 	{
-		ImVec2 p;
-		if (auto i = GetInterface())
+		if (auto i = GetInterface()) {
+			ImVec2 p;
 			i->GetWindowPos(&p.x, &p.y);
-		return p;
+			return p;
+		}
+		return ImVec2(0, 0);
 	}
 	inline ImVec2 GetWindowSize()
 	{
-		ImVec2 p;
-		if (auto i = GetInterface())
+		if (auto i = GetInterface()) {
+			ImVec2 p;
 			i->GetWindowSize(&p.x, &p.y);
-		return p;
+			return p;
+		}
+		return ImVec2(0, 0);
 	}
 	inline void SetNextWindowPos(const ImVec2& pos, int cond = 0, const ImVec2& pivot = ImVec2(0, 0))
 	{
@@ -941,7 +945,7 @@ namespace FUCK
 	inline bool DragFloat(const char* label, float* v, float speed = 1.0f, float min = 0.0f, float max = 0.0f, const char* fmt = "%.3f") { return GetInterface() ? GetInterface()->DragFloat(label, v, speed, min, max, fmt) : false; }
 	inline bool DragInt(const char* label, int* v, float speed = 1.0f, int min = 0, int max = 0, const char* fmt = "%d") { return GetInterface() ? GetInterface()->DragInt(label, v, speed, min, max, fmt) : false; }
 	inline bool Combo(const char* label, int* current_item, const char* const* items, int items_count) { return GetInterface() ? GetInterface()->Combo(label, current_item, items, items_count) : false; }
-	inline bool ComboWithFilter(const char* label, int* current_item, const char* const* items, int items_count, int popup_max_height_in_items) { return GetInterface() ? GetInterface()->ComboWithFilter(label, current_item, items, items_count, popup_max_height_in_items) : false; }
+	inline bool ComboWithFilter(const char* label, int* current_item, const char* const* items, int items_count, int popup_max_height_in_items = -1) { return GetInterface() ? GetInterface()->ComboWithFilter(label, current_item, items, items_count, popup_max_height_in_items) : false; }
 	inline bool ComboForm(const char* label, std::uint32_t* currentFormID, std::uint8_t formType) { return GetInterface() ? GetInterface()->ComboForm(label, currentFormID, formType) : false; }
 	inline ImGuiTableSortSpecs* GetTableSortSpecs() { return GetInterface() ? GetInterface()->GetTableSortSpecs() : nullptr; }
 	inline bool Selectable(const char* label, bool selected = false, int flags = 0, const ImVec2& size = ImVec2(0, 0)) { return GetInterface() ? GetInterface()->Selectable(label, selected, flags, size) : false; }
