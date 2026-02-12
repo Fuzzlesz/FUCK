@@ -327,14 +327,6 @@ void FUCKMan::Close()
 	_forceCursor = false;
 	MANAGER(Input)->ResetCursorState();
 
-	// Recenter mouse cursor (Skyrim OS cursor quirk)
-	if (auto ren = RE::BSGraphics::Renderer::GetSingleton(); ren->data.renderWindows[0].hWnd) {
-		auto ss = RE::BSGraphics::Renderer::GetScreenSize();
-		POINT c = { (LONG)(ss.width / 2), (LONG)(ss.height / 2) };
-		::ClientToScreen((HWND)ren->data.renderWindows[0].hWnd, &c);
-		::SetCursorPos(c.x, c.y);
-	}
-
 	UpdateGameState();
 
 	// Save to FUCK_Custom.ini
