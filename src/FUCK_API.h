@@ -157,7 +157,7 @@ struct FUCK_Interface
 	float (*GetResolutionScale)();
 	void (*GetDisplaySize)(float*, float*);
 	ImFont* (*GetFont)(FUCK_Font);
-	void (*PushFont)(ImFont*);
+	void (*PushFont)(ImFont*, float);
 	void (*PopFont)();
 	void (*SuspendRendering)(bool);
 	void (*SetMenuOpen)(bool);
@@ -413,10 +413,10 @@ namespace FUCK
 		return ImVec2(0, 0);
 	}
 	inline ImFont* GetFont(FUCK_Font font) { return GetInterface() ? GetInterface()->GetFont(font) : nullptr; }
-	inline void PushFont(ImFont* font)
+	inline void PushFont(ImFont* font, float size = 0.0f)
 	{
 		if (auto i = GetInterface())
-			i->PushFont(font);
+			i->PushFont(font, size);
 	}
 	inline void PopFont()
 	{

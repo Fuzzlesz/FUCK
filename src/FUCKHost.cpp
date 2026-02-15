@@ -35,7 +35,10 @@ namespace FUCK::Host
 		auto mgr = IconFont::Manager::GetSingleton();
 		return (f == FUCK_Font::kLarge) ? mgr->GetLargeFont() : mgr->GetRegularFont();
 	}
-	static void PushFont_Impl(ImFont* f) { ImGui::PushFont(f); }
+	static void PushFont_Impl(ImFont* f, float size)
+	{
+		ImGui::PushFont(f, size);
+	}
 	static void PopFont_Impl() { ImGui::PopFont(); }
 	static void SuspendRendering_Impl(bool suspend) { FUCKMan::GetSingleton()->SuspendRendering(suspend); }
 	static void SetMenuOpen_Impl(bool open) { open ? FUCKMan::GetSingleton()->Open() : FUCKMan::GetSingleton()->Close(); }

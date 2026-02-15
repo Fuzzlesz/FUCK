@@ -759,27 +759,27 @@ void FUCKMan::Draw()
 				const float itemHeight = 30.0f * scale;
 				const float topPadding = 2.0f * scale;
 				const float bottomPadding = 2.0f * scale;
+				const float indent = 15.0f * scale;
+				const float textVisualOffset = 1.0f * scale;
 
-				const float toolCount = static_cast<float>(_tools.size());
-				const float headerHeight = itemHeight;
-				const float separatorHeight = 1.0f;
-				const float settingsHeight = itemHeight + separatorHeight;
-				const float totalContentHeight = headerHeight + separatorHeight + (toolCount * itemHeight) + settingsHeight;
-
-				ImGuiWindowFlags childFlags = (totalContentHeight > availHeight) ? 0 : ImGuiWindowFlags_NoScrollbar;
-
-				FUCK::BeginChild("Sidebar", ImVec2(sidebarWidth, availHeight), true, childFlags);
+				FUCK::BeginChild("Sidebar", ImVec2(sidebarWidth, availHeight), true, ImGuiWindowFlags_None);
 				{
 					FUCK::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
-					const float indent = 15.0f * scale;
-					const float textVisualOffset = 1.0f * scale;
-
 					ImVec2 headerStart = FUCK::GetCursorPos();
 					headerStart.y += topPadding;
 
+					// --- HEADER: TOOLS (Centered) ---
 					FUCK::SetCursorPos(headerStart);
-					FUCK::SetCursorPosY(headerStart.y + (itemHeight - FUCK::GetTextLineHeight()) * 0.5f + textVisualOffset);
-					FUCK::CenteredText("$FUCK_Tools"_T);
+					FUCK::PushFont(FUCK::GetFont(FUCK_Font::kRegular), 22.0f * scale * 0.9f);
+					float textH = FUCK::GetTextLineHeight();
+					float sidebarW = FUCK::GetContentRegionAvail().x;
+					const char* headerText = "$FUCK_Tools"_T;
+					float headerW = ImGui::CalcTextSize(headerText).x;
+
+					FUCK::SetCursorPosX(headerStart.x + (sidebarW - headerW) * 0.5f);
+					FUCK::SetCursorPosY(headerStart.y + (itemHeight - textH) * 0.5f + textVisualOffset);
+					FUCK::Text(headerText);
+					FUCK::PopFont();
 
 					FUCK::SetCursorPos(ImVec2(headerStart.x, headerStart.y + itemHeight));
 					FUCK::SeparatorThick();
@@ -809,7 +809,10 @@ void FUCKMan::Draw()
 						FUCK::SetCursorPos(endPos);
 					}
 
+
+					// --- FOOTER: SETTINGS (Centered) ---
 					float childHeight = FUCK::GetWindowSize().y;
+					float separatorHeight = 1.0f;
 					float settingsY = childHeight - itemHeight - bottomPadding;
 
 					float minSettingY = FUCK::GetCursorPos().y + separatorHeight;
@@ -837,9 +840,16 @@ void FUCKMan::Draw()
 
 						ImVec2 endPos = FUCK::GetCursorPos();
 						FUCK::SetCursorPos(cursorPos);
-						float textH = FUCK::GetTextLineHeight();
+						FUCK::PushFont(FUCK::GetFont(FUCK_Font::kRegular), 22.0f * scale * 0.9f);
+
+						const char* settingText = "$FUCK_Settings"_T;
+						float setW = ImGui::CalcTextSize(settingText).x;
+
+						FUCK::SetCursorPosX(cursorPos.x + (sidebarW - setW) * 0.5f);
 						FUCK::SetCursorPosY(cursorPos.y + (itemHeight - textH) * 0.5f + textVisualOffset);
-						FUCK::CenteredText("SETTINGS");
+						FUCK::Text(settingText);
+
+						FUCK::PopFont();
 						FUCK::SetCursorPos(endPos);
 					}
 					FUCK::PopStyleVar();
@@ -914,7 +924,7 @@ void FUCKMan::SettingsTool::Draw()
 		// --------------------------------------------------------
 		// TAB 1: GENERAL
 		// --------------------------------------------------------
-		if (FUCK::BeginTabItem("$FUCK_Settings_Title"_T)) {
+		if (FUCK::BeginTabItem("$FUCK_Settings_Tab"_T)) {
 			FUCK::Spacing(2);
 
 			FUCK::Header("$FUCK_Settings_Behavior"_T);

@@ -140,7 +140,7 @@ namespace ImGui
 		case USER_STYLE::kStepper:
 			return user.stepperScale;
 		case USER_STYLE::kSeparatorThickness:
-			return user.separatorThickness * scale;
+			return user.separatorThickness;
 		case USER_STYLE::kGridLines:
 			return user.gridThickness * scale;
 		case USER_STYLE::kDisabledTextAlpha:
@@ -432,22 +432,20 @@ namespace ImGui
 		ImGuiStyle style{};
 		auto& colors = style.Colors;
 
-		float scale = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
-
-		style.WindowPadding = user.windowPadding * scale;
-		style.FramePadding = ImVec2(6.0f, 2.0f) * scale;
-		style.ItemSpacing = user.itemSpacing * scale;
-		style.ItemInnerSpacing = ImVec2(4.0f, 4.0f) * scale;
+		style.WindowPadding = user.windowPadding;
+		style.FramePadding = ImVec2(6.0f, 2.0f);
+		style.ItemSpacing = user.itemSpacing;
+		style.ItemInnerSpacing = ImVec2(4.0f, 4.0f);
 		style.TouchExtraPadding = ImVec2(0.0f, 0.0f);
-		style.IndentSpacing = user.indentSpacing * scale;
-		style.ColumnsMinSpacing = 6.0f * scale;
-		style.ScrollbarSize = 12.0f * scale;
-		style.GrabMinSize = 10.0f * scale;
+		style.IndentSpacing = user.indentSpacing;
+		style.ColumnsMinSpacing = 6.0f;
+		style.ScrollbarSize = 12.0f;
+		style.GrabMinSize = 10.0f;
 
-		style.WindowBorderSize = user.borderSize * scale;
-		style.ChildBorderSize = user.borderSize * scale;
-		style.FrameBorderSize = user.borderSize * scale;
-		style.PopupBorderSize = user.borderSize * scale;
+		style.WindowBorderSize = user.borderSize;
+		style.ChildBorderSize = user.borderSize;
+		style.FrameBorderSize = user.borderSize;
+		style.PopupBorderSize = user.borderSize;
 		style.TabBorderSize = 0.0f;
 
 		style.WindowRounding = user.windowRounding;
