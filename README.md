@@ -19,8 +19,8 @@
 
 ## Building
 ```
-git clone https://github.com/Fuzzlesz/EditHUD-SKSE.git
-cd EditHUD-SKSE
+git clone https://github.com/Fuzzlesz/FUCK.git
+cd FUCK
 # pull commonlib /extern to override the path settings
 git submodule init
 # to update submodules to checked in build
