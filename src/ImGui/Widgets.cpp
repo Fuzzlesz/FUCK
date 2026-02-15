@@ -11,7 +11,7 @@ namespace ImGui
 	// HELPER IMPLEMENTATION
 	// =========================================================================================
 
-	void DrawArrowIcon(ImDrawList * drawList, ImVec2 pos, ImVec2 size, ImU32 color, IconDirection direction)
+	void DrawArrowIcon(ImDrawList* drawList, ImVec2 pos, ImVec2 size, ImU32 color, IconDirection direction)
 	{
 		static auto iconArrow = MANAGER(IconFont)->GetStepperRight();
 		if (!iconArrow || !iconArrow->srView)
