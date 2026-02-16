@@ -16,6 +16,21 @@ static std::unordered_map<std::string, bool> s_windowCollapseStates;
 static std::unordered_map<std::string, bool> s_windowWasCollapsed;
 static std::unordered_map<std::string, ImVec2> s_windowPreCollapseSizes;
 
+// Helper to keep windows within the visible viewport
+static void ClampWindowToScreen(ImVec2& pos, const ImVec2& size)
+{
+	const ImGuiIO& io = ImGui::GetIO();
+	// Simple AABB clamping
+	if (pos.x + size.x > io.DisplaySize.x)
+		pos.x = std::max(0.0f, io.DisplaySize.x - size.x);
+	if (pos.y + size.y > io.DisplaySize.y)
+		pos.y = std::max(0.0f, io.DisplaySize.y - size.y);
+	if (pos.x < 0.0f)
+		pos.x = 0.0f;
+	if (pos.y < 0.0f)
+		pos.y = 0.0f;
+}
+
 FUCKMan::FUCKMan()
 {
 	FUCK::GetInterface() = FUCK::Host::CreateInterface();
@@ -134,14 +149,15 @@ void FUCKMan::ResetSettings()
 	if (scale < 0.1f)
 		scale = 1.0f;
 
-	_windowPos = { 100.0f, 100.0f };
-	_windowSize = { 1000.0f * scale, 600.0f * scale };
+	_windowPos = { 100.0f * scale, 100.0f * scale };
+	_windowSize = { 1280.0f * scale, 800.0f * scale };
 	_globalPauseType = PauseType::kNone;
 
-	_userScale = std::clamp(scale, 0.5f, 2.0f);
+	_userScale = 1.0f;
 	_sidebarOnRight = false;
 
 	if (_isOpen) {
+		ClampWindowToScreen(_windowPos, _windowSize);
 		ImGui::SetWindowPos(_windowPos);
 		ImGui::SetWindowSize(_windowSize);
 		ImGui::Styles::GetSingleton()->RefreshStyle();
@@ -151,10 +167,17 @@ void FUCKMan::ResetSettings()
 
 void FUCKMan::LoadSettings(const CSimpleIniA& a_ini)
 {
-	_windowPos.x = (float)a_ini.GetDoubleValue("Window", "X", _windowPos.x);
-	_windowPos.y = (float)a_ini.GetDoubleValue("Window", "Y", _windowPos.y);
-	_windowSize.x = (float)a_ini.GetDoubleValue("Window", "Width", _windowSize.x);
-	_windowSize.y = (float)a_ini.GetDoubleValue("Window", "Height", _windowSize.y);
+	double x = a_ini.GetDoubleValue("Window", "X", -1.0);
+	double y = a_ini.GetDoubleValue("Window", "Y", -1.0);
+	double w = a_ini.GetDoubleValue("Window", "Width", -1.0);
+	double h = a_ini.GetDoubleValue("Window", "Height", -1.0);
+
+	if (x == -1.0 || y == -1.0 || w == -1.0 || h == -1.0) {
+		ResetSettings();
+	} else {
+		_windowPos = { (float)x, (float)y };
+		_windowSize = { (float)w, (float)h };
+	}
 
 	_globalPauseType = static_cast<PauseType>(a_ini.GetLongValue("Settings", "iGlobalPauseType", (int)_globalPauseType));
 	_sidebarOnRight = a_ini.GetBoolValue("Settings", "bSidebarOnRight", _sidebarOnRight);
@@ -168,7 +191,7 @@ void FUCKMan::LoadSettings(const CSimpleIniA& a_ini)
 	// Check for first-run sentinel (-1.0)
 	float loadedScale = (float)a_ini.GetDoubleValue("Settings", "fUserScale", -1.0);
 	if (loadedScale == -1.0f) {
-		ResetSettings();
+		_userScale = 1.0f;
 	} else {
 		_userScale = std::clamp(loadedScale, 0.5f, 2.0f);
 	}
@@ -460,37 +483,37 @@ void FUCKMan::Draw()
 			bool wasCollapsed = s_windowWasCollapsed[title];
 			s_windowWasCollapsed[title] = isCollapsed;
 
+			// Get Metrics from Interface
+			ImVec2 targetSize = win->GetDefaultSize();
+
+			// Handle collapse override
 			if (isCollapsed) {
-				// COLLAPSED: Force height to title bar
-				float targetW = win->GetDefaultSize().x * scale;
+				float targetW = targetSize.x;
 				if (s_windowPreCollapseSizes.find(title) != s_windowPreCollapseSizes.end()) {
 					targetW = s_windowPreCollapseSizes[title].x;
 				}
-
-				FUCK::SetNextWindowSize(ImVec2(targetW, titleH), ImGuiCond_Always);
+				targetSize = ImVec2(targetW, titleH);
 				flags |= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar;
 			} else if (wasCollapsed) {
-				// JUST EXPANDED: Restore saved size
 				if (s_windowPreCollapseSizes.find(title) != s_windowPreCollapseSizes.end()) {
-					FUCK::SetNextWindowSize(s_windowPreCollapseSizes[title], ImGuiCond_Always);
-				} else {
-					ImVec2 defSize = win->GetDefaultSize();
-					FUCK::SetNextWindowSize(ImVec2(defSize.x * scale, defSize.y * scale), ImGuiCond_Always);
+					targetSize = s_windowPreCollapseSizes[title];
 				}
-			} else {
-				// NORMAL: Use default only for first run
-				ImVec2 defSize = win->GetDefaultSize();
-				FUCK::SetNextWindowSize(ImVec2(defSize.x * scale, defSize.y * scale), ImGuiCond_FirstUseEver);
 			}
 
 			// --- Position Logic ---
 			ImVec2 requestedPos;
 			if (win->GetRequestedPos(requestedPos)) {
-				FUCK::SetNextWindowPos(requestedPos, 4 /* ImGuiCond_Appearing */);
+				ClampWindowToScreen(requestedPos, targetSize);
+				FUCK::SetNextWindowPos(requestedPos, ImGuiCond_Appearing);
 			} else {
+				// Default position for new windows
 				ImVec2 defPos = win->GetDefaultPos();
-				FUCK::SetNextWindowPos(ImVec2(defPos.x * scale, defPos.y * scale), ImGuiCond_FirstUseEver);
+				ClampWindowToScreen(defPos, targetSize);
+				FUCK::SetNextWindowPos(defPos, ImGuiCond_FirstUseEver);
 			}
+
+			// Set size
+			FUCK::SetNextWindowSize(targetSize, isCollapsed || wasCollapsed ? ImGuiCond_Always : ImGuiCond_FirstUseEver);
 
 			bool open = true;
 
@@ -644,18 +667,21 @@ void FUCKMan::Draw()
 	static bool isCollapsed = false;
 	static bool wasCollapsed = false;
 
-	// Use exact same metrics as external windows
 	if (_settingsLoaded) {
-		FUCK::SetNextWindowPos(_windowPos, ImGuiCond_Appearing);
-		if (!isCollapsed)
-			FUCK::SetNextWindowSize(_windowSize, ImGuiCond_Appearing);
+		ClampWindowToScreen(_windowPos, _windowSize);
+		FUCK::SetNextWindowPos(_windowPos, ImGuiCond_Always);
+		if (!isCollapsed) {
+			FUCK::SetNextWindowSize(_windowSize, ImGuiCond_Always);
+		}
 		_settingsLoaded = false;
-	} else if (isCollapsed) {
-		FUCK::SetNextWindowSize(ImVec2(_windowSize.x, titleH));
-	} else if (wasCollapsed && !isCollapsed) {
-		FUCK::SetNextWindowSize(_windowSize);
 	} else {
-		FUCK::SetNextWindowSize(ImVec2(1000.0f * scale, 600.0f * scale), ImGuiCond_FirstUseEver);
+		if (isCollapsed) {
+			FUCK::SetNextWindowSize(ImVec2(_windowSize.x, titleH));
+		} else if (wasCollapsed && !isCollapsed) {
+			FUCK::SetNextWindowSize(_windowSize);
+		} else {
+			FUCK::SetNextWindowSize(ImVec2(1000.0f * scale, 600.0f * scale), ImGuiCond_FirstUseEver);
+		}
 	}
 
 	wasCollapsed = isCollapsed;
@@ -676,8 +702,10 @@ void FUCKMan::Draw()
 			_windowPos = FUCK::GetWindowPos();
 			_windowSize = FUCK::GetWindowSize();
 
-			if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && !isCollapsed) {
-				if (_windowPos.x != _lastSavedPos.x || _windowPos.y != _lastSavedPos.y || _windowSize.x != _lastSavedSize.x) {
+			// Auto-save settings on move/resize end
+			if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+				if (_windowPos.x != _lastSavedPos.x || _windowPos.y != _lastSavedPos.y ||
+					_windowSize.x != _lastSavedSize.x || _windowSize.y != _lastSavedSize.y) {
 					_lastSavedPos = _windowPos;
 					_lastSavedSize = _windowSize;
 					Settings::GetSingleton()->Save(FileType::kSettings, [](CSimpleIniA& ini) {
@@ -769,7 +797,7 @@ void FUCKMan::Draw()
 			float availHeight = FUCK::GetContentRegionAvail().y;
 			const float sidebarWidth = 250.0f * scale;
 
-			auto renderSidebar = [&]() {
+		auto renderSidebar = [&]() {
 				const float itemHeight = 30.0f * scale;
 				const float topPadding = 2.0f * scale;
 				const float bottomPadding = 2.0f * scale;

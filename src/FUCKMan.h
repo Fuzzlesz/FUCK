@@ -99,8 +99,14 @@ private:
 		bool		IsOpen() const override { return _isOpen; }
 		void		SetOpen(bool a_open) override { _isOpen = a_open; }
 
-		ImVec2 GetDefaultSize() const override { return { 450.0f, 600.0f }; }
-		ImVec2 GetDefaultPos() const override { return { 1050.0f, 450.0f }; }
+		ImVec2 GetDefaultSize() const override { 
+			float s = FUCK::GetResolutionScale();
+			return { 450.0f * s, 600.0f * s }; 
+		}
+		ImVec2 GetDefaultPos() const override { 
+			float s = FUCK::GetResolutionScale();
+			return { 1050.0f * s, 450.0f * s }; 
+		}
 
 		void UpdateState(const ImVec2& currentPos, const ImVec2& currentSize) override
 		{
