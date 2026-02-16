@@ -486,6 +486,9 @@ namespace ImGui
 		ImDrawList* parentDrawList = GetWindowDrawList();
 
 		const char* preview = (*current_item >= 0 && *current_item < items_count) ? items[*current_item] : "";
+
+		parentDrawList->AddRectFilled(widgetPos, widgetPos + ImVec2(width, GetFrameHeight()), GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox), ImGui::GetStyle().FrameRounding);
+
 		bool isOpen = BeginCombo(idStr.c_str(), preview, ImGuiComboFlags_NoArrowButton);
 		PopStyleColor(4);
 
@@ -496,7 +499,6 @@ namespace ImGui
 				opensUp = true;
 		}
 
-		parentDrawList->AddRectFilled(widgetPos, widgetPos + ImVec2(width, GetFrameHeight()), GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox), ImGui::GetStyle().FrameRounding);
 
 		DrawDropdownIcon(parentDrawList, { widgetPos.x + width - GetFrameHeight(), widgetPos.y }, { GetFrameHeight(), GetFrameHeight() }, isOpen, opensUp, IsItemHovered());
 		DrawWidgetBorder(parentDrawList, { widgetPos, widgetPos + ImVec2(width, GetFrameHeight()) }, isOpen || IsItemHovered() || IsWidgetFocused(GetID(idStr.c_str())), ImGui::GetStyle().FrameRounding);
