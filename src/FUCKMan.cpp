@@ -30,15 +30,46 @@ FUCKMan::FUCKMan()
 
 void FUCKMan::RegisterTool(ITool* a_tool)
 {
+	if (!a_tool)
+		return;
+
+	// 1. Pointer Check
+	if (std::find(_tools.begin(), _tools.end(), a_tool) != _tools.end()) {
+		return;
+	}
+
+	// 2. Name Collision Check
+	auto it = std::find_if(_tools.begin(), _tools.end(), [&](ITool* existing) {
+		return existing && (strcmp(existing->Name(), a_tool->Name()) == 0);
+	});
+
+	if (it != _tools.end()) {
+		return;
+	}
+
 	_tools.push_back(a_tool);
 }
 
 void FUCKMan::RegisterWindow(IWindow* a_window)
 {
-	auto it = std::find(_windows.begin(), _windows.end(), a_window);
-	if (it == _windows.end()) {
-		_windows.push_back(a_window);
+	if (!a_window)
+		return;
+
+	// 1. Pointer Check
+	if (std::find(_windows.begin(), _windows.end(), a_window) != _windows.end()) {
+		return;
 	}
+
+	// 2. Title Collision Check
+	auto it = std::find_if(_windows.begin(), _windows.end(), [&](IWindow* existing) {
+		return existing && (strcmp(existing->Title(), a_window->Title()) == 0);
+	});
+
+	if (it != _windows.end()) {
+		return;
+	}
+
+	_windows.push_back(a_window);
 }
 
 // ==========================================
@@ -762,6 +793,19 @@ void FUCKMan::Draw()
 				const float indent = 15.0f * scale;
 				const float textVisualOffset = 1.0f * scale;
 
+				std::vector<ITool*> looseTools;
+				std::map<std::string, std::vector<ITool*>> toolGroups;
+
+				for (auto* tool : _tools) {
+					if (!tool->ShowInSidebar())
+						continue;
+					const char* grp = tool->Group();
+					if (grp && *grp)
+						toolGroups[grp].push_back(tool);
+					else
+						looseTools.push_back(tool);
+				}
+
 				FUCK::BeginChild("Sidebar", ImVec2(sidebarWidth, availHeight), true, ImGuiWindowFlags_None);
 				{
 					FUCK::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
@@ -784,13 +828,13 @@ void FUCKMan::Draw()
 					FUCK::SetCursorPos(ImVec2(headerStart.x, headerStart.y + itemHeight));
 					FUCK::SeparatorThick();
 
-					for (auto* tool : _tools) {
-						if (!tool->ShowInSidebar())
-							continue;
+					auto RenderSidebarItem = [&](ITool* tool, const char* label) {
+						// Push ID to prevent conflicts if multiple tools have same name
+						ImGui::PushID(tool);
 
 						bool isSelected = (_activeTool == tool);
 						const auto cursorPos = FUCK::GetCursorPos();
-						std::string idLabel = std::format("##{}", tool->Name());
+						std::string idLabel = std::format("##{}", label);
 
 						if (FUCK::Selectable(idLabel.c_str(), isSelected, 0, ImVec2(0, itemHeight))) {
 							if (_activeTool && _activeTool != tool) {
@@ -803,12 +847,35 @@ void FUCKMan::Draw()
 						}
 
 						ImVec2 endPos = FUCK::GetCursorPos();
-						float textY = cursorPos.y + (itemHeight - FUCK::GetTextLineHeight()) * 0.5f;
+						FUCK::PushFont(FUCK::GetFont(FUCK_Font::kRegular), 22.0f * scale * 0.9f);
+						float textY = cursorPos.y + (itemHeight - textH) * 0.5f + textVisualOffset;
 						FUCK::SetCursorPos({ cursorPos.x + indent, textY });
-						FUCK::Text(tool->Name());
+						FUCK::Text(label);
+						FUCK::PopFont();
 						FUCK::SetCursorPos(endPos);
-					}
 
+						ImGui::PopID();
+					};
+
+					for (auto* tool : looseTools) RenderSidebarItem(tool, tool->Name());
+
+					for (auto& [groupName, tools] : toolGroups) {
+						FUCK::PushFont(FUCK::GetFont(FUCK_Font::kRegular), 22.0f * scale * 0.9f);
+						// Push ID string to ensure group node uniqueness
+						ImGui::PushID(groupName.c_str());
+						bool isOpen = FUCK::TreeNode(groupName.c_str());
+						ImGui::PopID();
+						FUCK::PopFont();
+
+						if (isOpen) {
+							for (auto* tool : tools) {
+								FUCK::Indent(indent);
+								RenderSidebarItem(tool, tool->Name());
+								FUCK::Unindent(indent);
+							}
+							FUCK::TreePop();
+						}
+					}
 
 					// --- FOOTER: SETTINGS (Centered) ---
 					float childHeight = FUCK::GetWindowSize().y;

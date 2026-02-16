@@ -119,6 +119,7 @@ class ITool
 public:
 	virtual ~ITool() = default;
 	virtual const char* Name() const = 0;
+	virtual const char* Group() const { return nullptr; }
 	virtual void Draw() = 0;
 	virtual void OnOpen() {}
 	virtual void OnClose() {}
