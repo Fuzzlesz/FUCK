@@ -94,10 +94,10 @@ private:
 	class ThemeEditorWindow : public IWindow
 	{
 	public:
-		const char* Title() const override { return "Theme Editor"; }
-		void Draw() override;
-		bool IsOpen() const override { return _isOpen; }
-		void SetOpen(bool a_open) override { _isOpen = a_open; }
+		const char*	Title() const override { return "$FUCK_ThemeEditor_Title"_T; }
+		void		Draw() override;
+		bool		IsOpen() const override { return _isOpen; }
+		void		SetOpen(bool a_open) override { _isOpen = a_open; }
 
 		ImVec2 GetDefaultSize() const override { return { 450.0f, 600.0f }; }
 		ImVec2 GetDefaultPos() const override { return { 1050.0f, 450.0f }; }

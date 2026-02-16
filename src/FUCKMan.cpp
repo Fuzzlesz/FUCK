@@ -1011,10 +1011,10 @@ void FUCKMan::SettingsTool::Draw()
 			}
 
 			FUCK::Spacing(2);
-			FUCK::TextDisabled("Load, save, or modify specific styles in the Theme Editor window.");
+			FUCK::TextDisabled("$FUCK_Styles_EditorDesc"_T);
 			FUCK::Spacing(2);
 
-			if (FUCK::Button("Open Theme Editor")) {
+			if (FUCK::Button("$FUCK_Styles_OpenThemeEditor"_T)) {
 				FUCKMan::GetSingleton()->_themeEditorWindow.SetOpen(true);
 			}
 
@@ -1022,7 +1022,7 @@ void FUCKMan::SettingsTool::Draw()
 			FUCK::SeparatorThick();
 			FUCK::Spacing(2);
 
-			if (FUCK::Button("Reset All to Defaults")) {
+			if (FUCK::Button("$FUCK_Styles_ResetDefaults"_T)) {
 				style->ResetToDefaults();
 			}
 
@@ -1133,7 +1133,7 @@ void FUCKMan::ThemeEditorWindow::Draw()
 		ColorPick("$FUCK_Styles_Header"_T, style->user.textHeader);
 		ColorPick("$FUCK_Styles_HoverActive"_T, style->user.textHovered);
 		ColorPick("$FUCK_Styles_Disabled"_T, style->user.textDisabled);
-		ColorPick("$FUCK_Styles_NavHighlight", style->user.navHighlight);
+		ColorPick("$FUCK_Styles_NavHighlight"_T, style->user.navHighlight);
 	}
 
 	if (FUCK::CollapsingHeader("$FUCK_Styles_Cat_Widgets"_T)) {
@@ -1185,7 +1185,7 @@ void FUCKMan::ThemeEditorWindow::Draw()
 
 		FUCK::Separator();
 
-		ColorPick("$FUCK_Styles_ScrollbarBG", style->user.scrollbarBG);
+		ColorPick("$FUCK_Styles_ScrollbarBG"_T, style->user.scrollbarBG);
 		ColorPick("$FUCK_Styles_ScrollbarGrab"_T, style->user.scrollbarGrab);
 		ColorPick("$FUCK_Styles_ScrollbarGrabActive"_T, style->user.scrollbarGrabActive);
 
