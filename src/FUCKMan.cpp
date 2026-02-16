@@ -402,7 +402,6 @@ RE::BSEventNotifyControl FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_e
 		return RE::BSEventNotifyControl::kContinue;
 
 	if (a_event->opening) {
-		// Clear caches (like ComboForms) when Main Menu loads
 		if (a_event->menuName == RE::MainMenu::MENU_NAME) {
 			ImGui::ClearFormCaches();
 		}
@@ -422,11 +421,6 @@ RE::BSEventNotifyControl FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_e
 					win->SetOpen(false);
 					UpdateGameState();
 				}
-			}
-
-			if (a_event->menuName == RE::MainMenu::MENU_NAME) {
-				_themeEditorWindow.SetOpen(false);
-				UpdateGameState();
 			}
 		}
 	}
