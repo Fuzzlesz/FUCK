@@ -530,14 +530,6 @@ void FUCKMan::Draw()
 							s_windowCollapseStates[title] = !isCollapsed;
 						}
 
-						if (ImGui::IsItemFocused()) {
-							ImGui::GetWindowDrawList()->AddRectFilled(
-								ImGui::GetItemRectMin(),
-								ImGui::GetItemRectMax(),
-								ImGui::GetColorU32(ImGuiCol_NavHighlight, 0.3f),
-								ImGui::GetStyle().FrameRounding);
-						}
-
 						// B. Determine Color
 						bool isHovered = ImGui::IsItemHovered();
 						ImU32 iconColor = isHovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
@@ -570,15 +562,6 @@ void FUCKMan::Draw()
 					if (ImGui::InvisibleButton("##WinClose", ImVec2(btnSize, btnSize))) {
 						open = false;
 					}
-
-					if (ImGui::IsItemFocused()) {
-						ImGui::GetWindowDrawList()->AddRectFilled(
-							ImGui::GetItemRectMin(),
-							ImGui::GetItemRectMax(),
-							ImGui::GetColorU32(ImGuiCol_NavHighlight, 0.3f),
-							ImGui::GetStyle().FrameRounding);
-					}
-
 					bool btnHovered = ImGui::IsItemHovered();
 					const char* xIcon = ICON_FA_XMARK;
 					ImVec2 textSize = ImGui::CalcTextSize(xIcon);
