@@ -627,52 +627,100 @@ namespace ImGui
 			const auto* m1Icon = (m1 != -1) ? iconFont->GetIcon(static_cast<uint32_t>(m1)) : nullptr;
 			const auto* m2Icon = (m2 != -1) ? iconFont->GetIcon(static_cast<uint32_t>(m2)) : nullptr;
 
-			auto DrawItem = [&](const IconFont::IconTexture* icon, const char* suffix) {
-				if (!icon)
-					return;
+			// Generic item to unify rendering loop
+			struct RenderItem
+			{
+				enum Type
+				{
+					kIcon,
+					kText
+				} type;
+				const IconFont::IconTexture* icon = nullptr;
+				const char* text = nullptr;
+				const char* idSuffix = nullptr;
+				ImVec2 size;
+			};
 
-				ImVec2 p = ImGui::GetCursorScreenPos();
-				ImVec2 size = icon->size;
+			// Build list: Anchor (Key) -> Leftward items
+			std::vector<RenderItem> items;
+			items.reserve(5);
 
-				bool isHovered = ImGui::IsMouseHoveringRect(p, { p.x + size.x, p.y + frameH }) || IsWidgetFocused(id);
+			auto AddIcon = [&](const IconFont::IconTexture* icon, const char* suffix) {
+				if (icon)
+					items.push_back({ RenderItem::kIcon, icon, nullptr, suffix, icon->size });
+			};
 
-				ImVec4 tint;
-				if (flashing) {
-					// Gold pulsing animation
-					float alpha = 0.4f + (0.6f * (float)fabs(sin(ImGui::GetTime() * 5.0f)));
-					tint = ImVec4(1.0f, 0.8f, 0.2f, alpha);
-				} else {
+			auto AddText = [&](const char* text) {
+				items.push_back({ RenderItem::kText, nullptr, text, nullptr, ImGui::CalcTextSize(text) });
+			};
 
-					tint = GetHighlightTint(true, isHovered, false);
+			// 1. Primary Key (The Anchor)
+			if (kIcon) {
+				AddIcon(kIcon, "key");
+			} else {
+				AddText("None");
+			}
+
+			// 2. Mod 2 ( Grows Left )
+			if (m2Icon) {
+				AddText("+");
+				AddIcon(m2Icon, "m2");
+			}
+
+			// 3. Mod 1 ( Grows Left )
+			if (m1Icon) {
+				AddText("+");
+				AddIcon(m1Icon, "m1");
+			}
+
+			// --- Rendering Phase ---
+			const float lineTop = ImGui::GetCursorPosY();
+
+			// We start at the current cursor X (The "Split Point")
+			// The Primary Key sits here. Modifiers grow to the left (negative X).
+			float anchorX = ImGui::GetCursorPosX();
+			float currentX = anchorX;
+
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+
+			for (size_t i = 0; i < items.size(); ++i) {
+				const auto& item = items[i];
+
+				// If this is NOT the first item (Key), we must move LEFT to make space for it
+				if (i > 0) {
+					currentX -= (item.size.x + spacing);
 				}
 
-				if (DrawTransparentButton(std::format("##{}", suffix).c_str(), (void*)icon->srView.Get(), size, tint))
-					clicked = true;
+				// Vertical Center Logic
+				float offY = (frameH - item.size.y) * 0.5f;
 
-				ImGui::SameLine(0, spacing);
-			};
+				ImGui::SetCursorPosX(currentX);
+				ImGui::SetCursorPosY(lineTop + offY);
 
-			auto DrawPlus = [&]() {
-				ImGui::AlignTextToFramePadding();
-				ImGui::TextDisabled("+");
-				ImGui::SameLine(0, spacing);
-			};
+				if (item.type == RenderItem::kIcon) {
+					ImVec2 p = ImGui::GetCursorScreenPos();
+					bool isHovered = ImGui::IsMouseHoveringRect(p, { p.x + item.size.x, p.y + item.size.y }) || IsWidgetFocused(id);
 
-			// Draw Order: Mod1 -> Mod2 -> Key
-			if (m1Icon) {
-				DrawItem(m1Icon, "m1");
-				DrawPlus();
+					ImVec4 tint;
+					if (flashing) {
+						float alpha = 0.4f + (0.6f * (float)fabs(sin(ImGui::GetTime() * 5.0f)));
+						tint = ImVec4(1.0f, 0.8f, 0.2f, alpha);
+					} else {
+						tint = GetHighlightTint(true, isHovered, false);
+					}
+
+					if (DrawTransparentButton(std::format("##{}", item.idSuffix).c_str(), (void*)item.icon->srView.Get(), item.size, tint)) {
+						clicked = true;
+					}
+				} else {
+					ImGui::TextDisabled("%s", item.text);
+				}
 			}
-			if (m2Icon) {
-				DrawItem(m2Icon, "m2");
-				DrawPlus();
-			}
-			if (kIcon) {
-				DrawItem(kIcon, "key");
-			} else {
-				ImGui::AlignTextToFramePadding();
-				ImGui::TextDisabled("None");
-			}
+
+			ImGui::PopStyleVar();
+
+			// Restore Y baseline for layout system
+			ImGui::SetCursorPosY(lineTop + frameH);
 		};
 
 		AlignedWidgetLayout(label, alignFar, labelLeft, DrawContent, frameH);
