@@ -598,6 +598,8 @@ void FUCKMan::Draw()
 
 						float targetFontSize = ImGui::GetFontSize() / _userScale;
 
+						float textOffsetY = 1.54f * uiScale;
+
 						ImGui::SetWindowFontScale(1.0f / _userScale);
 						ImVec2 textSize = ImGui::CalcTextSize(xIcon);
 						ImGui::SetWindowFontScale(1.0f);
@@ -605,7 +607,7 @@ void FUCKMan::Draw()
 						ImVec2 btnScreenPos = ImGui::GetItemRectMin();
 						ImVec2 textPos = {
 							btnScreenPos.x + (btnSize - textSize.x) * 0.5f,
-							btnScreenPos.y + (btnSize - textSize.y) * 0.5f
+							btnScreenPos.y + (btnSize - textSize.y) * 0.5f + textOffsetY
 						};
 
 						ImU32 xColor = btnHovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
@@ -778,7 +780,7 @@ void FUCKMan::Draw()
 					!isCollapsed ? ImGui::IconDirection::kDown : ImGui::IconDirection::kRight);
 			}
 
-			// 2. Close Button (Right)
+			// 2. Close Button
 			float btnSize = titleH;
 			float btnY = 0.0f;
 			float xPos = winWidth - btnSize - headerPadding;
@@ -793,7 +795,8 @@ void FUCKMan::Draw()
 			// X button with fixed size
 			{
 				const char* xIcon = ICON_FA_XMARK;
-				float textOffsetY = 1.0f * uiScale;
+
+				float textOffsetY = 1.55f * uiScale;
 
 				float targetFontSize = ImGui::GetFontSize() / _userScale;
 
