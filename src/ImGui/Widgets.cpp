@@ -314,8 +314,9 @@ namespace ImGui
 
 			float railH = frameH * 0.25f;
 			float railY = p.y + (frameH - railH) * 0.5f;
+
 			ImVec2 railMin = { p.x + 8.0f * scale, railY };
-			ImVec2 railMax = { p.x + width - 20.0f * scale, railY + railH };
+			ImVec2 railMax = { p.x + width - 8.0f * scale, railY + railH };
 
 			draw_list->AddRectFilled(railMin, railMax, col_rail_fill, ImGui::GetStyle().FrameRounding);
 			draw_list->AddRect(railMin, railMax, col_rail, ImGui::GetStyle().FrameRounding, 0, 1.0f * scale);
