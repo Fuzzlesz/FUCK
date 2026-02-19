@@ -387,7 +387,9 @@ namespace FUCK::Host
 	static bool IsItemClicked_Impl(int btn) { return ImGui::IsItemClicked(btn); }
 	static bool IsItemActive_Impl() { return ImGui::IsItemActive(); }
 	static bool IsAnyItemActive_Impl() { return ImGui::IsAnyItemActive(); }
+	static bool IsAnyItemHovered_Impl() { return ImGui::IsAnyItemHovered(); }
 	static bool IsWindowFocused_Impl(int flags) { return ImGui::IsWindowFocused(flags); }
+	static bool IsWindowHovered_Impl(int flags) { return ImGui::IsWindowHovered(flags); }
 	static bool IsMouseDown_Impl(int button) { return ImGui::IsMouseDown(button); }
 	static bool IsMouseReleased_Impl(int button) { return ImGui::IsMouseReleased(button); }
 	static void SetKeyboardFocusHere_Impl(int offset) { ImGui::SetKeyboardFocusHere(offset); }
@@ -415,6 +417,11 @@ namespace FUCK::Host
 	}
 	static void DrawBackgroundLine_Impl(float x1, float y1, float x2, float y2, unsigned int col, float t) { ImGui::GetBackgroundDrawList()->AddLine({ x1, y1 }, { x2, y2 }, col, t); }
 	static void DrawBackgroundRect_Impl(const ImVec2& min, const ImVec2& max, ImU32 col, float thickness) { ImGui::GetBackgroundDrawList()->AddRect(min, max, col, 0.0f, 0, thickness); }
+
+	// Screen primitives
+	static void DrawScreenRect_Impl(const ImVec2& min, const ImVec2& max, ImU32 col, float rounding, float thickness) { ImGui::GetBackgroundDrawList()->AddRect(min, max, col, rounding, 0, thickness); }
+	static void DrawScreenRectFilled_Impl(const ImVec2& min, const ImVec2& max, ImU32 col, float rounding) { ImGui::GetBackgroundDrawList()->AddRectFilled(min, max, col, rounding); }
+	static void DrawScreenLine_Impl(float x1, float y1, float x2, float y2, ImU32 col, float thickness) { ImGui::GetBackgroundDrawList()->AddLine({ x1, y1 }, { x2, y2 }, col, thickness); }
 
 	// ==========================================
 	// Windows & Containers
@@ -619,7 +626,9 @@ namespace FUCK::Host
 			.IsItemClicked = IsItemClicked_Impl,
 			.IsItemActive = IsItemActive_Impl,
 			.IsAnyItemActive = IsAnyItemActive_Impl,
+			.IsAnyItemHovered = IsAnyItemHovered_Impl,
 			.IsWindowFocused = IsWindowFocused_Impl,
+			.IsWindowHovered = IsWindowHovered_Impl,
 			.IsMouseDown = IsMouseDown_Impl,
 			.IsMouseReleased = IsMouseReleased_Impl,
 			.SetKeyboardFocusHere = SetKeyboardFocusHere_Impl,
@@ -631,6 +640,9 @@ namespace FUCK::Host
 			.DrawBackgroundImage = DrawBackgroundImage_Impl,
 			.DrawBackgroundLine = DrawBackgroundLine_Impl,
 			.DrawBackgroundRect = DrawBackgroundRect_Impl,
+			.DrawScreenRect = DrawScreenRect_Impl,
+			.DrawScreenRectFilled = DrawScreenRectFilled_Impl,
+			.DrawScreenLine = DrawScreenLine_Impl,
 			.SetNextWindowPos = SetNextWindowPos_Impl,
 			.SetNextWindowSize = SetNextWindowSize_Impl,
 			.GetWindowPos = GetWindowPos_Impl,
