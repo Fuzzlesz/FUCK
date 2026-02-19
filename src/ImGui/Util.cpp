@@ -46,7 +46,7 @@ namespace ImGui
 			return;
 		}
 
-		// Use foreground list to draw outside the standard clip rect
+		// Use background list to draw outside the standard clip rect. foreground was causing frame clipping.
 		auto* drawList = GetBackgroundDrawList();
 		const auto newWindowPos = ImVec2{ window->Pos.x - borderSize, window->Pos.y - borderSize };
 

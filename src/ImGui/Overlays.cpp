@@ -8,7 +8,7 @@ namespace ImGui
 	// ------------------------------------------------------------
 	void Overlays::Draw(FUCK_Overlay type, float thickness, ImU32 color, float paramA, float paramB, float paramC, float paramD)
 	{
-		auto* drawList = ImGui::GetForegroundDrawList();
+		auto* drawList = ImGui::GetBackgroundDrawList();
 		ImVec2 displaySize = ImGui::GetIO().DisplaySize;
 
 		if (color == 0) {
