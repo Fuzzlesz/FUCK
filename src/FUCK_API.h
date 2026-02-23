@@ -191,6 +191,7 @@ struct FUCK_Interface
 	void (*GetItemRectMin)(float*, float*);
 	void (*GetItemRectMax)(float*, float*);
 	void (*SetNextItemWidth)(float);
+	void (*SetNextItemOpen)(bool, int); 
 	void (*Dummy)(float, float);
 	void (*Spacing)();
 	void (*Separator)();
@@ -560,6 +561,11 @@ namespace FUCK
 	{
 		if (auto i = GetInterface())
 			i->SetNextItemWidth(width);
+	}
+	inline void SetNextItemOpen(bool is_open, int cond = 0)
+	{
+		if (auto i = GetInterface())
+			i->SetNextItemOpen(is_open, cond);
 	}
 	inline void Dummy(const ImVec2& size)
 	{

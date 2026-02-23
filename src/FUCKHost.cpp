@@ -207,6 +207,7 @@ namespace FUCK::Host
 			*y = s.y;
 	}
 	static void SetNextItemWidth_Impl(float w) { ImGui::SetNextItemWidth(w); }
+	static void SetNextItemOpen_Impl(bool is_open, int cond) { ImGui::SetNextItemOpen(is_open, cond); }
 	static void Dummy_Impl(float w, float h) { ImGui::Dummy(ImVec2(w, h)); }
 	static void Spacing_Impl() { ImGui::Spacing(); }
 	static void Separator_Impl() { ImGui::Separator(); }
@@ -580,6 +581,7 @@ namespace FUCK::Host
 			.GetItemRectMin = GetItemRectMin_Impl,
 			.GetItemRectMax = GetItemRectMax_Impl,
 			.SetNextItemWidth = SetNextItemWidth_Impl,
+			.SetNextItemOpen = SetNextItemOpen_Impl,
 			.Dummy = Dummy_Impl,
 			.Spacing = Spacing_Impl,
 			.Separator = Separator_Impl,
