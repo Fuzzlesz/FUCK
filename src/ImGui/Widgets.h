@@ -3,7 +3,7 @@
 #include "Styles.h"
 #include "Util.h"
 
-	namespace IconFont
+namespace IconFont
 {
 	struct IconTexture;
 }
@@ -38,7 +38,12 @@ namespace ImGui
 	// Specialized Inputs
 	bool InputTextStyled(const char* label, char* buf, size_t buf_size, int flags = 0);
 	bool ColorEdit3Styled(const char* label, float col[3], int flags = 0);
+	bool ColorEdit4Styled(const char* label, float col[4], int flags = 0);
 	void Stepper(const char* label, const char* text, bool* outLeft, bool* outRight);
+
+	bool DragFloat2Styled(const char* label, float v[2], float speed, float min, float max, const char* fmt);
+	bool DragFloat3Styled(const char* label, float v[3], float speed, float min, float max, const char* fmt);
+	bool DragFloat4Styled(const char* label, float v[4], float speed, float min, float max, const char* fmt);
 
 	// Navigation
 	bool BeginTabItemEx(const char* label, ImGuiTabItemFlags flags = 0);

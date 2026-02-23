@@ -187,7 +187,7 @@ namespace
 namespace ImGui
 {
 	// =========================================================================================
-	// CORE DRAWING
+	// CORE DRAWING & WIDGETS
 	// =========================================================================================
 
 	void DrawWidgetBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered, float rounding)
@@ -218,10 +218,6 @@ namespace ImGui
 		drawList->PathLineTo({ bb.Max.x, bb.Max.y });
 		drawList->PathStroke(col, 0, thick);
 	}
-
-	// =========================================================================================
-	// WIDGET IMPLEMENTATIONS
-	// =========================================================================================
 
 	bool CheckBox(const char* label, bool* a_toggle, bool alignFar, bool labelLeft)
 	{
@@ -1008,21 +1004,84 @@ namespace ImGui
 		return result;
 	}
 
+	bool ColorEdit4Styled(const char* label, float col[4], int flags)
+	{
+		std::string id = "##"s + label;
+		LeftAlignedTextImpl(label, id);
+		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorU32(USER_STYLE::kFrameBG_Widget));
+		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
+		PushStyleColor(ImGuiCol_FrameBgActive, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
+		PushStyleColor(ImGuiCol_Border, GetUserStyleColorU32(USER_STYLE::kSliderBorder));
+		bool result = ImGui::ColorEdit4(id.c_str(), col, flags | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_AlphaBar);
+		if (IsItemActivated())
+			RE::PlaySound("UIMenuFocus");
+		ActivateOnHover();
+		PopStyleColor(4);
+		return result;
+	}
+
 	bool InputTextStyled(const char* label, char* buf, size_t buf_size, int flags)
 	{
 		std::string id = "##"s + label;
 		LeftAlignedTextImpl(label, id);
-
 		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox));
-
 		PushStyleColor(ImGuiCol_Text, GetUserStyleColorU32(USER_STYLE::kComboBoxText));
-
 		bool res = ImGui::InputText(id.c_str(), buf, buf_size, flags);
 		if (IsItemActivated())
 			RE::PlaySound("UIMenuFocus");
-
 		PopStyleColor(2);
 		return res;
+	}
+
+	bool DragFloat2Styled(const char* label, float v[2], float speed, float min, float max, const char* fmt)
+	{
+		std::string id = "##"s + label;
+		LeftAlignedTextImpl(label, id);
+		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorU32(USER_STYLE::kFrameBG_Widget));
+		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
+		PushStyleColor(ImGuiCol_FrameBgActive, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
+
+		bool result = ImGui::DragFloat2(id.c_str(), v, speed, min, max, fmt);
+
+		if (result)
+			RE::PlaySound("UIMenuPrevNext");
+		ActivateOnHover();
+		PopStyleColor(3);
+		return result;
+	}
+
+	bool DragFloat3Styled(const char* label, float v[3], float speed, float min, float max, const char* fmt)
+	{
+		std::string id = "##"s + label;
+		LeftAlignedTextImpl(label, id);
+		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorU32(USER_STYLE::kFrameBG_Widget));
+		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
+		PushStyleColor(ImGuiCol_FrameBgActive, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
+
+		bool result = ImGui::DragFloat3(id.c_str(), v, speed, min, max, fmt);
+
+		if (result)
+			RE::PlaySound("UIMenuPrevNext");
+		ActivateOnHover();
+		PopStyleColor(3);
+		return result;
+	}
+
+	bool DragFloat4Styled(const char* label, float v[4], float speed, float min, float max, const char* fmt)
+	{
+		std::string id = "##"s + label;
+		LeftAlignedTextImpl(label, id);
+		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorU32(USER_STYLE::kFrameBG_Widget));
+		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
+		PushStyleColor(ImGuiCol_FrameBgActive, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
+
+		bool result = ImGui::DragFloat4(id.c_str(), v, speed, min, max, fmt);
+
+		if (result)
+			RE::PlaySound("UIMenuPrevNext");
+		ActivateOnHover();
+		PopStyleColor(3);
+		return result;
 	}
 
 	void Stepper(const char* label, const char* text, bool* outLeft, bool* outRight)

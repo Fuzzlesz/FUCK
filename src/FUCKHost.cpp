@@ -462,11 +462,19 @@ namespace FUCK::Host
 	static bool ToggleButton_Impl(const char* label, bool* v, bool alignFar, bool labelLeft) { return ImGui::ToggleButton(label, v, alignFar, labelLeft); }
 	static ImGuiTableSortSpecs* GetTableSortSpecs_Impl() { return ImGui::TableGetSortSpecs(); }
 	static bool InputText_Impl(const char* label, char* buf, size_t buf_size, int flags) { return ImGui::InputTextStyled(label, buf, buf_size, flags); }
+
 	static bool ColorEdit3_Impl(const char* label, float col[3], int flags) { return ImGui::ColorEdit3Styled(label, col, flags); }
+	static bool ColorEdit4_Impl(const char* label, float col[4], int flags) { return ImGui::ColorEdit4Styled(label, col, flags); }
+
 	static bool SliderFloat_Impl(const char* label, float* v, float min, float max, const char* fmt) { return ImGui::Slider(label, v, min, max, fmt); }
 	static bool SliderInt_Impl(const char* label, int* v, int min, int max, const char* fmt) { return ImGui::Slider(label, v, min, max, fmt); }
-	static bool DragFloat_Impl(const char* label, float* v, float s, float min, float max, const char* fmt) { return ImGui::DragOnHover(label, v, s, min, max, fmt); }
+
 	static bool DragInt_Impl(const char* label, int* v, float s, int min, int max, const char* fmt) { return ImGui::DragOnHover(label, v, s, min, max, fmt); }
+	static bool DragFloat_Impl(const char* label, float* v, float s, float min, float max, const char* fmt) { return ImGui::DragOnHover(label, v, s, min, max, fmt); }
+	static bool DragFloat2_Impl(const char* label, float v[2], float s, float min, float max, const char* fmt) { return ImGui::DragFloat2Styled(label, v, s, min, max, fmt); }
+	static bool DragFloat3_Impl(const char* label, float v[3], float s, float min, float max, const char* fmt) { return ImGui::DragFloat3Styled(label, v, s, min, max, fmt); }
+	static bool DragFloat4_Impl(const char* label, float v[4], float s, float min, float max, const char* fmt) { return ImGui::DragFloat4Styled(label, v, s, min, max, fmt); }
+
 	static bool Combo_Impl(const char* label, int* current_item, const char* const* items, int items_count) { return ImGui::ComboStyled(label, current_item, items, items_count); }
 	static bool ComboWithFilter_Impl(const char* label, int* current_item, const char* const* items, int items_count, int popup_max_height)
 	{
@@ -662,10 +670,14 @@ namespace FUCK::Host
 			.ToggleButton = ToggleButton_Impl,
 			.InputText = InputText_Impl,
 			.ColorEdit3 = ColorEdit3_Impl,
+			.ColorEdit4 = ColorEdit4_Impl,
 			.SliderFloat = SliderFloat_Impl,
 			.SliderInt = SliderInt_Impl,
-			.DragFloat = DragFloat_Impl,
 			.DragInt = DragInt_Impl,
+			.DragFloat = DragFloat_Impl,
+			.DragFloat2 = DragFloat2_Impl,
+			.DragFloat3 = DragFloat3_Impl,
+			.DragFloat4 = DragFloat4_Impl,
 			.Combo = Combo_Impl,
 			.ComboWithFilter = ComboWithFilter_Impl,
 			.ComboForm = ComboForm_Impl,
