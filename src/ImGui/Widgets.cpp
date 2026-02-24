@@ -886,6 +886,12 @@ namespace ImGui
 	{
 		ImGuiWindow* window = GetCurrentWindow();
 		ImGuiID id = window->GetID(label);
+
+		if (GImGui->NextItemData.HasFlags & ImGuiNextItemDataFlags_HasOpen) {
+			window->DC.StateStorage->SetInt(id, GImGui->NextItemData.OpenVal);
+			GImGui->NextItemData.ClearFlags();
+		}
+
 		bool is_open = window->DC.StateStorage->GetInt(id, (flags & ImGuiTreeNodeFlags_DefaultOpen) != 0);
 
 		// Calculate total layout size
@@ -926,6 +932,12 @@ namespace ImGui
 	{
 		ImGuiWindow* window = GetCurrentWindow();
 		ImGuiID id = window->GetID(label);
+
+		if (GImGui->NextItemData.HasFlags & ImGuiNextItemDataFlags_HasOpen) {
+			window->DC.StateStorage->SetInt(id, GImGui->NextItemData.OpenVal);
+			GImGui->NextItemData.ClearFlags();
+		}
+
 		bool is_open = window->DC.StateStorage->GetInt(id, (flags & ImGuiTreeNodeFlags_DefaultOpen) != 0);
 
 		ImVec2 pos = window->DC.CursorPos;
