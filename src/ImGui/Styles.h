@@ -36,7 +36,6 @@ namespace ImGui
 		kTabBorderActive,
 
 		// Toggles
-		kToggleRail,
 		kToggleRailFilled,
 		kToggleKnob,
 
@@ -186,7 +185,6 @@ namespace ImGui
 		ImU32 widgetFlashU32;
 		ImU32 tabBorderU32;
 		ImU32 tabBorderActiveU32;
-		ImU32 toggleRailU32;
 		ImU32 toggleRailFilledU32;
 		ImU32 toggleKnobU32;
 		ImU32 scrollbarBGU32;

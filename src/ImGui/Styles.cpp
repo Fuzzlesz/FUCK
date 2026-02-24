@@ -20,7 +20,6 @@ namespace ImGui
 
 		tabBorderU32 = ColorConvertFloat4ToU32(user.tabBorder);
 		tabBorderActiveU32 = ColorConvertFloat4ToU32(user.tabBorderActive);
-		toggleRailU32 = ColorConvertFloat4ToU32(user.toggleRail);
 		toggleRailFilledU32 = ColorConvertFloat4ToU32(user.toggleRailFilled);
 		toggleKnobU32 = ColorConvertFloat4ToU32(user.toggleKnob);
 
@@ -62,8 +61,6 @@ namespace ImGui
 			return tabBorderU32;
 		case USER_STYLE::kTabBorderActive:
 			return tabBorderActiveU32;
-		case USER_STYLE::kToggleRail:
-			return toggleRailU32;
 		case USER_STYLE::kToggleRailFilled:
 			return toggleRailFilledU32;
 		case USER_STYLE::kToggleKnob:
@@ -109,8 +106,6 @@ namespace ImGui
 			return user.tabBorder;
 		case USER_STYLE::kTabBorderActive:
 			return user.tabBorderActive;
-		case USER_STYLE::kToggleRail:
-			return user.toggleRail;
 		case USER_STYLE::kToggleRailFilled:
 			return user.toggleRailFilled;
 		case USER_STYLE::kToggleKnob:

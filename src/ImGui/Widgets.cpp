@@ -305,7 +305,6 @@ namespace ImGui
 			bool isFocused = IsWidgetFocused(id);
 			bool showFrame = isFocused && isInputGamepad;
 
-			ImU32 col_rail = GetUserStyleColorU32(USER_STYLE::kToggleRail);
 			ImU32 col_rail_fill = GetUserStyleColorU32(USER_STYLE::kToggleRailFilled);
 			ImU32 col_knob_fill = GetUserStyleColorU32(USER_STYLE::kToggleKnob);
 
@@ -326,9 +325,10 @@ namespace ImGui
 
 			ImVec2 railMin = { p.x + 8.0f * scale, railY };
 			ImVec2 railMax = { p.x + width - 8.0f * scale, railY + railH };
+			ImRect railBB(railMin, railMax);
 
 			draw_list->AddRectFilled(railMin, railMax, col_rail_fill, ImGui::GetStyle().FrameRounding);
-			draw_list->AddRect(railMin, railMax, col_rail, ImGui::GetStyle().FrameRounding, 0, 1.0f * scale);
+			DrawWidgetBorder(draw_list, railBB, hovered, ImGui::GetStyle().FrameRounding);
 
 			float knobRadius = frameH * 0.32f;
 			float knobStart = railMin.x - (knobRadius * 0.1f);
