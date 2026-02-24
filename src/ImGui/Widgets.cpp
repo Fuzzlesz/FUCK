@@ -204,6 +204,16 @@ namespace ImGui
 		drawList->AddRect(bb.Min, bb.Max, col, rounding, 0, thickness);
 	}
 
+	static void DrawLastItemBorder(float rounding = 0.0f)
+	{
+		ImGuiContext& g = *GImGui;
+		ImRect bb = g.LastItemData.Rect;
+		bool hovered = ImGui::IsItemHovered();
+		bool active = ImGui::IsItemActive();
+		bool focused = ImGui::IsItemFocused();
+		DrawWidgetBorder(ImGui::GetWindowDrawList(), bb, hovered || active || focused, rounding);
+	}
+
 	void DrawTabBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered)
 	{
 		float scale = ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
@@ -997,6 +1007,7 @@ namespace ImGui
 		PushStyleColor(ImGuiCol_FrameBgActive, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
 		PushStyleColor(ImGuiCol_Border, GetUserStyleColorU32(USER_STYLE::kSliderBorder));
 		bool result = ImGui::ColorEdit3(id.c_str(), col, flags | ImGuiColorEditFlags_NoLabel);
+		DrawLastItemBorder(ImGui::GetStyle().FrameRounding);
 		if (IsItemActivated())
 			RE::PlaySound("UIMenuFocus");
 		ActivateOnHover();
@@ -1013,6 +1024,7 @@ namespace ImGui
 		PushStyleColor(ImGuiCol_FrameBgActive, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
 		PushStyleColor(ImGuiCol_Border, GetUserStyleColorU32(USER_STYLE::kSliderBorder));
 		bool result = ImGui::ColorEdit4(id.c_str(), col, flags | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_AlphaBar);
+		DrawLastItemBorder(ImGui::GetStyle().FrameRounding);
 		if (IsItemActivated())
 			RE::PlaySound("UIMenuFocus");
 		ActivateOnHover();
@@ -1027,6 +1039,7 @@ namespace ImGui
 		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox));
 		PushStyleColor(ImGuiCol_Text, GetUserStyleColorU32(USER_STYLE::kComboBoxText));
 		bool res = ImGui::InputText(id.c_str(), buf, buf_size, flags);
+		DrawLastItemBorder(ImGui::GetStyle().FrameRounding);
 		if (IsItemActivated())
 			RE::PlaySound("UIMenuFocus");
 		PopStyleColor(2);
@@ -1040,9 +1053,8 @@ namespace ImGui
 		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorU32(USER_STYLE::kFrameBG_Widget));
 		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
 		PushStyleColor(ImGuiCol_FrameBgActive, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
-
 		bool result = ImGui::DragFloat2(id.c_str(), v, speed, min, max, fmt);
-
+		DrawLastItemBorder(ImGui::GetStyle().FrameRounding);
 		if (result)
 			RE::PlaySound("UIMenuPrevNext");
 		ActivateOnHover();
@@ -1057,9 +1069,8 @@ namespace ImGui
 		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorU32(USER_STYLE::kFrameBG_Widget));
 		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
 		PushStyleColor(ImGuiCol_FrameBgActive, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
-
 		bool result = ImGui::DragFloat3(id.c_str(), v, speed, min, max, fmt);
-
+		DrawLastItemBorder(ImGui::GetStyle().FrameRounding);
 		if (result)
 			RE::PlaySound("UIMenuPrevNext");
 		ActivateOnHover();
@@ -1074,9 +1085,8 @@ namespace ImGui
 		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorU32(USER_STYLE::kFrameBG_Widget));
 		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
 		PushStyleColor(ImGuiCol_FrameBgActive, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
-
 		bool result = ImGui::DragFloat4(id.c_str(), v, speed, min, max, fmt);
-
+		DrawLastItemBorder(ImGui::GetStyle().FrameRounding);
 		if (result)
 			RE::PlaySound("UIMenuPrevNext");
 		ActivateOnHover();
