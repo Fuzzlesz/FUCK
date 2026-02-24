@@ -111,7 +111,9 @@ namespace
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, { 0, 0, 0, 0 });
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, { 0, 0, 0, 0 });
 		ImGui::PushStyleColor(ImGuiCol_Border, { 0, 0, 0, 0 });
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0, 0 });
 		bool result = ImGui::ImageButton(id, (ImTextureID)tex, size, { 0, 0 }, { 1, 1 }, { 0, 0, 0, 0 }, tint);
+		ImGui::PopStyleVar();
 		ImGui::PopStyleColor(4);
 		return result;
 	}
@@ -125,7 +127,8 @@ namespace
 		float availWidth = ImGui::GetContentRegionAvail().x;
 		float startX = ImGui::GetCursorPosX();
 		float startY = ImGui::GetCursorPosY();
-		float splitPoint = startX + (availWidth * 0.65f);
+
+		float splitPoint = startX + floorf(availWidth * 0.65f);
 
 		std::string_view labelView(label);
 		auto doubleHash = labelView.find("##");
