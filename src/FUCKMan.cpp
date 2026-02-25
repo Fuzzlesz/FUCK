@@ -446,6 +446,28 @@ void FUCKMan::Draw()
 	const float padBase = 15.0f * uiScale;
 
 	// ------------------------------------------------------------------------
+	// Overlay Render Pass
+	// ------------------------------------------------------------------------
+	if (_isOpen && _activeTool) {
+		ImGui::SetNextWindowPos(ImGui::GetMainViewport()->Pos);
+		ImGui::SetNextWindowSize(ImGui::GetMainViewport()->Size);
+
+		ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration |
+		                         ImGuiWindowFlags_NoInputs |
+		                         ImGuiWindowFlags_NoBackground |
+		                         ImGuiWindowFlags_NoNav |
+		                         ImGuiWindowFlags_NoBringToFrontOnFocus |
+		                         ImGuiWindowFlags_NoFocusOnAppearing;
+
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+		if (ImGui::Begin("##ToolOverlayLayer", nullptr, flags)) {
+			_activeTool->RenderOverlay();
+		}
+		ImGui::End();
+		ImGui::PopStyleVar();
+	}
+
+	// ------------------------------------------------------------------------
 	// 1. Draw Registered External Windows (Overlays)
 	// ------------------------------------------------------------------------
 	for (auto* win : _windows) {

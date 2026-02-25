@@ -121,6 +121,7 @@ public:
 	virtual const char* Name() const = 0;
 	virtual const char* Group() const { return nullptr; }
 	virtual void Draw() = 0;
+	virtual void RenderOverlay() {}
 	virtual void OnOpen() {}
 	virtual void OnClose() {}
 	virtual bool OnAsyncInput(const void*) { return false; }
@@ -1316,7 +1317,7 @@ inline void PushFont(ImFont* font, float size = 0.0f)
 	}
 }
 
-	inline const char* operator""_T(const char* str, std::size_t)
-	{
-		return FUCK::Translate(str);
-	}
+inline const char* operator""_T(const char* str, std::size_t)
+{
+	return FUCK::Translate(str);
+}
