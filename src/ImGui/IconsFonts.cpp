@@ -312,13 +312,17 @@ namespace IconFont
 		leftKey.Resize(buttonScale);
 		rightKey.Resize(buttonScale);
 
-		std::for_each(keyboard.begin(), keyboard.end(), [&](auto& Icon) { Icon.second.Resize(buttonScale); });
-		std::for_each(gamePad.begin(), gamePad.end(), [&](auto& Icon) {
-			auto& [xbox, ps4] = Icon.second;
+		std::ranges::for_each(keyboard, [&](auto& IconTexture) {
+			IconTexture.second.Resize(buttonScale);
+		});
+		std::ranges::for_each(gamePad, [&](auto& IconTexture) {
+			auto& [xbox, ps4] = IconTexture.second;
 			xbox.Resize(buttonScale);
 			ps4.Resize(buttonScale);
 		});
-		std::for_each(mouse.begin(), mouse.end(), [&](auto& Icon) { Icon.second.Resize(buttonScale); });
+		std::ranges::for_each(mouse, [&](auto& IconTexture) {
+			IconTexture.second.Resize(buttonScale);
+		});
 
 		stepperLeft.Resize(stepperScale);
 		stepperRight.Resize(stepperScale);

@@ -38,7 +38,7 @@ namespace ImGui::Renderer
 			func();
 
 			if (const auto renderer = RE::BSGraphics::Renderer::GetSingleton()) {
-				const auto swapChain = (IDXGISwapChain*)renderer->data.renderWindows[0].swapChain;
+				const auto swapChain = reinterpret_cast<IDXGISwapChain*>(renderer->data.renderWindows[0].swapChain);
 				if (!swapChain) {
 					logger::error("couldn't find swapChain");
 					return;
@@ -50,8 +50,8 @@ namespace ImGui::Renderer
 					return;
 				}
 
-				const auto device = (ID3D11Device*)renderer->data.forwarder;
-				const auto context = (ID3D11DeviceContext*)renderer->data.context;
+				const auto device = reinterpret_cast<ID3D11Device*>(renderer->data.forwarder);
+				const auto context = reinterpret_cast<ID3D11DeviceContext*>(renderer->data.context);
 
 				logger::info("Initializing ImGui..."sv);
 
