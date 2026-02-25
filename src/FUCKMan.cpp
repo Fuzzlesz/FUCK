@@ -859,6 +859,36 @@ void FUCKMan::Draw()
 						looseTools.push_back(tool);
 				}
 
+				struct SidebarEntry
+				{
+					std::string label;
+					bool isGroup;
+					ITool* tool = nullptr;
+					std::vector<ITool*>* tools = nullptr;
+				};
+
+				std::vector<SidebarEntry> entries;
+				entries.reserve(looseTools.size() + toolGroups.size());
+
+				for (auto* t : looseTools) {
+					entries.push_back({ t->Name(), false, t, nullptr });
+				}
+
+				for (auto& [name, tools] : toolGroups) {
+					std::sort(tools.begin(), tools.end(), [](ITool* a, ITool* b) {
+						return _stricmp(a->Name(), b->Name()) < 0;
+					});
+					entries.push_back({ name, true, nullptr, &tools });
+				}
+
+				std::sort(entries.begin(), entries.end(), [](const SidebarEntry& a, const SidebarEntry& b) {
+					return _stricmp(a.label.c_str(), b.label.c_str()) < 0;
+				});
+
+				static auto iconArrow = MANAGER(IconFont)->GetStepperRight();
+				float baseIconWidth = iconArrow ? (iconArrow->size.x / _userScale) : 20.0f;
+				float alignedTextOffset = (indent * 0.5f) + baseIconWidth + headerPadding;
+
 				FUCK::BeginChild("Sidebar", ImVec2(sidebarWidth, availHeight), true, ImGuiWindowFlags_None);
 				{
 					FUCK::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
@@ -902,7 +932,7 @@ void FUCKMan::Draw()
 						ImVec2 endPos = FUCK::GetCursorPos();
 						FUCK::PushFont(FUCK::GetFont(FUCK_Font::kRegular), 22.0f * resScale * 0.9f);
 						float textY = cursorPos.y + (itemHeight - textH) * 0.5f + textVisualOffset;
-						FUCK::SetCursorPos({ cursorPos.x + indent, textY });
+						FUCK::SetCursorPos({ cursorPos.x + alignedTextOffset, textY });
 						FUCK::Text(label);
 						FUCK::PopFont();
 						FUCK::SetCursorPos(endPos);
@@ -910,9 +940,7 @@ void FUCKMan::Draw()
 						ImGui::PopID();
 					};
 
-					for (auto* tool : looseTools) RenderSidebarItem(tool, tool->Name());
-
-					for (auto& [groupName, tools] : toolGroups) {
+					auto RenderSidebarGroup = [&](const std::string& groupName, std::vector<ITool*>& tools) {
 						FUCK::PushFont(FUCK::GetFont(FUCK_Font::kRegular), 22.0f * resScale * 0.9f);
 
 						// Custom TreeNode rendering
@@ -937,7 +965,6 @@ void FUCKMan::Draw()
 								ImGui::RenderFrame(bb.Min, bb.Max, ImGui::GetColorU32(ImGuiCol_HeaderHovered), false);
 
 							// Draw chevron
-							static auto iconArrow = MANAGER(IconFont)->GetStepperRight();
 							if (iconArrow) {
 								ImU32 col = ImGui::GetDynamicTextColor(hovered);
 								ImVec2 iconSize = iconArrow->size;
@@ -953,13 +980,8 @@ void FUCKMan::Draw()
 									isOpen ? ImGui::IconDirection::kDown : ImGui::IconDirection::kRight);
 							}
 
-							// Draw text
-							// Calculate proper text offset accounting for fixed chevron size
-							float baseIconWidth = iconArrow ? (iconArrow->size.x / _userScale) : 20.0f;
-							float textOff = (indent * 0.5f) + baseIconWidth + headerPadding;
-
 							float textY = bb.Min.y + (frameHeight - ImGui::CalcTextSize(groupName.c_str()).y) * 0.5f + textVisualOffset;
-							ImGui::RenderText({ pos.x + textOff, textY }, groupName.c_str());
+							ImGui::RenderText({ pos.x + alignedTextOffset, textY }, groupName.c_str());
 						}
 
 						if (isOpen) {
@@ -974,6 +996,14 @@ void FUCKMan::Draw()
 
 						ImGui::PopID();
 						FUCK::PopFont();
+					};
+
+					for (auto& entry : entries) {
+						if (entry.isGroup) {
+							RenderSidebarGroup(entry.label, *entry.tools);
+						} else {
+							RenderSidebarItem(entry.tool, entry.label.c_str());
+						}
 					}
 
 					// --- FOOTER: SETTINGS (Centered) ---
