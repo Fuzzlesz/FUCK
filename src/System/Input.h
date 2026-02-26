@@ -45,6 +45,8 @@ namespace Input
 
 		void LoadSettings(const CSimpleIniA& a_ini);
 
+		void ClearState(); 
+
 		DEVICE	GetInputDevice() const;
 		bool	IsInputKBM() const;
 		bool	IsInputGamepad() const;

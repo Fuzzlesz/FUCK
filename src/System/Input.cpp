@@ -21,6 +21,13 @@ namespace Input
 		navigateWithMouse = a_ini.GetBoolValue("Controls", "bNavigateWithMouse", navigateWithMouse);
 	}
 
+	void Manager::ClearState()
+	{
+		std::unique_lock lock(_dataLock);
+		keyStateCache.clear();
+		_rebindCtx.Reset();
+	}
+
 	DEVICE Manager::GetInputDevice() const
 	{
 		return inputDevice;

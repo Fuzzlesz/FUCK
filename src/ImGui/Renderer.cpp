@@ -1,7 +1,8 @@
-#include "Renderer.h"
 #include "FUCKMan.h"
 #include "IconsFonts.h"
+#include "Renderer.h"
 #include "Styles.h"
+#include "..\System\Input.h"
 
 namespace ImGui::Renderer
 {
@@ -68,9 +69,16 @@ namespace ImGui::Renderer
 	{
 		static LRESULT thunk(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
-			auto& io = ImGui::GetIO();
+			// Handle focus loss
 			if (uMsg == WM_KILLFOCUS) {
+				// 1. Clear ImGui's internal key buffer
+				auto& io = ImGui::GetIO();
 				io.ClearInputKeys();
+
+				// 2. Clear our Input Manager's stuck keys
+				if (initialized.load()) {
+					Input::Manager::GetSingleton()->ClearState();
+				}
 			}
 
 			return func(hWnd, uMsg, wParam, lParam);
