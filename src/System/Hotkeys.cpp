@@ -36,25 +36,26 @@ namespace Hotkeys
 		if (_toggleHotkey.isBinding)
 			return;
 
+		// Prevent toggle while typing in ImGui widgets
 		if (FUCKMan::GetSingleton()->IsOpen()) {
 			if (ImGui::GetCurrentContext()) {
 				if (ImGui::GetIO().WantTextInput) {
-						return;
-					}
+					return;
 				}
+			}
 		}
+
 		if (auto ui = RE::UI::GetSingleton()) {
+			// Don't open if Console is open
 			if (ui->IsMenuOpen(RE::Console::MENU_NAME)) {
 				return;
 			}
 
-			if (ui->GameIsPaused() && !FUCKMan::GetSingleton()->IsOpen()) {
-            return;
+			// Don't open during Load Screens
+			if (ui->IsMenuOpen(RE::LoadingMenu::MENU_NAME)) {
+				return;
 			}
 		}
-
-		if (_toggleHotkey.isBinding)
-			return;
 
 		if (FUCK::ProcessManagedHotkey(a_event, _toggleHotkey)) {
 			FUCKMan::GetSingleton()->Toggle();

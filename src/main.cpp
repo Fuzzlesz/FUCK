@@ -1,15 +1,14 @@
 #include "FUCKHost.h"
 #include "FUCKMan.h"
-#include "System/Console.h"
+#include "ImGui/Renderer.h"
+#include "ImGui/Styles.h"
 #include "System/Compat.h"
+#include "System/Console.h"
 #include "System/Hooks.h"
 #include "System/Hotkeys.h"
 #include "System/Input.h"
 #include "System/Papyrus.h"
 #include "System/Settings.h"
-#include "ImGui/Renderer.h"
-#include "ImGui/Styles.h"
-
 
 // ==========================================
 // Exports
@@ -31,17 +30,14 @@ void OnInit(SKSE::MessagingInterface::Message* a_msg)
 		if (auto ui = RE::UI::GetSingleton()) {
 			ui->AddEventSink<RE::MenuOpenCloseEvent>(FUCKMan::GetSingleton());
 		}
+
 		Translation::Manager::GetSingleton()->BuildTranslationMap();
 		Console::Install();
-		Compat::ImmersiveHUD::Initialize(); 
+		Compat::ImmersiveHUD::Initialize();
 		ImGui::Styles::GetSingleton()->OnStyleRefresh();
-		logger::info("FUCK Data Loaded");
-		break;
-
-	case SKSE::MessagingInterface::kPostLoadGame:
-	case SKSE::MessagingInterface::kNewGame:
 		MANAGER(Hotkeys)->Enable(true);
-		logger::info("FUCK Hotkeys Enabled");
+
+		logger::info("FUCK Data Loaded & Hotkeys Enabled");
 		break;
 	}
 }

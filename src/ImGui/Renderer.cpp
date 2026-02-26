@@ -17,6 +17,53 @@ namespace ImGui::Renderer
 		DisplayTweaks::borderlessUpscale = a_ini.GetBoolValue("Render", "BorderlessUpscale", DisplayTweaks::borderlessUpscale);
 	}
 
+	// =========================================================================================
+	// HELPER
+	// =========================================================================================
+
+	void Draw()
+	{
+		if (!initialized.load()) {
+			return;
+		}
+
+		const auto manager = FUCKMan::GetSingleton();
+
+		if (!manager->ShouldRender()) {
+			return;
+		}
+
+		// Apply any deferred UI color/metric style changes
+		ImGui::Styles::GetSingleton()->OnStyleRefresh();
+
+		IconFont::Manager::GetSingleton()->ProcessPendingReload();
+
+		ImGui_ImplDX11_NewFrame();
+		SKSE::ImGui_ImplWin32_NewFrame();
+		{
+			// trick imgui into rendering at game's real resolution (ie. if upscaled with Display Tweaks)
+			static const auto screenSize = RE::BSGraphics::Renderer::GetScreenSize();
+
+			auto& io = ImGui::GetIO();
+			io.DisplaySize.x = static_cast<float>(screenSize.width);
+			io.DisplaySize.y = static_cast<float>(screenSize.height);
+		}
+		ImGui::NewFrame();
+		{
+			// disable windowing
+			GImGui->NavWindowingTarget = nullptr;
+
+			manager->Draw();
+		}
+		ImGui::EndFrame();
+		ImGui::Render();
+		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+	}
+
+	// =========================================================================================
+	// HOOKS
+	// =========================================================================================
+
 	struct WndProc
 	{
 		static LRESULT thunk(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -73,7 +120,7 @@ namespace ImGui::Renderer
 				MANAGER(IconFont)->LoadIcons();
 
 				auto styles = ImGui::Styles::GetSingleton();
-				styles->LoadStyles(); 
+				styles->LoadStyles();
 
 				logger::info("ImGui initialized.");
 
@@ -92,48 +139,24 @@ namespace ImGui::Renderer
 		static inline REL::Relocation<decltype(thunk)> func;
 	};
 
-	// IMenu::PostDisplay
-	struct PostDisplay
+	// IMenu::PostDisplay (HUDMenu)
+	struct HUDMenu_PostDisplay
 	{
 		static void thunk(RE::IMenu* a_menu)
 		{
-			// Skip if Imgui is not loaded
-			if (!initialized.load()) {
-				return func(a_menu);
-			}
+			Draw();
+			return func(a_menu);
+		}
+		static inline REL::Relocation<decltype(thunk)> func;
+		static inline std::size_t idx{ 0x6 };
+	};
 
-			const auto manager = FUCKMan::GetSingleton();
-
-			if (!manager->ShouldRender()) {
-				return func(a_menu);
-			}
-
-			// Apply any deferred UI color/metric style changes
-			ImGui::Styles::GetSingleton()->OnStyleRefresh();
-
-			IconFont::Manager::GetSingleton()->ProcessPendingReload();
-
-			ImGui_ImplDX11_NewFrame();
-			SKSE::ImGui_ImplWin32_NewFrame();
-			{
-				// trick imgui into rendering at game's real resolution (ie. if upscaled with Display Tweaks)
-				static const auto screenSize = RE::BSGraphics::Renderer::GetScreenSize();
-
-				auto& io = ImGui::GetIO();
-				io.DisplaySize.x = static_cast<float>(screenSize.width);
-				io.DisplaySize.y = static_cast<float>(screenSize.height);
-			}
-			ImGui::NewFrame();
-			{
-				// disable windowing
-				GImGui->NavWindowingTarget = nullptr;
-
-				manager->Draw();
-			}
-			ImGui::EndFrame();
-			ImGui::Render();
-			ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-
+	// IMenu::PostDisplay (MainMenu)
+	struct MainMenu_PostDisplay
+	{
+		static void thunk(RE::IMenu* a_menu)
+		{
+			Draw();
 			return func(a_menu);
 		}
 		static inline REL::Relocation<decltype(thunk)> func;
@@ -145,6 +168,7 @@ namespace ImGui::Renderer
 		REL::Relocation<std::uintptr_t> target{ RELOCATION_ID(75595, 77226), OFFSET(0x9, 0x275) };
 		stl::write_thunk_call<CreateD3DAndSwapChain>(target.address());
 
-		stl::write_vfunc<RE::HUDMenu, PostDisplay>();
+		stl::write_vfunc<RE::HUDMenu, HUDMenu_PostDisplay>();
+		stl::write_vfunc<RE::MainMenu, MainMenu_PostDisplay>();
 	}
 }
