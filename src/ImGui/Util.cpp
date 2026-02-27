@@ -242,9 +242,13 @@ namespace ImGui
 
 	bool IsWidgetFocused(ImGuiID id)
 	{
-		bool mouseNav = MANAGER(Input)->CanNavigateWithMouse();
-		return (mouseNav ? GetHoveredID() == id : GetFocusID() == id) &&
-		       (GetItemFlags() & ImGuiItemFlags_Disabled) == 0;
+		if (GetFocusID() == id)
+			return true;
+
+		if (MANAGER(Input)->CanNavigateWithMouse() && GetHoveredID() == id)
+			return true;
+
+		return false;
 	}
 
 	bool ActivateOnHover()
