@@ -448,7 +448,7 @@ void FUCKMan::Draw()
 	// ------------------------------------------------------------------------
 	// Overlay Render Pass
 	// ------------------------------------------------------------------------
-	if (_isOpen && _activeTool) {
+	if (_activeTool) {
 		ImGui::SetNextWindowPos(ImGui::GetMainViewport()->Pos);
 		ImGui::SetNextWindowSize(ImGui::GetMainViewport()->Size);
 
