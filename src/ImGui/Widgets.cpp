@@ -546,6 +546,7 @@ namespace ImGui
 
 		if (!wasActive)
 			PopStyleColor();
+
 		ImVec2 min = GetItemRectMin();
 		ImVec2 max = GetItemRectMax();
 		float inset = 2.0f;
@@ -556,10 +557,14 @@ namespace ImGui
 
 		DrawTabBorder(GetWindowDrawList(), insetRect, active || IsItemHovered());
 
-		if (active)
+		if (active) {
 			window->StateStorage.SetInt(storageKey, id);
-		if (active && ActivateOnHover())
-			RE::PlaySound("UIJournalTabsSD");
+
+			if (!wasActive) {
+				RE::PlaySound("UIJournalTabsSD");
+			}
+			ActivateOnHover();
+		}
 		return active;
 	}
 
