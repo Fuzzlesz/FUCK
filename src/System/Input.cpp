@@ -16,11 +16,6 @@ namespace Input
 		logger::info("Input Manager Initialized");
 	}
 
-	void Manager::LoadSettings(const CSimpleIniA& a_ini)
-	{
-		navigateWithMouse = a_ini.GetBoolValue("Controls", "bNavigateWithMouse", navigateWithMouse);
-	}
-
 	void Manager::ClearState()
 	{
 		std::unique_lock lock(_dataLock);
@@ -45,12 +40,11 @@ namespace Input
 
 	bool Manager::CanNavigateWithMouse() const
 	{
-		return IsInputKBM() && DoNavigateWithMouse();
+		return IsInputKBM();
 	}
 
 	void Manager::ToggleCursor(bool a_enable)
 	{
-		// 1. Enqueue safe task for UI message thread
 		SKSE::GetTaskInterface()->AddUITask([a_enable]() {
 			RE::UIMessageQueue::GetSingleton()->AddMessage(RE::CursorMenu::MENU_NAME,
 				a_enable ? RE::UI_MESSAGE_TYPE::kShow : RE::UI_MESSAGE_TYPE::kHide,
@@ -427,7 +421,7 @@ namespace Input
 				io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
 				io.ConfigFlags |= ImGuiConfigFlags_IsTouchScreen;  // unused flag to force ImGui to update gamepad input from backend
 			} else {
-				if (IsInputKBM() && !DoNavigateWithMouse()) {
+				if (IsInputKBM()) {
 					io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 				}
 			}

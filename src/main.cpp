@@ -112,7 +112,6 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 	settings->Load(FileType::kSettings, [](auto& ini) {
 		MANAGER(Hotkeys)->LoadHotKeys(ini);
 		FUCKMan::GetSingleton()->LoadSettings(ini);
-		MANAGER(Input)->LoadSettings(ini);
 	});
 
 	ImGui::Styles::GetSingleton()->LoadStyles();

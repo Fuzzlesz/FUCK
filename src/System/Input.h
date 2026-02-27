@@ -43,15 +43,12 @@ namespace Input
 	public:
 		static void Register();
 
-		void LoadSettings(const CSimpleIniA& a_ini);
-
 		void ClearState(); 
 
 		DEVICE	GetInputDevice() const;
 		bool	IsInputKBM() const;
 		bool	IsInputGamepad() const;
 		bool	CanNavigateWithMouse() const;
-		bool	DoNavigateWithMouse() const { return navigateWithMouse; }
 
 		static void	ToggleCursor(bool a_enable);
 		void		ResetCursorState();
@@ -86,8 +83,6 @@ namespace Input
 		DEVICE lastInputDevice{ DEVICE::kNone };
 
 		RebindContext _rebindCtx;
-
-		bool navigateWithMouse{ true };
 
 		std::optional<bool> cursorInit{ std::nullopt };
 
