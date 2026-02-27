@@ -251,6 +251,7 @@ struct FUCK_Interface
 	bool (*IsItemHovered)(int);
 	bool (*IsItemClicked)(int);
 	bool (*IsItemActive)();
+	bool (*IsItemFocused)();
 	bool (*IsAnyItemActive)();
 	bool (*IsAnyItemHovered)();
 	bool (*IsWindowFocused)(int);
@@ -742,6 +743,7 @@ inline void PushFont(ImFont* font, float size = 0.0f)
 	inline bool IsItemHovered(int flags = 0) { return GetInterface() ? GetInterface()->IsItemHovered(flags) : false; }
 	inline bool IsItemClicked(int mouse_button = 0) { return GetInterface() ? GetInterface()->IsItemClicked(mouse_button) : false; }
 	inline bool IsItemActive() { return GetInterface() ? GetInterface()->IsItemActive() : false; }
+	inline bool IsItemFocused() { return GetInterface() ? GetInterface()->IsItemFocused() : false; }
 	inline bool IsAnyItemActive() { return GetInterface() ? GetInterface()->IsAnyItemActive() : false; }
 	inline bool IsAnyItemHovered() { return GetInterface() ? GetInterface()->IsAnyItemHovered() : false; }
 	inline bool IsWindowFocused(int flags = 0) { return GetInterface() ? GetInterface()->IsWindowFocused(flags) : false; }

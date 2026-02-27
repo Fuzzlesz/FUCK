@@ -387,6 +387,7 @@ namespace FUCK::Host
 	static bool IsItemHovered_Impl(int flags) { return ImGui::IsItemHovered(flags); }
 	static bool IsItemClicked_Impl(int btn) { return ImGui::IsItemClicked(btn); }
 	static bool IsItemActive_Impl() { return ImGui::IsItemActive(); }
+	static bool IsItemFocused_Impl() { return ImGui::IsItemFocused(); }
 	static bool IsAnyItemActive_Impl() { return ImGui::IsAnyItemActive(); }
 	static bool IsAnyItemHovered_Impl() { return ImGui::IsAnyItemHovered(); }
 	static bool IsWindowFocused_Impl(int flags) { return ImGui::IsWindowFocused(flags); }
@@ -635,6 +636,7 @@ namespace FUCK::Host
 			.IsItemHovered = IsItemHovered_Impl,
 			.IsItemClicked = IsItemClicked_Impl,
 			.IsItemActive = IsItemActive_Impl,
+			.IsItemFocused = IsItemFocused_Impl,
 			.IsAnyItemActive = IsAnyItemActive_Impl,
 			.IsAnyItemHovered = IsAnyItemHovered_Impl,
 			.IsWindowFocused = IsWindowFocused_Impl,
