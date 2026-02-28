@@ -359,36 +359,36 @@ struct FUCK_Interface
 
 namespace FUCK
 {
-		enum class InputDevice
-		{
-			kMouseKeyboard,
-			kGamepad
-		};
+	enum class InputDevice
+	{
+		kMouseKeyboard,
+		kGamepad
+	};
 
-		inline FUCK_Interface*& GetInterface()
-		{
-			static FUCK_Interface* s = nullptr;
-			return s;
+	inline FUCK_Interface*& GetInterface()
+	{
+		static FUCK_Interface* s = nullptr;
+		return s;
+	}
+
+	inline bool Connect(unsigned int a_minVersion = FUCK_API_VERSION)
+	{
+		auto handle = GetModuleHandleW(L"FUCK.dll");
+		if (!handle)
+			return false;
+		auto fetcher = (void* (*)())GetProcAddress(handle, "RequestFUCK");
+		if (!fetcher)
+			return false;
+		auto* iface = static_cast<FUCK_Interface*>(fetcher());
+		if (!iface || iface->version < a_minVersion) {
+			logger::error("FUCK API Version Mismatch: Expected {}, found {}", a_minVersion, iface ? iface->version : 0);
+			return false;
 		}
 
-		inline bool Connect(unsigned int a_minVersion = FUCK_API_VERSION)
-		{
-			auto handle = GetModuleHandleW(L"FUCK.dll");
-			if (!handle)
-				return false;
-			auto fetcher = (void* (*)())GetProcAddress(handle, "RequestFUCK");
-			if (!fetcher)
-				return false;
-			auto* iface = static_cast<FUCK_Interface*>(fetcher());
-			if (!iface || iface->version < a_minVersion) {
-				logger::error("FUCK API Version Mismatch: Expected {}, found {}", a_minVersion, iface ? iface->version : 0);
-				return false;
-			}
+		GetInterface() = iface;
+		logger::info("Connected to FUCK API version {}", iface->version);
 
-			GetInterface() = iface;
-			logger::info("Connected to FUCK API version {}", iface->version);
-
-			return true;
+		return true;
 	}
 
 	// --- Registration ---
@@ -401,7 +401,7 @@ namespace FUCK
 	{
 		if (auto i = GetInterface())
 			i->RegisterWindow(window);
-}
+	}
 
 	// --- Input Binding ---
 	inline void AbortBinding()
@@ -428,11 +428,12 @@ namespace FUCK
 			return s;
 		}
 	return ImVec2(0, 0);
-}
-inline ImFont* GetFont(FUCK_Font font) { return GetInterface() ? GetInterface()->GetFont(font) : nullptr; }
-inline void PushFont(ImFont* font, float size = 0.0f)
-{
-	if (auto i = GetInterface())
+	}
+
+	inline ImFont* GetFont(FUCK_Font font) { return GetInterface() ? GetInterface()->GetFont(font) : nullptr; }
+	inline void PushFont(ImFont* font, float size = 0.0f)
+	{
+		if (auto i = GetInterface())
 			i->PushFont(font, size);
 	}
 	inline void PopFont()
@@ -450,7 +451,6 @@ inline void PushFont(ImFont* font, float size = 0.0f)
 		if (auto i = GetInterface())
 			i->SetMenuOpen(open);
 	}
-
 	inline void PushStyleColor(ImGuiCol idx, const ImVec4& col)
 	{
 		if (auto i = GetInterface())
