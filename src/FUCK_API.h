@@ -192,7 +192,7 @@ struct FUCK_Interface
 	void (*GetItemRectMin)(float*, float*);
 	void (*GetItemRectMax)(float*, float*);
 	void (*SetNextItemWidth)(float);
-	void (*SetNextItemOpen)(bool, int); 
+	void (*SetNextItemOpen)(bool, int);
 	void (*Dummy)(float, float);
 	void (*Spacing)();
 	void (*Separator)();
@@ -391,6 +391,84 @@ namespace FUCK
 		return true;
 	}
 
+	// -------------------------------------------------------------------------
+	// RAII Image Wrapper
+	// -------------------------------------------------------------------------
+	class Image
+	{
+	public:
+		Image() = default;
+
+		Image(const char* a_path, bool a_resizeToScreen = false)
+		{
+			if (auto i = GetInterface()) {
+				_handle = i->LoadImage(a_path, a_resizeToScreen);
+				if (_handle) {
+					i->GetImageInfo(_handle, &_width, &_height);
+				}
+			}
+		}
+
+		~Image()
+		{
+			Reset();
+		}
+
+		Image(Image&& other) noexcept :
+			_handle(other._handle), _width(other._width), _height(other._height)
+		{
+			other._handle = nullptr;
+			other._width = 0.0f;
+			other._height = 0.0f;
+		}
+
+		Image& operator=(Image&& other) noexcept
+		{
+			if (this != &other) {
+				Reset();
+				_handle = other._handle;
+				_width = other._width;
+				_height = other._height;
+
+				other._handle = nullptr;
+				other._width = 0.0f;
+				other._height = 0.0f;
+			}
+			return *this;
+		}
+
+		Image(const Image&) = delete;
+		Image& operator=(const Image&) = delete;
+
+		[[nodiscard]] bool IsLoaded() const { return _handle != nullptr; }
+
+		[[nodiscard]] ImTextureID GetID() const { return (ImTextureID)_handle; }
+		operator ImTextureID() const { return (ImTextureID)_handle; }
+
+		operator void*() const { return _handle; }
+
+		[[nodiscard]] float GetWidth() const { return _width; }
+		[[nodiscard]] float GetHeight() const { return _height; }
+		[[nodiscard]] ImVec2 GetSize() const { return ImVec2(_width, _height); }
+
+		void Reset()
+		{
+			if (_handle) {
+				if (auto i = GetInterface()) {
+					i->ReleaseImage(_handle);
+				}
+				_handle = nullptr;
+				_width = 0.0f;
+				_height = 0.0f;
+			}
+		}
+
+	private:
+		void* _handle = nullptr;
+		float _width = 0.0f;
+		float _height = 0.0f;
+	};
+
 	// --- Registration ---
 	inline void RegisterTool(ITool* tool)
 	{
@@ -427,7 +505,7 @@ namespace FUCK
 			i->GetDisplaySize(&s.x, &s.y);
 			return s;
 		}
-	return ImVec2(0, 0);
+		return ImVec2(0, 0);
 	}
 
 	inline ImFont* GetFont(FUCK_Font font) { return GetInterface() ? GetInterface()->GetFont(font) : nullptr; }
@@ -780,25 +858,14 @@ namespace FUCK
 	}
 
 	// --- Assets & Overlays ---
-	inline void* LoadImage(const char* path, bool resizeToScreen = false) { return GetInterface() ? GetInterface()->LoadImage(path, resizeToScreen) : nullptr; }
-	inline void ReleaseImage(void* texID)
-	{
-		if (auto i = GetInterface())
-			i->ReleaseImage(texID);
-	}
-	inline void GetImageInfo(void* texID, float* width, float* height)
-	{
-		if (auto i = GetInterface())
-			i->GetImageInfo(texID, width, height);
-	}
-	inline void* GetIconForKey(std::uint32_t key, ImVec2* outSize = nullptr)
+	inline ImTextureID GetIconForKey(std::uint32_t key, ImVec2* outSize = nullptr)
 	{
 		if (auto i = GetInterface()) {
 			if (outSize)
 				i->GetIconSizeForKey(key, &outSize->x, &outSize->y);
-			return i->GetIconForKey(key);
+			return (ImTextureID)i->GetIconForKey(key);
 		}
-		return nullptr;
+		return (ImTextureID)0;
 	}
 	inline void Spinner(const char* label, float radius, float thickness, const ImVec4& color)
 	{
@@ -843,20 +910,20 @@ namespace FUCK
 		if (auto i = GetInterface())
 			i->DrawRectFilled(min, max, col, rounding);
 	}
-	inline void DrawImage(void* textureId, const ImVec2& size, const ImVec2& uv0 = ImVec2(0, 0), const ImVec2& uv1 = ImVec2(1, 1), const ImVec4& tint_col = ImVec4(1, 1, 1, 1))
+	inline void DrawImage(ImTextureID textureId, const ImVec2& size, const ImVec2& uv0 = ImVec2(0, 0), const ImVec2& uv1 = ImVec2(1, 1), const ImVec4& tint_col = ImVec4(1, 1, 1, 1))
 	{
 		if (auto i = GetInterface())
-			i->DrawImage(textureId, size, uv0, uv1, tint_col);
+			i->DrawImage((void*)textureId, size, uv0, uv1, tint_col);
 	}
-	inline void AddImage(void* textureId, const ImVec2& min, const ImVec2& max, const ImVec2& uv0 = ImVec2(0, 0), const ImVec2& uv1 = ImVec2(1, 1), const ImVec4& col = ImVec4(1, 1, 1, 1))
+	inline void AddImage(ImTextureID textureId, const ImVec2& min, const ImVec2& max, const ImVec2& uv0 = ImVec2(0, 0), const ImVec2& uv1 = ImVec2(1, 1), const ImVec4& col = ImVec4(1, 1, 1, 1))
 	{
 		if (auto i = GetInterface())
-			i->AddImage(textureId, min, max, uv0, uv1, col);
+			i->AddImage((void*)textureId, min, max, uv0, uv1, col);
 	}
-	inline void DrawBackgroundImage(void* tex, float alpha)
+	inline void DrawBackgroundImage(ImTextureID tex, float alpha)
 	{
 		if (auto i = GetInterface())
-			i->DrawBackgroundImage(tex, alpha);
+			i->DrawBackgroundImage((void*)tex, alpha);
 	}
 	inline void DrawBackgroundLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float thickness)
 	{
@@ -1084,8 +1151,14 @@ namespace FUCK
 			i->SetTooltip(fmt);
 	}
 	inline bool IsWidgetFocused(const char* label) { return GetInterface() ? GetInterface()->IsWidgetFocused(label) : false; }
-	inline bool ButtonIconWithLabel(const char* label, void* textureID, const ImVec2& size, bool alignFar = true, bool labelLeft = true) { return GetInterface() ? GetInterface()->ButtonIconWithLabel(label, textureID, size.x, size.y, alignFar, labelLeft) : false; }
-	inline bool ImageButton(const char* str_id, void* user_texture_id, const ImVec2& image_size, const ImVec4* tint = nullptr) { return GetInterface() ? GetInterface()->ImageButton(str_id, user_texture_id, image_size.x, image_size.y, tint) : false; }
+	inline bool ButtonIconWithLabel(const char* label, ImTextureID textureID, const ImVec2& size, bool alignFar = true, bool labelLeft = true)
+	{
+		return GetInterface() ? GetInterface()->ButtonIconWithLabel(label, (void*)textureID, size.x, size.y, alignFar, labelLeft) : false;
+	}
+	inline bool ImageButton(const char* str_id, ImTextureID user_texture_id, const ImVec2& image_size, const ImVec4* tint = nullptr)
+	{
+		return GetInterface() ? GetInterface()->ImageButton(str_id, (void*)user_texture_id, image_size.x, image_size.y, tint) : false;
+	}
 	inline void Stepper(const char* label, const char* text, bool* outLeft, bool* outRight)
 	{
 		if (auto i = GetInterface())
