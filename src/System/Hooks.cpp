@@ -4,6 +4,48 @@
 
 namespace Hooks
 {
+	// Filters the input event list to only pass through Screenshot and Console keys.
+	[[nodiscard]] static RE::InputEvent* FilterInputEvents(RE::InputEvent* const* a_events)
+	{
+		auto* controlMap = RE::ControlMap::GetSingleton();
+		auto* userEvents = RE::UserEvents::GetSingleton();
+
+		RE::InputEvent* head = nullptr;
+		RE::InputEvent* tail = nullptr;
+
+		for (auto iter = *a_events; iter;) {
+			auto next = iter->next;
+			bool keep = false;
+
+			if (auto button = iter->AsButtonEvent()) {
+				const auto id = button->GetIDCode();
+				const auto device = button->GetDevice();
+				const auto keyScreenshot = controlMap->GetMappedKey(userEvents->screenshot, device);
+				const auto keyConsole = controlMap->GetMappedKey(userEvents->console, device);
+
+				if (id != 0xFF && (id == keyScreenshot || id == keyConsole)) {
+					keep = true;
+				}
+			}
+
+			if (keep) {
+				if (!head)
+					head = iter;
+				else
+					tail->next = iter;
+				tail = iter;
+				tail->next = nullptr;
+			}
+			iter = next;
+		}
+
+		return head;
+	}
+
+	// ========================================================================
+	// EVENT HOOKS
+	// ========================================================================
+
 	struct ProcessInputQueue
 	{
 		static void thunk(RE::BSTEventSource<RE::InputEvent*>* a_dispatcher, RE::InputEvent* const* a_events)
@@ -19,43 +61,10 @@ namespace Hooks
 
 			// Filter input if blocked by UI
 			if (consumed || FUCKMan::GetSingleton()->IsInputBlocked()) {
-				auto* controlMap = RE::ControlMap::GetSingleton();
-				auto* userEvents = RE::UserEvents::GetSingleton();
+				RE::InputEvent* filteredHead = FilterInputEvents(a_events);
 
-				RE::InputEvent* head = nullptr;
-				RE::InputEvent* tail = nullptr;
-
-				for (auto iter = *a_events; iter;) {
-					auto next = iter->next;
-					bool keep = false;
-
-					if (auto button = iter->AsButtonEvent()) {
-						if (controlMap && userEvents) {
-							const auto id = button->GetIDCode();
-							const auto device = button->GetDevice();
-							const auto keyScreenshot = controlMap->GetMappedKey(userEvents->screenshot, device);
-							const auto keyConsole = controlMap->GetMappedKey(userEvents->console, device);
-
-							// Only pass mapped Screenshot or Console keys
-							if (id != 0xFF && (id == keyScreenshot || id == keyConsole)) {
-								keep = true;
-							}
-						}
-					}
-
-					if (keep) {
-						if (!head)
-							head = iter;
-						else
-							tail->next = iter;
-						tail = iter;
-						tail->next = nullptr;
-					}
-					iter = next;
-				}
-
-				if (head) {
-					RE::InputEvent* const filtered[] = { head };
+				if (filteredHead) {
+					RE::InputEvent* const filtered[] = { filteredHead };
 					func(a_dispatcher, filtered);
 				} else {
 					constexpr RE::InputEvent* const dummy[] = { nullptr };
