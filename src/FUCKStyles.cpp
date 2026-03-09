@@ -7,22 +7,9 @@ void ThemeEditorWindow::Draw()
 	auto style = ImGui::Styles::GetSingleton();
 
 	auto ColorPick = [&](const char* label, ImVec4& col) {
-		FUCK::LeftLabel(label);
-		std::string id = std::format("##{}", label);
-
-		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImGui::GetUserStyleColorVec4(ImGui::USER_STYLE::kFrameBG_Widget));
-		ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImGui::GetUserStyleColorVec4(ImGui::USER_STYLE::kFrameBG_WidgetActive));
-		ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImGui::GetUserStyleColorVec4(ImGui::USER_STYLE::kFrameBG_WidgetActive));
-		ImGui::PushStyleColor(ImGuiCol_Border, ImGui::GetUserStyleColorVec4(ImGui::USER_STYLE::kSliderBorder));
-
-		if (ImGui::ColorEdit4(id.c_str(), (float*)&col, ImGuiColorEditFlags_AlphaBar | ImGuiColorEditFlags_DisplayRGB | ImGuiColorEditFlags_NoLabel)) {
+		if (FUCK::ColorEdit4(label, (float*)&col)) {
 			style->RefreshStyle();
 		}
-
-		if (ImGui::IsItemActivated())
-			RE::PlaySound("UIMenuFocus");
-
-		ImGui::PopStyleColor(4);
 	};
 
 	if (FUCK::CollapsingHeader("$FUCK_Styles_Presets"_T, ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -80,16 +67,14 @@ void ThemeEditorWindow::Draw()
 		}
 
 		FUCK::Separator();
-		FUCK::LeftLabel("$FUCK_Styles_WindowPadding"_T);
-		if (ImGui::DragFloat2("##WinPad", &style->user.windowPadding.x, 0.5f, 0.0f, 30.0f, "%.0f"))
+
+		if (FUCK::DragFloat2("$FUCK_Styles_WindowPadding"_T, &style->user.windowPadding.x, 0.5f, 0.0f, 30.0f, "%.0f"))
 			style->RefreshStyle();
 
-		FUCK::LeftLabel("$FUCK_Styles_ItemSpacing"_T);
-		if (ImGui::DragFloat2("##ItemSpace", &style->user.itemSpacing.x, 0.5f, 0.0f, 30.0f, "%.0f"))
+		if (FUCK::DragFloat2("$FUCK_Styles_ItemSpacing"_T, &style->user.itemSpacing.x, 0.5f, 0.0f, 30.0f, "%.0f"))
 			style->RefreshStyle();
 
-		FUCK::LeftLabel("$FUCK_Styles_WindowRounding"_T);
-		if (FUCK::SliderFloat("##WinRound", &style->user.windowRounding, 0.0f, 20.0f, "%.0f"))
+		if (FUCK::SliderFloat("$FUCK_Styles_WindowRounding"_T, &style->user.windowRounding, 0.0f, 20.0f, "%.0f"))
 			style->RefreshStyle();
 	}
 
