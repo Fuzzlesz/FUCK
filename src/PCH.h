@@ -131,5 +131,7 @@ namespace stl
 #	define OFFSET(se, ae) se
 #endif
 
+#include "FUCK_API.h"
+
 #include "System/Translation.h"
 #include "Version.h"

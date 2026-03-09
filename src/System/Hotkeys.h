@@ -1,7 +1,5 @@
 #pragma once
 
-#include "FUCK_API.h"
-
 namespace IconFont
 {
 	struct IconTexture;

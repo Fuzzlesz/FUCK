@@ -1,8 +1,5 @@
 #pragma once
 
-#include "FUCK_API.h"
-#include <imgui.h>
-
 class FUCKMan :
 	public REX::Singleton<FUCKMan>,
 	public RE::BSTEventSink<RE::MenuOpenCloseEvent>
