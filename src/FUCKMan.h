@@ -1,10 +1,23 @@
 #pragma once
 
+#include "FUCKSettings.h"
+#include "FUCKStyles.h"
+
 class FUCKMan :
 	public REX::Singleton<FUCKMan>,
 	public RE::BSTEventSink<RE::MenuOpenCloseEvent>
 {
 public:
+	enum class PauseType : int
+	{
+		kNone = 0,
+		kSoft = 1,
+		kHard = 2
+	};
+
+	friend class SettingsTool;
+	friend class ThemeEditorWindow;
+
 	FUCKMan();
 
 	void RegisterTool(ITool* tool);
@@ -60,13 +73,6 @@ private:
 	bool _forceCursor = false;
 	bool _suspendRendering = false;
 
-	enum class PauseType : int
-	{
-		kNone = 0,
-		kSoft = 1,
-		kHard = 2
-	};
-
 	PauseType _globalPauseType = PauseType::kNone;
 	float _userScale = 1.0f;
 	bool _sidebarOnRight = false;
@@ -78,43 +84,6 @@ private:
 	ImVec2 _lastSavedSize{ 1000.0f, 600.0f };
 
 	bool _isCollapsed = false;
-
-	class SettingsTool : public ITool
-	{
-	public:
-		const char* Name() const override;
-		void Draw() override;
-		bool OnAsyncInput(const void* a_event) override;
-		void OnClose() override;
-	};
-
-	class ThemeEditorWindow : public IWindow
-	{
-	public:
-		const char*	Title() const override { return "$FUCK_ThemeEditor_Title"_T; }
-		void		Draw() override;
-		bool		IsOpen() const override { return _isOpen; }
-		void		SetOpen(bool a_open) override { _isOpen = a_open; }
-
-		ImVec2 GetDefaultSize() const override { 
-			float s = FUCK::GetResolutionScale();
-			return { 450.0f * s, 600.0f * s }; 
-		}
-		ImVec2 GetDefaultPos() const override { 
-			float s = FUCK::GetResolutionScale();
-			return { 1050.0f * s, 450.0f * s }; 
-		}
-
-		void UpdateState(const ImVec2& currentPos, const ImVec2& currentSize) override
-		{
-			_lastPos = currentPos;
-			_lastSize = currentSize;
-		}
-
-		bool _isOpen = false;
-		ImVec2 _lastPos{ 1050.0f, 450.0f };
-		ImVec2 _lastSize{ 450.0f, 600.0f };
-	};
 
 	SettingsTool _settingsTool;
 	ThemeEditorWindow _themeEditorWindow;

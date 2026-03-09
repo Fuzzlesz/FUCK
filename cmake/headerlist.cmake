@@ -1,6 +1,8 @@
 set(headers ${headers}
 	src/FUCKHost.h
 	src/FUCKMan.h
+	src/FUCKSettings.h
+	src/FUCKStyles.h
 	src/FUCK_API.h
 	src/ImGui/Backend/imgui_impl_win32.h
 	src/ImGui/FormComboBox.h
