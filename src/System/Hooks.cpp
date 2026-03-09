@@ -2,8 +2,86 @@
 #include "FUCKMan.h"
 #include "Input.h"
 
-namespace Hooks
+	namespace Hooks
 {
+	static bool s_fuckButtonInjected = false;
+	static double s_fuckButtonIndex = -1.0;
+
+	constexpr const char* kSystemPagePath = "_root.QuestJournalFader.Menu_mc.SystemFader.Page_mc";
+
+	static void TryInjectFUCKButton(RE::GFxMovieView * a_movieView)
+	{
+		if (!a_movieView || s_fuckButtonInjected)
+			return;
+
+		RE::GFxValue page, cat, listObj, entryList;
+		if (!a_movieView->GetVariable(&page, kSystemPagePath) ||
+			!page.GetMember("CategoryList_mc", &cat) || !cat.GetMember("List_mc", &listObj) ||
+			!listObj.GetMember("entryList", &entryList) || !entryList.IsArray()) {
+			return;
+		}
+
+		const std::uint32_t arraySize = entryList.GetArraySize();
+		if (arraySize == 0)
+			return;
+
+		const std::string menuName = TRANSLATE_S("$FUCK_Title");
+
+		RE::GFxValue newEntry;
+		a_movieView->CreateObject(&newEntry);
+		newEntry.SetMember("text", RE::GFxValue(menuName.c_str()));
+		newEntry.SetMember("index", RE::GFxValue(static_cast<double>(arraySize)));
+		entryList.PushBack(newEntry);
+
+		listObj.Invoke("InvalidateData", nullptr, nullptr, 0);
+
+		s_fuckButtonIndex = static_cast<double>(arraySize);
+		s_fuckButtonInjected = true;
+	}
+
+	// Returns true if the injected entry is selected and an accept input is detected.
+	[[nodiscard]] static bool CheckForJournalAccept(RE::InputEvent* const* a_events)
+	{
+		if (!s_fuckButtonInjected || s_fuckButtonIndex < 0.0)
+			return false;
+
+		auto* journal = RE::UI::GetSingleton()->GetMenu<RE::JournalMenu>().get();
+		if (!journal || !journal->uiMovie)
+			return false;
+
+		RE::GFxValue page, cat, listObj, selIdx;
+		if (!journal->uiMovie->GetVariable(&page, kSystemPagePath) ||
+			!page.GetMember("CategoryList_mc", &cat) || !cat.GetMember("List_mc", &listObj) ||
+			!listObj.GetMember("selectedIndex", &selIdx) || !selIdx.IsNumber() ||
+			selIdx.GetNumber() != s_fuckButtonIndex) {
+			return false;
+		}
+
+		auto* input = MANAGER(Input);
+
+		const std::uint32_t keyEnter = static_cast<std::uint32_t>(KEY::kEnter);
+		const std::uint32_t mouseLeft = static_cast<std::uint32_t>(SKSE::InputMap::kMacro_MouseButtonOffset);  // 0 offset = Left Click
+		const std::uint32_t gamepadA = static_cast<std::uint32_t>(SKSE::InputMap::kMacro_GamepadOffset) + SKSE::InputMap::kGamepadButtonOffset_A;
+
+		if (input->IsInputPressed(a_events, keyEnter) ||
+			input->IsInputPressed(a_events, mouseLeft) ||
+			input->IsInputPressed(a_events, gamepadA)) {
+			RE::PlaySound("UIMenuOK");
+
+			if (auto queue = RE::UIMessageQueue::GetSingleton()) {
+				queue->AddMessage(RE::JournalMenu::MENU_NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
+			}
+
+			SKSE::GetTaskInterface()->AddTask([]() {
+				FUCKMan::GetSingleton()->Open();
+			});
+
+			return true;
+		}
+
+		return false;
+	}
+
 	// Filters the input event list to only pass through Screenshot and Console keys.
 	[[nodiscard]] static RE::InputEvent* FilterInputEvents(RE::InputEvent* const* a_events)
 	{
@@ -55,11 +133,17 @@ namespace Hooks
 				return;
 			}
 
-			// Process API events
+			constexpr RE::InputEvent* const dummy[] = { nullptr };
+
 			MANAGER(Input)->ProcessInputEvents(a_events);
 			const bool consumed = FUCKMan::GetSingleton()->ProcessAsyncInput(a_events);
 
-			// Filter input if blocked by UI
+			if (CheckForJournalAccept(a_events)) {
+				func(a_dispatcher, dummy);
+				return;
+			}
+
+			// Swallow input if FUCK menu is active; allow only Console and Screenshot through
 			if (consumed || FUCKMan::GetSingleton()->IsInputBlocked()) {
 				RE::InputEvent* filteredHead = FilterInputEvents(a_events);
 
@@ -67,7 +151,6 @@ namespace Hooks
 					RE::InputEvent* const filtered[] = { filteredHead };
 					func(a_dispatcher, filtered);
 				} else {
-					constexpr RE::InputEvent* const dummy[] = { nullptr };
 					func(a_dispatcher, dummy);
 				}
 				return;
@@ -78,11 +161,35 @@ namespace Hooks
 		static inline REL::Relocation<decltype(thunk)> func;
 	};
 
+	struct JournalMenu_ProcessMessage
+	{
+		static RE::UI_MESSAGE_RESULTS thunk(RE::JournalMenu* a_this, RE::UIMessage& a_message)
+		{
+			if (a_message.type == RE::UI_MESSAGE_TYPE::kHide) {
+				s_fuckButtonInjected = false;
+				s_fuckButtonIndex = -1.0;
+				return func(a_this, a_message);
+			}
+
+			auto result = func(a_this, a_message);
+
+			if (a_message.type == RE::UI_MESSAGE_TYPE::kUpdate && !s_fuckButtonInjected && a_this->uiMovie) {
+				TryInjectFUCKButton(a_this->uiMovie.get());
+			}
+
+			return result;
+		}
+		static inline REL::Relocation<decltype(thunk)> func;
+	};
+
 	void Install()
 	{
 		REL::Relocation<std::uintptr_t> inputUnk(RELOCATION_ID(67315, 68617), 0x7B);
 		stl::write_thunk_call<ProcessInputQueue>(inputUnk.address());
 
-		logger::info("Installed Input Hooks");
+		REL::Relocation<std::uintptr_t> journalVtbl(RE::VTABLE_JournalMenu[0]);
+		JournalMenu_ProcessMessage::func = journalVtbl.write_vfunc(0x4, &JournalMenu_ProcessMessage::thunk);
+
+		logger::info("Installed Input and Journal Menu Hooks");
 	}
 }
