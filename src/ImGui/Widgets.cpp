@@ -509,7 +509,6 @@ namespace ImGui
 				opensUp = true;
 		}
 
-
 		DrawDropdownIcon(parentDrawList, { widgetPos.x + width - GetFrameHeight(), widgetPos.y }, { GetFrameHeight(), GetFrameHeight() }, isOpen, opensUp, IsItemHovered());
 		DrawWidgetBorder(parentDrawList, { widgetPos, widgetPos + ImVec2(width, GetFrameHeight()) }, isOpen || IsItemHovered() || IsWidgetFocused(GetID(idStr.c_str())), ImGui::GetStyle().FrameRounding);
 

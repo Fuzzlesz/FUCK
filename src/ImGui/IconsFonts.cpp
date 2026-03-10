@@ -36,25 +36,24 @@ namespace IconFont
 
 	std::string Manager::ResolveFontPath(const std::string& a_filename) const
 	{
-		// 1. Check User Fonts (Data/Interface/FUCK/Fonts)
+		// Check User Fonts (Data/Interface/FUCK/Fonts)
 		std::filesystem::path userPath(Settings::GetSingleton()->GetUserFontsPath());
 		userPath /= a_filename;
 		if (std::filesystem::exists(userPath))
 			return userPath.string();
 
-		// 2. Check Legacy Fonts (Data/Interface/ImGuiIcons/Fonts)
+		// Check Legacy Fonts (Data/Interface/ImGuiIcons/Fonts)
 		std::filesystem::path legacyPath(Settings::GetSingleton()->GetLegacyFontsPath());
 		legacyPath /= a_filename;
 		if (std::filesystem::exists(legacyPath))
 			return legacyPath.string();
 
-		// 3. Fallback
+		// Fallback
 		return a_filename;
 	}
 
 	void Manager::SetFontName(const std::string& a_fontName)
 	{
-		// If font changed, update name and request reload
 		if (fontName != a_fontName && !a_fontName.empty()) {
 			fontName = a_fontName;
 			ReloadFonts();
@@ -82,8 +81,6 @@ namespace IconFont
 
 	void Manager::ReloadFonts()
 	{
-		// Just set the flag.
-		// DO NOT rebuild the atlas here, or we crash if called mid-frame.
 		_pendingReload = true;
 	}
 
@@ -94,7 +91,7 @@ namespace IconFont
 
 		RebuildFontAtlas();
 		_pendingReload = false;
-		return true;  // Return true to indicate we did work (caller should skip frame)
+		return true;
 	}
 
 	void Manager::RebuildFontAtlas()
@@ -301,7 +298,6 @@ namespace IconFont
 
 	void Manager::ResizeIcons()
 	{
-		// (Same as before)
 		float buttonScale = ImGui::GetUserStyleVar(ImGui::USER_STYLE::kButtons);
 		float checkboxScale = ImGui::GetUserStyleVar(ImGui::USER_STYLE::kCheckbox);
 		float stepperScale = ImGui::GetUserStyleVar(ImGui::USER_STYLE::kStepper);
