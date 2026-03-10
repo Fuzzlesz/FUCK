@@ -628,9 +628,9 @@ void FUCKMan::Draw()
 
 						float textOffsetY = 1.54f * uiScale;
 
-						ImGui::SetWindowFontScale(1.0f / _userScale);
+						ImGui::PushFont(nullptr, ImGui::GetStyle().FontSizeBase / _userScale);
 						ImVec2 textSize = ImGui::CalcTextSize(xIcon);
-						ImGui::SetWindowFontScale(1.0f);
+						ImGui::PopFont();
 
 						ImVec2 btnScreenPos = ImGui::GetItemRectMin();
 						ImVec2 textPos = {
@@ -677,9 +677,10 @@ void FUCKMan::Draw()
 						FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padBase, 0.0f));
 
 						std::string childId = "##Content_" + title;
-						ImGuiWindowFlags childFlags = ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_AlwaysUseWindowPadding;
+						ImGuiChildFlags childFlags = ImGuiChildFlags_AlwaysUseWindowPadding;
+						ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoBackground;
 
-						if (ImGui::BeginChild(childId.c_str(), ImVec2(0, 0), false, childFlags)) {
+						if (ImGui::BeginChild(childId.c_str(), ImVec2(0, 0), childFlags, windowFlags)) {
 							FUCK::Dummy(ImVec2(0, padBase));
 
 							ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
@@ -828,9 +829,9 @@ void FUCKMan::Draw()
 
 				float targetFontSize = ImGui::GetFontSize() / _userScale;
 
-				ImGui::SetWindowFontScale(1.0f / _userScale);
+				ImGui::PushFont(nullptr, ImGui::GetStyle().FontSizeBase / _userScale);
 				ImVec2 textSize = ImGui::CalcTextSize(xIcon);
-				ImGui::SetWindowFontScale(1.0f);
+				ImGui::PopFont();
 
 				ImVec2 textPos = {
 					btnCursor.x + (btnSize - textSize.x) * 0.5f,
@@ -873,6 +874,8 @@ void FUCKMan::Draw()
 				const float bottomPadding = 2.0f * uiScale;
 				const float indent = 15.0f * uiScale;
 				const float textVisualOffset = 1.0f * uiScale;
+
+				const float sidebarFontSize = (22.0f * 0.9f) / _userScale;
 
 				std::vector<ITool*> looseTools;
 				std::map<std::string, std::vector<ITool*>> toolGroups;
@@ -925,7 +928,7 @@ void FUCKMan::Draw()
 
 					// --- HEADER: TOOLS (Centered) ---
 					FUCK::SetCursorPos(headerStart);
-					FUCK::PushFont(FUCK::GetFont(FUCK_Font::kRegular), 22.0f * resScale * 0.9f);
+					FUCK::PushFont(FUCK::GetFont(FUCK_Font::kRegular), sidebarFontSize);
 					float textH = FUCK::GetTextLineHeight();
 					float sidebarW = FUCK::GetContentRegionAvail().x;
 					const char* headerText = "$FUCK_Tools"_T;
@@ -958,7 +961,7 @@ void FUCKMan::Draw()
 						}
 
 						ImVec2 endPos = FUCK::GetCursorPos();
-						FUCK::PushFont(FUCK::GetFont(FUCK_Font::kRegular), 22.0f * resScale * 0.9f);
+						FUCK::PushFont(FUCK::GetFont(FUCK_Font::kRegular), sidebarFontSize);
 						float textY = cursorPos.y + (itemHeight - textH) * 0.5f + textVisualOffset;
 						FUCK::SetCursorPos({ cursorPos.x + alignedTextOffset, textY });
 						FUCK::Text(label);
@@ -969,7 +972,7 @@ void FUCKMan::Draw()
 					};
 
 					auto RenderSidebarGroup = [&](const std::string& groupName, std::vector<ITool*>& tools) {
-						FUCK::PushFont(FUCK::GetFont(FUCK_Font::kRegular), 22.0f * resScale * 0.9f);
+						FUCK::PushFont(FUCK::GetFont(FUCK_Font::kRegular), sidebarFontSize);
 
 						// Custom TreeNode rendering
 						ImGui::PushID(groupName.c_str());
@@ -1064,7 +1067,7 @@ void FUCKMan::Draw()
 
 						ImVec2 endPos = FUCK::GetCursorPos();
 						FUCK::SetCursorPos(cursorPos);
-						FUCK::PushFont(FUCK::GetFont(FUCK_Font::kRegular), 22.0f * resScale * 0.9f);
+						FUCK::PushFont(FUCK::GetFont(FUCK_Font::kRegular), sidebarFontSize);
 
 						const char* settingText = "$FUCK_Settings"_T;
 						float setW = ImGui::CalcTextSize(settingText).x;
