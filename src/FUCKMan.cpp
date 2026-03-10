@@ -155,6 +155,8 @@ void FUCKMan::ResetSettings()
 
 	_userScale = 1.0f;
 	_sidebarOnRight = false;
+	_injectSystemMenu = true;
+	_replaceHelpMenu = false;
 
 	if (_isOpen) {
 		ClampWindowToScreen(_windowPos, _windowSize);
@@ -181,6 +183,8 @@ void FUCKMan::LoadSettings(const CSimpleIniA& a_ini)
 
 	_globalPauseType = static_cast<PauseType>(a_ini.GetLongValue("Settings", "iGlobalPauseType", (int)_globalPauseType));
 	_sidebarOnRight = a_ini.GetBoolValue("Settings", "bSidebarOnRight", _sidebarOnRight);
+	_injectSystemMenu = a_ini.GetBoolValue("Settings", "bInjectSystemMenu", _injectSystemMenu);
+	_replaceHelpMenu = a_ini.GetBoolValue("Settings", "bReplaceHelpMenu", _replaceHelpMenu);
 
 	// Theme Editor State
 	_themeEditorWindow._lastPos.x = (float)a_ini.GetDoubleValue("ThemeEditor", "X", _themeEditorWindow._lastPos.x);
@@ -210,6 +214,8 @@ void FUCKMan::SaveSettings(CSimpleIniA& a_ini)
 	a_ini.SetLongValue("Settings", "iGlobalPauseType", (int)_globalPauseType);
 	a_ini.SetDoubleValue("Settings", "fUserScale", _userScale);
 	a_ini.SetBoolValue("Settings", "bSidebarOnRight", _sidebarOnRight);
+	a_ini.SetBoolValue("Settings", "bInjectSystemMenu", _injectSystemMenu);
+	a_ini.SetBoolValue("Settings", "bReplaceHelpMenu", _replaceHelpMenu);
 
 	// Theme Editor State
 	a_ini.SetDoubleValue("ThemeEditor", "X", _themeEditorWindow._lastPos.x);

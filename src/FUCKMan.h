@@ -41,6 +41,9 @@ public:
 	void ResetSettings();
 	float GetUserScale() const { return _userScale; }
 
+	bool GetInjectSystemMenu() const { return _injectSystemMenu; }
+	bool GetReplaceHelpMenu() const { return _replaceHelpMenu; }
+
 	void SetVanityBlocked(bool blocked);
 	void SuspendRendering(bool suspend);
 
@@ -76,6 +79,8 @@ private:
 	PauseType _globalPauseType = PauseType::kNone;
 	float _userScale = 1.0f;
 	bool _sidebarOnRight = false;
+	bool _injectSystemMenu = true;
+	bool _replaceHelpMenu = false;
 
 	ImVec2 _windowPos{ 100.0f, 100.0f };
 	ImVec2 _windowSize{ 1000.0f, 600.0f };

@@ -38,6 +38,19 @@ void SettingsTool::Draw()
 			FUCK::Header("$FUCK_Settings_Behavior"_T);
 			FUCK::Spacing(2);
 
+			FUCK::DrawManagedHotkey("$FUCK_Settings_Hotkey"_T, hotkey);
+			FUCK::Spacing(2);
+
+			FUCK::Checkbox("$FUCK_Settings_InjectSystemMenu"_T, &manager->_injectSystemMenu, true, true);
+			FUCK::SetTooltip("$FUCK_Settings_InjectSystemMenuTT"_T);
+
+			FUCK::BeginDisabled(!manager->_injectSystemMenu);
+			FUCK::Checkbox("$FUCK_Settings_ReplaceHelpMenu"_T, &manager->_replaceHelpMenu, true, true);
+			FUCK::SetTooltip("$FUCK_Settings_ReplaceHelpMenuTT"_T);
+			FUCK::EndDisabled();
+
+			FUCK::Spacing(2);
+
 			const char* pauseTypes[] = { "$FUCK_Settings_PauseNone"_T, "$FUCK_Settings_PauseSoft"_T, "$FUCK_Settings_PauseHard"_T };
 			int currentPauseIdx = (int)manager->_globalPauseType;
 			FUCK::SetNextItemWidth(-1);
@@ -48,10 +61,6 @@ void SettingsTool::Draw()
 			}
 			FUCK::Spacing();
 			FUCK::TextColoredWrapped(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "$FUCK_Settings_PauseDesc"_T);
-			FUCK::Spacing(2);
-
-			FUCK::DrawManagedHotkey("$FUCK_Settings_Hotkey"_T, hotkey);
-
 			FUCK::Spacing(2);
 
 			FUCK::Header("$FUCK_Settings_Appearance"_T);

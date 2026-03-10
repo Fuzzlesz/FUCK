@@ -14,6 +14,10 @@ namespace Hooks
 		if (!a_movieView || s_fuckButtonInjected)
 			return;
 
+		auto* manager = FUCKMan::GetSingleton();
+		if (!manager->GetInjectSystemMenu())
+			return;
+
 		RE::GFxValue page, cat, listObj, entryList;
 		if (!a_movieView->GetVariable(&page, kSystemPagePath) ||
 			!page.GetMember("CategoryList_mc", &cat) || !cat.GetMember("List_mc", &listObj) ||
@@ -26,6 +30,21 @@ namespace Hooks
 			return;
 
 		const std::string menuName = TRANSLATE_S("$FUCK_Title");
+
+		if (manager->GetReplaceHelpMenu()) {
+			for (std::uint32_t i = 0; i < arraySize; ++i) {
+				RE::GFxValue element, textVal;
+				if (entryList.GetElement(i, &element) && element.GetMember("text", &textVal) &&
+					textVal.IsString() && std::string_view(textVal.GetString()) == "$HELP") {
+					element.SetMember("text", RE::GFxValue(menuName.c_str()));
+					entryList.SetElement(i, element);
+					s_fuckButtonIndex = static_cast<double>(i);
+					listObj.Invoke("InvalidateData", nullptr, nullptr, 0);
+					s_fuckButtonInjected = true;
+					return;
+				}
+			}
+		}
 
 		RE::GFxValue newEntry;
 		a_movieView->CreateObject(&newEntry);
@@ -40,7 +59,7 @@ namespace Hooks
 	// Returns true if the injected entry is selected and an accept input is detected.
 	[[nodiscard]] static bool CheckForJournalAccept(RE::InputEvent* const* a_events)
 	{
-		if (!s_fuckButtonInjected)
+		if (!FUCKMan::GetSingleton()->GetInjectSystemMenu() || !s_fuckButtonInjected)
 			return false;
 
 		auto* journal = RE::UI::GetSingleton()->GetMenu<RE::JournalMenu>().get();
