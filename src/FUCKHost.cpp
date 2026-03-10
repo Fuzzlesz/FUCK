@@ -405,7 +405,7 @@ namespace FUCK::Host
 	static void DrawImage_Impl(void* tex, const ImVec2& s, const ImVec2& u0, const ImVec2& u1, const ImVec4& tint)
 	{
 		if (auto srv = GetSRV(tex))
-			ImGui::Image((ImTextureID)srv, s, u0, u1, tint, ImVec4(0, 0, 0, 0));
+			ImGui::ImageWithBg((ImTextureID)srv, s, u0, u1, ImVec4(0, 0, 0, 0), tint);
 	}
 	static void AddImage_Impl(void* tex, const ImVec2& min, const ImVec2& max, const ImVec2& u0, const ImVec2& u1, const ImVec4& col)
 	{
