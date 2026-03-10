@@ -2,14 +2,14 @@
 #include "FUCKMan.h"
 #include "Input.h"
 
-	namespace Hooks
+namespace Hooks
 {
 	static bool s_fuckButtonInjected = false;
 	static double s_fuckButtonIndex = -1.0;
 
 	constexpr const char* kSystemPagePath = "_root.QuestJournalFader.Menu_mc.SystemFader.Page_mc";
 
-	static void TryInjectFUCKButton(RE::GFxMovieView * a_movieView)
+	static void TryInjectFUCKButton(RE::GFxMovieView* a_movieView)
 	{
 		if (!a_movieView || s_fuckButtonInjected)
 			return;
@@ -30,9 +30,7 @@
 		RE::GFxValue newEntry;
 		a_movieView->CreateObject(&newEntry);
 		newEntry.SetMember("text", RE::GFxValue(menuName.c_str()));
-		newEntry.SetMember("index", RE::GFxValue(static_cast<double>(arraySize)));
 		entryList.PushBack(newEntry);
-
 		listObj.Invoke("InvalidateData", nullptr, nullptr, 0);
 
 		s_fuckButtonIndex = static_cast<double>(arraySize);
@@ -42,7 +40,7 @@
 	// Returns true if the injected entry is selected and an accept input is detected.
 	[[nodiscard]] static bool CheckForJournalAccept(RE::InputEvent* const* a_events)
 	{
-		if (!s_fuckButtonInjected || s_fuckButtonIndex < 0.0)
+		if (!s_fuckButtonInjected)
 			return false;
 
 		auto* journal = RE::UI::GetSingleton()->GetMenu<RE::JournalMenu>().get();
@@ -59,14 +57,13 @@
 
 		auto* input = MANAGER(Input);
 
-		const std::uint32_t keyEnter = static_cast<std::uint32_t>(KEY::kEnter);
-		const std::uint32_t mouseLeft = static_cast<std::uint32_t>(SKSE::InputMap::kMacro_MouseButtonOffset);  // 0 offset = Left Click
-		const std::uint32_t gamepadA = static_cast<std::uint32_t>(SKSE::InputMap::kMacro_GamepadOffset) + SKSE::InputMap::kGamepadButtonOffset_A;
+		constexpr std::uint32_t kKeyEnter = static_cast<std::uint32_t>(KEY::kEnter);
+		constexpr std::uint32_t kMouseLeft = static_cast<std::uint32_t>(SKSE::InputMap::kMacro_MouseButtonOffset);
+		constexpr std::uint32_t kGamepadA = static_cast<std::uint32_t>(SKSE::InputMap::kMacro_GamepadOffset) + SKSE::InputMap::kGamepadButtonOffset_A;
 
-		if (input->IsInputPressed(a_events, keyEnter) ||
-			input->IsInputPressed(a_events, mouseLeft) ||
-			input->IsInputPressed(a_events, gamepadA)) {
-			RE::PlaySound("UIMenuOK");
+		if (input->IsInputPressed(a_events, kKeyEnter) ||
+			input->IsInputPressed(a_events, kMouseLeft) ||
+			input->IsInputPressed(a_events, kGamepadA)) {
 
 			if (auto queue = RE::UIMessageQueue::GetSingleton()) {
 				queue->AddMessage(RE::JournalMenu::MENU_NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
