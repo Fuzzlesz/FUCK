@@ -8,7 +8,7 @@
 #include "Styles.h"
 #include "Util.h"
 
-namespace IconFont
+	namespace IconFont
 {
 	IconTexture::IconTexture(std::wstring_view a_iconName) :
 		ImGui::Texture(LR"(Data/Interface/ImGuiIcons/Icons/)", a_iconName)
@@ -111,15 +111,11 @@ namespace IconFont
 		builder.AddRanges(icons_ranges);
 		builder.BuildRanges(&ranges);
 
-		float resScale = ImGui::Renderer::GetResolutionScale();
-		float userScale = FUCKMan::GetSingleton()->GetUserScale();
-		float totalScale = std::max(resScale * userScale, 0.5f);
-
-		regularFont = LoadFontIconSet(baseFontSize * totalScale, baseIconSize * totalScale, ranges);
-		largeFont = LoadFontIconSet(baseLargeFontSize * totalScale, baseLargeIconSize * totalScale, ranges);
+		regularFont = LoadFontIconSet(baseFontSize, baseIconSize, ranges);
+		largeFont = LoadFontIconSet(baseLargeFontSize, baseLargeIconSize, ranges);
 
 		io.FontDefault = regularFont;
-		io.FontGlobalScale = 1.0f;
+		ImGui::GetStyle().FontSizeBase = regularFont->LegacySize;
 		io.Fonts->Build();
 
 		ImGui_ImplDX11_InvalidateDeviceObjects();

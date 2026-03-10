@@ -10,7 +10,7 @@
 #include "System/Input.h"
 #include "System/Utils.h"
 
-namespace FUCK::Host
+	namespace FUCK::Host
 {
 	// ==========================================
 	// Framework Registration
@@ -37,6 +37,11 @@ namespace FUCK::Host
 	}
 	static void PushFont_Impl(ImFont* f, float size)
 	{
+		if (size <= 0.0f) {
+			// Request the font's unscaled baked size.
+			size = f ? f->LegacySize : ImGui::GetStyle().FontSizeBase;
+		}
+		// ImGui 1.92 will automatically multiply this 'size' by style.FontScaleMain
 		ImGui::PushFont(f, size);
 	}
 	static void PopFont_Impl() { ImGui::PopFont(); }

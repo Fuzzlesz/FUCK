@@ -424,8 +424,10 @@ namespace ImGui
 
 		ConvertVec4StylesToU32();
 
-		ImGuiStyle style{};
+		ImGuiStyle& style = ImGui::GetStyle();
 		auto& colors = style.Colors;
+
+		style.FontScaleMain = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
 
 		style.WindowPadding = user.windowPadding;
 		style.FramePadding = ImVec2(6.0f, 2.0f);
@@ -490,8 +492,6 @@ namespace ImGui
 
 		colors[ImGuiCol_ScrollbarBg] = user.scrollbarBG;
 		colors[ImGuiCol_NavHighlight] = user.navHighlight;
-
-		ImGui::GetStyle() = style;
 
 		MANAGER(IconFont)->ResizeIcons();
 		refreshStyle = false;

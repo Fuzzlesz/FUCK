@@ -584,7 +584,7 @@ namespace ImGui
 
 		ImU32 frameCol = GetColorU32(h || held ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
 
-	    RenderFrame(bb.Min, bb.Max, frameCol, true, rounding); 
+		RenderFrame(bb.Min, bb.Max, frameCol, true, rounding);
 		DrawWidgetBorder(window->DrawList, bb, h, rounding);
 
 		bool dim = MANAGER(Input)->IsInputGamepad() && !h;
@@ -997,7 +997,8 @@ namespace ImGui
 		bool dim = MANAGER(Input)->IsInputGamepad() && !hovered;
 		if (dim)
 			PushStyleColor(ImGuiCol_Text, GetColorU32(ImGuiCol_TextDisabled));
-		PushFont(MANAGER(IconFont)->GetLargeFont());
+		auto largeFont = MANAGER(IconFont)->GetLargeFont();
+		PushFont(largeFont, largeFont ? largeFont->LegacySize : ImGui::GetStyle().FontSizeBase);
 		RenderTextClipped(bb.Min, bb.Max, centerText.data(), NULL, NULL, { 0.5f, 0.5f });
 		PopFont();
 		if (dim)

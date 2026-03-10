@@ -68,7 +68,6 @@ void SettingsTool::Draw()
 
 			if (FUCK::SliderFloat("$FUCK_Settings_UIScale"_T, &manager->_userScale, 0.5f, 2.0f, "%.2f")) {
 				style->RefreshStyle();
-				MANAGER(IconFont)->ReloadFonts();
 			}
 
 			FUCK::Checkbox("$FUCK_Settings_SidebarOnRight"_T, &manager->_sidebarOnRight, true, true);
