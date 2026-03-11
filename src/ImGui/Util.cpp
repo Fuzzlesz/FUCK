@@ -90,6 +90,8 @@ namespace ImGui
 
 	void LeftAlignedTextImpl(const char* label, const std::string& newLabel)
 	{
+		ImGui::AlignTextToFramePadding();
+
 		const float width = CalcItemWidth();
 		const float x = GetCursorPosX();
 

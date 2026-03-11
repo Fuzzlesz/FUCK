@@ -358,6 +358,8 @@ namespace ImGui
 		if (window->SkipItems)
 			return false;
 
+		PushStyleVar(ImGuiStyleVar_FramePadding, { GetStyle().FramePadding.x, 4.0f * scale });
+
 		const bool isHidden = std::string_view(label).starts_with("##");
 		std::string idStr = isHidden ? label : "##"s + label;
 		if (!isHidden)
@@ -388,7 +390,6 @@ namespace ImGui
 		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
 		PushStyleColor(ImGuiCol_Text, GetUserStyleColorVec4(USER_STYLE::kComboBoxText));
 		PushStyleColor(ImGuiCol_PopupBg, GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
-		PushStyleVar(ImGuiStyleVar_FramePadding, { GetStyle().FramePadding.x, 4.0f * scale });
 
 		// Capture height while padding is active
 		float frameH = GetFrameHeight();
@@ -396,6 +397,7 @@ namespace ImGui
 		ImDrawList* parentDrawList = GetWindowDrawList();
 
 		bool isOpen = BeginCombo(idStr.c_str(), preview, ImGuiComboFlags_NoArrowButton);
+
 		PopStyleVar();
 		PopStyleColor(3);
 
@@ -471,17 +473,17 @@ namespace ImGui
 			}
 			EndListBox();
 		}
-
 		ImGui::PopStyleColor();
-
-		EndCombo();
 		ImGui::PopFont();
+		EndCombo();
 		return changed;
 	}
 
 	bool ComboStyled(const char* label, int* current_item, const char* const* items, int items_count, int popup_max_height_in_items)
 	{
 		float scale = ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
+
+		PushStyleVar(ImGuiStyleVar_FramePadding, { GetStyle().FramePadding.x, 4.0f * scale });
 
 		std::string idStr = "##"s + label;
 		LeftAlignedTextImpl(label, idStr);
@@ -497,7 +499,6 @@ namespace ImGui
 
 		PushStyleColor(ImGuiCol_Text, GetUserStyleColorVec4(USER_STYLE::kComboBoxText));
 		PushStyleColor(ImGuiCol_PopupBg, GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
-		PushStyleVar(ImGuiStyleVar_FramePadding, { GetStyle().FramePadding.x, 4.0f * scale });
 
 		float frameH = GetFrameHeight();
 
