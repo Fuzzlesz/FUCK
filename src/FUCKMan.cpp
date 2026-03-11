@@ -936,7 +936,8 @@ void FUCKMan::Draw()
 				
 				// Draw Icon with fixed size
 				float baseIconWidth = iconArrow ? (iconArrow->size.x / _userScale) : 20.0f;
-				float alignedTextOffset = (indent * 0.5f) + baseIconWidth + headerPadding;
+				const float iconToTextPadding = 10.0f * uiScale;
+				float alignedTextOffset = (indent * 0.5f) + baseIconWidth + iconToTextPadding;
 
 				FUCK::BeginChild("Sidebar", ImVec2(sidebarWidth, availHeight), true, ImGuiWindowFlags_None);
 				{
