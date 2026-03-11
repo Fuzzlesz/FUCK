@@ -141,14 +141,19 @@ namespace
 
 		float labelWidth = ImGui::CalcTextSize(labelView.data(), labelView.data() + labelView.size()).x;
 
+		float defaultTargetHeight = targetHeight > 0.0f ? targetHeight : ImGui::GetFrameHeight();
+
 		auto DrawLabel = [&]() {
-			if (targetHeight > 0.0f) {
-				float offY = (targetHeight - g.FontSize) * 0.5f;
-				if (offY > 0.0f)
-					ImGui::SetCursorPosY(startY + offY);
-			}
-			ImGui::AlignTextToFramePadding();
+			float textH = ImGui::GetTextLineHeight();
+			float offY = (defaultTargetHeight - textH) * 0.5f;
+
+			ImGui::SetCursorPosY(startY + std::max(0.0f, offY));
 			ImGui::TextUnformatted(labelView.data(), labelView.data() + labelView.size());
+		};
+
+		auto DrawWidget = [&]() {
+			ImGui::SetCursorPosY(startY);
+			drawContent();
 		};
 
 		if (alignFar) {
@@ -156,36 +161,27 @@ namespace
 				ImGui::SetCursorPosX(startX);
 				DrawLabel();
 				ImGui::SameLine();
-				if (targetHeight > 0.0f)
-					ImGui::SetCursorPosY(startY);
 				ImGui::SetCursorPosX(splitPoint);
-				drawContent();
+				DrawWidget();
 			} else {
 				ImGui::SetCursorPosX(startX);
-				if (targetHeight > 0.0f)
-					ImGui::SetCursorPosY(startY);
-				drawContent();
+				DrawWidget();
 
 				ImGui::SameLine();
 
 				float rightAnchorX = (splitPoint + contentWidth) - labelWidth;
-
-				if (targetHeight > 0.0f)
-					ImGui::SetCursorPosY(startY);
 				ImGui::SetCursorPosX(rightAnchorX);
 				DrawLabel();
 			}
 		} else {
 			if (labelLeft) {
+				ImGui::SetCursorPosX(startX);
 				DrawLabel();
 				ImGui::SameLine(0, g.Style.ItemInnerSpacing.x);
-				if (targetHeight > 0.0f)
-					ImGui::SetCursorPosY(startY);
-				drawContent();
+				DrawWidget();
 			} else {
-				if (targetHeight > 0.0f)
-					ImGui::SetCursorPosY(startY);
-				drawContent();
+				ImGui::SetCursorPosX(startX);
+				DrawWidget();
 				ImGui::SameLine(0, g.Style.ItemInnerSpacing.x);
 				DrawLabel();
 			}
