@@ -342,6 +342,8 @@ namespace ImGui
 
 	bool ComboWithFilter(const char* label, int* current_item, const std::vector<std::string>& items, int popup_max_height_in_items)
 	{
+		float scale = ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
+
 		ImGuiContext& g = *GImGui;
 		ImGuiWindow* window = GetCurrentWindow();
 		if (window->SkipItems)
@@ -365,24 +367,27 @@ namespace ImGui
 		if (popup_max_height_in_items == -1)
 			popup_max_height_in_items = 8;
 
-		// Explicit constraint calculation
-		float filterBoxH = GetFrameHeight();
 		float listH_Max = GetTextLineHeightWithSpacing() * popup_max_height_in_items;
-		float constraintH = filterBoxH + g.Style.ItemSpacing.y + listH_Max + (g.Style.WindowPadding.y * 2.0f) + 20.0f;
+		float constraintH = GetFrameHeight() + g.Style.ItemSpacing.y + listH_Max + (g.Style.WindowPadding.y * 2.0f) + 20.0f;
 
 		if (!(g.NextWindowData.HasFlags & ImGuiNextWindowDataFlags_HasSizeConstraint)) {
 			SetNextWindowSizeConstraints({ width, 0.0f }, { width, constraintH });
 		}
 
-		const char* preview = (*current_item >= 0 && *current_item < items.size()) ? items[*current_item].c_str() : "";
+		const char* preview = (*current_item >= 0 && *current_item < (int)items.size()) ? items[*current_item].c_str() : "";
 
 		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
 		PushStyleColor(ImGuiCol_Text, GetUserStyleColorVec4(USER_STYLE::kComboBoxText));
 		PushStyleColor(ImGuiCol_PopupBg, GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
+		PushStyleVar(ImGuiStyleVar_FramePadding, { GetStyle().FramePadding.x, 4.0f * scale });
+
+		// Capture height while padding is active
+		float frameH = GetFrameHeight();
 
 		ImDrawList* parentDrawList = GetWindowDrawList();
 
 		bool isOpen = BeginCombo(idStr.c_str(), preview, ImGuiComboFlags_NoArrowButton);
+		PopStyleVar();
 		PopStyleColor(3);
 
 		// Detect if opened Upwards
@@ -393,11 +398,14 @@ namespace ImGui
 				opensUp = true;
 		}
 
-		DrawDropdownIcon(parentDrawList, { widgetPos.x + width - GetFrameHeight(), widgetPos.y }, { GetFrameHeight(), GetFrameHeight() }, isOpen, opensUp, IsItemHovered());
-		DrawWidgetBorder(parentDrawList, { widgetPos, widgetPos + ImVec2(width, GetFrameHeight()) }, isOpen || IsItemHovered() || IsWidgetFocused(id));
+		DrawDropdownIcon(parentDrawList, { widgetPos.x + width - frameH, widgetPos.y }, { frameH, frameH }, isOpen, opensUp, IsItemHovered());
+		DrawWidgetBorder(parentDrawList, { widgetPos, widgetPos + ImVec2(width, frameH) }, isOpen || IsItemHovered() || IsWidgetFocused(id));
 
 		if (!isOpen)
 			return false;
+
+		float fontSize = std::round(ImGui::GetStyle().FontSizeBase * FUCKMan::GetSingleton()->GetUserScale() * 2.0f) / 2.0f;
+		ImGui::PushFont(nullptr, fontSize);
 
 		if (IsWindowAppearing())
 			ImGui::SetKeyboardFocusHere();
@@ -458,11 +466,14 @@ namespace ImGui
 		ImGui::PopStyleColor();
 
 		EndCombo();
+		ImGui::PopFont();
 		return changed;
 	}
 
 	bool ComboStyled(const char* label, int* current_item, const char* const* items, int items_count, int popup_max_height_in_items)
 	{
+		float scale = ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
+
 		std::string idStr = "##"s + label;
 		LeftAlignedTextImpl(label, idStr);
 		ImVec2 widgetPos = GetCursorScreenPos();
@@ -477,14 +488,18 @@ namespace ImGui
 
 		PushStyleColor(ImGuiCol_Text, GetUserStyleColorVec4(USER_STYLE::kComboBoxText));
 		PushStyleColor(ImGuiCol_PopupBg, GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
+		PushStyleVar(ImGuiStyleVar_FramePadding, { GetStyle().FramePadding.x, 4.0f * scale });
+
+		float frameH = GetFrameHeight();
 
 		ImDrawList* parentDrawList = GetWindowDrawList();
 
 		const char* preview = (*current_item >= 0 && *current_item < items_count) ? items[*current_item] : "";
 
-		parentDrawList->AddRectFilled(widgetPos, widgetPos + ImVec2(width, GetFrameHeight()), GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox), ImGui::GetStyle().FrameRounding);
+		parentDrawList->AddRectFilled(widgetPos, widgetPos + ImVec2(width, frameH), GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox), ImGui::GetStyle().FrameRounding);
 
 		bool isOpen = BeginCombo(idStr.c_str(), preview, ImGuiComboFlags_NoArrowButton);
+		PopStyleVar();
 		PopStyleColor(4);
 
 		bool opensUp = false;
@@ -494,11 +509,14 @@ namespace ImGui
 				opensUp = true;
 		}
 
-		DrawDropdownIcon(parentDrawList, { widgetPos.x + width - GetFrameHeight(), widgetPos.y }, { GetFrameHeight(), GetFrameHeight() }, isOpen, opensUp, IsItemHovered());
-		DrawWidgetBorder(parentDrawList, { widgetPos, widgetPos + ImVec2(width, GetFrameHeight()) }, isOpen || IsItemHovered() || IsWidgetFocused(GetID(idStr.c_str())), ImGui::GetStyle().FrameRounding);
+		DrawDropdownIcon(parentDrawList, { widgetPos.x + width - frameH, widgetPos.y }, { frameH, frameH }, isOpen, opensUp, IsItemHovered());
+		DrawWidgetBorder(parentDrawList, { widgetPos, widgetPos + ImVec2(width, frameH) }, isOpen || IsItemHovered() || IsWidgetFocused(GetID(idStr.c_str())), ImGui::GetStyle().FrameRounding);
 
 		bool changed = false;
 		if (isOpen) {
+			float fontSize = std::round(ImGui::GetStyle().FontSizeBase * FUCKMan::GetSingleton()->GetUserScale() * 2.0f) / 2.0f;
+			ImGui::PushFont(nullptr, fontSize);
+
 			for (int i = 0; i < items_count; i++) {
 				if (Selectable(items[i], *current_item == i)) {
 					*current_item = i;
@@ -508,6 +526,8 @@ namespace ImGui
 				if (*current_item == i)
 					SetItemDefaultFocus();
 			}
+
+			ImGui::PopFont();
 			EndCombo();
 		}
 		return changed;
