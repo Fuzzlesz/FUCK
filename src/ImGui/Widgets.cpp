@@ -678,11 +678,7 @@ namespace ImGui
 			ImVec2 p = ImGui::GetCursorScreenPos();
 			bool h = ImGui::IsMouseHoveringRect(p, p + size) || IsWidgetFocused(GetID(idStr.c_str()));
 
-			ImVec4 tint = GetInteractiveColorVec4(ImGuiCol_Text, ImGuiCol_ButtonHovered, ImGuiCol_ButtonActive);
-			if (!h)
-				tint = GetUserStyleColorVec4(USER_STYLE::kTextButton);
-			if (h)
-				tint = GetUserStyleColorVec4(USER_STYLE::kTextHovered);
+			ImVec4 tint = GetHighlightTint(true, h, false);
 
 			if (DrawTransparentButton(idStr.c_str(), tex, size, tint))
 				clicked = true;
