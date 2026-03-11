@@ -619,13 +619,13 @@ void FUCKMan::Draw()
 						iconW = titleH + 20.0f;
 					}
 
-					// 2. Title Text
-					// Center vertically using the unscaled text height
-					float textY = (titleH - uiTextH) * 0.5f;
+					// 2. Title Text										
+					ImFont* baseFont = ImGui::GetFont();
+					float uiFontSize = 22.0f * 0.9f;
+					float textY = (titleH - uiFontSize) * 0.5f;
+
 					FUCK::SetCursorPos({ iconW, textY });
 
-					ImFont* baseFont = ImGui::GetFont();
-					float uiFontSize = ImGui::GetStyle().FontSizeBase;
 					ImGui::GetWindowDrawList()->AddText(baseFont, uiFontSize,
 						FUCK::GetCursorScreenPos(), ImGui::GetColorU32(ImGuiCol_Text), title.c_str());
 
@@ -648,12 +648,10 @@ void FUCKMan::Draw()
 						ImVec2 textSize = ImGui::CalcTextSize(xIcon);
 						ImGui::PopFont();
 
-						float textOffsetY = 1.54f * uiScale;
-
 						ImVec2 btnScreenPos = ImGui::GetItemRectMin();
 						ImVec2 textPos = {
 							btnScreenPos.x + (btnSize - textSize.x) * 0.5f,
-							btnScreenPos.y + (btnSize - textSize.y) * 0.5f + textOffsetY
+							btnScreenPos.y + (btnSize - textSize.y) * 0.5f
 						};
 
 						ImU32 xColor = btnHovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
@@ -844,7 +842,6 @@ void FUCKMan::Draw()
 
 			{
 				const char* xIcon = ICON_FA_XMARK;
-				float textOffsetY = 1.55f * uiScale;
 				float uiFontSize = ImGui::GetStyle().FontSizeBase;
 
 				ImGui::PushFont(nullptr, uiFontSize);
@@ -853,7 +850,7 @@ void FUCKMan::Draw()
 
 				ImVec2 textPos = {
 					btnCursor.x + (btnSize - textSize.x) * 0.5f,
-					btnCursor.y + (btnSize - textSize.y) * 0.5f + textOffsetY
+					btnCursor.y + (btnSize - textSize.y) * 0.5f
 				};
 
 				ImU32 xColor = ImGui::IsItemHovered() ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
