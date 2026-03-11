@@ -597,25 +597,40 @@ namespace ImGui
 		ImGuiWindow* window = GetCurrentWindow();
 		float scale = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
 		float rounding = GetUserStyleVar(USER_STYLE::kButtonRounding) * scale;
+		float borderSize = ImGui::GetStyle().FrameBorderSize;
 
-		ImVec2 sz = CalcTextSize(label) + ImGui::GetStyle().FramePadding * 2.0f;
+		ImVec2 textSize = CalcTextSize(label);
+		ImVec2 padding = ImVec2(5.0f * scale, 4.0f * scale);
+
+		float blackThick = borderSize + (1.5f * scale);
+		float bleed = blackThick * 0.5f;
+
+		// Consistent vertical size based on line height
+		ImVec2 contentSize = ImVec2(textSize.x, GetTextLineHeight());
+		ImVec2 sz = contentSize + (padding * 2.0f) + ImVec2(bleed * 2.0f, bleed * 2.0f);
+		sz.x = ImMax(sz.x, sz.y);  // minimum square
+
 		ImRect bb(window->DC.CursorPos, window->DC.CursorPos + sz);
 		ItemSize(sz);
 		if (!ItemAdd(bb, window->GetID(label)))
 			return false;
 
+		ImRect drawBb = { bb.Min + ImVec2(bleed, bleed), bb.Max - ImVec2(bleed, bleed) };
+
 		bool h, held;
 		bool p = ButtonBehavior(bb, window->GetID(label), &h, &held);
 
-		ImU32 frameCol = GetColorU32(h || held ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
-
-		RenderFrame(bb.Min, bb.Max, frameCol, true, rounding);
-		DrawWidgetBorder(window->DrawList, bb, h, rounding);
+		RenderFrame(drawBb.Min, drawBb.Max, GetColorU32(ImGuiCol_Button), true, rounding);
+		window->DrawList->AddRect(drawBb.Min, drawBb.Max, IM_COL32(0, 0, 0, 255), rounding, 0, blackThick);
+		DrawWidgetBorder(window->DrawList, drawBb, h || held, rounding);
 
 		bool dim = MANAGER(Input)->IsInputGamepad() && !h;
 		if (dim)
 			PushStyleColor(ImGuiCol_Text, GetColorU32(ImGuiCol_TextDisabled));
-		RenderTextClipped(bb.Min, bb.Max, label, NULL, NULL, { 0.5f, 0.5f });
+
+		// Center using contentSize so vertical position is consistent across all glyphs
+		RenderTextClipped(bb.Min, bb.Max, label, NULL, &contentSize, { 0.5f, 0.5f });
+
 		if (dim)
 			PopStyleColor();
 
