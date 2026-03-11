@@ -74,7 +74,7 @@ namespace ImGui
 			float grabRounding{ 0.0f };
 			float tabRounding{ 4.0f };
 			float popupRounding{ 0.0f };
-			float scrollbarRounding{ 2.0f };
+			float scrollbarRounding{ 0.0f };
 			float buttonRounding{ 4.0f };
 
 			// Windows & Borders
