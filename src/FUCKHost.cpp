@@ -10,7 +10,7 @@
 #include "System/Input.h"
 #include "System/Utils.h"
 
-	namespace FUCK::Host
+namespace FUCK::Host
 {
 	// ==========================================
 	// Framework Registration
@@ -253,23 +253,48 @@
 	static void SanitizePath_Impl(char* dest, const char* source, size_t size) { Utils::SanitizePath(dest, source, size); }
 	static void PushItemFlag_Impl(ItemFlags flag, bool enabled) { ImGui::PushItemFlag(static_cast<ImGuiItemFlags>(flag), enabled); }
 	static void PopItemFlag_Impl() { ImGui::PopItemFlag(); }
+	
+	static void PushID_Str_Impl(const char* str_id) { ImGui::PushID(str_id); }
+	static void PushID_Int_Impl(int int_id) { ImGui::PushID(int_id); }
+	static void PopID_Impl() { ImGui::PopID(); }
+
+	static void SetTooltip_Impl(const char* fmt)
+	{
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) {
+			const float scale = ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
+			const float offset = 32.0f * scale;
+			ImGui::SetNextWindowPos(ImGui::GetMousePos() + ImVec2(offset, offset), ImGuiCond_Always);
+
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * scale, 12.0f * scale));
+
+			if (ImGui::BeginTooltip()) {
+				ImGui::TextUnformatted(fmt);
+				ImGui::EndTooltip();
+			}
+
+			ImGui::PopStyleVar();
+		}
+	}
 	static void HelpMarker_Impl(const char* desc)
 	{
 		ImGui::TextDisabled("(?)");
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
-			const float offset = 32.0f * ImGui::Renderer::GetResolutionScale();
+			const float scale = ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
+			const float offset = 32.0f * scale;
 			ImGui::SetNextWindowPos(ImGui::GetMousePos() + ImVec2(offset, offset), ImGuiCond_Always);
+
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * scale, 12.0f * scale));
+
 			if (ImGui::BeginTooltip()) {
 				ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
 				ImGui::TextUnformatted(desc);
 				ImGui::PopTextWrapPos();
 				ImGui::EndTooltip();
 			}
+
+			ImGui::PopStyleVar();
 		}
 	}
-	static void PushID_Str_Impl(const char* str_id) { ImGui::PushID(str_id); }
-	static void PushID_Int_Impl(int int_id) { ImGui::PushID(int_id); }
-	static void PopID_Impl() { ImGui::PopID(); }
 
 	// ==========================================
 	// Textures & Icons
@@ -547,18 +572,7 @@
 	static void BeginDisabled_Impl(bool disabled) { ImGui::BeginDisabled(disabled); }
 	static void EndDisabled_Impl() { ImGui::EndDisabled(); }
 	static bool IsWidgetFocused_Impl(const char* label) { return ImGui::IsWidgetFocused(label); }
-	static void SetTooltip_Impl(const char* fmt)
-	{
-		if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) {
-			const float offset = 32.0f * ImGui::Renderer::GetResolutionScale();
-			ImGui::SetNextWindowPos(ImGui::GetMousePos() + ImVec2(offset, offset), ImGuiCond_Always);
-			if (ImGui::BeginTooltip()) {
-				ImGui::TextUnformatted(fmt);
-				ImGui::EndTooltip();
-			}
-		}
-	}
-
+	
 	FUCK_Interface* CreateInterface()
 	{
 		static FUCK_Interface api = {
