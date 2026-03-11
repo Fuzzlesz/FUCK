@@ -960,7 +960,7 @@ void FUCKMan::Draw()
 					FUCK::SetCursorPos(ImVec2(headerStart.x, headerStart.y + itemHeight));
 					FUCK::SeparatorThick();
 
-					auto RenderSidebarItem = [&](ITool* tool, const char* label) {
+					auto RenderSidebarItem = [&](ITool* tool, const char* label, float extraIndent = 0.0f) {
 						// Push ID to prevent conflicts if multiple tools have same name
 						ImGui::PushID(tool);
 
@@ -981,7 +981,8 @@ void FUCKMan::Draw()
 						ImVec2 endPos = FUCK::GetCursorPos();
 						FUCK::PushFont(FUCK::GetFont(FUCK_Font::kRegular), sidebarFontSize);
 						float textY = cursorPos.y + (itemHeight - textH) * 0.5f + textVisualOffset;
-						FUCK::SetCursorPos({ cursorPos.x + alignedTextOffset, textY });
+
+						FUCK::SetCursorPos({ cursorPos.x + alignedTextOffset + extraIndent, textY });
 						FUCK::Text(label);
 						FUCK::PopFont();
 						FUCK::SetCursorPos(endPos);
@@ -1035,9 +1036,7 @@ void FUCKMan::Draw()
 
 						if (isOpen) {
 							for (auto* tool : tools) {
-								FUCK::Indent(indent);
-								RenderSidebarItem(tool, tool->Name());
-								FUCK::Unindent(indent);
+								RenderSidebarItem(tool, tool->Name(), indent);
 							}
 						}
 
