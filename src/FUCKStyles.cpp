@@ -104,9 +104,6 @@ void ThemeEditorWindow::Draw()
 
 		FUCK::Separator();
 		ColorPick("$FUCK_Styles_SeparatorColor"_T, style->user.separator);
-		if (FUCK::SliderFloat("$FUCK_Styles_SeparatorThick"_T, &style->user.separatorThickness, 1.0f, 10.0f, "%.1f")) {
-			style->RefreshStyle();
-		}
 
 		FUCK::Separator();
 		auto DragRound = [&](const char* label, float* v) {

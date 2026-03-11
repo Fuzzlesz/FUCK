@@ -75,7 +75,8 @@ namespace ImGui
 		if (window->SkipItems)
 			return;
 
-		const float thickness = GetUserStyleVar(USER_STYLE::kSeparatorThickness);
+		float scale = Renderer::GetResolutionScale() * window->FontWindowScale;
+		const float thickness = std::max(1.0f, std::round(3.0f * scale));
 
 		const ImVec2 pos = window->DC.CursorPos;
 		const float w = GetContentRegionAvail().x;

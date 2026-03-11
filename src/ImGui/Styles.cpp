@@ -134,8 +134,6 @@ namespace ImGui
 			return user.checkboxScale;
 		case USER_STYLE::kStepper:
 			return user.stepperScale;
-		case USER_STYLE::kSeparatorThickness:
-			return user.separatorThickness;
 		case USER_STYLE::kGridLines:
 			return user.gridThickness * scale;
 		case USER_STYLE::kDisabledTextAlpha:
@@ -320,7 +318,6 @@ namespace ImGui
 		SET_VALUE(gridThickness, "Widget", "fGridThickness");
 		SET_VALUE(indentSpacing, "Widget", "fIndentSpacing");
 		SET_VALUE(separator, "Widget", "rSeparatorColor");
-		SET_VALUE(separatorThickness, "Widget", "fSeparatorThickness");
 
 		SET_VALUE(tab, "Widget", "rTabColor");
 		SET_VALUE(tabHovered, "Widget", "rTabActiveColor");
@@ -392,7 +389,6 @@ namespace ImGui
 		GET_VALUE(gridThickness, "Widget", "fGridThickness");
 		GET_VALUE(indentSpacing, "Widget", "fIndentSpacing");
 		GET_VALUE(separator, "Widget", "rSeparatorColor");
-		GET_VALUE(separatorThickness, "Widget", "fSeparatorThickness");
 
 		GET_VALUE(tab, "Widget", "rTabColor");
 		GET_VALUE(tabHovered, "Widget", "rTabActiveColor");
@@ -485,7 +481,7 @@ namespace ImGui
 		colors[ImGuiCol_ResizeGripHovered] = user.sliderBorderActive;
 		colors[ImGuiCol_ResizeGripActive] = user.sliderBorderActive;
 
-		colors[ImGuiCol_Border] = user.sliderBorder;
+		colors[ImGuiCol_Border] = user.border;
 		colors[ImGuiCol_Separator] = user.separator;
 		colors[ImGuiCol_SeparatorHovered] = user.sliderBorderActive;
 		colors[ImGuiCol_SeparatorActive] = user.sliderBorderActive;

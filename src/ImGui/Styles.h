@@ -18,7 +18,6 @@ namespace ImGui
 		// Widget Colours
 		kIconDisabled,
 		kSeparator,
-		kSeparatorThickness,
 		kGridLines,
 
 		// Sliders
@@ -79,7 +78,7 @@ namespace ImGui
 
 			// Windows & Borders
 			ImVec4 background{ 0.0f, 0.0f, 0.0f, bgAlpha };
-			ImVec4 border{ 0.569f, 0.545f, 0.506f, bgAlpha };
+			ImVec4 border{ 0.25f, 0.25f, 0.25f, 1.0f };
 			float borderSize{ 3.0f };
 
 			// Text
@@ -124,8 +123,7 @@ namespace ImGui
 			// Decorations
 			ImVec4 gridLines{ 1.0f, 1.0f, 1.0f, 0.329f };
 			float gridThickness{ 2.5f };
-			ImVec4 separator{ 0.569f, 0.545f, 0.506f, bgAlpha };
-			float separatorThickness{ 3.0f };
+			ImVec4 separator{ 0.25f, 0.25f, 0.25f, 1.0f };
 
 			// Scrollbars
 			ImVec4 scrollbarBG{ 0.0f, 0.0f, 0.0f, 0.0f };
