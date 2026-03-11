@@ -163,6 +163,8 @@ namespace ImGui
 
 		std::sort(userFonts.begin(), userFonts.end());
 		userFonts.erase(std::unique(userFonts.begin(), userFonts.end()), userFonts.end());
+
+		userFonts.insert(userFonts.begin(), "$FUCK_Default"_T);
 		return userFonts;
 	}
 
@@ -193,7 +195,7 @@ namespace ImGui
 			sIni.SetValue("Settings", "sLastPreset", "");
 		});
 
-		SetCurrentFont("Jost-Regular.ttf");
+		SetCurrentFont("Default");
 		RefreshStyle();
 		MANAGER(IconFont)->ReloadFonts();
 	}
@@ -212,7 +214,7 @@ namespace ImGui
 		}
 
 		if (currentFont.empty()) {
-			SetCurrentFont("Jost-Regular.ttf");
+			SetCurrentFont("Default");
 		}
 
 		RefreshStyle();

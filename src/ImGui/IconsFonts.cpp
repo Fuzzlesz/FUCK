@@ -4,6 +4,7 @@
 #include "System/Input.h"
 #include "System/Settings.h"
 #include "IconsFontAwesome6.h"
+#include "Backend/imgui_default.h"
 #include "Renderer.h"
 #include "Styles.h"
 #include "Util.h"
@@ -125,9 +126,21 @@
 	ImFont* Manager::LoadFontIconSet(float a_fontSize, float a_iconSize, const ImVector<ImWchar>& a_ranges) const
 	{
 		const auto& io = ImGui::GetIO();
-		std::string fullPath = ResolveFontPath(fontName);
 
-		auto font = io.Fonts->AddFontFromFileTTF(fullPath.c_str(), a_fontSize, nullptr, a_ranges.Data);
+		ImFont* font = nullptr;
+
+		if (fontName == "Default") {
+			ImFontConfig default_cfg;
+			default_cfg.FontDataOwnedByAtlas = false;
+			default_cfg.OversampleH = default_cfg.OversampleV = 1;
+			default_cfg.PixelSnapH = true;
+			font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(
+				GetDefaultFontData(), a_fontSize, &default_cfg, io.Fonts->GetGlyphRangesDefault());
+		} else {
+			std::string fullPath = ResolveFontPath(fontName);
+			font = io.Fonts->AddFontFromFileTTF(fullPath.c_str(), a_fontSize, nullptr, a_ranges.Data);
+		}
+
 		if (!font)
 			font = io.Fonts->AddFontDefault();
 
