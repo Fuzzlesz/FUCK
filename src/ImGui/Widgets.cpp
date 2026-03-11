@@ -5,7 +5,7 @@
 #include "Renderer.h"
 #include "System/Input.h"
 
-namespace ImGui
+	namespace ImGui
 {
 	// =========================================================================================
 	// HELPER IMPLEMENTATION
@@ -118,22 +118,28 @@ namespace
 		return result;
 	}
 
-	void AlignedWidgetLayout(const char* label, bool alignFar, bool labelLeft, std::function<void()> drawContent, float targetHeight = -1.0f)
+	void AlignedWidgetLayout(const char* label, bool alignFar, bool labelLeft, float contentWidth, std::function<void()> drawContent, float targetHeight = -1.0f)
 	{
 		ImGui::BeginGroup();
 		ImGui::PushID(label);
 
 		ImGuiContext& g = *GImGui;
-		float availWidth = ImGui::GetContentRegionAvail().x;
 		float startX = ImGui::GetCursorPosX();
 		float startY = ImGui::GetCursorPosY();
+		float availWidth = ImGui::GetContentRegionAvail().x;
 
-		float splitPoint = startX + floorf(availWidth * 0.65f);
+		float rightPaneStart = startX + ImGui::CalcItemWidth() * 0.5f + g.Style.ItemInnerSpacing.x;
+		float rightPaneEnd = startX + availWidth;
+		float rightPaneCenter = rightPaneStart + (rightPaneEnd - rightPaneStart) * 0.5f;
+
+		float splitPoint = rightPaneCenter - (contentWidth * 0.5f);
 
 		std::string_view labelView(label);
 		auto doubleHash = labelView.find("##");
 		if (doubleHash != std::string_view::npos)
 			labelView = labelView.substr(0, doubleHash);
+
+		float labelWidth = ImGui::CalcTextSize(labelView.data(), labelView.data() + labelView.size()).x;
 
 		auto DrawLabel = [&]() {
 			if (targetHeight > 0.0f) {
@@ -159,11 +165,14 @@ namespace
 				if (targetHeight > 0.0f)
 					ImGui::SetCursorPosY(startY);
 				drawContent();
-				ImRect lastItemRect = g.LastItemData.Rect;
-				float contentW = lastItemRect.Max.x - lastItemRect.Min.x;
+
 				ImGui::SameLine();
-				ImVec2 textSize = ImGui::CalcTextSize(labelView.data(), labelView.data() + labelView.size());
-				ImGui::SetCursorPosX((splitPoint + contentW) - textSize.x);
+
+				float rightAnchorX = (splitPoint + contentWidth) - labelWidth;
+
+				if (targetHeight > 0.0f)
+					ImGui::SetCursorPosY(startY);
+				ImGui::SetCursorPosX(rightAnchorX);
 				DrawLabel();
 			}
 		} else {
@@ -233,7 +242,7 @@ namespace ImGui
 				selected = true;
 			}
 		};
-		AlignedWidgetLayout(label, alignFar, labelLeft, DrawContent, icon->size.y);
+		AlignedWidgetLayout(label, alignFar, labelLeft, icon->size.x, DrawContent, icon->size.y);
 		if (selected)
 			RE::PlaySound("UIMenuFocus");
 		return selected;
@@ -244,6 +253,9 @@ namespace ImGui
 		bool pressed = false;
 		std::string idStr = std::format("##{}", label);
 
+		float frameH = ImGui::GetFrameHeight();
+		float width = frameH * 1.55f;
+
 		auto DrawContent = [&]() {
 			ImGuiWindow* window = GetCurrentWindow();
 			if (window->SkipItems)
@@ -252,9 +264,6 @@ namespace ImGui
 			ImGuiContext& g = *GImGui;
 			const ImGuiID id = window->GetID(idStr.c_str());
 			float scale = ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
-
-			float frameH = ImGui::GetFrameHeight();
-			float width = frameH * 1.55f;
 
 			ImVec2 p = ImGui::GetCursorScreenPos();
 			ImRect bb(p, p + ImVec2(width, frameH));
@@ -334,7 +343,7 @@ namespace ImGui
 			}
 		};
 
-		AlignedWidgetLayout(label, alignFar, labelLeft, DrawContent);
+		AlignedWidgetLayout(label, alignFar, labelLeft, width, DrawContent);
 		if (pressed)
 			RE::PlaySound("UIMenuFocus");
 		return pressed;
@@ -660,7 +669,7 @@ namespace ImGui
 			*wasFocused = h;
 		return p;
 	}
-
+	
 	bool ButtonIconWithLabelStyled(const char* label, void* tex, const ImVec2& size, bool alignFar, bool labelLeft)
 	{
 		bool clicked = false;
@@ -678,7 +687,7 @@ namespace ImGui
 			if (DrawTransparentButton(idStr.c_str(), tex, size, tint))
 				clicked = true;
 		};
-		AlignedWidgetLayout(label, alignFar, labelLeft, DrawContent, size.y);
+		AlignedWidgetLayout(label, alignFar, labelLeft, size.x, DrawContent, size.y);
 		if (clicked)
 			RE::PlaySound("UIMenuOK");
 		return clicked;
@@ -694,73 +703,74 @@ namespace ImGui
 		const float frameH = ImGui::GetFrameHeight();
 		const float spacing = g.Style.ItemInnerSpacing.x;
 
-		auto DrawContent = [&]() {
-			ImGuiID id = ImGui::GetID(baseId.c_str());
-
-			const auto* kIcon = iconFont->GetIcon(key);
-			const auto* m1Icon = (m1 != -1) ? iconFont->GetIcon(static_cast<uint32_t>(m1)) : nullptr;
-			const auto* m2Icon = (m2 != -1) ? iconFont->GetIcon(static_cast<uint32_t>(m2)) : nullptr;
+		const auto* kIcon = iconFont->GetIcon(key);
+		const auto* m1Icon = (m1 != -1) ? iconFont->GetIcon(static_cast<uint32_t>(m1)) : nullptr;
+		const auto* m2Icon = (m2 != -1) ? iconFont->GetIcon(static_cast<uint32_t>(m2)) : nullptr;
 
 			// Generic item to unify rendering loop
-			struct RenderItem
+		struct RenderItem
+		{
+			enum Type
 			{
-				enum Type
-				{
-					kIcon,
-					kText
-				} type;
-				const IconFont::IconTexture* icon = nullptr;
-				const char* text = nullptr;
-				const char* idSuffix = nullptr;
-				ImVec2 size;
-			};
+				kIcon,
+				kText
+			} type;
+			const IconFont::IconTexture* icon = nullptr;
+			const char* text = nullptr;
+			const char* idSuffix = nullptr;
+			ImVec2 size;
+		};
 
-			// Build list: Anchor (Key) -> Leftward items
-			std::vector<RenderItem> items;
-			items.reserve(5);
+		// Build list: Anchor (Key) -> Leftward items
+		std::vector<RenderItem> items;
+		items.reserve(5);
 
-			auto AddIcon = [&](const IconFont::IconTexture* icon, const char* suffix) {
-				if (icon)
-					items.push_back({ RenderItem::kIcon, icon, nullptr, suffix, icon->size });
-			};
+		auto AddIcon = [&](const IconFont::IconTexture* icon, const char* suffix) {
+			if (icon)
+				items.push_back({ RenderItem::kIcon, icon, nullptr, suffix, icon->size });
+		};
 
-			auto AddText = [&](const char* text) {
-				items.push_back({ RenderItem::kText, nullptr, text, nullptr, ImGui::CalcTextSize(text) });
-			};
+		auto AddText = [&](const char* text) {
+			items.push_back({ RenderItem::kText, nullptr, text, nullptr, ImGui::CalcTextSize(text) });
+		};
 
-			// 1. Primary Key (The Anchor)
-			if (kIcon) {
-				AddIcon(kIcon, "key");
-			} else {
-				AddText("None");
-			}
+		// 1. Primary Key (The Anchor)
+		if (kIcon) {
+			AddIcon(kIcon, "key");
+		} else {
+			AddText("None");
+		}
 
 			// 2. Mod 2 ( Grows Left )
-			if (m2Icon) {
-				AddText("+");
-				AddIcon(m2Icon, "m2");
-			}
+		if (m2Icon) {
+			AddText("+");
+			AddIcon(m2Icon, "m2");
+		}
 
 			// 3. Mod 1 ( Grows Left )
-			if (m1Icon) {
-				AddText("+");
-				AddIcon(m1Icon, "m1");
-			}
+		if (m1Icon) {
+			AddText("+");
+			AddIcon(m1Icon, "m1");
+		}
 
-			// --- Rendering Phase ---
+		// --- Rendering Phase ---
+
+		// Pass just the primary key width to AlignedWidgetLayout
+		float anchorWidth = items[0].size.x;
+
+		auto DrawContent = [&]() {
+			ImGuiID id = ImGui::GetID(baseId.c_str());
 			const float lineTop = ImGui::GetCursorPosY();
 
-			// We start at the current cursor X (The "Split Point")
-			// The Primary Key sits here. Modifiers grow to the left (negative X).
-			float anchorX = ImGui::GetCursorPosX();
-			float currentX = anchorX;
+			// AlignedWidgetLayout starts cursor where the primary key should be centered
+			float currentX = ImGui::GetCursorPosX();
 
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 
 			for (size_t i = 0; i < items.size(); ++i) {
 				const auto& item = items[i];
 
-				// If this is NOT the first item (Key), we must move LEFT to make space for it
+				// Move the cursor leftwards for modifiers, leaving the primary key at the initial (centered) currentX
 				if (i > 0) {
 					currentX -= (item.size.x + spacing);
 				}
@@ -797,7 +807,7 @@ namespace ImGui
 			ImGui::SetCursorPosY(lineTop + frameH);
 		};
 
-		AlignedWidgetLayout(label, alignFar, labelLeft, DrawContent, frameH);
+		AlignedWidgetLayout(label, alignFar, labelLeft, anchorWidth, DrawContent, frameH);
 
 		if (clicked)
 			RE::PlaySound("UIMenuFocus");
