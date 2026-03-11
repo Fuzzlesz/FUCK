@@ -427,31 +427,32 @@ namespace ImGui
 		ImGuiStyle& style = ImGui::GetStyle();
 		auto& colors = style.Colors;
 
-		style.FontScaleMain = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
+		// Base scale is resolution only — userScale is applied per-content-region in FUCKMan
+		float scale = Renderer::GetResolutionScale();
 
-		style.WindowPadding = user.windowPadding;
-		style.FramePadding = ImVec2(6.0f, 2.0f);
-		style.ItemSpacing = user.itemSpacing;
-		style.ItemInnerSpacing = ImVec2(4.0f, 4.0f);
+		style.WindowPadding = ImVec2(user.windowPadding.x * scale, user.windowPadding.y * scale);
+		style.FramePadding = ImVec2(6.0f * scale, 3.0f * scale);
+		style.ItemSpacing = ImVec2(user.itemSpacing.x * scale, user.itemSpacing.y * scale);
+		style.ItemInnerSpacing = ImVec2(4.0f * scale, 4.0f * scale);
 		style.TouchExtraPadding = ImVec2(0.0f, 0.0f);
-		style.IndentSpacing = user.indentSpacing;
-		style.ColumnsMinSpacing = 6.0f;
-		style.ScrollbarSize = 12.0f;
-		style.GrabMinSize = 10.0f;
+		style.IndentSpacing = user.indentSpacing * scale;
+		style.ColumnsMinSpacing = 6.0f * scale;
+		style.ScrollbarSize = 12.0f * scale;
+		style.GrabMinSize = 10.0f * scale;
 
-		style.WindowBorderSize = user.borderSize;
-		style.ChildBorderSize = user.borderSize;
-		style.FrameBorderSize = user.borderSize;
-		style.PopupBorderSize = user.borderSize;
+		style.WindowBorderSize = user.borderSize * scale;
+		style.ChildBorderSize = user.borderSize * scale;
+		style.FrameBorderSize = user.borderSize * scale;
+		style.PopupBorderSize = user.borderSize * scale;
 		style.TabBorderSize = 0.0f;
 
-		style.WindowRounding = user.windowRounding;
-		style.ChildRounding = user.windowRounding;
-		style.FrameRounding = user.frameRounding;
-		style.PopupRounding = user.popupRounding;
-		style.ScrollbarRounding = user.scrollbarRounding;
-		style.GrabRounding = user.grabRounding;
-		style.TabRounding = user.tabRounding;
+		style.WindowRounding = user.windowRounding * scale;
+		style.ChildRounding = user.windowRounding * scale;
+		style.FrameRounding = user.frameRounding * scale;
+		style.PopupRounding = user.popupRounding * scale;
+		style.ScrollbarRounding = user.scrollbarRounding * scale;
+		style.GrabRounding = user.grabRounding * scale;
+		style.TabRounding = user.tabRounding * scale;
 
 		colors[ImGuiCol_WindowBg] = user.background;
 		colors[ImGuiCol_ChildBg] = user.background;

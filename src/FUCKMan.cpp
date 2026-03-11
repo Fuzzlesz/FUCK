@@ -441,15 +441,32 @@ void FUCKMan::Draw()
 {
 	UpdateGameState();
 
-	const auto resScale = FUCK::GetResolutionScale();
+	const float resScale = FUCK::GetResolutionScale();
 	const float uiScale = resScale;
 
+	// Chrome metrics — always based on resScale only, never _userScale
 	const float scaledTextH = FUCK::GetTextLineHeight();
-	const float uiTextH = scaledTextH / _userScale;
+	const float uiTextH = scaledTextH;  // text height at base scale
 
 	const float headerPadding = 3.0f * uiScale;
 	const float titleH = uiTextH + (headerPadding * 2.0f);
 	const float padBase = 15.0f * uiScale;
+
+	// Content scale helper — pushes _userScale on top of the base style for content regions only
+	auto pushContentScale = [&]() {
+		ImGui::SetWindowFontScale(_userScale);
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f * uiScale * _userScale, 3.0f * uiScale * _userScale));
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f * uiScale * _userScale, 4.0f * uiScale * _userScale));
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(4.0f * uiScale * _userScale, 4.0f * uiScale * _userScale));
+		ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, 20.0f * uiScale * _userScale);
+		ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 12.0f * uiScale * _userScale);
+		ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, 10.0f * uiScale * _userScale);
+	};
+
+	auto popContentScale = [&]() {
+		ImGui::PopStyleVar(6);
+		ImGui::SetWindowFontScale(1.0f);
+	};
 
 	// ------------------------------------------------------------------------
 	// Overlay Render Pass
@@ -467,14 +484,16 @@ void FUCKMan::Draw()
 
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 		if (ImGui::Begin("##ToolOverlayLayer", nullptr, flags)) {
+			pushContentScale();
 			_activeTool->RenderOverlay();
+			popContentScale();
 		}
 		ImGui::End();
 		ImGui::PopStyleVar();
 	}
 
 	// ------------------------------------------------------------------------
-	// 1. Draw Registered External Windows (Overlays)
+	// 1. Draw Registered External Windows
 	// ------------------------------------------------------------------------
 	for (auto* win : _windows) {
 		if (win->IsOpen()) {
@@ -560,7 +579,7 @@ void FUCKMan::Draw()
 					FUCK::ExtendWindowPastBorder();
 
 				if (!noDecoration) {
-					// --- Decorated Window Logic ---
+					// --- Window Chrome Decoration (unscaled) ---
 					float midY = titleH * 0.5f;
 					float winWidth = FUCK::GetWindowSize().x;
 
@@ -605,9 +624,8 @@ void FUCKMan::Draw()
 					float textY = (titleH - uiTextH) * 0.5f;
 					FUCK::SetCursorPos({ iconW, textY });
 
-					// Use base font size manually scaled to UI scale (ignoring user zoom)
 					ImFont* baseFont = ImGui::GetFont();
-					float uiFontSize = ImGui::GetFontSize() / _userScale;
+					float uiFontSize = ImGui::GetStyle().FontSizeBase;
 					ImGui::GetWindowDrawList()->AddText(baseFont, uiFontSize,
 						FUCK::GetCursorScreenPos(), ImGui::GetColorU32(ImGuiCol_Text), title.c_str());
 
@@ -624,13 +642,13 @@ void FUCKMan::Draw()
 						bool btnHovered = ImGui::IsItemHovered();
 						const char* xIcon = ICON_FA_XMARK;
 
-						float targetFontSize = ImGui::GetFontSize() / _userScale;
+						float uiFontSize2 = ImGui::GetStyle().FontSizeBase;
 
-						float textOffsetY = 1.54f * uiScale;
-
-						ImGui::PushFont(nullptr, ImGui::GetStyle().FontSizeBase / _userScale);
+						ImGui::PushFont(nullptr, uiFontSize2);
 						ImVec2 textSize = ImGui::CalcTextSize(xIcon);
 						ImGui::PopFont();
+
+						float textOffsetY = 1.54f * uiScale;
 
 						ImVec2 btnScreenPos = ImGui::GetItemRectMin();
 						ImVec2 textPos = {
@@ -641,8 +659,8 @@ void FUCKMan::Draw()
 						ImU32 xColor = btnHovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
 
 						ImGui::GetWindowDrawList()->AddText(
-							ImGui::GetFont(),
-							targetFontSize,
+							baseFont,
+							uiFontSize2,
 							textPos,
 							xColor,
 							xIcon);
@@ -670,7 +688,7 @@ void FUCKMan::Draw()
 						FUCK::SeparatorThick();
 					}
 
-					// 5. Content Child (Applies internal padding)
+					// 5. Content Child (scaled)
 					if (!isCollapsed) {
 						float childY = titleH + (1.0f * uiScale);
 						FUCK::SetCursorPos({ 0, childY });
@@ -684,7 +702,9 @@ void FUCKMan::Draw()
 							FUCK::Dummy(ImVec2(0, padBase));
 
 							ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
+							pushContentScale();
 							win->Draw();
+							popContentScale();
 							ImGui::PopItemWidth();
 
 							FUCK::Dummy(ImVec2(0, padBase));
@@ -694,8 +714,10 @@ void FUCKMan::Draw()
 						FUCK::PopStyleVar();
 					}
 				} else {
-					// --- No Decoration Logic ---
+					// --- No Chrome Decoration ---
+					pushContentScale();
 					win->Draw();
+					popContentScale();
 				}
 			}
 			FUCK::EndWindow();
@@ -768,7 +790,7 @@ void FUCKMan::Draw()
 			}
 		}
 
-		// -- Custom Title Bar --
+		// -- Custom Title Bar (unscaled) --
 		{
 			ImVec2 cursorScreen = FUCK::GetCursorScreenPos();
 
@@ -811,25 +833,21 @@ void FUCKMan::Draw()
 
 			// 2. Close Button
 			float btnSize = titleH;
-			float btnY = 0.0f;
 			float xPos = winWidth - btnSize - headerPadding;
 
-			FUCK::SetCursorPos({ xPos, btnY });
+			FUCK::SetCursorPos({ xPos, 0.0f });
 			ImVec2 btnCursor = FUCK::GetCursorScreenPos();
 
 			if (ImGui::InvisibleButton("##CloseBtn", ImVec2(btnSize, btnSize))) {
 				wantsOpen = false;
 			}
 
-			// X button with fixed size
 			{
 				const char* xIcon = ICON_FA_XMARK;
-
 				float textOffsetY = 1.55f * uiScale;
+				float uiFontSize = ImGui::GetStyle().FontSizeBase;
 
-				float targetFontSize = ImGui::GetFontSize() / _userScale;
-
-				ImGui::PushFont(nullptr, ImGui::GetStyle().FontSizeBase / _userScale);
+				ImGui::PushFont(nullptr, uiFontSize);
 				ImVec2 textSize = ImGui::CalcTextSize(xIcon);
 				ImGui::PopFont();
 
@@ -842,7 +860,7 @@ void FUCKMan::Draw()
 
 				ImGui::GetWindowDrawList()->AddText(
 					ImGui::GetFont(),
-					targetFontSize,
+					uiFontSize,
 					textPos,
 					xColor,
 					xIcon);
@@ -868,6 +886,7 @@ void FUCKMan::Draw()
 			float availHeight = FUCK::GetContentRegionAvail().y;
 			const float sidebarWidth = 250.0f * uiScale;
 
+			// -- Sidebar (unscaled) --
 			auto renderSidebar = [&]() {
 				const float itemHeight = 30.0f * uiScale;
 				const float topPadding = 2.0f * uiScale;
@@ -875,7 +894,7 @@ void FUCKMan::Draw()
 				const float indent = 15.0f * uiScale;
 				const float textVisualOffset = 1.0f * uiScale;
 
-				const float sidebarFontSize = (22.0f * 0.9f) / _userScale;
+				const float sidebarFontSize = 22.0f * 0.9f;
 
 				std::vector<ITool*> looseTools;
 				std::map<std::string, std::vector<ITool*>> toolGroups;
@@ -917,6 +936,8 @@ void FUCKMan::Draw()
 				});
 
 				static auto iconArrow = MANAGER(IconFont)->GetStepperRight();
+				
+				// Draw Icon with fixed size
 				float baseIconWidth = iconArrow ? (iconArrow->size.x / _userScale) : 20.0f;
 				float alignedTextOffset = (indent * 0.5f) + baseIconWidth + headerPadding;
 
@@ -1016,13 +1037,11 @@ void FUCKMan::Draw()
 						}
 
 						if (isOpen) {
-							ImGui::TreePush(groupName.c_str());
 							for (auto* tool : tools) {
 								FUCK::Indent(indent);
 								RenderSidebarItem(tool, tool->Name());
 								FUCK::Unindent(indent);
 							}
-							FUCK::TreePop();
 						}
 
 						ImGui::PopID();
@@ -1085,10 +1104,12 @@ void FUCKMan::Draw()
 				FUCK::EndChild();
 			};
 
+			// -- Content (scaled) --
 			auto renderContent = [&](float width) {
 				FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padBase, 0.0f));
 				FUCK::BeginChild("Content", ImVec2(width, availHeight), true, 0);
 				{
+					pushContentScale();
 					FUCK::Dummy(ImVec2(0, padBase));
 					if (_activeTool)
 						_activeTool->Draw();
@@ -1096,6 +1117,7 @@ void FUCKMan::Draw()
 						FUCK::CenteredText("$FUCK_NoToolSelected"_T, true);
 
 					FUCK::Dummy(ImVec2(0, 1));
+					popContentScale();
 				}
 				FUCK::EndChild();
 				FUCK::PopStyleVar();
