@@ -72,10 +72,10 @@ namespace ImGui
 			float windowRounding{ 0.0f };
 			float frameRounding{ 0.0f };
 			float grabRounding{ 0.0f };
-			float tabRounding{ 4.0f };
+			float tabRounding{ 6.0f };
 			float popupRounding{ 0.0f };
 			float scrollbarRounding{ 0.0f };
-			float buttonRounding{ 4.0f };
+			float buttonRounding{ 6.0f };
 
 			// Windows & Borders
 			ImVec4 background{ 0.0f, 0.0f, 0.0f, bgAlpha };

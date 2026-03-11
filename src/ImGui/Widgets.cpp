@@ -217,21 +217,6 @@ namespace ImGui
 		DrawWidgetBorder(ImGui::GetWindowDrawList(), bb, hovered || active || focused, rounding);
 	}
 
-	void DrawTabBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered)
-	{
-		float scale = ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
-		float thick = 2.0f * scale;
-		float rnd = ImGui::GetStyle().TabRounding;
-
-		ImU32 col = isActiveOrHovered ? GetUserStyleColorU32(USER_STYLE::kTabBorderActive) : GetUserStyleColorU32(USER_STYLE::kTabBorder);
-
-		drawList->PathLineTo({ bb.Min.x, bb.Max.y });
-		drawList->PathArcToFast({ bb.Min.x + rnd, bb.Min.y + rnd }, rnd, 6, 9);
-		drawList->PathArcToFast({ bb.Max.x - rnd, bb.Min.y + rnd }, rnd, 9, 12);
-		drawList->PathLineTo({ bb.Max.x, bb.Max.y });
-		drawList->PathStroke(col, 0, thick);
-	}
-
 	bool CheckBox(const char* label, bool* a_toggle, bool alignFar, bool labelLeft)
 	{
 		bool selected = false;
@@ -528,6 +513,34 @@ namespace ImGui
 		return changed;
 	}
 
+	void DrawTabBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered)
+	{
+		float thick = ImGui::GetStyle().FrameBorderSize;
+		float rnd = ImGui::GetStyle().TabRounding;
+		float scale = ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
+		float blackThick = thick + (1.0f * scale);
+
+		auto buildPath = [&](ImDrawList* dl, float botY) {
+			dl->PathLineTo({ bb.Min.x, botY });
+			dl->PathArcToFast({ bb.Min.x + rnd, bb.Min.y + rnd }, rnd, 6, 9);
+			dl->PathArcToFast({ bb.Max.x - rnd, bb.Min.y + rnd }, rnd, 9, 12);
+			dl->PathLineTo({ bb.Max.x, botY });
+		};
+
+		ImDrawList* bgList = ImGui::GetBackgroundDrawList();
+		buildPath(bgList, bb.Max.y);
+		bgList->PathFillConvex(GetColorU32(ImGuiCol_Button));
+
+		buildPath(drawList, bb.Max.y);
+		drawList->PathStroke(IM_COL32(0, 0, 0, 255), 0, blackThick);
+
+		ImU32 col = isActiveOrHovered ?
+		                GetUserStyleColorU32(USER_STYLE::kTabBorderActive) :
+		                GetUserStyleColorU32(USER_STYLE::kTabBorder);
+		buildPath(drawList, bb.Max.y);
+		drawList->PathStroke(col, 0, thick);
+	}
+
 	bool BeginTabItemEx(const char* label, ImGuiTabItemFlags flags)
 	{
 		ImGuiWindow* window = GetCurrentWindow();
@@ -536,22 +549,34 @@ namespace ImGui
 		ImGuiID lastActive = window->StateStorage.GetInt(storageKey, 0);
 
 		bool wasActive = (lastActive == id);
+		float scale = ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
+
+		PushStyleColor(ImGuiCol_Tab, ImVec4(0, 0, 0, 0));
+		PushStyleColor(ImGuiCol_TabHovered, ImVec4(0, 0, 0, 0));
+		PushStyleColor(ImGuiCol_TabActive, ImVec4(0, 0, 0, 0));
+		PushStyleColor(ImGuiCol_TabUnfocused, ImVec4(0, 0, 0, 0));
+		PushStyleColor(ImGuiCol_TabUnfocusedActive, ImVec4(0, 0, 0, 0));
+
 		if (!wasActive)
 			PushStyleColor(ImGuiCol_Text, GetStyleColorVec4(ImGuiCol_TextDisabled));
 
-		PushStyleVar(ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, 0.0f });
+		PushStyleVar(ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, 6.0f * scale });
 		bool active = BeginTabItem(label, nullptr, flags);
 		PopStyleVar();
 
 		if (!wasActive)
 			PopStyleColor();
+		PopStyleColor(5);
 
 		ImVec2 min = GetItemRectMin();
 		ImVec2 max = GetItemRectMax();
-		float inset = 2.0f;
+		float thick = ImGui::GetStyle().FrameBorderSize;
+		float inset = thick * 0.5f;
+		float clampedMaxY = min.y + GetFrameHeight() - 2.0f;  // hug the bar tighter
+
 		ImRect insetRect = {
-			ImVec2(min.x + inset, min.y + inset),
-			ImVec2(max.x - inset, max.y - inset)
+			ImVec2(min.x + inset, min.y),
+			ImVec2(max.x - inset, clampedMaxY)
 		};
 
 		DrawTabBorder(GetWindowDrawList(), insetRect, active || IsItemHovered());
