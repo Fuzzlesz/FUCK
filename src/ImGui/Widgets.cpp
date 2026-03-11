@@ -408,7 +408,7 @@ namespace ImGui
 		}
 
 		DrawDropdownIcon(parentDrawList, { widgetPos.x + width - frameH, widgetPos.y }, { frameH, frameH }, isOpen, opensUp, IsItemHovered());
-		DrawWidgetBorder(parentDrawList, { widgetPos, widgetPos + ImVec2(width, frameH) }, isOpen || IsItemHovered() || IsWidgetFocused(id));
+		DrawWidgetBorder(parentDrawList, { widgetPos, widgetPos + ImVec2(width, frameH) }, isOpen || IsItemHovered() || IsWidgetFocused(id), ImGui::GetStyle().FrameRounding);
 
 		if (!isOpen)
 			return false;
@@ -1031,7 +1031,7 @@ namespace ImGui
 			RE::PlaySound(is_open ? "UIMenuFocus" : "UIMenuCancel");
 		}
 		if (h)
-			RenderFrame(bb.Min, bb.Max, GetColorU32(ImGuiCol_HeaderHovered), false);
+			RenderFrame(bb.Min, bb.Max, GetColorU32(ImGuiCol_HeaderHovered), false, GImGui->Style.FrameRounding);
 
 		// Draw Arrow Icon using helper
 		float padding = GImGui->Style.ItemInnerSpacing.x;
