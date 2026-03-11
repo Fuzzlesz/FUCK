@@ -556,9 +556,8 @@ namespace ImGui
 			dl->PathLineTo({ bb.Max.x, botY });
 		};
 
-		ImDrawList* bgList = ImGui::GetBackgroundDrawList();
-		buildPath(bgList, bb.Max.y);
-		bgList->PathFillConvex(GetColorU32(ImGuiCol_Button));
+		buildPath(drawList, bb.Max.y);
+		drawList->PathFillConvex(GetColorU32(ImGuiCol_Button));
 
 		buildPath(drawList, bb.Max.y);
 		drawList->PathStroke(IM_COL32(0, 0, 0, 255), 0, blackThick);
@@ -590,12 +589,20 @@ namespace ImGui
 			PushStyleColor(ImGuiCol_Text, GetStyleColorVec4(ImGuiCol_TextDisabled));
 
 		PushStyleVar(ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, 6.0f * scale });
+
+		window->DrawList->ChannelsSplit(2);
+		window->DrawList->ChannelsSetCurrent(1);
+
 		bool active = BeginTabItem(label, nullptr, flags);
+
 		PopStyleVar();
 
 		if (!wasActive)
 			PopStyleColor();
 		PopStyleColor(5);
+
+		// Switch to background channel for custom border
+		window->DrawList->ChannelsSetCurrent(0);
 
 		ImVec2 min = GetItemRectMin();
 		ImVec2 max = GetItemRectMax();
@@ -608,7 +615,10 @@ namespace ImGui
 			ImVec2(max.x - inset, clampedMaxY)
 		};
 
-		DrawTabBorder(GetWindowDrawList(), insetRect, active || IsItemHovered());
+		DrawTabBorder(window->DrawList, insetRect, active || IsItemHovered());
+
+		// Merge channels back to normal
+		window->DrawList->ChannelsMerge();
 
 		if (active) {
 			window->StateStorage.SetInt(storageKey, id);
