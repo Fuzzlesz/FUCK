@@ -254,7 +254,7 @@ namespace ImGui
 		std::string idStr = std::format("##{}", label);
 
 		float frameH = ImGui::GetFrameHeight();
-		float width = frameH * 1.55f;
+		float width = frameH * 1.25f;
 
 		auto DrawContent = [&]() {
 			ImGuiWindow* window = GetCurrentWindow();
