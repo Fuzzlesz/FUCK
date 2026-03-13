@@ -9,7 +9,7 @@
 #include "Styles.h"
 #include "Util.h"
 
-	namespace IconFont
+namespace IconFont
 {
 	IconTexture::IconTexture(std::wstring_view a_iconName) :
 		ImGui::Texture(LR"(Data/Interface/ImGuiIcons/Icons/)", a_iconName)
