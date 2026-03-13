@@ -212,16 +212,6 @@ namespace ImGui
 		drawList->AddRect(bb.Min, bb.Max, col, rounding, 0, thickness);
 	}
 
-	static void DrawLastItemBorder(float rounding = 0.0f)
-	{
-		ImGuiContext& g = *GImGui;
-		ImRect bb = g.LastItemData.Rect;
-		bool hovered = ImGui::IsItemHovered();
-		bool active = ImGui::IsItemActive();
-		bool focused = ImGui::IsItemFocused();
-		DrawWidgetBorder(ImGui::GetWindowDrawList(), bb, hovered || active || focused, rounding);
-	}
-
 	bool CheckBox(const char* label, bool* a_toggle, bool alignFar, bool labelLeft)
 	{
 		bool selected = false;
@@ -1093,100 +1083,107 @@ namespace ImGui
 		return pressed;
 	}
 
-	bool ColorEdit3Styled(const char* label, float col[3], int flags)
+	template <typename TWidgetFunc>
+	bool OutsetFramedWidget(const char* label, TWidgetFunc drawWidget)
 	{
 		std::string id = "##"s + label;
 		LeftAlignedTextImpl(label, id);
+
+		float borderSize = ImGui::GetStyle().FrameBorderSize;
+		float rounding = ImGui::GetStyle().FrameRounding;
+
 		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorU32(USER_STYLE::kFrameBG_Widget));
 		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
 		PushStyleColor(ImGuiCol_FrameBgActive, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
-		PushStyleColor(ImGuiCol_Border, GetUserStyleColorU32(USER_STYLE::kSliderBorder));
-		bool result = ImGui::ColorEdit3(id.c_str(), col, flags | ImGuiColorEditFlags_NoLabel);
-		DrawLastItemBorder(ImGui::GetStyle().FrameRounding);
+		PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
+
+		bool result = drawWidget(id.c_str());
+
+		PopStyleVar();
+		PopStyleColor(3);
+
+		if (borderSize > 0.0f) {
+			ImRect bb = GImGui->LastItemData.Rect;
+			bool hovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
+			bool active = ImGui::IsItemActive();
+			bool focused = IsWidgetFocused(id);
+
+			ImU32 borderColor = (hovered || active || focused) ?
+			                        GetUserStyleColorU32(USER_STYLE::kSliderBorderActive) :
+			                        GetUserStyleColorU32(USER_STYLE::kSliderBorder);
+
+			float outset = borderSize * 0.5f;
+			ImRect drawBb = { bb.Min - ImVec2(outset, outset), bb.Max + ImVec2(outset, outset) };
+
+			ImGui::GetWindowDrawList()->AddRect(drawBb.Min, drawBb.Max, borderColor, rounding, 0, borderSize);
+		}
+		ActivateOnHover();
+
+		return result;
+	}
+
+	bool ColorEdit3Styled(const char* label, float col[3], int flags)
+	{
+		bool res = OutsetFramedWidget(label, [&](const char* id) {
+			return ImGui::ColorEdit3(id, col, flags | ImGuiColorEditFlags_NoLabel);
+		});
 		if (IsItemActivated())
 			RE::PlaySound("UIMenuFocus");
-		ActivateOnHover();
-		PopStyleColor(4);
-		return result;
+		return res;
 	}
 
 	bool ColorEdit4Styled(const char* label, float col[4], int flags)
 	{
-		std::string id = "##"s + label;
-		LeftAlignedTextImpl(label, id);
-		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorU32(USER_STYLE::kFrameBG_Widget));
-		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
-		PushStyleColor(ImGuiCol_FrameBgActive, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
-		PushStyleColor(ImGuiCol_Border, GetUserStyleColorU32(USER_STYLE::kSliderBorder));
-		bool result = ImGui::ColorEdit4(id.c_str(), col, flags | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_AlphaBar);
-		DrawLastItemBorder(ImGui::GetStyle().FrameRounding);
+		bool res = OutsetFramedWidget(label, [&](const char* id) {
+			return ImGui::ColorEdit4(id, col, flags | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_AlphaBar);
+		});
 		if (IsItemActivated())
 			RE::PlaySound("UIMenuFocus");
-		ActivateOnHover();
-		PopStyleColor(4);
-		return result;
+		return res;
 	}
 
 	bool InputTextStyled(const char* label, char* buf, size_t buf_size, int flags)
 	{
-		std::string id = "##"s + label;
-		LeftAlignedTextImpl(label, id);
-		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox));
-		PushStyleColor(ImGuiCol_Text, GetUserStyleColorU32(USER_STYLE::kComboBoxText));
-		bool res = ImGui::InputText(id.c_str(), buf, buf_size, flags);
-		DrawLastItemBorder(ImGui::GetStyle().FrameRounding);
+		bool res = OutsetFramedWidget(label, [&](const char* id) {
+			PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox));
+			PushStyleColor(ImGuiCol_Text, GetUserStyleColorU32(USER_STYLE::kComboBoxText));
+			bool internalRes = ImGui::InputText(id, buf, buf_size, flags);
+			PopStyleColor(2);
+			return internalRes;
+		});
 		if (IsItemActivated())
 			RE::PlaySound("UIMenuFocus");
-		PopStyleColor(2);
 		return res;
 	}
 
 	bool DragFloat2Styled(const char* label, float v[2], float speed, float min, float max, const char* fmt)
 	{
-		std::string id = "##"s + label;
-		LeftAlignedTextImpl(label, id);
-		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorU32(USER_STYLE::kFrameBG_Widget));
-		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
-		PushStyleColor(ImGuiCol_FrameBgActive, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
-		bool result = ImGui::DragFloat2(id.c_str(), v, speed, min, max, fmt);
-		DrawLastItemBorder(ImGui::GetStyle().FrameRounding);
-		if (result)
+		bool res = OutsetFramedWidget(label, [&](const char* id) {
+			return ImGui::DragFloat2(id, v, speed, min, max, fmt);
+		});
+		if (res)
 			RE::PlaySound("UIMenuPrevNext");
-		ActivateOnHover();
-		PopStyleColor(3);
-		return result;
+		return res;
 	}
 
 	bool DragFloat3Styled(const char* label, float v[3], float speed, float min, float max, const char* fmt)
 	{
-		std::string id = "##"s + label;
-		LeftAlignedTextImpl(label, id);
-		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorU32(USER_STYLE::kFrameBG_Widget));
-		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
-		PushStyleColor(ImGuiCol_FrameBgActive, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
-		bool result = ImGui::DragFloat3(id.c_str(), v, speed, min, max, fmt);
-		DrawLastItemBorder(ImGui::GetStyle().FrameRounding);
-		if (result)
+		bool res = OutsetFramedWidget(label, [&](const char* id) {
+			return ImGui::DragFloat3(id, v, speed, min, max, fmt);
+		});
+		if (res)
 			RE::PlaySound("UIMenuPrevNext");
-		ActivateOnHover();
-		PopStyleColor(3);
-		return result;
+		return res;
 	}
 
 	bool DragFloat4Styled(const char* label, float v[4], float speed, float min, float max, const char* fmt)
 	{
-		std::string id = "##"s + label;
-		LeftAlignedTextImpl(label, id);
-		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorU32(USER_STYLE::kFrameBG_Widget));
-		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
-		PushStyleColor(ImGuiCol_FrameBgActive, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
-		bool result = ImGui::DragFloat4(id.c_str(), v, speed, min, max, fmt);
-		DrawLastItemBorder(ImGui::GetStyle().FrameRounding);
-		if (result)
+		bool res = OutsetFramedWidget(label, [&](const char* id) {
+			return ImGui::DragFloat4(id, v, speed, min, max, fmt);
+		});
+		if (res)
 			RE::PlaySound("UIMenuPrevNext");
-		ActivateOnHover();
-		PopStyleColor(3);
-		return result;
+		return res;
 	}
 
 	void Stepper(const char* label, const char* text, bool* outLeft, bool* outRight)
