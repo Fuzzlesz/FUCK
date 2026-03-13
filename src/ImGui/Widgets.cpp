@@ -541,15 +541,15 @@ namespace ImGui
 
 	void DrawTabBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered)
 	{
-		float thick = ImGui::GetStyle().FrameBorderSize;
-		float rnd = ImGui::GetStyle().TabRounding;
+		float borderSize = ImGui::GetStyle().FrameBorderSize;
+		float round = ImGui::GetStyle().TabRounding;
 		float scale = ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
-		float blackThick = thick + (1.0f * scale);
+		float outlining = borderSize + (2.5f * scale);
 
 		auto buildPath = [&](ImDrawList* dl, float botY) {
 			dl->PathLineTo({ bb.Min.x, botY });
-			dl->PathArcToFast({ bb.Min.x + rnd, bb.Min.y + rnd }, rnd, 6, 9);
-			dl->PathArcToFast({ bb.Max.x - rnd, bb.Min.y + rnd }, rnd, 9, 12);
+			dl->PathArcToFast({ bb.Min.x + round, bb.Min.y + round }, round, 6, 9);
+			dl->PathArcToFast({ bb.Max.x - round, bb.Min.y + round }, round, 9, 12);
 			dl->PathLineTo({ bb.Max.x, botY });
 		};
 
@@ -557,13 +557,13 @@ namespace ImGui
 		drawList->PathFillConvex(GetColorU32(ImGuiCol_Button));
 
 		buildPath(drawList, bb.Max.y);
-		drawList->PathStroke(IM_COL32(0, 0, 0, 255), 0, blackThick);
+		drawList->PathStroke(IM_COL32(0, 0, 0, 255), 0, outlining);
 
 		ImU32 col = isActiveOrHovered ?
 		                GetUserStyleColorU32(USER_STYLE::kTabBorderActive) :
 		                GetUserStyleColorU32(USER_STYLE::kTabBorder);
 		buildPath(drawList, bb.Max.y);
-		drawList->PathStroke(col, 0, thick);
+		drawList->PathStroke(col, 0, borderSize);
 	}
 
 	bool BeginTabItemEx(const char* label, ImGuiTabItemFlags flags)
@@ -603,16 +603,16 @@ namespace ImGui
 
 		ImVec2 min = GetItemRectMin();
 		ImVec2 max = GetItemRectMax();
-		float thick = ImGui::GetStyle().FrameBorderSize;
-		float inset = thick * 0.5f;
+		float borderSize = ImGui::GetStyle().FrameBorderSize;
+		float outlineInset = borderSize * 0.5f;
 		float clampedMaxY = min.y + GetFrameHeight() - 2.0f;  // hug the bar tighter
 
-		ImRect insetRect = {
-			ImVec2(min.x + inset, min.y),
-			ImVec2(max.x - inset, clampedMaxY)
+		ImRect drawBb = {
+			ImVec2(min.x + outlineInset, min.y),
+			ImVec2(max.x - outlineInset, clampedMaxY)
 		};
 
-		DrawTabBorder(window->DrawList, insetRect, active || IsItemHovered());
+		DrawTabBorder(window->DrawList, drawBb, active || IsItemHovered());
 
 		// Merge channels back to normal
 		window->DrawList->ChannelsMerge();
@@ -636,14 +636,15 @@ namespace ImGui
 		float borderSize = ImGui::GetStyle().FrameBorderSize;
 
 		ImVec2 textSize = CalcTextSize(label);
-		ImVec2 padding = ImVec2(5.0f * scale, 4.0f * scale);
+		ImVec2 textPad = ImVec2(5.0f * scale, 4.0f * scale);
 
-		float blackThick = borderSize + (1.5f * scale);
-		float bleed = blackThick * 0.5f;
+		float outlining = borderSize + (2.5f * scale);
+		float outlineInset = outlining * 0.5f;
 
 		// Consistent vertical size based on line height
 		ImVec2 contentSize = ImVec2(textSize.x, GetTextLineHeight());
-		ImVec2 sz = contentSize + (padding * 2.0f) + ImVec2(bleed * 2.0f, bleed * 2.0f);
+
+		ImVec2 sz = contentSize + (textPad * 2.0f) + ImVec2(outlineInset * 2.0f, outlineInset * 2.0f);
 		sz.x = ImMax(sz.x, sz.y);  // minimum square
 
 		ImRect bb(window->DC.CursorPos, window->DC.CursorPos + sz);
@@ -651,13 +652,14 @@ namespace ImGui
 		if (!ItemAdd(bb, window->GetID(label)))
 			return false;
 
-		ImRect drawBb = { bb.Min + ImVec2(bleed, bleed), bb.Max - ImVec2(bleed, bleed) };
+		ImRect drawBb = { bb.Min + ImVec2(outlineInset, outlineInset), bb.Max - ImVec2(outlineInset, outlineInset) };
 
 		bool h, held;
 		bool p = ButtonBehavior(bb, window->GetID(label), &h, &held);
 
 		RenderFrame(drawBb.Min, drawBb.Max, GetColorU32(ImGuiCol_Button), true, rounding);
-		window->DrawList->AddRect(drawBb.Min, drawBb.Max, IM_COL32(0, 0, 0, 255), rounding, 0, blackThick);
+
+		window->DrawList->AddRect(drawBb.Min, drawBb.Max, IM_COL32(0, 0, 0, 255), rounding, 0, outlining);
 		DrawWidgetBorder(window->DrawList, drawBb, h || held, rounding);
 
 		bool dim = MANAGER(Input)->IsInputGamepad() && !h;
@@ -710,7 +712,7 @@ namespace ImGui
 		const auto* m1Icon = (m1 != -1) ? iconFont->GetIcon(static_cast<uint32_t>(m1)) : nullptr;
 		const auto* m2Icon = (m2 != -1) ? iconFont->GetIcon(static_cast<uint32_t>(m2)) : nullptr;
 
-			// Generic item to unify rendering loop
+		// Generic item to unify rendering loop
 		struct RenderItem
 		{
 			enum Type
