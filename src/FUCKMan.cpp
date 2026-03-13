@@ -455,9 +455,17 @@ void FUCKMan::Draw()
 	// Content scale helper — pushes _userScale on top of the base style for content regions only
 	auto pushContentScale = [&]() {
 		ImGui::SetWindowFontScale(_userScale);
+
+		float borderSize = ImGui::GetStyle().FrameBorderSize;
+
+		float spaceX = (8.0f * uiScale * _userScale) + borderSize;
+		float spaceY = (4.0f * uiScale * _userScale) + borderSize;
+		float innerSpaceX = (4.0f * uiScale * _userScale) + borderSize;
+		float innerSpaceY = (4.0f * uiScale * _userScale) + borderSize;
+
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f * uiScale * _userScale, 3.0f * uiScale * _userScale));
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f * uiScale * _userScale, 4.0f * uiScale * _userScale));
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(4.0f * uiScale * _userScale, 4.0f * uiScale * _userScale));
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spaceX, spaceY));
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(innerSpaceX, innerSpaceY));
 		ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, 20.0f * uiScale * _userScale);
 		ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 12.0f * uiScale * _userScale);
 		ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, 10.0f * uiScale * _userScale);
