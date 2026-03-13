@@ -373,9 +373,13 @@ namespace ImGui
 
 		const char* preview = (*current_item >= 0 && *current_item < (int)items.size()) ? items[*current_item].c_str() : "";
 
-		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
+		ImVec4 textBoxColor = GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox);
+		PushStyleColor(ImGuiCol_FrameBg, textBoxColor);
+		PushStyleColor(ImGuiCol_FrameBgHovered, textBoxColor);
+		PushStyleColor(ImGuiCol_FrameBgActive, textBoxColor);
+
 		PushStyleColor(ImGuiCol_Text, GetUserStyleColorVec4(USER_STYLE::kComboBoxText));
-		PushStyleColor(ImGuiCol_PopupBg, GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
+		PushStyleColor(ImGuiCol_PopupBg, textBoxColor);
 
 		// Capture height while padding is active
 		float frameH = GetFrameHeight();
@@ -385,7 +389,7 @@ namespace ImGui
 		bool isOpen = BeginCombo(idStr.c_str(), preview, ImGuiComboFlags_NoArrowButton);
 
 		PopStyleVar();
-		PopStyleColor(3);
+		PopStyleColor(5);
 
 		// Detect if opened Upwards
 		bool opensUp = false;
@@ -482,6 +486,8 @@ namespace ImGui
 
 		PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
 		PushStyleColor(ImGuiCol_FrameBg, ImVec4(0, 0, 0, 0));
+		PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0, 0, 0, 0));
+		PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(0, 0, 0, 0));
 
 		PushStyleColor(ImGuiCol_Text, GetUserStyleColorVec4(USER_STYLE::kComboBoxText));
 		PushStyleColor(ImGuiCol_PopupBg, GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
@@ -495,8 +501,9 @@ namespace ImGui
 		parentDrawList->AddRectFilled(widgetPos, widgetPos + ImVec2(width, frameH), GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox), ImGui::GetStyle().FrameRounding);
 
 		bool isOpen = BeginCombo(idStr.c_str(), preview, ImGuiComboFlags_NoArrowButton);
+
 		PopStyleVar();
-		PopStyleColor(4);
+		PopStyleColor(6);
 
 		bool opensUp = false;
 		if (isOpen) {
