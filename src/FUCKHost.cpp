@@ -479,7 +479,16 @@ namespace FUCK::Host
 	static bool BeginWindow_Impl(const char* n, bool* o, int f) { return ImGui::Begin(n, o, f); }
 	static void EndWindow_Impl() { ImGui::End(); }
 	static void ExtendWindowPastBorder_Impl() { ImGui::ExtendWindowPastBorder(); }
-	static void BeginChild_Impl(const char* id, float w, float h, bool border, int flags) { ImGui::BeginChild(id, ImVec2(w, h), border, flags); }
+	static void BeginChild_Impl(const char* id, float w, float h, bool border, int flags)
+	{
+		// Capture the current UI scale from the parent window
+		float currentScale = ImGui::GetCurrentWindow()->FontWindowScale;
+
+		ImGui::BeginChild(id, ImVec2(w, h), border, flags);
+
+		// Immediately apply it to the new child window so plugins scale automatically
+		ImGui::SetWindowFontScale(currentScale);
+	}
 	static void EndChild_Impl() { ImGui::EndChild(); }
 	static bool TreeNode_Impl(const char* label) { return ImGui::TreeNodeIcon(label, 0); }
 	static void TreePop_Impl() { ImGui::TreePop(); }

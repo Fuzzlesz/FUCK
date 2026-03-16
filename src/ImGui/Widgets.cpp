@@ -743,13 +743,13 @@ namespace ImGui
 			AddText("None");
 		}
 
-			// 2. Mod 2 ( Grows Left )
+		// 2. Mod 2 ( Grows Left )
 		if (m2Icon) {
 			AddText("+");
 			AddIcon(m2Icon, "m2");
 		}
 
-			// 3. Mod 1 ( Grows Left )
+		// 3. Mod 1 ( Grows Left )
 		if (m1Icon) {
 			AddText("+");
 			AddIcon(m1Icon, "m1");
@@ -804,9 +804,9 @@ namespace ImGui
 			}
 
 			ImGui::PopStyleVar();
-
-			// Restore Y baseline for layout system
+			
 			ImGui::SetCursorPosY(lineTop + frameH);
+			ImGui::Dummy(ImVec2(0.0f, 0.0f));
 		};
 
 		AlignedWidgetLayout(label, alignFar, labelLeft, anchorWidth, DrawContent, frameH);
