@@ -467,8 +467,8 @@ void FUCKMan::Draw()
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spaceX, spaceY));
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(innerSpaceX, innerSpaceY));
 		ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, 20.0f * uiScale * _userScale);
-		ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 12.0f * uiScale * _userScale);
-		ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, 10.0f * uiScale * _userScale);
+		ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 12.0f * uiScale);
+		ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, 10.0f * uiScale);
 	};
 
 	auto popContentScale = [&]() {
