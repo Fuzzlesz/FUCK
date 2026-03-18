@@ -454,7 +454,9 @@ void FUCKMan::Draw()
 
 	// Content scale helper — pushes _userScale on top of the base style for content regions only
 	auto pushContentScale = [&]() {
-		ImGui::SetWindowFontScale(_userScale);
+		ImFont* defaultFont = ImGui::GetFont();
+		float targetSize = defaultFont->LegacySize * _userScale;
+		ImGui::PushFont(defaultFont, targetSize);
 
 		float borderSize = ImGui::GetStyle().FrameBorderSize;
 
@@ -473,7 +475,7 @@ void FUCKMan::Draw()
 
 	auto popContentScale = [&]() {
 		ImGui::PopStyleVar(6);
-		ImGui::SetWindowFontScale(1.0f);
+		ImGui::PopFont();
 	};
 
 	// ------------------------------------------------------------------------

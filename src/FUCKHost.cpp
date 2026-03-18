@@ -37,11 +37,14 @@ namespace FUCK::Host
 	}
 	static void PushFont_Impl(ImFont* f, float size)
 	{
+		float userScale = FUCKMan::GetSingleton()->GetUserScale();
+
 		if (size <= 0.0f) {
-			// Request the font's unscaled baked size.
-			size = f ? f->LegacySize : ImGui::GetStyle().FontSizeBase;
+			size = (f ? f->LegacySize : ImGui::GetStyle().FontSizeBase) * userScale;
+		} else {
+			size *= userScale;
 		}
-		// ImGui 1.92 will automatically multiply this 'size' by style.FontScaleMain
+
 		ImGui::PushFont(f, size);
 	}
 	static void PopFont_Impl() { ImGui::PopFont(); }
@@ -481,13 +484,7 @@ namespace FUCK::Host
 	static void ExtendWindowPastBorder_Impl() { ImGui::ExtendWindowPastBorder(); }
 	static void BeginChild_Impl(const char* id, float w, float h, bool border, int flags)
 	{
-		// Capture the current UI scale from the parent window
-		float currentScale = ImGui::GetCurrentWindow()->FontWindowScale;
-
 		ImGui::BeginChild(id, ImVec2(w, h), border, flags);
-
-		// Immediately apply it to the new child window so plugins scale automatically
-		ImGui::SetWindowFontScale(currentScale);
 	}
 	static void EndChild_Impl() { ImGui::EndChild(); }
 	static bool TreeNode_Impl(const char* label) { return ImGui::TreeNodeIcon(label, 0); }
