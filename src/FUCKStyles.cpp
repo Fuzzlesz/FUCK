@@ -18,12 +18,18 @@ void ThemeEditorWindow::Draw()
 		static std::vector<std::string> fonts = style->GetAvailableFonts();
 		std::string currentFont = style->GetCurrentFont();
 
+		std::vector<std::string> displayFonts;
 		std::vector<const char*> fontPtrs;
+		displayFonts.reserve(fonts.size());
 		fontPtrs.reserve(fonts.size());
+
 		int currentFontIdx = -1;
 
 		for (size_t i = 0; i < fonts.size(); ++i) {
-			fontPtrs.push_back(fonts[i].c_str());
+			std::string disp = (fonts[i] == "Default") ? std::string("$FUCK_Styles_FontDefault"_T) : fonts[i];
+			displayFonts.push_back(disp);
+			fontPtrs.push_back(displayFonts.back().c_str());
+
 			if (fonts[i] == currentFont) {
 				currentFontIdx = static_cast<int>(i);
 			}
