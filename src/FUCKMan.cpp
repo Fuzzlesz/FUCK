@@ -902,6 +902,7 @@ void FUCKMan::Draw()
 				const float textVisualOffset = 1.0f * uiScale;
 
 				const float sidebarFontSize = 22.0f * 0.9f;
+				ImFont* regularFont = MANAGER(IconFont)->GetRegularFont();
 
 				std::vector<ITool*> looseTools;
 				std::map<std::string, std::vector<ITool*>> toolGroups;
@@ -943,7 +944,7 @@ void FUCKMan::Draw()
 				});
 
 				static auto iconArrow = MANAGER(IconFont)->GetStepperRight();
-				
+
 				// Draw Icon with fixed size
 				float baseIconWidth = iconArrow ? (iconArrow->size.x / _userScale) : 20.0f;
 				const float iconToTextPadding = 10.0f * uiScale;
@@ -957,8 +958,10 @@ void FUCKMan::Draw()
 
 					// --- HEADER: TOOLS (Centered) ---
 					FUCK::SetCursorPos(headerStart);
-					FUCK::PushFont(FUCK::GetFont(FUCK_Font::kRegular), sidebarFontSize);
-					float textH = FUCK::GetTextLineHeight();
+
+					// Bypassing FUCK::PushFont scaling
+					ImGui::PushFont(regularFont, sidebarFontSize);
+					float textH = ImGui::GetTextLineHeight();
 					float sidebarW = FUCK::GetContentRegionAvail().x;
 					const char* headerText = "$FUCK_Tools"_T;
 					float headerW = ImGui::CalcTextSize(headerText).x;
@@ -966,7 +969,7 @@ void FUCKMan::Draw()
 					FUCK::SetCursorPosX(headerStart.x + (sidebarW - headerW) * 0.5f);
 					FUCK::SetCursorPosY(headerStart.y + (itemHeight - textH) * 0.5f + textVisualOffset);
 					FUCK::Text(headerText);
-					FUCK::PopFont();
+					ImGui::PopFont();
 
 					FUCK::SetCursorPos(ImVec2(headerStart.x, headerStart.y + itemHeight));
 					FUCK::SeparatorThick();
@@ -990,19 +993,23 @@ void FUCKMan::Draw()
 						}
 
 						ImVec2 endPos = FUCK::GetCursorPos();
-						FUCK::PushFont(FUCK::GetFont(FUCK_Font::kRegular), sidebarFontSize);
+
+						// Bypassing FUCK::PushFont scaling
+						ImGui::PushFont(regularFont, sidebarFontSize);
 						float textY = cursorPos.y + (itemHeight - textH) * 0.5f + textVisualOffset;
 
 						FUCK::SetCursorPos({ cursorPos.x + alignedTextOffset + extraIndent, textY });
 						FUCK::Text(label);
-						FUCK::PopFont();
+						ImGui::PopFont();
 						FUCK::SetCursorPos(endPos);
 
 						ImGui::PopID();
 					};
 
 					auto RenderSidebarGroup = [&](const std::string& groupName, std::vector<ITool*>& tools) {
-						FUCK::PushFont(FUCK::GetFont(FUCK_Font::kRegular), sidebarFontSize);
+						
+						// Bypassing FUCK::PushFont scaling
+						ImGui::PushFont(regularFont, sidebarFontSize);
 
 						// Custom TreeNode rendering
 						ImGui::PushID(groupName.c_str());
@@ -1052,7 +1059,7 @@ void FUCKMan::Draw()
 						}
 
 						ImGui::PopID();
-						FUCK::PopFont();
+						ImGui::PopFont();
 					};
 
 					for (auto& entry : entries) {
@@ -1093,7 +1100,9 @@ void FUCKMan::Draw()
 
 						ImVec2 endPos = FUCK::GetCursorPos();
 						FUCK::SetCursorPos(cursorPos);
-						FUCK::PushFont(FUCK::GetFont(FUCK_Font::kRegular), sidebarFontSize);
+
+						// Bypassing FUCK::PushFont scaling
+						ImGui::PushFont(regularFont, sidebarFontSize);
 
 						const char* settingText = "$FUCK_Settings"_T;
 						float setW = ImGui::CalcTextSize(settingText).x;
@@ -1102,7 +1111,7 @@ void FUCKMan::Draw()
 						FUCK::SetCursorPosY(cursorPos.y + (itemHeight - textH) * 0.5f + textVisualOffset);
 						FUCK::Text(settingText);
 
-						FUCK::PopFont();
+						ImGui::PopFont();
 						FUCK::SetCursorPos(endPos);
 					}
 					FUCK::PopStyleVar();
