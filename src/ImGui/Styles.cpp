@@ -4,6 +4,8 @@
 #include "Renderer.h"
 #include "System/Settings.h"
 
+#include <shellapi.h>
+
 namespace ImGui
 {
 	void Styles::ConvertVec4StylesToU32()
@@ -281,7 +283,16 @@ namespace ImGui
 		p /= filename;
 
 		if (std::filesystem::exists(p)) {
-			std::filesystem::remove(p);
+			std::wstring widePath = p.wstring();
+			widePath.push_back(L'\0');
+
+			SHFILEOPSTRUCTW fileOp = { 0 };
+			fileOp.wFunc = FO_DELETE;
+			fileOp.pFrom = widePath.c_str();
+			fileOp.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_SILENT;
+
+			SHFileOperationW(&fileOp);
+
 			cachedPresets.clear();
 		}
 
