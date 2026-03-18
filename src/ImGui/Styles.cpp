@@ -162,7 +162,7 @@ namespace ImGui
 		std::sort(userFonts.begin(), userFonts.end());
 		userFonts.erase(std::unique(userFonts.begin(), userFonts.end()), userFonts.end());
 
-		userFonts.insert(userFonts.begin(), "$FUCK_Default"_T);
+		userFonts.insert(userFonts.begin(), "$FUCK_Styles_FontDefault"_T);
 		return userFonts;
 	}
 
