@@ -102,6 +102,7 @@ void ThemeEditorWindow::Draw()
 				lastSeenPreset = "";
 			}
 		}
+		FUCK::SetTooltip("$FUCK_Styles_Delete_TT"_T);
 
 		FUCK::PopFont();
 		FUCK::PopStyleColor(4);
