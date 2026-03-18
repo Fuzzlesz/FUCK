@@ -267,6 +267,32 @@ namespace ImGui
 		MANAGER(IconFont)->ReloadFonts();
 	}
 
+	void Styles::DeletePreset(const std::string& a_name)
+	{
+		if (a_name.empty())
+			return;
+
+		std::filesystem::path p(Settings::GetSingleton()->GetPresetsPath());
+		std::string filename = a_name;
+
+		if (filename.length() < 4 || filename.substr(filename.length() - 4) != ".ini")
+			filename += ".ini";
+
+		p /= filename;
+
+		if (std::filesystem::exists(p)) {
+			std::filesystem::remove(p);
+			cachedPresets.clear();
+		}
+
+		if (currentPresetName == filename || currentPresetName == a_name) {
+			currentPresetName = "";
+			Settings::GetSingleton()->Save(FileType::kSettings, [](auto& sIni) {
+				sIni.SetValue("Settings", "sLastPreset", "");
+			});
+		}
+	}
+
 	// ==========================================
 	// SERIALIZATION
 	// ==========================================

@@ -146,6 +146,7 @@ namespace ImGui
 		void LoadStyles();
 		void SavePreset(const std::string& a_name);
 		void LoadPreset(const std::string& a_name);
+		void DeletePreset(const std::string& a_name);
 		std::string GetCurrentPresetName() const { return currentPresetName; }
 
 		// Font Management

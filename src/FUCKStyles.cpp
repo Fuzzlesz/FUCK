@@ -42,23 +42,69 @@ void ThemeEditorWindow::Draw()
 		}
 		FUCK::Spacing();
 
-		static char newPresetNameBuf[64] = "MyNewPreset";
-		FUCK::InputText("$FUCK_Styles_NewPresetName"_T, newPresetNameBuf, 64);
+		static char presetNameBuf[64] = "";
+		static std::string lastSeenPreset = "";
 
-		if (FUCK::Button("$FUCK_Styles_SaveNew"_T)) {
-			style->SavePreset(newPresetNameBuf);
-			style->RefreshStyle();
+		// Auto-fill the text box if the user selected a new preset from the Settings tab
+		std::string activePreset = style->GetCurrentPresetName();
+		if (activePreset != lastSeenPreset) {
+			lastSeenPreset = activePreset;
+			std::string display = activePreset;
+			if (display.ends_with(".ini"))
+				display = display.substr(0, display.length() - 4);
+			strncpy_s(presetNameBuf, display.c_str(), sizeof(presetNameBuf));
 		}
 
-		FUCK::SameLine();
+		FUCK::InputText("$FUCK_Styles_PresetName"_T, presetNameBuf, 64);
+		FUCK::Spacing();
 
-		std::string currentPreset = style->GetCurrentPresetName();
-		if (!currentPreset.empty()) {
-			std::string btnLabel = std::format("{} ({})", "$FUCK_Styles_SaveCurrent"_T, currentPreset);
-			if (FUCK::Button(btnLabel.c_str())) {
-				style->SavePreset(currentPreset);
+		// Save Button
+		if (FUCK::Button("$FUCK_Styles_Save"_T)) {
+			if (presetNameBuf[0] != '\0') {
+				style->SavePreset(presetNameBuf);
+				style->RefreshStyle();
+				lastSeenPreset = style->GetCurrentPresetName();
 			}
 		}
+
+		// Reload Button
+		FUCK::SameLine();
+		if (FUCK::Button("$FUCK_Styles_Reload"_T)) {
+			if (presetNameBuf[0] != '\0' && !lastSeenPreset.empty()) {
+				style->LoadPreset(lastSeenPreset);
+			} else {
+				style->ResetToDefaults();
+				presetNameBuf[0] = '\0';
+				lastSeenPreset = "";
+			}
+		}
+
+		// Delete Button
+		FUCK::SameLine();
+		FUCK::Dummy(ImVec2(20.0f, 0.0f));
+		FUCK::SameLine();
+
+		FUCK::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+		FUCK::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 1.0f));
+		FUCK::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.1f, 0.1f, 1.0f));
+		FUCK::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.8f, 1.0f));
+
+		ImFont* defaultFont = FUCK::GetFont(FUCK_Font::kRegular);
+		float baseFontSize = defaultFont ? defaultFont->LegacySize : ImGui::GetStyle().FontSizeBase;
+
+		FUCK::PushFont(defaultFont, baseFontSize * 0.85f);
+
+		if (FUCK::Button("$FUCK_Styles_Delete"_T)) {
+			if (presetNameBuf[0] != '\0') {
+				style->DeletePreset(presetNameBuf);
+				style->ResetToDefaults();
+				presetNameBuf[0] = '\0';
+				lastSeenPreset = "";
+			}
+		}
+
+		FUCK::PopFont();
+		FUCK::PopStyleColor(4);
 
 		FUCK::Spacing(2);
 		FUCK::Separator();
