@@ -1059,27 +1059,63 @@ namespace ImGui
 	{
 		ImGuiWindow* window = GetCurrentWindow();
 		ImGuiID id = window->GetID(label);
-		float w = CalcItemWidth();
-		ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, ImGui::GetFrameHeight()));
-		ItemSize(bb);
-		if (!ItemAdd(bb, id))
-			return { false, false, false };
-		bool hovered = IsWidgetFocused(id) || (MANAGER(Input)->CanNavigateWithMouse() && ItemHoverable(bb, id, GImGui->LastItemData.ItemFlags));
+		ImRect widgetBounds(window->DC.CursorPos, window->DC.CursorPos + ImVec2(CalcItemWidth(), GetFrameHeight()));
+		ItemSize(widgetBounds);
 
-		bool dim = MANAGER(Input)->IsInputGamepad() && !hovered;
-		if (dim)
+		if (!ItemAdd(widgetBounds, id))
+			return { false, false, false };
+
+		auto arrowIcon = MANAGER(IconFont)->GetStepperRight();
+		ImVec2 arrowSize = arrowIcon ? arrowIcon->size : ImVec2(GetFrameHeight(), GetFrameHeight());
+
+		bool isFocused = (GImGui->NavId == id);
+		bool isHovered = ItemHoverable(widgetBounds, id, GImGui->LastItemData.ItemFlags);
+
+		bool hoveredLeft = false, hoveredRight = false, hoveredCenter = false;
+		bool clickedLeft = false, clickedRight = false;
+
+		// If mouse is actively over the widget, just check the X coordinate to split the hitboxes
+		if (isHovered && MANAGER(Input)->CanNavigateWithMouse()) {
+			float mouseX = GetIO().MousePos.x;
+
+			hoveredLeft = mouseX < (widgetBounds.Min.x + arrowSize.x);
+			hoveredRight = mouseX > (widgetBounds.Max.x - arrowSize.x);
+			hoveredCenter = !hoveredLeft && !hoveredRight;
+
+			if (IsMouseClicked(0)) {
+				SetFocusID(id, window);
+				clickedLeft = hoveredLeft;
+				clickedRight = hoveredRight;
+			}
+		}
+
+		bool showNavHighlight = isFocused && (MANAGER(Input)->GetInputDevice() != Input::DEVICE::kMouse);
+		bool dimText = MANAGER(Input)->IsInputGamepad() && !(isFocused || isHovered);
+
+		if (dimText)
 			PushStyleColor(ImGuiCol_Text, GetColorU32(ImGuiCol_TextDisabled));
+
 		auto largeFont = MANAGER(IconFont)->GetLargeFont();
-		PushFont(largeFont, largeFont ? largeFont->LegacySize : ImGui::GetStyle().FontSizeBase);
-		RenderTextClipped(bb.Min, bb.Max, centerText.data(), NULL, NULL, { 0.5f, 0.5f });
+		float fontScale = FUCKMan::GetSingleton()->GetUserScale();
+		float fontSize = (largeFont ? largeFont->LegacySize : GetStyle().FontSizeBase) * fontScale;
+
+		PushFont(largeFont, fontSize);
+		RenderTextClipped(widgetBounds.Min + ImVec2(arrowSize.x, 0), widgetBounds.Max - ImVec2(arrowSize.x, 0), centerText.data(), nullptr, nullptr, { 0.5f, 0.5f });
 		PopFont();
-		if (dim)
+
+		if (dimText)
 			PopStyleColor();
 
-		auto lA = MANAGER(IconFont)->GetStepperLeft();
-		auto rA = MANAGER(IconFont)->GetStepperRight();
-		ImU32 col = hovered ? IM_COL32_WHITE : GetUserStyleColorU32(USER_STYLE::kIconDisabled);
-		return { hovered, AlignedImage(lA->srView.Get(), lA->size, bb.Min, bb.Max, { 0, 0.5f }, col), AlignedImage(rA->srView.Get(), rA->size, bb.Min, bb.Max, { 1.0f, 0.5f }, col) };
+		if (arrowIcon) {
+			ImU32 colorLeft = (showNavHighlight || hoveredLeft || hoveredCenter) ? IM_COL32_WHITE : GetUserStyleColorU32(USER_STYLE::kIconDisabled);
+			ImU32 colorRight = (showNavHighlight || hoveredRight || hoveredCenter) ? IM_COL32_WHITE : GetUserStyleColorU32(USER_STYLE::kIconDisabled);
+			float iconOffsetY = widgetBounds.Min.y + (widgetBounds.GetHeight() - arrowSize.y) * 0.5f;
+
+			DrawArrowIcon(window->DrawList, { widgetBounds.Min.x, iconOffsetY }, arrowSize, colorLeft, IconDirection::kLeft);
+			DrawArrowIcon(window->DrawList, { widgetBounds.Max.x - arrowSize.x, iconOffsetY }, arrowSize, colorRight, IconDirection::kRight);
+		}
+
+		return { isHovered || isFocused, clickedLeft, clickedRight };
 	}
 
 	bool SelectableStyled(const char* label, bool selected, int flags, const ImVec2& size)

@@ -156,7 +156,6 @@ namespace IconFont
 
 	void Manager::LoadIcons()
 	{
-		stepperLeft.Load();
 		stepperRight.Load();
 		checkbox.Load();
 		checkboxFilled.Load();
@@ -329,7 +328,6 @@ namespace IconFont
 			IconTexture.second.Resize(buttonScale);
 		});
 
-		stepperLeft.Resize(stepperScale);
 		stepperRight.Resize(stepperScale);
 		checkbox.Resize(checkboxScale);
 		checkboxFilled.Resize(checkboxScale);
@@ -337,7 +335,6 @@ namespace IconFont
 
 	ImFont* Manager::GetLargeFont() const { return largeFont; }
 	ImFont* Manager::GetRegularFont() const { return regularFont; }
-	const IconTexture* Manager::GetStepperLeft() const { return &stepperLeft; }
 	const IconTexture* Manager::GetStepperRight() const { return &stepperRight; }
 	const IconTexture* Manager::GetCheckbox() const { return &checkbox; }
 	const IconTexture* Manager::GetCheckboxFilled() const { return &checkboxFilled; }

@@ -45,7 +45,6 @@ namespace IconFont
 		ImFont* GetLargeFont() const;
 		ImFont* GetRegularFont() const;
 
-		const IconTexture* GetStepperLeft() const;
 		const IconTexture* GetStepperRight() const;
 		const IconTexture* GetCheckbox() const;
 		const IconTexture* GetCheckboxFilled() const;
@@ -86,7 +85,6 @@ namespace IconFont
 		ImFont* largeFont{ nullptr };
 		ImFont* regularFont{ nullptr };
 
-		IconTexture stepperLeft{ L"StepperLeft"sv };
 		IconTexture stepperRight{ L"StepperRight"sv };
 		IconTexture checkbox{ L"Checkbox"sv };
 		IconTexture checkboxFilled{ L"Checkbox-Filled"sv };
