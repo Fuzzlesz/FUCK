@@ -8,7 +8,7 @@ public:
 	bool IsOpen() const override { return _isOpen; }
 	void SetOpen(bool a_open) override { _isOpen = a_open; }
 
-	WindowFlags GetFlags() const override { return WindowFlags::kExtendBorder; }
+	WindowFlags GetFlags() const override { return WindowFlags::kExtendBorder | WindowFlags::kCloseOnEsc; }
 
 	ImVec2 GetDefaultSize() const override
 	{
