@@ -61,7 +61,7 @@ namespace ImGui
 
 			float buttonScale{ 0.5f };
 			float checkboxScale{ 0.5f };
-			float stepperScale{ 0.5f };
+			float stepperScale{ 0.3f };
 
 			// Layout Metrics
 			ImVec2 windowPadding{ 8.0f, 8.0f };
@@ -79,7 +79,7 @@ namespace ImGui
 			// Windows & Borders
 			ImVec4 background{ 0.0f, 0.0f, 0.0f, bgAlpha };
 			ImVec4 border{ 0.25f, 0.25f, 0.25f, 1.0f };
-			float borderSize{ 3.0f };
+			float borderSize{ 4.0f };
 
 			// Text
 			ImVec4 text{ 0.733f, 0.741f, 0.749f, 1.0f };
