@@ -142,7 +142,7 @@ namespace ImGui
 		ImVec4 GetColorVec4(USER_STYLE a_style) const;
 		float GetVar(USER_STYLE a_style) const;
 
-		void ResetToDefaults();
+		void ResetToDefaults(bool a_saveToIni = true);
 		void LoadStyles();
 		void SavePreset(const std::string& a_name);
 		void LoadPreset(const std::string& a_name);

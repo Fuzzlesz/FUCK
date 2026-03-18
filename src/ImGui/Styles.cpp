@@ -184,14 +184,16 @@ namespace ImGui
 	// PRESET LOGIC
 	// ==========================================
 
-	void Styles::ResetToDefaults()
+	void Styles::ResetToDefaults(bool a_saveToIni)
 	{
 		user = def;
 		currentPresetName = "";
 
-		Settings::GetSingleton()->Save(FileType::kSettings, [this](auto& sIni) {
-			sIni.SetValue("Settings", "sLastPreset", "");
-		});
+		if (a_saveToIni) {
+			Settings::GetSingleton()->Save(FileType::kSettings, [](auto& sIni) {
+				sIni.SetValue("Settings", "sLastPreset", "");
+			});
+		}
 
 		SetCurrentFont("Default");
 		RefreshStyle();
@@ -200,12 +202,12 @@ namespace ImGui
 
 	void Styles::LoadStyles()
 	{
-		ResetToDefaults();
-
 		std::string lastPreset = "";
 		Settings::GetSingleton()->Load(FileType::kSettings, [&](auto& ini) {
 			lastPreset = ini.GetValue("Settings", "sLastPreset", "");
 		});
+
+		ResetToDefaults(false);
 
 		if (!lastPreset.empty()) {
 			LoadPreset(lastPreset);
