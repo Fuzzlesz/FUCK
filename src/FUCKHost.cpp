@@ -498,8 +498,14 @@ namespace FUCK::Host
 	static bool Hotkey_Impl(const char* label, std::uint32_t key, std::int32_t m1, std::int32_t m2, bool alignFar, bool labelLeft, bool flashing) { return ImGui::Hotkey(label, key, m1, m2, alignFar, labelLeft, flashing); }
 	static bool ToggleButton_Impl(const char* label, bool* v, bool alignFar, bool labelLeft) { return ImGui::ToggleButton(label, v, alignFar, labelLeft); }
 	static ImGuiTableSortSpecs* GetTableSortSpecs_Impl() { return ImGui::TableGetSortSpecs(); }
-	static bool InputText_Impl(const char* label, char* buf, size_t buf_size, int flags) { return ImGui::InputTextStyled(label, buf, buf_size, flags); }
-
+	
+	static bool InputText_Impl(const char* label, char* buf, size_t buf_size, int flags)
+	{
+		if (!buf || buf_size == 0)
+			return false;
+		return ImGui::InputTextStyled(label, buf, buf_size, flags);
+	}
+	
 	static bool ColorEdit3_Impl(const char* label, float col[3], int flags) { return ImGui::ColorEdit3Styled(label, col, flags); }
 	static bool ColorEdit4_Impl(const char* label, float col[4], int flags) { return ImGui::ColorEdit4Styled(label, col, flags); }
 
