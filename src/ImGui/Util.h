@@ -33,6 +33,7 @@ namespace ImGui
 
 	bool ActivateOnHover();
 	void UnfocusOnEscape();
+	void ClearNavState();
 
 	void Spacing(std::uint32_t a_numSpaces);
 

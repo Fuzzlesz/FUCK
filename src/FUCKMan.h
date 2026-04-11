@@ -28,6 +28,8 @@ public:
 
 	bool IsInputBlocked() const;
 	bool IsCursorForced() const;
+	
+	bool HasWindowWithFlag(WindowFlags a_flag) const;
 
 	bool ProcessAsyncInput(const RE::InputEvent* const* a_event);
 

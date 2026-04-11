@@ -283,6 +283,33 @@ namespace ImGui
 		}
 	}
 
+	void ClearNavState()
+	{
+		ImGuiContext& g = *GImGui;
+
+		g.ActiveId = 0;
+		g.NavId = 0;
+		g.NavFocusScopeId = 0;
+		g.NavWindow = nullptr;
+		g.NavInitRequest = false;
+
+		g.NavCursorVisible = false;
+		g.NavHighlightItemUnderNav = false;
+
+		g.NavInputSource = ImGuiInputSource_Mouse;
+
+		for (int i = 0; i < g.Windows.Size; i++) {
+			ImGuiWindow* window = g.Windows[i];
+			window->NavLastIds[0] = 0;
+			window->NavLastIds[1] = 0;
+		}
+
+		ImGui::SetWindowFocus(nullptr);
+
+		ImGui::GetIO().ClearInputKeys();
+		ImGui::GetIO().ClearEventsQueue();
+	}
+
 	void Spacing(std::uint32_t a_numSpaces)
 	{
 		for (std::uint32_t i = 0; i < a_numSpaces; i++) {

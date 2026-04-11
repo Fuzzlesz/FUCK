@@ -463,11 +463,15 @@ namespace Input
 		// -- Event Forwarding --
 		auto& io = ImGui::GetIO();
 		const bool cursorMenuOpen = RE::UI::GetSingleton()->IsMenuOpen(RE::CursorMenu::MENU_NAME);
-		const bool shouldPassToImGui = fuck->ShouldRender();
+
+		// Determine exactly what input ImGui is allowed to see right now
+		const bool shouldRender = fuck->ShouldRender();
+		const bool passKeyboardAndGamepad = shouldRender && blockInput;
+		const bool passMouse = shouldRender && (blockInput || forceCursor);
 
 		for (auto event = *a_events; event; event = event->next) {
 			if (const auto charEvent = event->AsCharEvent()) {
-				if (shouldPassToImGui) {
+				if (passKeyboardAndGamepad) {
 					io.AddInputCharacter(charEvent->keyCode);
 				}
 			} else if (const auto buttonEvent = event->AsButtonEvent()) {
@@ -475,12 +479,13 @@ namespace Input
 				const bool isPressed = buttonEvent->IsPressed();
 				const float value = buttonEvent->Value();
 
-				if (shouldPassToImGui) {
-					switch (inputDevice) {
-					case DEVICE::kKeyboard:
+				switch (inputDevice) {
+				case DEVICE::kKeyboard:
+					if (passKeyboardAndGamepad)
 						io.AddKeyEvent(Keymap::ToImGuiKey(static_cast<KEY>(key)), isPressed);
-						break;
-					case DEVICE::kMouse:
+					break;
+				case DEVICE::kMouse:
+					if (passMouse) {
 						switch (auto mouseKey = static_cast<MOUSE>(key)) {
 						case MOUSE::kWheelUp:
 							io.AddMouseWheelEvent(0, value);
@@ -492,31 +497,30 @@ namespace Input
 							io.AddMouseButtonEvent(key, isPressed);
 							break;
 						}
-						break;
-					case DEVICE::kGamepadDirectX:
-						{
-							auto [imKey, analog] = Keymap::ToImGuiKey(static_cast<GAMEPAD_DIRECTX>(key));
-							if (analog)
-								io.AddKeyAnalogEvent(imKey, isPressed, value);
-							else
-								io.AddKeyEvent(imKey, isPressed);
-						}
-						break;
-					case DEVICE::kGamepadOrbis:
-						{
-							auto [imKey, analog] = Keymap::ToImGuiKey(static_cast<GAMEPAD_ORBIS>(key));
-							if (analog)
-								io.AddKeyAnalogEvent(imKey, isPressed, value);
-							else
-								io.AddKeyEvent(imKey, isPressed);
-						}
-						break;
-					default:
-						break;
 					}
+					break;
+				case DEVICE::kGamepadDirectX:
+					if (passKeyboardAndGamepad) {
+						auto [imKey, analog] = Keymap::ToImGuiKey(static_cast<GAMEPAD_DIRECTX>(key));
+						if (analog)
+							io.AddKeyAnalogEvent(imKey, isPressed, value);
+						else
+							io.AddKeyEvent(imKey, isPressed);
+					}
+					break;
+				case DEVICE::kGamepadOrbis:
+					if (passKeyboardAndGamepad) {
+						auto [imKey, analog] = Keymap::ToImGuiKey(static_cast<GAMEPAD_ORBIS>(key));
+						if (analog)
+							io.AddKeyAnalogEvent(imKey, isPressed, value);
+						else
+							io.AddKeyEvent(imKey, isPressed);
+					}
+					break;
+				default:
+					break;
 				}
-			}
-			else if (blockInput || shouldPassToImGui) {
+			} else if (passMouse) {
 				if (auto mouseEvent = event->AsMouseMoveEvent()) {
 					if (auto cursorMenu = RE::UI::GetSingleton()->GetMenu<RE::CursorMenu>()) {
 						cursorMenu->ProcessMouseMove(mouseEvent);

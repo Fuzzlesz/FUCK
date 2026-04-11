@@ -344,6 +344,16 @@ bool FUCKMan::IsCursorForced() const
 	return _forceCursor;
 }
 
+bool FUCKMan::HasWindowWithFlag(WindowFlags a_flag) const
+{
+	for (const auto* win : _windows) {
+		if (win->IsOpen() && (win->GetFlags() & a_flag)) {
+			return true;
+		}
+	}
+	return false;
+}
+
 // ==========================================
 // Open / Close Logic
 // ==========================================
@@ -361,6 +371,8 @@ void FUCKMan::Open()
 	_forceCursor = false;
 
 	MANAGER(Input)->ResetCursorState();
+
+	ImGui::ClearNavState();
 
 	ImGui::Styles::GetSingleton()->OnStyleRefresh();
 
@@ -394,6 +406,7 @@ void FUCKMan::Close()
 		FUCKMan::GetSingleton()->SaveSettings(ini);
 	});
 
+	ImGui::ClearNavState();
 	RE::PlaySound("UIMenuCancel");
 }
 
@@ -416,17 +429,29 @@ RE::BSEventNotifyControl FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_e
 		static const std::vector<std::string> closeOnOpen = {
 			RE::Console::MENU_NAME.data(), RE::ContainerMenu::MENU_NAME.data(),
 			RE::JournalMenu::MENU_NAME.data(), RE::InventoryMenu::MENU_NAME.data(),
-			RE::MapMenu::MENU_NAME.data(), RE::DialogueMenu::MENU_NAME.data()
+			RE::MapMenu::MENU_NAME.data(), RE::DialogueMenu::MENU_NAME.data(),
+			RE::MagicMenu::MENU_NAME.data(), RE::StatsMenu::MENU_NAME.data(),
+			RE::TweenMenu::MENU_NAME.data(), RE::FavoritesMenu::MENU_NAME.data()
 		};
 
 		if (std::ranges::find(closeOnOpen, a_event->menuName.data()) != closeOnOpen.end()) {
-			if (_isOpen)
+			bool closedSomething = false;
+
+			if (_isOpen && a_event->menuName != RE::Console::MENU_NAME) {
 				Close();
+				closedSomething = true;
+			}
+
 			for (auto* win : _windows) {
 				if (win->IsOpen() && (win->GetFlags() & WindowFlags::kCloseOnGameMenu)) {
 					win->SetOpen(false);
-					UpdateGameState();
+					closedSomething = true;
 				}
+			}
+
+			if (closedSomething) {
+				UpdateGameState();
+				ImGui::ClearNavState();
 			}
 		}
 	}

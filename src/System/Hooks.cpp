@@ -98,11 +98,13 @@ namespace Hooks
 		return false;
 	}
 
-	// Filters the input event list to only pass through Screenshot and Console keys.
+	// Filters the input event list. Allows Screenshot/Console, and conditionally Game Menus.
 	[[nodiscard]] static RE::InputEvent* FilterInputEvents(RE::InputEvent* const* a_events)
 	{
-		auto* controlMap = RE::ControlMap::GetSingleton();
 		auto* userEvents = RE::UserEvents::GetSingleton();
+		auto* manager = FUCKMan::GetSingleton();
+
+		bool allowGameMenus = !manager->IsOpen() && manager->HasWindowWithFlag(WindowFlags::kCloseOnGameMenu);
 
 		RE::InputEvent* head = nullptr;
 		RE::InputEvent* tail = nullptr;
@@ -112,13 +114,26 @@ namespace Hooks
 			bool keep = false;
 
 			if (auto button = iter->AsButtonEvent()) {
-				const auto id = button->GetIDCode();
-				const auto device = button->GetDevice();
-				const auto keyScreenshot = controlMap->GetMappedKey(userEvents->screenshot, device);
-				const auto keyConsole = controlMap->GetMappedKey(userEvents->console, device);
+				const auto& eventName = button->userEvent;
 
-				if (id != 0xFF && (id == keyScreenshot || id == keyConsole)) {
+				// Always allow Screenshot and Console
+				if (eventName == userEvents->screenshot || eventName == userEvents->console) {
 					keep = true;
+				}
+				// Pass menu inputs to the game so MenuOpenCloseEvent can trigger
+				else if (allowGameMenus && button->HasIDCode()) {
+					if (eventName == userEvents->tweenMenu ||
+						eventName == userEvents->journal ||
+						eventName == userEvents->map ||
+						eventName == userEvents->quickMap ||
+						eventName == userEvents->inventory ||
+						eventName == userEvents->quickInventory ||
+						eventName == userEvents->quickMagic ||
+						eventName == userEvents->stats ||
+						eventName == userEvents->quickStats ||
+						eventName == userEvents->favorites) {
+						keep = true;
+					}
 				}
 			}
 
@@ -149,6 +164,11 @@ namespace Hooks
 				return;
 			}
 
+			if (auto ui = RE::UI::GetSingleton(); ui && ui->IsMenuOpen(RE::Console::MENU_NAME)) {
+				func(a_dispatcher, a_events);
+				return;
+			}
+
 			constexpr RE::InputEvent* const dummy[] = { nullptr };
 
 			MANAGER(Input)->ProcessInputEvents(a_events);
@@ -159,7 +179,6 @@ namespace Hooks
 				return;
 			}
 
-			// Swallow input if FUCK menu is active; allow only Console and Screenshot through
 			if (consumed || FUCKMan::GetSingleton()->IsInputBlocked()) {
 				RE::InputEvent* filteredHead = FilterInputEvents(a_events);
 
