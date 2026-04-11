@@ -464,6 +464,33 @@ RE::BSEventNotifyControl FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_e
 
 void FUCKMan::Draw()
 {
+	// --- Auto-Close on forced camera states ---
+	if (auto camera = RE::PlayerCamera::GetSingleton(); camera && camera->currentState) {
+		auto* activeState = camera->currentState.get();
+
+		if (activeState == camera->cameraStates[RE::CameraState::kVATS].get() ||
+			activeState == camera->cameraStates[RE::CameraState::kBleedout].get()) {
+			bool closedSomething = false;
+
+			if (_isOpen) {
+				Close();
+				closedSomething = true;
+			}
+
+			for (auto* win : _windows) {
+				if (win->IsOpen()) {
+					win->SetOpen(false);
+					closedSomething = true;
+				}
+			}
+
+			if (closedSomething) {
+				UpdateGameState();
+				ImGui::ClearNavState();
+			}
+		}
+	}
+
 	UpdateGameState();
 
 	const float resScale = FUCK::GetResolutionScale();
