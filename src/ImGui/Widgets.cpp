@@ -663,7 +663,7 @@ namespace ImGui
 		if (dim)
 			PushStyleColor(ImGuiCol_Text, GetColorU32(ImGuiCol_TextDisabled));
 
-		// Center using contentSize so vertical position is consistent across all glyphs
+		// Centre using contentSize so vertical position is consistent across all glyphs
 		RenderTextClipped(bb.Min, bb.Max, label, NULL, &contentSize, { 0.5f, 0.5f });
 
 		if (dim)
@@ -764,7 +764,7 @@ namespace ImGui
 			ImGuiID id = ImGui::GetID(baseId.c_str());
 			const float lineTop = ImGui::GetCursorPosY();
 
-			// AlignedWidgetLayout starts cursor where the primary key should be centered
+			// AlignedWidgetLayout starts cursor where the primary key should be centred
 			float currentX = ImGui::GetCursorPosX();
 
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
@@ -772,12 +772,12 @@ namespace ImGui
 			for (size_t i = 0; i < items.size(); ++i) {
 				const auto& item = items[i];
 
-				// Move the cursor leftwards for modifiers, leaving the primary key at the initial (centered) currentX
+				// Move the cursor leftwards for modifiers, leaving the primary key at the initial (centred) currentX
 				if (i > 0) {
 					currentX -= (item.size.x + spacing);
 				}
 
-				// Vertical Center Logic
+				// Vertical Centre Logic
 				float offY = (frameH - item.size.y) * 0.5f;
 
 				ImGui::SetCursorPosX(currentX);
@@ -999,7 +999,7 @@ namespace ImGui
 		float fontSize = GImGui->FontSize;
 		float textOff = fontSize + GImGui->Style.ItemInnerSpacing.x * 2.0f;
 
-		// Vertically center text
+		// Vertically centre text
 		ImVec2 textSize = CalcTextSize(label);
 		float textY = bb.Min.y + (frameHeight - textSize.y) * 0.5f;
 

@@ -1008,7 +1008,7 @@ void FUCKMan::Draw()
 					ImVec2 headerStart = FUCK::GetCursorPos();
 					headerStart.y += topPadding;
 
-					// --- HEADER: TOOLS (Centered) ---
+					// --- HEADER: TOOLS (Centred) ---
 					FUCK::SetCursorPos(headerStart);
 
 					// Bypassing FUCK::PushFont scaling
@@ -1122,7 +1122,7 @@ void FUCKMan::Draw()
 						}
 					}
 
-					// --- FOOTER: SETTINGS (Centered) ---
+					// --- FOOTER: SETTINGS (Centred) ---
 					float childHeight = FUCK::GetWindowSize().y;
 					float separatorHeight = 1.0f;
 					float settingsY = childHeight - itemHeight - bottomPadding;
