@@ -116,8 +116,13 @@ namespace Hooks
 			if (auto button = iter->AsButtonEvent()) {
 				const auto& eventName = button->userEvent;
 
+				// Always let Key-Up events through so the game doesn't get stuck inputs
+				if (button->IsUp()) {
+					keep = true;
+				}
+
 				// Always allow Screenshot and Console
-				if (eventName == userEvents->screenshot || eventName == userEvents->console) {
+				else if (eventName == userEvents->screenshot || eventName == userEvents->console) {
 					keep = true;
 				}
 				// Pass menu inputs to the game so MenuOpenCloseEvent can trigger
