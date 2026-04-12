@@ -534,5 +534,16 @@ namespace Input
 				}
 			}
 		}
+
+		// Explicitly sync modifiers to ImGui
+		if (passKeyboardAndGamepad) {
+			io.AddKeyEvent(ImGuiMod_Ctrl, IsModifierPressed(Modifier::kCtrl));
+			io.AddKeyEvent(ImGuiMod_Shift, IsModifierPressed(Modifier::kShift));
+			io.AddKeyEvent(ImGuiMod_Alt, IsModifierPressed(Modifier::kAlt));
+
+			bool superDown = IsInputDown(static_cast<std::uint32_t>(KEY::kLeftWin)) ||
+			                 IsInputDown(static_cast<std::uint32_t>(KEY::kRightWin));
+			io.AddKeyEvent(ImGuiMod_Super, superDown);
+		}
 	}
 }

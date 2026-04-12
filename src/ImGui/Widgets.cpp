@@ -835,14 +835,14 @@ namespace ImGui
 		bool h = ItemHoverable(bb, id, g.LastItemData.ItemFlags);
 		bool temp_input_is_active = temp_input_allowed && TempInputIsActive(id);
 
-		// Logic for Activating Input via Click/Gamepad
 		if (!temp_input_is_active) {
 			const bool mouse_clicked = h && IsMouseClicked(0, ImGuiInputFlags_None, id);
 			const bool make_active = (mouse_clicked || g.NavActivateId == id);
 
 			if (make_active && temp_input_allowed) {
-				if (mouse_clicked && g.IO.KeyCtrl)
+				if ((mouse_clicked && g.IO.KeyCtrl) || (g.NavActivateId == id && (g.NavActivateFlags & ImGuiActivateFlags_PreferInput))) {
 					temp_input_is_active = true;
+				}
 			}
 
 			if (make_active && !temp_input_is_active) {
@@ -898,14 +898,14 @@ namespace ImGui
 		bool h = ItemHoverable(bb, id, g.LastItemData.ItemFlags);
 		bool temp_input_is_active = temp_input_allowed && TempInputIsActive(id);
 
-		// Logic for Activating Slider via Click/Gamepad
 		if (!temp_input_is_active) {
 			const bool mouse_clicked = h && IsMouseClicked(0, ImGuiInputFlags_None, id);
 			const bool make_active = (mouse_clicked || g.NavActivateId == id);
 
 			if (make_active && temp_input_allowed) {
-				if (mouse_clicked && g.IO.KeyCtrl)
+				if ((mouse_clicked && g.IO.KeyCtrl) || (g.NavActivateId == id && (g.NavActivateFlags & ImGuiActivateFlags_PreferInput))) {
 					temp_input_is_active = true;
+				}
 			}
 
 			if (make_active && !temp_input_is_active) {
