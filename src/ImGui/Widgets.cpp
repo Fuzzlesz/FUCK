@@ -405,7 +405,7 @@ namespace ImGui
 		if (!isOpen)
 			return false;
 
-		float fontSize = std::round(ImGui::GetStyle().FontSizeBase * FUCKMan::GetSingleton()->GetUserScale() * 2.0f) / 2.0f;
+		float fontSize = std::round(ImGui::GetStyle().FontSizeBase * 2.0f) / 2.0f;
 		ImGui::PushFont(nullptr, fontSize);
 
 		if (IsWindowAppearing())
@@ -517,7 +517,7 @@ namespace ImGui
 
 		bool changed = false;
 		if (isOpen) {
-			float fontSize = std::round(ImGui::GetStyle().FontSizeBase * FUCKMan::GetSingleton()->GetUserScale() * 2.0f) / 2.0f;
+			float fontSize = std::round(ImGui::GetStyle().FontSizeBase * 2.0f) / 2.0f;
 			ImGui::PushFont(nullptr, fontSize);
 
 			for (int i = 0; i < items_count; i++) {
