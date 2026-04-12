@@ -20,6 +20,26 @@ namespace ImGui
 
 	void DrawArrowIcon(ImDrawList* drawList, ImVec2 pos, ImVec2 size, ImU32 color, IconDirection direction);
 
+	struct ArrowIconParams
+	{
+		ImVec2 drawSize;  // final draw dimensions, orientation-swapped
+		float offsetY;    // vertical centering offset within rowH
+	};
+
+	inline ArrowIconParams CalcArrowIconParams(float iconAspect, bool pointsDown, float rowH,
+		float baseSize = 16.0f, float userScale = 1.0f)
+	{
+		float scaledH = baseSize * userScale;
+		float scaledW = scaledH * iconAspect;
+
+		ArrowIconParams p;
+		// When pointing down/up the texture is rotated 90°, so physical W and H
+		// are swapped to keep the icon from stretching.
+		p.drawSize = pointsDown ? ImVec2(scaledH, scaledW) : ImVec2(scaledW, scaledH);
+		p.offsetY = (rowH - p.drawSize.y) * 0.5f;
+		return p;
+	}
+
 	// Cache Management
 	void ClearFormCaches();
 

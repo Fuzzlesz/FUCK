@@ -58,15 +58,15 @@ namespace
 			return;
 
 		ImU32 col = ImGui::GetDynamicTextColor(isHovered);
+		float uiScale = ImGui::Renderer::GetResolutionScale();
+		float userScale = FUCKMan::GetSingleton()->GetUserScale();
+		float aspect = iconArrow->imageSize.y > 0.0f ? (iconArrow->imageSize.x / iconArrow->imageSize.y) : 1.0f;
 
-		ImVec2 size = iconArrow->size;
-		ImVec2 drawSize = isOpen ? ImVec2(size.y, size.x) : size;
+		auto ap = ImGui::CalcArrowIconParams(aspect, isOpen, frameHeight, 16.0f * uiScale, userScale);
 
-		float offY = (frameHeight - drawSize.y) * 0.5f;
-		ImVec2 drawPos = { pos.x, pos.y + offY };
-
-		// TreeNode: Closed = Right, Open = Down
-		ImGui::DrawArrowIcon(drawList, drawPos, drawSize, col, isOpen ? ImGui::IconDirection::kDown : ImGui::IconDirection::kRight);
+		ImVec2 drawPos = { pos.x, pos.y + ap.offsetY };
+		ImGui::DrawArrowIcon(drawList, drawPos, ap.drawSize, col,
+			isOpen ? ImGui::IconDirection::kDown : ImGui::IconDirection::kRight);
 	}
 
 	void DrawDropdownIcon(ImDrawList* drawList, ImVec2 bPos, ImVec2 bSize, bool isOpen, bool opensUp, bool isHovered)
@@ -76,13 +76,15 @@ namespace
 			return;
 
 		ImU32 col = ImGui::GetDynamicTextColor(isHovered || isOpen);
+		float uiScale = ImGui::Renderer::GetResolutionScale();
+		float userScale = FUCKMan::GetSingleton()->GetUserScale();
+		float aspect = iconArrow->imageSize.y > 0.0f ? (iconArrow->imageSize.x / iconArrow->imageSize.y) : 1.0f;
 
-		ImVec2 size = iconArrow->size;
-		ImVec2 drawSize = isOpen ? ImVec2(size.y, size.x) : size;
+		auto ap = ImGui::CalcArrowIconParams(aspect, isOpen, bSize.y, 16.0f * uiScale, userScale);
 
 		ImVec2 iconPos = {
-			bPos.x + (bSize.x - drawSize.x) * 0.5f,
-			bPos.y + (bSize.y - drawSize.y) * 0.5f
+			bPos.x + (bSize.x - ap.drawSize.x) * 0.5f,
+			bPos.y + ap.offsetY
 		};
 
 		// Combo/Window: Closed = Left, Open = Down/Up
@@ -93,7 +95,7 @@ namespace
 			dir = ImGui::IconDirection::kLeft;
 		}
 
-		ImGui::DrawArrowIcon(drawList, iconPos, drawSize, col, dir);
+		ImGui::DrawArrowIcon(drawList, iconPos, ap.drawSize, col, dir);
 	}
 
 	ImVec4 GetHighlightTint(bool active, bool hovered, bool focused)
@@ -1066,7 +1068,15 @@ namespace ImGui
 			return { false, false, false };
 
 		auto arrowIcon = MANAGER(IconFont)->GetStepperRight();
-		ImVec2 arrowSize = arrowIcon ? arrowIcon->size : ImVec2(GetFrameHeight(), GetFrameHeight());
+		float uiScale = ImGui::Renderer::GetResolutionScale();
+		float userScale = FUCKMan::GetSingleton()->GetUserScale();
+
+		// Extract ratio (steppers always point left/right, so height is height)
+		float targetH = 16.0f * uiScale * userScale;
+		float aspect = (arrowIcon && arrowIcon->imageSize.y > 0.0f) ? (arrowIcon->imageSize.x / arrowIcon->imageSize.y) : 1.0f;
+		float targetW = targetH * aspect;
+
+		ImVec2 arrowSize(targetW, targetH);
 
 		bool isFocused = (GImGui->NavId == id);
 		bool isHovered = ItemHoverable(widgetBounds, id, GImGui->LastItemData.ItemFlags);

@@ -493,16 +493,59 @@ void FUCKMan::Draw()
 
 	UpdateGameState();
 
-	const float resScale = FUCK::GetResolutionScale();
-	const float uiScale = resScale;
+	// ==========================================
+	// LAYOUT METRICS (Chrome / Unscaled)
+	// ==========================================
+	auto iconArrow = MANAGER(IconFont)->GetStepperRight();
 
-	// Chrome metrics — always based on resScale only, never _userScale
-	const float scaledTextH = FUCK::GetTextLineHeight();
-	const float uiTextH = scaledTextH;  // text height at base scale
+	struct LayoutMetrics
+	{
+		float uiScale;
+		float textH;
+		float padBase;
 
-	const float headerPadding = 3.0f * uiScale;
-	const float titleH = uiTextH + (headerPadding * 2.0f);
-	const float padBase = 15.0f * uiScale;
+		float iconAspect;
+		float chromeIconBaseH;  // = 16.0f * uiScale  (userScale intentionally excluded for chrome)
+
+		// Titlebar
+		float titleH;
+		float titleFontSize;
+		float titleIconPadX;
+		float titleIconNudgeY;
+		float titleTextOffsetY;
+
+		// Sidebar
+		float sidebarWidth;
+		float sidebarItemH;
+		float sidebarFontSize;
+		float sidebarIndent;
+	} m;
+
+	m.uiScale  = FUCK::GetResolutionScale();
+	m.textH    = FUCK::GetTextLineHeight();
+	m.padBase  = 15.0f * m.uiScale;
+
+	m.iconAspect = (iconArrow && iconArrow->imageSize.y > 0.0f) ? (iconArrow->imageSize.x / iconArrow->imageSize.y) : 1.0f;
+	
+	m.chromeIconBaseH = 16.0f * m.uiScale;
+
+	float headerPadding = 3.0f * m.uiScale;
+	
+	m.titleH           = m.textH + (headerPadding * 2.0f);
+	m.titleFontSize    = 22.0f * 0.9f;
+	m.titleIconNudgeY  = 1.0f * m.uiScale;
+	m.titleIconPadX    = 8.0f * m.uiScale;
+	m.titleIconNudgeY  = 1.0f * m.uiScale;  // positive = down, negative = up
+	m.titleTextOffsetY = (m.titleH - m.titleFontSize) * 0.5f + (2.0f * m.uiScale);
+
+	m.sidebarWidth    = 250.0f * m.uiScale;
+	m.sidebarItemH    = 30.0f * m.uiScale;
+	m.sidebarFontSize = 22.0f * 0.9f;
+	m.sidebarIndent   = 15.0f * m.uiScale;
+
+	auto chromeArrow = [&](bool pointsDown, float rowH) {
+		return ImGui::CalcArrowIconParams(m.iconAspect, pointsDown, rowH, m.chromeIconBaseH);
+	};
 
 	// Content scale helper — pushes _userScale on top of the base style for content regions only
 	auto pushContentScale = [&]() {
@@ -512,17 +555,17 @@ void FUCKMan::Draw()
 
 		float borderSize = ImGui::GetStyle().FrameBorderSize;
 
-		float spaceX = (8.0f * uiScale * _userScale) + borderSize;
-		float spaceY = (4.0f * uiScale * _userScale) + borderSize;
-		float innerSpaceX = (4.0f * uiScale * _userScale) + borderSize;
-		float innerSpaceY = (4.0f * uiScale * _userScale) + borderSize;
+		float spaceX = (8.0f * m.uiScale * _userScale) + borderSize;
+		float spaceY = (4.0f * m.uiScale * _userScale) + borderSize;
+		float innerSpaceX = (4.0f * m.uiScale * _userScale) + borderSize;
+		float innerSpaceY = (4.0f * m.uiScale * _userScale) + borderSize;
 
-		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f * uiScale * _userScale, 3.0f * uiScale * _userScale));
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f * m.uiScale * _userScale, 3.0f * m.uiScale * _userScale));
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spaceX, spaceY));
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(innerSpaceX, innerSpaceY));
-		ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, 20.0f * uiScale * _userScale);
-		ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 12.0f * uiScale);
-		ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, 10.0f * uiScale);
+		ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, 20.0f * m.uiScale * _userScale);
+		ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 12.0f * m.uiScale);
+		ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, 10.0f * m.uiScale);
 	};
 
 	auto popContentScale = [&]() {
@@ -599,7 +642,7 @@ void FUCKMan::Draw()
 				if (s_windowPreCollapseSizes.find(title) != s_windowPreCollapseSizes.end()) {
 					targetW = s_windowPreCollapseSizes[title].x;
 				}
-				targetSize = ImVec2(targetW, titleH);
+				targetSize = ImVec2(targetW, m.titleH);
 				flags |= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar;
 			} else if (wasCollapsed) {
 				if (s_windowPreCollapseSizes.find(title) != s_windowPreCollapseSizes.end()) {
@@ -627,7 +670,7 @@ void FUCKMan::Draw()
 			if (!noDecoration) {
 				FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 			} else {
-				FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padBase, padBase));
+				FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase, m.padBase));
 			}
 
 			if (FUCK::BeginWindow(title.c_str(), &open, flags)) {
@@ -642,7 +685,6 @@ void FUCKMan::Draw()
 
 				if (!noDecoration) {
 					// --- Window Chrome Decoration (unscaled) ---
-					float midY = titleH * 0.5f;
 					float winWidth = FUCK::GetWindowSize().x;
 
 					ImVec2 headerStartCursor = FUCK::GetCursorPos();
@@ -651,49 +693,38 @@ void FUCKMan::Draw()
 					FUCK::BeginGroup();
 
 					// 1. Collapse Icon
-					static auto iconArrow = MANAGER(IconFont)->GetStepperRight();
 					float iconW = 0.0f;
 
 					if (iconArrow) {
-						// A. Draw Button
-						if (ImGui::InvisibleButton("##CollapseToggle", ImVec2(titleH + 20.0f, titleH))) {
+						if (ImGui::InvisibleButton("##CollapseToggle", ImVec2(m.titleH + 20.0f, m.titleH))) {
 							s_windowCollapseStates[title] = !isCollapsed;
 						}
-
-						// B. Determine Color
 						bool isHovered = ImGui::IsItemHovered();
 						ImU32 iconColor = isHovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
 
-						// C. Draw Icon with fixed size (compensate for user scale)
-						ImVec2 size = iconArrow->size;
-						size.x /= _userScale;
-						size.y /= _userScale;
-						ImVec2 drawSize = !isCollapsed ? ImVec2(size.y, size.x) : size;
-						float iconYOffset = midY - (drawSize.y * 0.5f);
+						bool pointsDown = !isCollapsed;
+						auto ap = chromeArrow(pointsDown, m.titleH);
 
 						ImVec2 drawPos = cursorScreen;
-						drawPos.x += (8.0f * uiScale);
-						drawPos.y += iconYOffset;
+						drawPos.x += m.titleIconPadX;
+						drawPos.y += ap.offsetY + m.titleIconNudgeY;
 
-						ImGui::DrawArrowIcon(ImGui::GetWindowDrawList(), drawPos, drawSize, iconColor,
-							!isCollapsed ? ImGui::IconDirection::kDown : ImGui::IconDirection::kRight);
+						ImGui::DrawArrowIcon(ImGui::GetWindowDrawList(), drawPos, ap.drawSize, iconColor,
+							pointsDown ? ImGui::IconDirection::kDown : ImGui::IconDirection::kRight);
 
-						iconW = titleH + 20.0f;
+						iconW = m.titleH + 20.0f;
 					}
 
-					// 2. Title Text										
+					// 2. Title Text
 					ImFont* baseFont = ImGui::GetFont();
-					float uiFontSize = 22.0f * 0.9f;
-					float textY = (titleH - uiFontSize) * 0.5f;
 
-					FUCK::SetCursorPos({ iconW, textY });
-
-					ImGui::GetWindowDrawList()->AddText(baseFont, uiFontSize,
+					FUCK::SetCursorPos({ iconW, m.titleTextOffsetY });
+					ImGui::GetWindowDrawList()->AddText(baseFont, m.titleFontSize,
 						FUCK::GetCursorScreenPos(), ImGui::GetColorU32(ImGuiCol_Text), title.c_str());
 
 					// 3. Close Button
-					const float btnSize = titleH;
-					const float btnX = winWidth - btnSize - (4.0f * uiScale);
+					const float btnSize = m.titleH;
+					const float btnX = winWidth - btnSize - (4.0f * m.uiScale);
 
 					FUCK::SetCursorPos({ btnX, 0 });
 					if (ImGui::InvisibleButton("##WinClose", ImVec2(btnSize, btnSize))) {
@@ -736,7 +767,7 @@ void FUCKMan::Draw()
 					}
 
 					// 4. Separator
-					FUCK::SetCursorPos({ headerStartCursor.x, titleH });
+					FUCK::SetCursorPos({ headerStartCursor.x, m.titleH });
 
 					if (isCollapsed) {
 						ImVec2 sepStart = FUCK::GetCursorScreenPos();
@@ -750,9 +781,10 @@ void FUCKMan::Draw()
 
 					// 5. Content Child (scaled)
 					if (!isCollapsed) {
-						float childY = titleH + (1.0f * uiScale);
+						float childY = m.titleH + (1.0f * m.uiScale);
 						FUCK::SetCursorPos({ 0, childY });
-						FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padBase, 0.0f));
+
+						FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase, m.padBase));
 
 						std::string childId = "##Content_" + title;
 						ImGuiChildFlags childFlags = ImGuiChildFlags_AlwaysUseWindowPadding;
@@ -807,11 +839,11 @@ void FUCKMan::Draw()
 		_settingsLoaded = false;
 	} else {
 		if (isCollapsed) {
-			FUCK::SetNextWindowSize(ImVec2(_windowSize.x, titleH));
+			FUCK::SetNextWindowSize(ImVec2(_windowSize.x, m.titleH));
 		} else if (wasCollapsed && !isCollapsed) {
 			FUCK::SetNextWindowSize(_windowSize);
 		} else {
-			FUCK::SetNextWindowSize(ImVec2(1000.0f * uiScale, 600.0f * uiScale), ImGuiCond_FirstUseEver);
+			FUCK::SetNextWindowSize(ImVec2(1000.0f * m.uiScale, 600.0f * m.uiScale), ImGuiCond_FirstUseEver);
 		}
 	}
 
@@ -848,47 +880,35 @@ void FUCKMan::Draw()
 
 		// -- Custom Title Bar (unscaled) --
 		{
-			ImVec2 cursorScreen = FUCK::GetCursorScreenPos();
-
 			FUCK::BeginGroup();
 
 			float winWidth = FUCK::GetWindowSize().x;
-			float midY = titleH * 0.5f;
+
+			ImVec2 cursorScreen = FUCK::GetCursorScreenPos();
 
 			// 1. Collapse Icon (Left)
-			static auto iconArrow = MANAGER(IconFont)->GetStepperRight();
 			if (iconArrow) {
-				// A. Draw Button
 				FUCK::SetCursorPos({ 0, 0 });
-				if (ImGui::InvisibleButton("##CollapseToggle", ImVec2(titleH + 20.0f, titleH))) {
+				if (ImGui::InvisibleButton("##CollapseToggle", ImVec2(m.titleH + 20.0f, m.titleH))) {
 					isCollapsed = !isCollapsed;
 				}
 
-				// B. Hover Color
 				bool isHovered = ImGui::IsItemHovered();
 				ImU32 iconColor = isHovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
 
-				// C. Draw Icon with fixed size
-				ImVec2 size = iconArrow->size;
-				size.x /= _userScale;
-				size.y /= _userScale;
-
-				bool pointDown = !isCollapsed;
-				float actualIconHeight = pointDown ? size.x : size.y;
-				float iconY = midY - (actualIconHeight * 0.5f);
+				bool pointsDown = !isCollapsed;
+				auto ap = chromeArrow(pointsDown, m.titleH);
 
 				ImVec2 drawPos = cursorScreen;
-				drawPos.x += (8.0f * uiScale);
-				drawPos.y += iconY;
+				drawPos.x += m.titleIconPadX;
+				drawPos.y += ap.offsetY + m.titleIconNudgeY;
 
-				ImVec2 drawSize = pointDown ? ImVec2(size.y, size.x) : size;
-
-				ImGui::DrawArrowIcon(ImGui::GetWindowDrawList(), drawPos, drawSize, iconColor,
-					!isCollapsed ? ImGui::IconDirection::kDown : ImGui::IconDirection::kRight);
+				ImGui::DrawArrowIcon(ImGui::GetWindowDrawList(), drawPos, ap.drawSize, iconColor,
+					pointsDown ? ImGui::IconDirection::kDown : ImGui::IconDirection::kRight);
 			}
 
 			// 2. Close Button
-			float btnSize = titleH;
+			float btnSize = m.titleH;
 			float xPos = winWidth - btnSize - headerPadding;
 
 			FUCK::SetCursorPos({ xPos, 0.0f });
@@ -925,9 +945,10 @@ void FUCKMan::Draw()
 
 			// Double Click Header
 			if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && !ImGui::IsAnyItemHovered()) {
-				ImVec2 m = ImGui::GetMousePos();
+				ImVec2 mousePos = ImGui::GetMousePos();
 				ImVec2 wP = FUCK::GetWindowPos();
-				if (m.x >= wP.x && m.x <= wP.x + winWidth && m.y >= wP.y && m.y <= wP.y + titleH) {
+				if (mousePos.x >= wP.x && mousePos.x <= wP.x + winWidth &&
+					mousePos.y >= wP.y && mousePos.y <= wP.y + m.titleH) {
 					isCollapsed = !isCollapsed;
 				}
 			}
@@ -935,21 +956,17 @@ void FUCKMan::Draw()
 
 		// -- Content --
 		if (!isCollapsed) {
-			float contentY = titleH;
+			float contentY = m.titleH;
 			FUCK::SetCursorPos({ 0, contentY });
 
 			float availHeight = FUCK::GetContentRegionAvail().y;
-			const float sidebarWidth = 250.0f * uiScale;
 
 			// -- Sidebar (unscaled) --
 			auto renderSidebar = [&]() {
-				const float itemHeight = 30.0f * uiScale;
-				const float topPadding = 2.0f * uiScale;
-				const float bottomPadding = 2.0f * uiScale;
-				const float indent = 15.0f * uiScale;
-				const float textVisualOffset = 1.0f * uiScale;
+				const float topPadding = 2.0f * m.uiScale;
+				const float bottomPadding = 2.0f * m.uiScale;
+				const float textVisualOffset = 1.0f * m.uiScale;
 
-				const float sidebarFontSize = 22.0f * 0.9f;
 				ImFont* regularFont = MANAGER(IconFont)->GetRegularFont();
 
 				std::vector<ITool*> looseTools;
@@ -991,14 +1008,10 @@ void FUCKMan::Draw()
 					return _stricmp(a.label.c_str(), b.label.c_str()) < 0;
 				});
 
-				static auto iconArrow = MANAGER(IconFont)->GetStepperRight();
+				auto apRight = chromeArrow(false, m.sidebarItemH);
+				float alignedTextOffset = (m.sidebarIndent * 0.5f) + apRight.drawSize.x + (10.0f * m.uiScale);
 
-				// Draw Icon with fixed size
-				float baseIconWidth = iconArrow ? (iconArrow->size.x / _userScale) : 20.0f;
-				const float iconToTextPadding = 10.0f * uiScale;
-				float alignedTextOffset = (indent * 0.5f) + baseIconWidth + iconToTextPadding;
-
-				FUCK::BeginChild("Sidebar", ImVec2(sidebarWidth, availHeight), true, ImGuiWindowFlags_None);
+				FUCK::BeginChild("Sidebar", ImVec2(m.sidebarWidth, availHeight), true, ImGuiWindowFlags_None);
 				{
 					FUCK::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
 					ImVec2 headerStart = FUCK::GetCursorPos();
@@ -1008,18 +1021,18 @@ void FUCKMan::Draw()
 					FUCK::SetCursorPos(headerStart);
 
 					// Bypassing FUCK::PushFont scaling
-					ImGui::PushFont(regularFont, sidebarFontSize);
-					float textH = ImGui::GetTextLineHeight();
-					float sidebarW = FUCK::GetContentRegionAvail().x;
+					ImGui::PushFont(regularFont, m.sidebarFontSize);
+					float textHeightCalc = ImGui::GetTextLineHeight();
+					float sidebarAvailW = FUCK::GetContentRegionAvail().x;
 					const char* headerText = "$FUCK_Tools"_T;
 					float headerW = ImGui::CalcTextSize(headerText).x;
 
-					FUCK::SetCursorPosX(headerStart.x + (sidebarW - headerW) * 0.5f);
-					FUCK::SetCursorPosY(headerStart.y + (itemHeight - textH) * 0.5f + textVisualOffset);
+					FUCK::SetCursorPosX(headerStart.x + (sidebarAvailW - headerW) * 0.5f);
+					FUCK::SetCursorPosY(headerStart.y + (m.sidebarItemH - textHeightCalc) * 0.5f + textVisualOffset);
 					FUCK::Text(headerText);
 					ImGui::PopFont();
 
-					FUCK::SetCursorPos(ImVec2(headerStart.x, headerStart.y + itemHeight));
+					FUCK::SetCursorPos(ImVec2(headerStart.x, headerStart.y + m.sidebarItemH));
 					FUCK::SeparatorThick();
 
 					auto RenderSidebarItem = [&](ITool* tool, const char* label, float extraIndent = 0.0f) {
@@ -1030,7 +1043,7 @@ void FUCKMan::Draw()
 						const auto cursorPos = FUCK::GetCursorPos();
 						std::string idLabel = std::format("##{}", label);
 
-						if (FUCK::Selectable(idLabel.c_str(), isSelected, 0, ImVec2(0, itemHeight))) {
+						if (FUCK::Selectable(idLabel.c_str(), isSelected, 0, ImVec2(0, m.sidebarItemH))) {
 							if (_activeTool && _activeTool != tool) {
 								FUCK::AbortBinding();
 								_activeTool->OnClose();
@@ -1043,8 +1056,8 @@ void FUCKMan::Draw()
 						ImVec2 endPos = FUCK::GetCursorPos();
 
 						// Bypassing FUCK::PushFont scaling
-						ImGui::PushFont(regularFont, sidebarFontSize);
-						float textY = cursorPos.y + (itemHeight - textH) * 0.5f + textVisualOffset;
+						ImGui::PushFont(regularFont, m.sidebarFontSize);
+						float textY = cursorPos.y + (m.sidebarItemH - textHeightCalc) * 0.5f + textVisualOffset;
 
 						FUCK::SetCursorPos({ cursorPos.x + alignedTextOffset + extraIndent, textY });
 						FUCK::Text(label);
@@ -1057,7 +1070,7 @@ void FUCKMan::Draw()
 					auto RenderSidebarGroup = [&](const std::string& groupName, std::vector<ITool*>& tools) {
 						
 						// Bypassing FUCK::PushFont scaling
-						ImGui::PushFont(regularFont, sidebarFontSize);
+						ImGui::PushFont(regularFont, m.sidebarFontSize);
 
 						// Custom TreeNode rendering
 						ImGui::PushID(groupName.c_str());
@@ -1066,8 +1079,7 @@ void FUCKMan::Draw()
 						bool isOpen = window->DC.StateStorage->GetInt(id, 0);
 
 						ImVec2 pos = window->DC.CursorPos;
-						float frameHeight = itemHeight;
-						ImRect bb(pos, pos + ImVec2(FUCK::GetContentRegionAvail().x, frameHeight));
+						ImRect bb(pos, pos + ImVec2(FUCK::GetContentRegionAvail().x, m.sidebarItemH));
 
 						ImGui::ItemSize(bb);
 						if (ImGui::ItemAdd(bb, id)) {
@@ -1083,26 +1095,24 @@ void FUCKMan::Draw()
 							// Draw chevron
 							if (iconArrow) {
 								ImU32 col = ImGui::GetDynamicTextColor(hovered);
-								ImVec2 iconSize = iconArrow->size;
-								// Divide by user scale to maintain constant size
-								iconSize.x /= _userScale;
-								iconSize.y /= _userScale;
+								bool pDown = isOpen;
+								auto ap = chromeArrow(pDown, m.sidebarItemH);
 
-								ImVec2 drawSize = isOpen ? ImVec2(iconSize.y, iconSize.x) : iconSize;
-								float offY = (frameHeight - drawSize.y) * 0.5f;
-								ImVec2 drawPos = { pos.x + (15.0f * uiScale) * 0.5f, pos.y + offY };
-
-								ImGui::DrawArrowIcon(window->DrawList, drawPos, drawSize, col,
-									isOpen ? ImGui::IconDirection::kDown : ImGui::IconDirection::kRight);
+								ImVec2 drawPos = {
+									pos.x + (m.sidebarIndent * 0.5f),
+									pos.y + ap.offsetY + textVisualOffset
+								};
+								ImGui::DrawArrowIcon(window->DrawList, drawPos, ap.drawSize, col,
+									pDown ? ImGui::IconDirection::kDown : ImGui::IconDirection::kRight);
 							}
 
-							float textY = bb.Min.y + (frameHeight - ImGui::CalcTextSize(groupName.c_str()).y) * 0.5f + textVisualOffset;
+							float textY = bb.Min.y + (m.sidebarItemH - ImGui::CalcTextSize(groupName.c_str()).y) * 0.5f + textVisualOffset;
 							ImGui::RenderText({ pos.x + alignedTextOffset, textY }, groupName.c_str());
 						}
 
 						if (isOpen) {
 							for (auto* tool : tools) {
-								RenderSidebarItem(tool, tool->Name(), indent);
+								RenderSidebarItem(tool, tool->Name(), m.sidebarIndent);
 							}
 						}
 
@@ -1121,7 +1131,7 @@ void FUCKMan::Draw()
 					// --- FOOTER: SETTINGS (Centred) ---
 					float childHeight = FUCK::GetWindowSize().y;
 					float separatorHeight = 1.0f;
-					float settingsY = childHeight - itemHeight - bottomPadding;
+					float settingsY = childHeight - m.sidebarItemH - bottomPadding;
 
 					float minSettingY = FUCK::GetCursorPos().y + separatorHeight;
 					if (settingsY < minSettingY)
@@ -1136,7 +1146,7 @@ void FUCKMan::Draw()
 						bool isSelected = (_activeTool == settingsTool);
 						const auto cursorPos = FUCK::GetCursorPos();
 
-						if (FUCK::Selectable("##SETTINGS", isSelected, 0, ImVec2(0, itemHeight))) {
+						if (FUCK::Selectable("##SETTINGS", isSelected, 0, ImVec2(0, m.sidebarItemH))) {
 							if (_activeTool && _activeTool != settingsTool) {
 								FUCK::AbortBinding();
 								_activeTool->OnClose();
@@ -1150,13 +1160,13 @@ void FUCKMan::Draw()
 						FUCK::SetCursorPos(cursorPos);
 
 						// Bypassing FUCK::PushFont scaling
-						ImGui::PushFont(regularFont, sidebarFontSize);
+						ImGui::PushFont(regularFont, m.sidebarFontSize);
 
 						const char* settingText = "$FUCK_Settings"_T;
 						float setW = ImGui::CalcTextSize(settingText).x;
 
-						FUCK::SetCursorPosX(cursorPos.x + (sidebarW - setW) * 0.5f);
-						FUCK::SetCursorPosY(cursorPos.y + (itemHeight - textH) * 0.5f + textVisualOffset);
+						FUCK::SetCursorPosX(cursorPos.x + (sidebarAvailW - setW) * 0.5f);
+						FUCK::SetCursorPosY(cursorPos.y + (m.sidebarItemH - textHeightCalc) * 0.5f + textVisualOffset);
 						FUCK::Text(settingText);
 
 						ImGui::PopFont();
@@ -1170,7 +1180,7 @@ void FUCKMan::Draw()
 
 			// -- Content (scaled) --
 			auto renderContent = [&](float width) {
-				FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padBase, 0.0f));
+				FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase, m.padBase));
 				FUCK::BeginChild("Content", ImVec2(width, availHeight), true, ImGuiChildFlags_AlwaysUseWindowPadding);
 				{
 					pushContentScale();
@@ -1186,7 +1196,7 @@ void FUCKMan::Draw()
 			};
 
 			if (_sidebarOnRight) {
-				float contentWidth = FUCK::GetContentRegionAvail().x - sidebarWidth - FUCK::GetStyleVarVec(ImGuiStyleVar_ItemSpacing).x;
+				float contentWidth = FUCK::GetContentRegionAvail().x - m.sidebarWidth - FUCK::GetStyleVarVec(ImGuiStyleVar_ItemSpacing).x;
 				renderContent(contentWidth);
 				FUCK::SameLine();
 				renderSidebar();
