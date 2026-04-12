@@ -759,15 +759,11 @@ void FUCKMan::Draw()
 						ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoBackground;
 
 						if (ImGui::BeginChild(childId.c_str(), ImVec2(0, 0), childFlags, windowFlags)) {
-							FUCK::Dummy(ImVec2(0, padBase));
-
 							ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
 							pushContentScale();
 							win->Draw();
 							popContentScale();
 							ImGui::PopItemWidth();
-
-							FUCK::Dummy(ImVec2(0, padBase));
 						}
 						ImGui::EndChild();
 
@@ -1175,16 +1171,14 @@ void FUCKMan::Draw()
 			// -- Content (scaled) --
 			auto renderContent = [&](float width) {
 				FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padBase, 0.0f));
-				FUCK::BeginChild("Content", ImVec2(width, availHeight), true, 0);
+				FUCK::BeginChild("Content", ImVec2(width, availHeight), true, ImGuiChildFlags_AlwaysUseWindowPadding);
 				{
 					pushContentScale();
-					FUCK::Dummy(ImVec2(0, padBase));
 					if (_activeTool)
 						_activeTool->Draw();
 					else
 						FUCK::CenteredText("$FUCK_NoToolSelected"_T, true);
 
-					FUCK::Dummy(ImVec2(0, 1));
 					popContentScale();
 				}
 				FUCK::EndChild();
