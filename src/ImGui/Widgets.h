@@ -10,6 +10,48 @@ namespace IconFont
 
 namespace ImGui
 {
+	// --- Safe Type Mappers for Templates ---
+	namespace detail
+	{
+		template <typename T>
+		constexpr ImGuiDataType GetDataType()
+		{
+			if constexpr (std::is_same_v<T, float>)
+				return ImGuiDataType_Float;
+			else if constexpr (std::is_same_v<T, double>)
+				return ImGuiDataType_Double;
+			else if constexpr (std::is_same_v<T, int8_t>)
+				return ImGuiDataType_S8;
+			else if constexpr (std::is_same_v<T, uint8_t>)
+				return ImGuiDataType_U8;
+			else if constexpr (std::is_same_v<T, int16_t>)
+				return ImGuiDataType_S16;
+			else if constexpr (std::is_same_v<T, uint16_t>)
+				return ImGuiDataType_U16;
+			else if constexpr (std::is_same_v<T, int32_t>)
+				return ImGuiDataType_S32;
+			else if constexpr (std::is_same_v<T, uint32_t>)
+				return ImGuiDataType_U32;
+			else if constexpr (std::is_same_v<T, int64_t>)
+				return ImGuiDataType_S64;
+			else if constexpr (std::is_same_v<T, uint64_t>)
+				return ImGuiDataType_U64;
+			else
+				return ImGuiDataType_S32;
+		}
+
+		template <typename T>
+		constexpr const char* GetDefaultFormat()
+		{
+			if constexpr (std::is_floating_point_v<T>)
+				return "%.2f";
+			else if constexpr (std::is_signed_v<T>)
+				return "%d";
+			else
+				return "%u";
+		}
+	}
+
 	enum class IconDirection
 	{
 		kRight,  // >
@@ -79,10 +121,10 @@ namespace ImGui
 
 	// Templates
 	template <class E>
-	bool EnumSlider(const char* label, E* index, const std::ranges::common_range auto& a_enum, bool a_translate = true)
+	bool EnumSlider(const char* label, E* index, const std::ranges::random_access_range auto& a_enum, bool a_translate = true)
 	{
 		bool value_changed = false;
-		std::size_t uIndex = (std::is_enum_v<E>) ? std::to_underlying(*index) : *index;
+		std::size_t uIndex = (std::is_enum_v<E>) ? static_cast<std::size_t>(*index) : *index;
 
 		LeftLabel(label);
 		auto [hovered, clickedLeft, clickedRight] = CenteredTextWithArrows(label, a_translate ? TRANSLATE(a_enum[uIndex]) : a_enum[uIndex]);
@@ -112,9 +154,10 @@ namespace ImGui
 		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
 		PushStyleColor(ImGuiCol_FrameBgActive, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
 
-		bool result = DragScalarEx(newLabel.c_str(), std::is_floating_point_v<T> ? ImGuiDataType_Float : ImGuiDataType_S32, v, v_speed, &v_min, &v_max, format ? format : (std::is_floating_point_v<T> ? "%.2f" : "%d"), flags);
+		bool result = DragScalarEx(newLabel.c_str(), detail::GetDataType<T>(), v, v_speed, &v_min, &v_max, format ? format : detail::GetDefaultFormat<T>(), flags);
 		if (result)
 			RE::PlaySound("UIMenuPrevNext");
+
 		ActivateOnHover();
 		PopStyleColor(3);
 		return result;
@@ -129,9 +172,10 @@ namespace ImGui
 		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
 		PushStyleColor(ImGuiCol_FrameBgActive, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
 
-		bool result = ThinSliderScalar(newLabel.c_str(), std::is_floating_point_v<T> ? ImGuiDataType_Float : ImGuiDataType_S32, v, &v_min, &v_max, format ? format : (std::is_floating_point_v<T> ? "%.2f" : "%d"), flags, 0.5f);
+		bool result = ThinSliderScalar(newLabel.c_str(), detail::GetDataType<T>(), v, &v_min, &v_max, format ? format : detail::GetDefaultFormat<T>(), flags, 0.5f);
 		if (result)
 			RE::PlaySound("UIMenuPrevNext");
+
 		ActivateOnHover();
 		PopStyleColor(3);
 		return result;
