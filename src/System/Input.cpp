@@ -40,7 +40,7 @@ namespace Input
 
 	bool Manager::CanNavigateWithMouse() const
 	{
-		return IsInputKBM();
+		return IsInputKBM() || RE::UI::GetSingleton()->IsMenuOpen(RE::CursorMenu::MENU_NAME);
 	}
 
 	void Manager::ToggleCursor(bool a_enable)
@@ -506,6 +506,11 @@ namespace Input
 							io.AddKeyAnalogEvent(imKey, isPressed, value);
 						else
 							io.AddKeyEvent(imKey, isPressed);
+
+						if (key == static_cast<uint32_t>(GAMEPAD_DIRECTX::kLeftThumb) ||
+							key == static_cast<uint32_t>(GAMEPAD_DIRECTX::kRightThumb)) {
+							io.AddMouseButtonEvent(0, isPressed);
+						}
 					}
 					break;
 				case DEVICE::kGamepadOrbis:
@@ -515,6 +520,11 @@ namespace Input
 							io.AddKeyAnalogEvent(imKey, isPressed, value);
 						else
 							io.AddKeyEvent(imKey, isPressed);
+
+						if (key == static_cast<uint32_t>(GAMEPAD_ORBIS::kPS3_L3) ||
+							key == static_cast<uint32_t>(GAMEPAD_ORBIS::kPS3_R3)) {
+							io.AddMouseButtonEvent(0, isPressed);
+						}
 					}
 					break;
 				default:
