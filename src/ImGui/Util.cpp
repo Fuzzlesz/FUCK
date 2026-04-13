@@ -94,8 +94,8 @@ namespace ImGui
 	{
 		ImGui::AlignTextToFramePadding();
 
-		const float width = CalcItemWidth();
-		const float x = GetCursorPosX();
+		float fullAvailX = ImGui::GetContentRegionAvail().x;
+		float startX = ImGui::GetCursorPosX();
 
 		const bool hovered = IsWidgetFocused(newLabel.empty() ? label : newLabel.c_str());
 
@@ -113,15 +113,34 @@ namespace ImGui
 			labelView = labelView.substr(0, hashPos);
 		}
 
-		TextUnformatted(labelView.data(), labelView.data() + labelView.size());
+		bool hasLabel = !labelView.empty();
+
+		// Only draw the label if it actually exists
+		if (hasLabel) {
+			TextUnformatted(labelView.data(), labelView.data() + labelView.size());
+		}
 
 		if (dim) {
 			PopStyleColor();
 		}
 
-		SameLine();
-		SetCursorPosX(x + width * 0.5f + GetStyle().ItemInnerSpacing.x);
-		SetNextItemWidth(-1);
+		if (hasLabel) {
+			SameLine();
+		}
+
+		// Keep the 50/50 split anchored only if there is a label
+		float rightPaneStart = startX;
+		if (hasLabel) {
+			rightPaneStart = startX + (fullAvailX * 0.5f) + GetStyle().ItemInnerSpacing.x;
+		}
+		SetCursorPosX(rightPaneStart);
+
+		// If the user didn't explicitly request a width via SetNextItemWidth,
+		// force the widget to fill our right pane.
+		if (!(GImGui->NextItemData.HasFlags & ImGuiNextItemDataFlags_HasWidth)) {
+			float rightPaneAvail = (startX + fullAvailX) - rightPaneStart;
+			SetNextItemWidth(std::max(1.0f, rightPaneAvail));
+		}
 	}
 
 	std::string LeftAlignedText(const char* label)

@@ -128,12 +128,23 @@ namespace
 		ImGuiContext& g = *GImGui;
 		float startX = ImGui::GetCursorPosX();
 		float startY = ImGui::GetCursorPosY();
-		float availWidth = ImGui::GetContentRegionAvail().x;
 
-		float rightPaneStart = startX + ImGui::CalcItemWidth() * 0.5f + g.Style.ItemInnerSpacing.x;
-		float rightPaneEnd = startX + availWidth;
+		float fullAvailX = ImGui::GetContentRegionAvail().x;
+
+		float rightPaneStart = startX + (fullAvailX * 0.5f) + g.Style.ItemInnerSpacing.x;
+		float rightPaneEnd = startX + fullAvailX;
+
+		// If you used SetNextItemWidth(-x), shrink the right pane bounds
+		if (g.NextItemData.HasFlags & ImGuiNextItemDataFlags_HasWidth) {
+			float reqW = g.NextItemData.Width;
+			if (reqW < 0.0f) {
+				rightPaneEnd += reqW;
+			}
+			// Consume the flag for our custom widgets so it doesn't leak
+			g.NextItemData.HasFlags &= ~ImGuiNextItemDataFlags_HasWidth;
+		}
+
 		float rightPaneCenter = rightPaneStart + (rightPaneEnd - rightPaneStart) * 0.5f;
-
 		float splitPoint = rightPaneCenter - (contentWidth * 0.5f);
 
 		std::string_view labelView(label);
@@ -143,13 +154,17 @@ namespace
 
 		float labelWidth = ImGui::CalcTextSize(labelView.data(), labelView.data() + labelView.size()).x;
 
-		float defaultTargetHeight = targetHeight > 0.0f ? targetHeight : ImGui::GetFrameHeight();
-
 		auto DrawLabel = [&]() {
-			float textH = ImGui::GetTextLineHeight();
-			float offY = (defaultTargetHeight - textH) * 0.5f;
-
-			ImGui::SetCursorPosY(startY + std::max(0.0f, offY));
+			if (targetHeight > 0.0f) {
+				// If a custom height was provided (like Checkboxes), center it mathematically
+				float textH = ImGui::GetTextLineHeight();
+				float offY = (targetHeight - textH) * 0.5f;
+				ImGui::SetCursorPosY(startY + std::max(0.0f, offY));
+			} else {
+				// For native-height widgets (like ToggleButton), let ImGui handle the baseline
+				ImGui::SetCursorPosY(startY);
+				ImGui::AlignTextToFramePadding();
+			}
 			ImGui::TextUnformatted(labelView.data(), labelView.data() + labelView.size());
 		};
 
