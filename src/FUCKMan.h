@@ -20,35 +20,38 @@ public:
 
 	FUCKMan();
 
+	// --- Tool & Window Registration ---
 	void RegisterTool(ITool* tool);
 	void RegisterWindow(IWindow* window);
 
+	// --- Rendering & Input ---
 	bool ShouldRender() const;
 	void Draw();
-
-	bool IsInputBlocked() const;
-	bool IsCursorForced() const;
-	
-	bool HasWindowWithFlag(WindowFlags a_flag) const;
-
 	bool ProcessAsyncInput(const RE::InputEvent* const* a_event);
 
+	// --- State Queries ---
+	bool IsInputBlocked() const;
+	bool IsCursorForced() const;
+	bool HasWindowWithFlag(WindowFlags a_flag) const;
+	bool IsOpen() const { return _isOpen; }
+
+	// --- Menu Controls ---
 	void Open();
 	void Close();
 	void Toggle();
-	bool IsOpen() const { return _isOpen; }
 
+	// --- Settings & State ---
 	void LoadSettings(const CSimpleIniA& a_ini);
 	void SaveSettings(CSimpleIniA& a_ini);
 	void ResetSettings();
-	float GetUserScale() const { return _userScale; }
 
+	float GetUserScale() const { return _userScale; }
 	bool GetInjectSystemMenu() const { return _injectSystemMenu; }
 	bool GetReplaceHelpMenu() const { return _replaceHelpMenu; }
 
+	// --- API Overrides ---
 	void SetVanityBlocked(bool blocked);
 	void SuspendRendering(bool suspend);
-
 	void SetManualHardPause(bool paused);
 	void SetManualSoftPause(bool paused);
 	void SetForceCursor(bool force);
@@ -78,20 +81,22 @@ private:
 	bool _forceCursor = false;
 	bool _suspendRendering = false;
 
+	// Config / Settings
 	PauseType _globalPauseType = PauseType::kNone;
 	float _userScale = 1.0f;
 	bool _sidebarOnRight = false;
 	bool _injectSystemMenu = true;
 	bool _replaceHelpMenu = false;
 
+	// Window Metrics
 	ImVec2 _windowPos{ 100.0f, 100.0f };
 	ImVec2 _windowSize{ 1000.0f, 600.0f };
 	bool _settingsLoaded = false;
 	ImVec2 _lastSavedPos{ 100.0f, 100.0f };
 	ImVec2 _lastSavedSize{ 1000.0f, 600.0f };
-
 	bool _isCollapsed = false;
 
+	// Built-in Tools
 	SettingsTool _settingsTool;
 	ThemeEditorWindow _themeEditorWindow;
 };
