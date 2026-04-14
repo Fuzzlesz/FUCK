@@ -8,6 +8,7 @@
 #include "ImGui/Util.h"
 #include "ImGui/Widgets.h"
 #include "System/Input.h"
+#include "System/Settings.h"
 #include "System/Utils.h"
 
 namespace FUCK::Host
@@ -254,6 +255,21 @@ namespace FUCK::Host
 	static void LoadTranslation_Impl(const char* n) { Translation::Manager::GetSingleton()->LoadCustomTranslation(n); }
 	static const char* GetTranslation_Impl(const char* k) { return Translation::Manager::GetSingleton()->GetTranslation(k); }
 	static void SanitizePath_Impl(char* dest, const char* source, size_t size) { Utils::SanitizePath(dest, source, size); }
+	static void LoadPluginINI_Impl(const wchar_t* defaultPath, const wchar_t* userPath, void* userdata, void (*callback)(CSimpleIniA&, void*))
+	{
+		if (!callback)
+			return;
+		Settings::GetSingleton()->LoadINI(defaultPath, userPath, [userdata, callback](CSimpleIniA& ini) {
+			callback(ini, userdata);
+		});
+	}
+
+	static void SavePluginINI_Impl(const wchar_t* userPath, void* userdata, void (*callback)(CSimpleIniA&, void*))
+	{
+		if (!callback)
+			return;
+		Settings::GetSingleton()->LoadINI(userPath, [userdata, callback](CSimpleIniA& ini) { callback(ini, userdata); }, true);
+	}
 	static void PushItemFlag_Impl(ItemFlags flag, bool enabled) { ImGui::PushItemFlag(static_cast<ImGuiItemFlags>(flag), enabled); }
 	static void PopItemFlag_Impl() { ImGui::PopItemFlag(); }
 	
@@ -643,6 +659,8 @@ namespace FUCK::Host
 			.LoadTranslation = LoadTranslation_Impl,
 			.GetTranslation = GetTranslation_Impl,
 			.SanitizePath = SanitizePath_Impl,
+			.LoadPluginINI = LoadPluginINI_Impl,
+			.SavePluginINI = SavePluginINI_Impl,
 			.PushItemFlag = PushItemFlag_Impl,
 			.PopItemFlag = PopItemFlag_Impl,
 			.HelpMarker = HelpMarker_Impl,

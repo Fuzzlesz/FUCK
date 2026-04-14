@@ -209,6 +209,8 @@ struct FUCK_Interface
 	void (*LoadTranslation)(const char*);
 	const char* (*GetTranslation)(const char*);
 	void (*SanitizePath)(char*, const char*, size_t);
+	void (*LoadPluginINI)(const wchar_t* defaultPath, const wchar_t* userPath, void* userdata, void (*callback)(CSimpleIniA&, void*));
+	void (*SavePluginINI)(const wchar_t* userPath, void* userdata, void (*callback)(CSimpleIniA&, void*));
 	void (*PushItemFlag)(ItemFlags, bool);
 	void (*PopItemFlag)();
 	void (*HelpMarker)(const char*);
@@ -858,6 +860,41 @@ namespace FUCK
 		if (auto i = GetInterface())
 			i->HelpMarker(desc);
 	}
+
+	// --- Plugin Settings ---
+	class PluginSettings
+	{
+	public:
+		PluginSettings(const wchar_t* a_defaultPath, const wchar_t* a_userPath) :
+			_defaultPath(a_defaultPath), _userPath(a_userPath)
+		{}
+
+		using INIFunc = std::function<void(CSimpleIniA&)>;
+
+		void Load(INIFunc a_func) const
+		{
+			if (!a_func)
+				return;
+			if (auto* i = GetInterface())
+				i->LoadPluginINI(_defaultPath, _userPath, &a_func, [](CSimpleIniA& ini, void* ud) {
+					(*static_cast<INIFunc*>(ud))(ini);
+				});
+		}
+
+		void Save(INIFunc a_func) const
+		{
+			if (!a_func)
+				return;
+			if (auto* i = GetInterface())
+				i->SavePluginINI(_userPath, &a_func, [](CSimpleIniA& ini, void* ud) {
+					(*static_cast<INIFunc*>(ud))(ini);
+				});
+		}
+
+	private:
+		const wchar_t* _defaultPath;
+		const wchar_t* _userPath;
+	};
 
 	// --- RAII Menu Events ---
 	inline void AddMenuListener(void* userdata, void (*callback)(const char* menuName, bool opening, void* userdata))
