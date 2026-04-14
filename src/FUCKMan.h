@@ -56,12 +56,40 @@ public:
 	void SetManualSoftPause(bool paused);
 	void SetForceCursor(bool force);
 
+	// --- Menu Event Listeners ---
+	void AddMenuListener(void* userdata, void (*callback)(const char*, bool, void*))
+	{
+		_menuListeners.push_back({ userdata, callback });
+	}
+
+	void RemoveMenuListener(void* userdata)
+	{
+		std::erase_if(_menuListeners, [userdata](const MenuListenerEntry& e) {
+			return e.userdata == userdata;
+		});
+	}
+
+	void DispatchMenuEvent(const char* menuName, bool opening)
+	{
+		auto listenersCopy = _menuListeners;
+		for (auto& e : listenersCopy) {
+			e.callback(menuName, opening, e.userdata);
+		}
+	}
+
 protected:
 	RE::BSEventNotifyControl ProcessEvent(const RE::MenuOpenCloseEvent* a_event, RE::BSTEventSource<RE::MenuOpenCloseEvent>*) override;
 
 private:
 	void UpdateGameState();
 
+	struct MenuListenerEntry
+	{
+		void* userdata;
+		void (*callback)(const char*, bool, void*);
+	};
+
+	std::vector<MenuListenerEntry> _menuListeners;
 	std::vector<ITool*> _tools;
 	std::vector<IWindow*> _windows;
 

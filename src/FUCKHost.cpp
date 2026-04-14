@@ -299,6 +299,15 @@ namespace FUCK::Host
 		}
 	}
 
+	static void AddMenuListener_Impl(void* userdata, void (*callback)(const char*, bool, void*))
+	{
+		FUCKMan::GetSingleton()->AddMenuListener(userdata, callback);
+	}
+	static void RemoveMenuListener_Impl(void* userdata)
+	{
+		FUCKMan::GetSingleton()->RemoveMenuListener(userdata);
+	}
+
 	// ==========================================
 	// Textures & Icons
 	// ==========================================
@@ -640,6 +649,8 @@ namespace FUCK::Host
 			.PushID_Str = PushID_Str_Impl,
 			.PushID_Int = PushID_Int_Impl,
 			.PopID = PopID_Impl,
+			.AddMenuListener = AddMenuListener_Impl,
+			.RemoveMenuListener = RemoveMenuListener_Impl,
 			.LoadImage = LoadImage_Impl,
 			.ReleaseImage = ReleaseImage_Impl,
 			.GetImageInfo = GetImageInfo_Impl,

@@ -216,6 +216,10 @@ struct FUCK_Interface
 	void (*PushID_Int)(int);
 	void (*PopID)();
 
+	// Menu Events
+	void (*AddMenuListener)(void* userdata, void (*callback)(const char* menuName, bool opening, void* userdata));
+	void (*RemoveMenuListener)(void* userdata);
+
 	// Assets
 	void* (*LoadImage)(const char*, bool);
 	void (*ReleaseImage)(void*);
@@ -391,9 +395,7 @@ namespace FUCK
 		return true;
 	}
 
-	// -------------------------------------------------------------------------
-	// RAII Image Wrapper
-	// -------------------------------------------------------------------------
+	// --- RAII Image Wrapper ---
 	class Image
 	{
 	public:
@@ -856,6 +858,65 @@ namespace FUCK
 		if (auto i = GetInterface())
 			i->HelpMarker(desc);
 	}
+
+	// --- RAII Menu Events ---
+	inline void AddMenuListener(void* userdata, void (*callback)(const char* menuName, bool opening, void* userdata))
+	{
+		if (auto i = GetInterface())
+			i->AddMenuListener(userdata, callback);
+	}
+	inline void RemoveMenuListener(void* userdata)
+	{
+		if (auto i = GetInterface())
+			i->RemoveMenuListener(userdata);
+	}
+
+	class MenuEventListener
+	{
+	public:
+		using Callback = std::function<void(const char* menuName, bool opening)>;
+
+		MenuEventListener() = default;
+
+		explicit MenuEventListener(Callback a_cb) :
+			_callback(std::move(a_cb))
+		{
+			FUCK::AddMenuListener(this, &MenuEventListener::Dispatch);
+		}
+
+		~MenuEventListener()
+		{
+			if (_callback)
+				FUCK::RemoveMenuListener(this);
+		}
+
+		// Non-copyable, movable
+		MenuEventListener(const MenuEventListener&) = delete;
+		MenuEventListener& operator=(const MenuEventListener&) = delete;
+
+		MenuEventListener& operator=(MenuEventListener&& other) noexcept
+		{
+			if (this != &other) {
+				if (_callback)
+					FUCK::RemoveMenuListener(this);
+				_callback = std::move(other._callback);
+				if (_callback) {
+					FUCK::RemoveMenuListener(&other);
+					FUCK::AddMenuListener(this, &MenuEventListener::Dispatch);
+					other._callback = nullptr;
+				}
+			}
+			return *this;
+		}
+
+	private:
+		static void Dispatch(const char* menuName, bool opening, void* userdata)
+		{
+			static_cast<MenuEventListener*>(userdata)->_callback(menuName, opening);
+		}
+
+		Callback _callback;
+	};
 
 	// --- Assets & Overlays ---
 	inline ImTextureID GetIconForKey(std::uint32_t key, ImVec2* outSize = nullptr)

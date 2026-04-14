@@ -420,6 +420,8 @@ RE::BSEventNotifyControl FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_e
 	if (!a_event)
 		return RE::BSEventNotifyControl::kContinue;
 
+	DispatchMenuEvent(a_event->menuName.c_str(), a_event->opening);
+
 	if (a_event->opening) {
 		if (a_event->menuName == RE::MainMenu::MENU_NAME) {
 			ImGui::ClearFormCaches();

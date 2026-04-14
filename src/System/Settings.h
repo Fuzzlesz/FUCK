@@ -26,10 +26,10 @@ public:
 	const wchar_t* GetUserFontsPath() const { return userFontsPath; }
 	const wchar_t* GetLegacyFontsPath() const { return legacyFontsPath; }
 
-private:
 	static void LoadINI(const wchar_t* a_path, INIFunc a_func, bool a_generate = false);
 	static void LoadINI(const wchar_t* a_defaultPath, const wchar_t* a_userPath, INIFunc a_func);
 
+private:
 	const wchar_t* defaultSettingsPath{ L"Data/SKSE/Plugins/FUCK.ini" };
 	const wchar_t* userSettingsPath{ L"Data/SKSE/Plugins/FUCK_Custom.ini" };
 
