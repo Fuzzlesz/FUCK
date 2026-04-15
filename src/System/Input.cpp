@@ -104,10 +104,10 @@ namespace Input
 		_rebindCtx.originalMod2 = m2;
 	}
 
-	BindResult Manager::UpdateBinding(const RE::InputEvent* const* a_event, std::uint32_t* outKey, std::int32_t* outMod1, std::int32_t* outMod2)
+	FUCK::BindResult Manager::UpdateBinding(const RE::InputEvent* const* a_event, std::uint32_t* outKey, std::int32_t* outMod1, std::int32_t* outMod2)
 	{
 		if (!_rebindCtx.active)
-			return BindResult::kNone;
+			return FUCK::BindResult::kNone;
 
 		// 1. Update debounce timer (using ImGui's DeltaTime is easiest here)
 		_rebindCtx.timer += ImGui::GetIO().DeltaTime;
@@ -120,12 +120,12 @@ namespace Input
 		auto result = GetInputBind(a_event, &newKey, &newM1, &newM2);
 
 		// 3. Prevent accidental "double-click" capture
-		if (result == BindResult::kBound && _rebindCtx.timer < 0.2f) {
-			return BindResult::kNone;
+		if (result == FUCK::BindResult::kBound && _rebindCtx.timer < 0.2f) {
+			return FUCK::BindResult::kNone;
 		}
 
 		// 4. Handle Results
-		if (result == BindResult::kCancelled) {
+ 		   	if (result == FUCK::BindResult::kCancelled) {
 			// AUTOMATIC RESTORE
 			if (outKey)
 				*outKey = _rebindCtx.originalKey;
@@ -134,10 +134,10 @@ namespace Input
 			if (outMod2)
 				*outMod2 = _rebindCtx.originalMod2;
 			_rebindCtx.Reset();
-			return BindResult::kCancelled;
+			return FUCK::BindResult::kCancelled;
 		}
 
-		if (result == BindResult::kBound) {
+		if (result == FUCK::BindResult::kBound) {
 			if (outKey)
 				*outKey = newKey;
 			if (outMod1)
@@ -145,16 +145,16 @@ namespace Input
 			if (outMod2)
 				*outMod2 = newM2;
 			_rebindCtx.Reset();
-			return BindResult::kBound;
+			return FUCK::BindResult::kBound;
 		}
 
-		return BindResult::kNone;
+		return FUCK::BindResult::kNone;
 	}
 
-	BindResult Manager::GetInputBind(const RE::InputEvent* const* a_event, std::uint32_t* outKey, std::int32_t* outMod1, std::int32_t* outMod2)
+	FUCK::BindResult Manager::GetInputBind(const RE::InputEvent* const* a_event, std::uint32_t* outKey, std::int32_t* outMod1, std::int32_t* outMod2)
 	{
 		if (!a_event)
-			return BindResult::kNone;
+			return FUCK::BindResult::kNone;
 
 		const auto gpOffset = static_cast<std::uint32_t>(SKSE::InputMap::kMacro_GamepadOffset);
 		const auto msOffset = static_cast<std::uint32_t>(SKSE::InputMap::kMacro_MouseButtonOffset);
@@ -181,13 +181,13 @@ namespace Input
 
 			// BLOCKERS
 			if (device == RE::INPUT_DEVICE::kMouse && (key == 0 || key == 1))
-				return BindResult::kNone;
+				return FUCK::BindResult::kNone;
 			if (device == RE::INPUT_DEVICE::kKeyboard && (key == KEY::kLeftWin || key == KEY::kRightWin))
-				return BindResult::kError;
+				return FUCK::BindResult::kError;
 
 			if (unifiedKey == Hotkeys::Manager::EscapeKey()) {
 				RE::PlaySound("UIMenuCancel");
-				return BindResult::kCancelled;
+				return FUCK::BindResult::kCancelled;
 			}
 
 			// MODIFIER COLLEC
@@ -227,7 +227,7 @@ namespace Input
 
 			if (isModCandidate) {
 				if (button->Value() < 1.0f || !pressedMods.empty())
-					return BindResult::kNone;
+					return FUCK::BindResult::kNone;
 			}
 
 			// PREVENT SELF-BIND
@@ -244,7 +244,7 @@ namespace Input
 						match = true;
 				}
 				if (match)
-					return BindResult::kNone;
+					return FUCK::BindResult::kNone;
 			}
 
 			// OUT
@@ -255,9 +255,9 @@ namespace Input
 			if (outMod2)
 				*outMod2 = (pressedMods.size() > 1) ? pressedMods[1] : -1;
 
-			return BindResult::kBound;
+			return FUCK::BindResult::kBound;
 		}
-		return BindResult::kNone;
+		return FUCK::BindResult::kNone;
 	}
 
 	float Manager::GetAnalogInput(std::uint32_t a_unifiedKey) const
@@ -267,14 +267,14 @@ namespace Input
 		return it != keyStateCache.end() ? it->second : 0.0f;
 	}
 
-	bool Manager::IsModifierPressed(Modifier a_modifier) const
+	bool Manager::IsModifierPressed(FUCK::Modifier a_modifier) const
 	{
 		switch (a_modifier) {
-		case Modifier::kShift:
+		case FUCK::Modifier::kShift:
 			return IsInputDown(KEY::kLeftShift) || IsInputDown(KEY::kRightShift);
-		case Modifier::kCtrl:
+		case FUCK::Modifier::kCtrl:
 			return IsInputDown(KEY::kLeftControl) || IsInputDown(KEY::kRightControl);
-		case Modifier::kAlt:
+		case FUCK::Modifier::kAlt:
 			return IsInputDown(KEY::kLeftAlt) || IsInputDown(KEY::kRightAlt);
 		default:
 			return false;
@@ -547,9 +547,9 @@ namespace Input
 
 		// Explicitly sync modifiers to ImGui
 		if (passKeyboardAndGamepad) {
-			io.AddKeyEvent(ImGuiMod_Ctrl, IsModifierPressed(Modifier::kCtrl));
-			io.AddKeyEvent(ImGuiMod_Shift, IsModifierPressed(Modifier::kShift));
-			io.AddKeyEvent(ImGuiMod_Alt, IsModifierPressed(Modifier::kAlt));
+			io.AddKeyEvent(ImGuiMod_Ctrl, IsModifierPressed(FUCK::Modifier::kCtrl));
+			io.AddKeyEvent(ImGuiMod_Shift, IsModifierPressed(FUCK::Modifier::kShift));
+			io.AddKeyEvent(ImGuiMod_Alt, IsModifierPressed(FUCK::Modifier::kAlt));
 
 			bool superDown = IsInputDown(static_cast<std::uint32_t>(KEY::kLeftWin)) ||
 			                 IsInputDown(static_cast<std::uint32_t>(KEY::kRightWin));

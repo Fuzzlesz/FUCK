@@ -1,6 +1,6 @@
 #pragma once
 
-class ThemeEditorWindow : public IWindow
+class ThemeEditorWindow : public FUCK::IWindow
 {
 public:
 	const char* Title() const override { return "$FUCK_ThemeEditor_Title"_T; }
@@ -8,7 +8,7 @@ public:
 	bool IsOpen() const override { return _isOpen; }
 	void SetOpen(bool a_open) override { _isOpen = a_open; }
 
-	WindowFlags GetFlags() const override { return WindowFlags::kExtendBorder | WindowFlags::kCloseOnEsc; }
+	FUCK::WindowFlags GetFlags() const override { return FUCK::WindowFlags::kExtendBorder | FUCK::WindowFlags::kCloseOnEsc; }
 
 	ImVec2 GetDefaultSize() const override
 	{

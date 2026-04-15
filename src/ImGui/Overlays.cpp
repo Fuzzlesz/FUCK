@@ -6,7 +6,7 @@ namespace ImGui
 	// ------------------------------------------------------------
 	// Entry point
 	// ------------------------------------------------------------
-	void Overlays::Draw(FUCK_Overlay type, float thickness, ImU32 color, float paramA, float paramB, float paramC, float paramD)
+	void Overlays::Draw(FUCK::Overlay type, float thickness, ImU32 color, float paramA, float paramB, float paramC, float paramD)
 	{
 		auto* drawList = ImGui::GetBackgroundDrawList();
 		ImVec2 displaySize = ImGui::GetIO().DisplaySize;
@@ -19,13 +19,13 @@ namespace ImGui
 		}
 
 		switch (type) {
-		case FUCK_Overlay::kGrid:
+		case FUCK::Overlay::kGrid:
 			DrawGrid(drawList, displaySize, color, thickness, paramA, paramB, paramC);
 			break;
-		case FUCK_Overlay::kCrosshair:
+		case FUCK::Overlay::kCrosshair:
 			DrawCrosshair(drawList, displaySize, color, thickness, paramA, paramB);
 			break;
-		case FUCK_Overlay::kGoldenSpiral:
+		case FUCK::Overlay::kGoldenSpiral:
 			{
 				bool showSquares = false;
 				float anchor = paramA;
@@ -36,10 +36,10 @@ namespace ImGui
 				DrawGoldenSpiral(drawList, displaySize, color, thickness, anchor, paramB, paramC, paramD, showSquares);
 				break;
 			}
-		case FUCK_Overlay::kGoldenRatio:
+		case FUCK::Overlay::kGoldenRatio:
 			DrawGoldenRatioGrid(drawList, displaySize, color, thickness, paramA);
 			break;
-		case FUCK_Overlay::kTriangle:
+		case FUCK::Overlay::kTriangle:
 			DrawTriangle(drawList, displaySize, color, thickness, paramA > 0.0f);
 			break;
 		}

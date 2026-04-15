@@ -57,15 +57,15 @@ namespace Input
 		bool IsInputPressed(const RE::InputEvent* const* a_event, std::uint32_t a_unifiedKey);
 
 		// --- Rebinding API ---
-		void		StartBinding(std::uint32_t a_currentKey, std::int32_t a_currentMod1, std::int32_t a_currentMod2);
-		BindResult	UpdateBinding(const RE::InputEvent* const* a_event, std::uint32_t* outKey, std::int32_t* outMod1, std::int32_t* outMod2);
-		bool		IsBinding() const { return _rebindCtx.active; }
-		void		AbortBinding() { _rebindCtx.Reset(); }
-		BindResult	GetInputBind(const RE::InputEvent* const* a_event, std::uint32_t* outKey, std::int32_t* outMod1, std::int32_t* outMod2);
+		void		     StartBinding(std::uint32_t a_currentKey, std::int32_t a_currentMod1, std::int32_t a_currentMod2);
+		FUCK::BindResult UpdateBinding(const RE::InputEvent* const* a_event, std::uint32_t* outKey, std::int32_t* outMod1, std::int32_t* outMod2);
+		bool		     IsBinding() const { return _rebindCtx.active; }
+		void		     AbortBinding() { _rebindCtx.Reset(); }
+		FUCK::BindResult GetInputBind(const RE::InputEvent* const* a_event, std::uint32_t* outKey, std::int32_t* outMod1, std::int32_t* outMod2);
 
 		bool	IsInputDown(std::uint32_t a_unifiedKey) const;
 		float	GetAnalogInput(std::uint32_t a_unifiedKey) const;
-		bool	IsModifierPressed(Modifier a_modifier) const;
+		bool	IsModifierPressed(FUCK::Modifier a_modifier) const;
 
 		void PushContext(Context a_ctx);
 		void PopContext(std::string_view a_name);

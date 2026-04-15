@@ -31,10 +31,10 @@ namespace FUCK::Host
 		if (y)
 			*y = size.y;
 	}
-	static ImFont* GetFont_Impl(FUCK_Font f)
+	static ImFont* GetFont_Impl(FUCK::Font f)
 	{
 		auto mgr = IconFont::Manager::GetSingleton();
-		return (f == FUCK_Font::kLarge) ? mgr->GetLargeFont() : mgr->GetRegularFont();
+		return (f == FUCK::Font::kLarge) ? mgr->GetLargeFont() : mgr->GetRegularFont();
 	}
 	static void PushFont_Impl(ImFont* f, float size)
 	{
@@ -402,7 +402,7 @@ namespace FUCK::Host
 		}
 		window->DrawList->PathStroke(ImGui::ColorConvertFloat4ToU32(color), false, thickness);
 	}
-	static void DrawOverlay_Impl(FUCK_Overlay type, float thickness, ImU32 color, float paramA, float paramB, float paramC, float paramD) { ImGui::Overlays::Draw(type, thickness, color, paramA, paramB, paramC, paramD); }
+	static void DrawOverlay_Impl(FUCK::Overlay type, float thickness, ImU32 color, float paramA, float paramB, float paramC, float paramD) { ImGui::Overlays::Draw(type, thickness, color, paramA, paramB, paramC, paramD); }
 
 	// ==========================================
 	// Game Control
@@ -423,7 +423,7 @@ namespace FUCK::Host
 	static bool IsInputPressed_Impl(const void* evt, std::uint32_t key) { return Input::Manager::GetSingleton()->IsInputPressed(static_cast<const RE::InputEvent* const*>(evt), key); }
 	static bool IsInputDown_Impl(std::uint32_t key) { return Input::Manager::GetSingleton()->IsInputDown(key); }
 	static float GetAnalogInput_Impl(std::uint32_t key) { return Input::Manager::GetSingleton()->GetAnalogInput(key); }
-	static bool IsModifierPressed_Impl(Modifier m) { return Input::Manager::GetSingleton()->IsModifierPressed(m); }
+	static bool IsModifierPressed_Impl(FUCK::Modifier m) { return Input::Manager::GetSingleton()->IsModifierPressed(m); }
 	static int GetInputDevice_Impl()
 	{
 		auto device = Input::Manager::GetSingleton()->GetInputDevice();
@@ -436,8 +436,8 @@ namespace FUCK::Host
 	static bool IsBinding_Impl() { return Input::Manager::GetSingleton()->IsBinding(); }
 	static void AbortBinding_Impl() { Input::Manager::GetSingleton()->AbortBinding(); }
 	static void StartBinding_Impl(std::uint32_t k, std::int32_t m1, std::int32_t m2) { Input::Manager::GetSingleton()->StartBinding(k, m1, m2); }
-	static BindResult UpdateBinding_Impl(const void* evt, std::uint32_t* k, std::int32_t* m1, std::int32_t* m2) { return Input::Manager::GetSingleton()->UpdateBinding(static_cast<const RE::InputEvent* const*>(evt), k, m1, m2); }
-	static BindResult GetInputBind_Impl(const void* evt, std::uint32_t* k, std::int32_t* m1, std::int32_t* m2) { return Input::Manager::GetSingleton()->GetInputBind(static_cast<const RE::InputEvent* const*>(evt), k, m1, m2); }
+	static FUCK::BindResult UpdateBinding_Impl(const void* evt, std::uint32_t* k, std::int32_t* m1, std::int32_t* m2) { return Input::Manager::GetSingleton()->UpdateBinding(static_cast<const RE::InputEvent* const*>(evt), k, m1, m2); }
+	static FUCK::BindResult GetInputBind_Impl(const void* evt, std::uint32_t* k, std::int32_t* m1, std::int32_t* m2) { return Input::Manager::GetSingleton()->GetInputBind(static_cast<const RE::InputEvent* const*>(evt), k, m1, m2); }
 
 	// ==========================================
 	// Interaction

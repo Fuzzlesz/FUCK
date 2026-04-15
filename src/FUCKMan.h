@@ -21,8 +21,8 @@ public:
 	FUCKMan();
 
 	// --- Tool & Window Registration ---
-	void RegisterTool(ITool* tool);
-	void RegisterWindow(IWindow* window);
+	void RegisterTool(FUCK::ITool* tool);
+	void RegisterWindow(FUCK::IWindow* window);
 
 	// --- Rendering & Input ---
 	bool ShouldRender() const;
@@ -32,7 +32,7 @@ public:
 	// --- State Queries ---
 	bool IsInputBlocked() const;
 	bool IsCursorForced() const;
-	bool HasWindowWithFlag(WindowFlags a_flag) const;
+	bool HasWindowWithFlag(FUCK::WindowFlags a_flag) const;
 	bool IsOpen() const { return _isOpen; }
 
 	// --- Menu Controls ---
@@ -90,10 +90,10 @@ private:
 	};
 
 	std::vector<MenuListenerEntry> _menuListeners;
-	std::vector<ITool*> _tools;
-	std::vector<IWindow*> _windows;
+	std::vector<FUCK::ITool*> _tools;
+	std::vector<FUCK::IWindow*> _windows;
 
-	ITool* _activeTool = nullptr;
+	FUCK::ITool* _activeTool = nullptr;
 	bool _isOpen = false;
 
 	// Game State

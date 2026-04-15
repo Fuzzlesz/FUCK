@@ -43,7 +43,7 @@ FUCKMan::FUCKMan()
 // Registration & Callbacks
 // ==========================================
 
-void FUCKMan::RegisterTool(ITool* a_tool)
+void FUCKMan::RegisterTool(FUCK::ITool* a_tool)
 {
 	if (!a_tool)
 		return;
@@ -54,7 +54,7 @@ void FUCKMan::RegisterTool(ITool* a_tool)
 	}
 
 	// 2. Name Collision Check
-	auto it = std::find_if(_tools.begin(), _tools.end(), [&](ITool* existing) {
+	auto it = std::find_if(_tools.begin(), _tools.end(), [&](FUCK::ITool* existing) {
 		return existing && (strcmp(existing->Name(), a_tool->Name()) == 0);
 	});
 
@@ -65,7 +65,7 @@ void FUCKMan::RegisterTool(ITool* a_tool)
 	_tools.push_back(a_tool);
 }
 
-void FUCKMan::RegisterWindow(IWindow* a_window)
+void FUCKMan::RegisterWindow(FUCK::IWindow* a_window)
 {
 	if (!a_window)
 		return;
@@ -76,7 +76,7 @@ void FUCKMan::RegisterWindow(IWindow* a_window)
 	}
 
 	// 2. Title Collision Check
-	auto it = std::find_if(_windows.begin(), _windows.end(), [&](IWindow* existing) {
+	auto it = std::find_if(_windows.begin(), _windows.end(), [&](FUCK::IWindow* existing) {
 		return existing && (strcmp(existing->Title(), a_window->Title()) == 0);
 	});
 
@@ -106,7 +106,7 @@ bool FUCKMan::ProcessAsyncInput(const RE::InputEvent* const* a_event)
 
 				// A. Close Child Windows with kCloseOnEsc flag
 				for (auto* win : _windows) {
-					if (win->IsOpen() && (win->GetFlags() & WindowFlags::kCloseOnEsc)) {
+					if (win->IsOpen() && (win->GetFlags() & FUCK::WindowFlags::kCloseOnEsc)) {
 						win->SetOpen(false);
 						UpdateGameState();
 						handled = true;
@@ -255,17 +255,17 @@ void FUCKMan::UpdateGameState()
 	// 2. Window Overrides
 	for (auto* win : _windows) {
 		if (win->IsOpen()) {
-			WindowFlags f = win->GetFlags();
+			FUCK::WindowFlags f = win->GetFlags();
 
-			if (f & WindowFlags::kPauseSoft)
+			if (f & FUCK::WindowFlags::kPauseSoft)
 				targetSoft = true;
-			if (f & WindowFlags::kPauseHard)
+			if (f & FUCK::WindowFlags::kPauseHard)
 				targetHard = true;
-			if (f & WindowFlags::kBlurBackground)
+			if (f & FUCK::WindowFlags::kBlurBackground)
 				targetBlur = true;
-			if (f & WindowFlags::kBlockVanity)
+			if (f & FUCK::WindowFlags::kBlockVanity)
 				targetVanity = true;
-			if (f & WindowFlags::kHideHUD) {
+			if (f & FUCK::WindowFlags::kHideHUD) {
 				targetHideHUD = true;
 				targetiHUDDisabled = true;
 			}
@@ -273,7 +273,6 @@ void FUCKMan::UpdateGameState()
 	}
 
 	// 3. Apply States
-
 	Compat::ImmersiveHUD::SetDisabled(targetiHUDDisabled);
 
 	// HUD
@@ -332,7 +331,7 @@ bool FUCKMan::IsInputBlocked() const
 	if (_isOpen)
 		return true;
 	for (const auto* win : _windows) {
-		if (win->IsOpen() && !(win->GetFlags() & WindowFlags::kPassInputToGame)) {
+		if (win->IsOpen() && !(win->GetFlags() & FUCK::WindowFlags::kPassInputToGame)) {
 			return true;
 		}
 	}
@@ -344,7 +343,7 @@ bool FUCKMan::IsCursorForced() const
 	return _forceCursor;
 }
 
-bool FUCKMan::HasWindowWithFlag(WindowFlags a_flag) const
+bool FUCKMan::HasWindowWithFlag(FUCK::WindowFlags a_flag) const
 {
 	for (const auto* win : _windows) {
 		if (win->IsOpen() && (win->GetFlags() & a_flag)) {
@@ -445,7 +444,7 @@ RE::BSEventNotifyControl FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_e
 			}
 
 			for (auto* win : _windows) {
-				if (win->IsOpen() && (win->GetFlags() & WindowFlags::kCloseOnGameMenu)) {
+				if (win->IsOpen() && (win->GetFlags() & FUCK::WindowFlags::kCloseOnGameMenu)) {
 					win->SetOpen(false);
 					closedSomething = true;
 				}
@@ -604,7 +603,7 @@ void FUCKMan::Draw()
 	// ------------------------------------------------------------------------
 	for (auto* win : _windows) {
 		if (win->IsOpen()) {
-			if (win->GetFlags() & WindowFlags::kCustomRender) {
+			if (win->GetFlags() & FUCK::WindowFlags::kCustomRender) {
 				win->Draw();
 				continue;
 			}
@@ -613,7 +612,7 @@ void FUCKMan::Draw()
 			int flags = 0;
 
 			// --- Flags Setup ---
-			bool noDecoration = (win->GetFlags() & WindowFlags::kNoDecoration);
+			bool noDecoration = (win->GetFlags() & FUCK::WindowFlags::kNoDecoration);
 
 			flags |= ImGuiWindowFlags_NoTitleBar;
 			if (noDecoration) {
@@ -624,10 +623,10 @@ void FUCKMan::Draw()
 				flags |= ImGuiWindowFlags_NoScrollbar;
 			}
 
-			if (win->GetFlags() & WindowFlags::kNoBackground)
+			if (win->GetFlags() & FUCK::WindowFlags::kNoBackground)
 				flags |= ImGuiWindowFlags_NoBackground;
 
-			if ((win->GetFlags() & WindowFlags::kPassInputToGame) && !IsInputBlocked())
+			if ((win->GetFlags() & FUCK::WindowFlags::kPassInputToGame) && !IsInputBlocked())
 				flags |= ImGuiWindowFlags_NoInputs;
 
 			// --- Collapse Logic ---
@@ -682,7 +681,7 @@ void FUCKMan::Draw()
 
 				win->UpdateState(FUCK::GetWindowPos(), FUCK::GetWindowSize());
 
-				if (win->GetFlags() & WindowFlags::kExtendBorder)
+				if (win->GetFlags() & FUCK::WindowFlags::kExtendBorder)
 					FUCK::ExtendWindowPastBorder();
 
 				if (!noDecoration) {
@@ -971,8 +970,8 @@ void FUCKMan::Draw()
 
 				ImFont* regularFont = MANAGER(IconFont)->GetRegularFont();
 
-				std::vector<ITool*> looseTools;
-				std::map<std::string, std::vector<ITool*>> toolGroups;
+				std::vector<FUCK::ITool*> looseTools;
+				std::map<std::string, std::vector<FUCK::ITool*>> toolGroups;
 
 				for (auto* tool : _tools) {
 					if (!tool->ShowInSidebar())
@@ -988,8 +987,8 @@ void FUCKMan::Draw()
 				{
 					std::string label;
 					bool isGroup;
-					ITool* tool = nullptr;
-					std::vector<ITool*>* tools = nullptr;
+					FUCK::ITool* tool = nullptr;
+					std::vector<FUCK::ITool*>* tools = nullptr;
 				};
 
 				std::vector<SidebarEntry> entries;
@@ -1000,7 +999,7 @@ void FUCKMan::Draw()
 				}
 
 				for (auto& [name, tools] : toolGroups) {
-					std::sort(tools.begin(), tools.end(), [](ITool* a, ITool* b) {
+					std::sort(tools.begin(), tools.end(), [](FUCK::ITool* a, FUCK::ITool* b) {
 						return _stricmp(a->Name(), b->Name()) < 0;
 					});
 					entries.push_back({ name, true, nullptr, &tools });
@@ -1037,7 +1036,7 @@ void FUCKMan::Draw()
 					FUCK::SetCursorPos(ImVec2(headerStart.x, headerStart.y + m.sidebarItemH));
 					FUCK::SeparatorThick();
 
-					auto RenderSidebarItem = [&](ITool* tool, const char* label, float extraIndent = 0.0f) {
+					auto RenderSidebarItem = [&](FUCK::ITool* tool, const char* label, float extraIndent = 0.0f) {
 						// Push ID to prevent conflicts if multiple tools have same name
 						ImGui::PushID(tool);
 
@@ -1069,7 +1068,7 @@ void FUCKMan::Draw()
 						ImGui::PopID();
 					};
 
-					auto RenderSidebarGroup = [&](const std::string& groupName, std::vector<ITool*>& tools) {
+					auto RenderSidebarGroup = [&](const std::string& groupName, std::vector<FUCK::ITool*>& tools) {
 						
 						// Bypassing FUCK::PushFont scaling
 						ImGui::PushFont(regularFont, m.sidebarFontSize);

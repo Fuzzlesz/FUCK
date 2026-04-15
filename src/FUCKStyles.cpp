@@ -89,7 +89,7 @@ void ThemeEditorWindow::Draw()
 		FUCK::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.1f, 0.1f, 1.0f));
 		FUCK::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.8f, 1.0f));
 
-		ImFont* defaultFont = FUCK::GetFont(FUCK_Font::kRegular);
+		ImFont* defaultFont = FUCK::GetFont(FUCK::Font::kRegular);
 		float baseFontSize = defaultFont ? defaultFont->LegacySize : ImGui::GetStyle().FontSizeBase;
 
 		FUCK::PushFont(defaultFont, baseFontSize * 0.85f);

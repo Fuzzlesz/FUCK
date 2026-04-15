@@ -5,7 +5,7 @@ namespace ImGui
 	class Overlays
 	{
 	public:
-		static void Draw(FUCK_Overlay type, float thickness, ImU32 color, float paramA, float paramB, float paramC, float paramD);
+		static void Draw(FUCK::Overlay type, float thickness, ImU32 color, float paramA, float paramB, float paramC, float paramD);
 
 	private:
 		static void DrawGrid(ImDrawList* dl, const ImVec2& size, ImU32 col, float thick, float rows, float cols, float rotationDeg);

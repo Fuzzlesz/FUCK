@@ -1,6 +1,6 @@
 #pragma once
 
-class SettingsTool : public ITool
+class SettingsTool : public FUCK::ITool
 {
 public:
 	const char* Name() const override;
