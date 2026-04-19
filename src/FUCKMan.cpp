@@ -93,50 +93,57 @@ void FUCKMan::RegisterWindow(FUCK::IWindow* a_window)
 
 bool FUCKMan::ProcessAsyncInput(const RE::InputEvent* const* a_event)
 {
-	// 1. Active Tool Input (Priority)
+	bool consumed = false;
+
+	// Active Tool Input (Priority)
 	if (_activeTool && _activeTool->OnAsyncInput(a_event)) {
-		return true;
+		consumed = true;
 	}
 
-	if (_isOpen || IsInputBlocked()) {
-		// 2. ESC / Close Logic (Priority over Global Hotkeys)
-		if (_isOpen || IsInputBlocked()) {
-			if (MANAGER(Input)->IsInputPressed(a_event, Hotkeys::Manager::EscapeKey())) {
-				bool handled = false;
+	if (!consumed && (_isOpen || IsInputBlocked())) {
+		// ESC / Close Logic (Priority over Global Hotkeys)
+		if (MANAGER(Input)->IsInputPressed(a_event, Hotkeys::Manager::EscapeKey())) {
+			bool handled = false;
 
-				// A. Close Child Windows with kCloseOnEsc flag
-				for (auto* win : _windows) {
-					if (win->IsOpen() && (win->GetFlags() & FUCK::WindowFlags::kCloseOnEsc)) {
-						win->SetOpen(false);
-						UpdateGameState();
-						handled = true;
-					}
-				}
-
-				// B. Close Main Menu
-				if (!handled && _isOpen) {
-					Close();
+			// A. Close Child Windows with kCloseOnEsc flag
+			for (auto* win : _windows) {
+				if (win->IsOpen() && (win->GetFlags() & FUCK::WindowFlags::kCloseOnEsc)) {
+					win->SetOpen(false);
 					handled = true;
 				}
+			}
 
-				if (handled)
-					return true;
+			// B. Close Main Menu
+			if (!handled && _isOpen) {
+				Close();
+				handled = true;
+			}
+
+			if (handled) {
+				consumed = true;
 			}
 		}
 	}
 
-	// 3. Framework Global Hotkeys (Toggle Menu)
-	MANAGER(Hotkeys)->ProcessInput(a_event);
+	if (!consumed) {
+		// Framework Global Hotkeys
+		MANAGER(Hotkeys)->ProcessInput(a_event);
+	}
 
-	// 4. Background Tool Input
-	for (auto* tool : _tools) {
-		if (tool != _activeTool && tool->OnAsyncInput(a_event)) {
-			return true;
+	if (!consumed) {
+		// Background Tool Input
+		for (auto* tool : _tools) {
+			if (tool != _activeTool && tool->OnAsyncInput(a_event)) {
+				consumed = true;
+				break;
+			}
 		}
 	}
 
+	UpdateGameState();
+
 	// 5. Block Game Input if Menu/Windows are blocking
-	return IsInputBlocked();
+	return consumed || IsInputBlocked();
 }
 
 // ==========================================
