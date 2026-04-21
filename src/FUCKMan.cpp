@@ -584,7 +584,7 @@ void FUCKMan::Draw()
 	// ------------------------------------------------------------------------
 	// Overlay Render Pass
 	// ------------------------------------------------------------------------
-	if (_activeTool) {
+	if (_activeTool || ShouldRender()) {
 		ImGui::SetNextWindowPos(ImGui::GetMainViewport()->Pos);
 		ImGui::SetNextWindowSize(ImGui::GetMainViewport()->Size);
 
@@ -598,7 +598,13 @@ void FUCKMan::Draw()
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 		if (ImGui::Begin("##ToolOverlayLayer", nullptr, flags)) {
 			pushContentScale();
-			_activeTool->RenderOverlay();
+			if (_activeTool)
+				_activeTool->RenderOverlay();
+
+			for (auto* tool : _tools) {
+				if (tool != _activeTool)
+					tool->RenderOverlay();
+			}
 			popContentScale();
 		}
 		ImGui::End();
