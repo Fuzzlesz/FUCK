@@ -104,7 +104,29 @@ namespace Hooks
 		auto* userEvents = RE::UserEvents::GetSingleton();
 		auto* manager = FUCKMan::GetSingleton();
 
-		bool allowGameMenus = !manager->IsOpen() && manager->HasWindowWithFlag(FUCK::WindowFlags::kCloseOnGameMenu);
+		const bool allowGameMenus =	!manager->IsOpen() && manager->HasWindowWithFlag(FUCK::WindowFlags::kCloseOnGameMenu);
+
+		auto CheckIfModifier = [](RE::INPUT_DEVICE device, std::uint32_t rawKey) -> bool {
+			if (device == RE::INPUT_DEVICE::kKeyboard) {
+				return rawKey == static_cast<uint32_t>(KEY::kLeftShift) ||
+				       rawKey == static_cast<uint32_t>(KEY::kRightShift) ||
+				       rawKey == static_cast<uint32_t>(KEY::kLeftControl) ||
+				       rawKey == static_cast<uint32_t>(KEY::kRightControl) ||
+				       rawKey == static_cast<uint32_t>(KEY::kLeftAlt) ||
+				       rawKey == static_cast<uint32_t>(KEY::kRightAlt);
+			}
+
+			if (device == RE::INPUT_DEVICE::kGamepad) {
+				const uint32_t norm = SKSE::InputMap::GamepadMaskToKeycode(rawKey);
+
+				return norm == SKSE::InputMap::kGamepadButtonOffset_LEFT_SHOULDER ||
+				       norm == SKSE::InputMap::kGamepadButtonOffset_RIGHT_SHOULDER ||
+				       norm == SKSE::InputMap::kGamepadButtonOffset_LT ||
+				       norm == SKSE::InputMap::kGamepadButtonOffset_RT;
+			}
+
+			return false;
+		};
 
 		RE::InputEvent* head = nullptr;
 		RE::InputEvent* tail = nullptr;
@@ -126,22 +148,30 @@ namespace Hooks
 					keep = true;
 				}
 				// Pass menu inputs to the game so MenuOpenCloseEvent can trigger
-				else if (allowGameMenus && button->HasIDCode()) {
-					if (eventName == userEvents->tweenMenu ||
-						eventName == userEvents->journal ||
-						eventName == userEvents->map ||
-						eventName == userEvents->quickMap ||
-						eventName == userEvents->inventory ||
-						eventName == userEvents->quickInventory ||
-						eventName == userEvents->quickMagic ||
-						eventName == userEvents->stats ||
-						eventName == userEvents->quickStats ||
-						eventName == userEvents->favorites) {
+				else if (button->HasIDCode()) {
+					const auto rawKey = button->GetIDCode();
+					const auto device = button->GetDevice();
+
+					if (CheckIfModifier(device, rawKey)) {
 						keep = true;
+					}
+					// Game menu passthrough — only relevant when a kCloseOnGameMenu window is open.
+					else if (allowGameMenus) {
+						if (eventName == userEvents->tweenMenu ||
+							eventName == userEvents->journal ||
+							eventName == userEvents->map ||
+							eventName == userEvents->quickMap ||
+							eventName == userEvents->inventory ||
+							eventName == userEvents->quickInventory ||
+							eventName == userEvents->quickMagic ||
+							eventName == userEvents->stats ||
+							eventName == userEvents->quickStats ||
+							eventName == userEvents->favorites) {
+							keep = true;
+						}
 					}
 				}
 			}
-
 			if (keep) {
 				if (!head)
 					head = iter;
@@ -177,6 +207,8 @@ namespace Hooks
 			constexpr RE::InputEvent* const dummy[] = { nullptr };
 
 			MANAGER(Input)->ProcessInputEvents(a_events);
+
+			const bool wasBlocked = FUCKMan::GetSingleton()->IsInputBlocked();
 			const bool consumed = FUCKMan::GetSingleton()->ProcessAsyncInput(a_events);
 
 			if (CheckForJournalAccept(a_events)) {
@@ -184,15 +216,31 @@ namespace Hooks
 				return;
 			}
 
-			if (consumed || FUCKMan::GetSingleton()->IsInputBlocked()) {
+			if (consumed || wasBlocked) {
 				RE::InputEvent* filteredHead = FilterInputEvents(a_events);
 
+				auto ui = RE::UI::GetSingleton();
+				std::uint32_t savedPauses = 0;
+
+				// Temporarily lift the hard pause
+				if (ui && ui->numPausesGame > 0) {
+					savedPauses = ui->numPausesGame;
+					ui->numPausesGame = 0;
+				}
+
+				// Dispatch the events
 				if (filteredHead) {
 					RE::InputEvent* const filtered[] = { filteredHead };
 					func(a_dispatcher, filtered);
 				} else {
 					func(a_dispatcher, dummy);
 				}
+
+				// Restore the hard pause
+				if (ui && savedPauses > 0) {
+					ui->numPausesGame = savedPauses;
+				}
+
 				return;
 			}
 

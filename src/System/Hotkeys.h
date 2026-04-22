@@ -12,7 +12,7 @@ namespace Hotkeys
 	public:
 		void	LoadHotKeys(const CSimpleIniA& a_ini);
 		void	SaveHotKeys(CSimpleIniA& a_ini);
-		void	ProcessInput(const RE::InputEvent* const* a_event);
+		bool	ProcessInput(const RE::InputEvent* const* a_event);
 		void	Enable(bool a_enable) { enabled = a_enable; }
 		bool	IsEnabled() const { return enabled; }
 

@@ -28,38 +28,37 @@ namespace Hotkeys
 		a_ini.SetLongValue("Controls", "iToggleEditorGamePadMod2", _toggleHotkey.gMod2);
 	}
 
-	void Manager::ProcessInput(const RE::InputEvent* const* a_event)
+	bool Manager::ProcessInput(const RE::InputEvent* const* a_event)
 	{
 		if (!enabled)
-			return;
+			return false;
 
 		if (_toggleHotkey.isBinding)
-			return;
+			return false;
 
 		// Prevent toggle while typing in ImGui widgets
 		if (FUCKMan::GetSingleton()->IsOpen()) {
 			if (ImGui::GetCurrentContext()) {
 				if (ImGui::GetIO().WantTextInput) {
-					return;
+					return false;
 				}
 			}
 		}
 
 		if (auto ui = RE::UI::GetSingleton()) {
 			// Don't open if Console is open
-			if (ui->IsMenuOpen(RE::Console::MENU_NAME)) {
-				return;
-			}
-
+			if (ui->IsMenuOpen(RE::Console::MENU_NAME))
+				return false;
 			// Don't open during Load Screens
-			if (ui->IsMenuOpen(RE::LoadingMenu::MENU_NAME)) {
-				return;
-			}
+			if (ui->IsMenuOpen(RE::LoadingMenu::MENU_NAME))
+				return false;
 		}
 
 		if (FUCK::ProcessManagedHotkey(a_event, _toggleHotkey)) {
 			FUCKMan::GetSingleton()->Toggle();
+			return true;
 		}
+		return false;
 	}
 
 	const IconFont::IconTexture* Manager::ToggleIcon() const

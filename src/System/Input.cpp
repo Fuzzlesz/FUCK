@@ -125,7 +125,7 @@ namespace Input
 		}
 
 		// 4. Handle Results
- 		   	if (result == FUCK::BindResult::kCancelled) {
+		if (result == FUCK::BindResult::kCancelled) {
 			// AUTOMATIC RESTORE
 			if (outKey)
 				*outKey = _rebindCtx.originalKey;
@@ -476,13 +476,13 @@ namespace Input
 				}
 			} else if (const auto buttonEvent = event->AsButtonEvent()) {
 				const auto key = buttonEvent->GetIDCode();
-				const bool isPressed = buttonEvent->IsPressed();
 				const float value = buttonEvent->Value();
+				const bool isDown = value > 0.0f;
 
 				switch (inputDevice) {
 				case DEVICE::kKeyboard:
 					if (passKeyboardAndGamepad)
-						io.AddKeyEvent(Keymap::ToImGuiKey(static_cast<KEY>(key)), isPressed);
+						io.AddKeyEvent(Keymap::ToImGuiKey(static_cast<KEY>(key)), isDown);
 					break;
 				case DEVICE::kMouse:
 					if (passMouse) {
@@ -494,7 +494,7 @@ namespace Input
 							io.AddMouseWheelEvent(0, value * -1);
 							break;
 						default:
-							io.AddMouseButtonEvent(key, isPressed);
+							io.AddMouseButtonEvent(key, isDown);
 							break;
 						}
 					}
@@ -503,13 +503,13 @@ namespace Input
 					if (passKeyboardAndGamepad) {
 						auto [imKey, analog] = Keymap::ToImGuiKey(static_cast<GAMEPAD_DIRECTX>(key));
 						if (analog)
-							io.AddKeyAnalogEvent(imKey, isPressed, value);
+							io.AddKeyAnalogEvent(imKey, isDown, value);
 						else
-							io.AddKeyEvent(imKey, isPressed);
+							io.AddKeyEvent(imKey, isDown);
 
 						if (key == static_cast<uint32_t>(GAMEPAD_DIRECTX::kLeftThumb) ||
 							key == static_cast<uint32_t>(GAMEPAD_DIRECTX::kRightThumb)) {
-							io.AddMouseButtonEvent(0, isPressed);
+							io.AddMouseButtonEvent(0, isDown);
 						}
 					}
 					break;
@@ -517,13 +517,13 @@ namespace Input
 					if (passKeyboardAndGamepad) {
 						auto [imKey, analog] = Keymap::ToImGuiKey(static_cast<GAMEPAD_ORBIS>(key));
 						if (analog)
-							io.AddKeyAnalogEvent(imKey, isPressed, value);
+							io.AddKeyAnalogEvent(imKey, isDown, value);
 						else
-							io.AddKeyEvent(imKey, isPressed);
+							io.AddKeyEvent(imKey, isDown);
 
 						if (key == static_cast<uint32_t>(GAMEPAD_ORBIS::kPS3_L3) ||
 							key == static_cast<uint32_t>(GAMEPAD_ORBIS::kPS3_R3)) {
-							io.AddMouseButtonEvent(0, isPressed);
+							io.AddMouseButtonEvent(0, isDown);
 						}
 					}
 					break;

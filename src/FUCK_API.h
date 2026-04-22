@@ -151,6 +151,7 @@ namespace FUCK
 		virtual ImVec2 GetDefaultPos() const { return ImVec2(0.0f, 0.0f); }
 		virtual bool GetRequestedPos(ImVec2& /*outPos*/) { return false; }
 		virtual void UpdateState(const ImVec2& /*currentPos*/, const ImVec2& /*currentSize*/) {}
+		virtual bool OnAsyncInput(const void*) { return false; }
 	};
 }
 

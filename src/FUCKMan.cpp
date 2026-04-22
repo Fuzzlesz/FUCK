@@ -127,13 +127,25 @@ bool FUCKMan::ProcessAsyncInput(const RE::InputEvent* const* a_event)
 
 	if (!consumed) {
 		// Framework Global Hotkeys
-		MANAGER(Hotkeys)->ProcessInput(a_event);
+		if (MANAGER(Hotkeys)->ProcessInput(a_event)) {
+			consumed = true;
+		}
 	}
 
 	if (!consumed) {
 		// Background Tool Input
 		for (auto* tool : _tools) {
 			if (tool != _activeTool && tool->OnAsyncInput(a_event)) {
+				consumed = true;
+				break;
+			}
+		}
+	}
+
+	if (!consumed) {
+		// Window Input
+		for (auto* win : _windows) {
+			if (win->OnAsyncInput(a_event)) {
 				consumed = true;
 				break;
 			}
