@@ -1327,24 +1327,58 @@ namespace FUCK
 		return true;
 	}
 
+	// --- Hotkey Cast Helpers ---
+	template <typename T>
+	constexpr std::uint32_t AsU32(T a_enum) noexcept
+	{
+		return static_cast<std::uint32_t>(a_enum);
+	}
+
+	template <typename T>
+	constexpr std::int32_t AsI32(T a_enum) noexcept
+	{
+		return static_cast<std::int32_t>(a_enum);
+	}
+
+	inline constexpr std::int32_t kGPBaseI32 = static_cast<std::int32_t>(SKSE::InputMap::kMacro_GamepadOffset);
+
 	inline bool ProcessManagedHotkey(const void*, ManagedHotkey& h)
 	{
 		if (h.isBinding)
 			return false;
 
+		static constexpr std::int32_t kGP_LT = kGPBaseI32 + SKSE::InputMap::kGamepadButtonOffset_LT;
+		static constexpr std::int32_t kGP_RT = kGPBaseI32 + SKSE::InputMap::kGamepadButtonOffset_RT;
+
+		static constexpr std::int32_t kbMods[] = {
+			AsI32(RE::BSWin32KeyboardDevice::Key::kLeftShift),
+			AsI32(RE::BSWin32KeyboardDevice::Key::kRightShift),
+			AsI32(RE::BSWin32KeyboardDevice::Key::kLeftControl),
+			AsI32(RE::BSWin32KeyboardDevice::Key::kRightControl),
+			AsI32(RE::BSWin32KeyboardDevice::Key::kLeftAlt),
+			AsI32(RE::BSWin32KeyboardDevice::Key::kRightAlt),
+		};
+
+		static constexpr std::int32_t gpMods[] = {
+			kGPBaseI32 + SKSE::InputMap::kGamepadButtonOffset_LEFT_SHOULDER,
+			kGPBaseI32 + SKSE::InputMap::kGamepadButtonOffset_RIGHT_SHOULDER,
+			kGP_LT,
+			kGP_RT,
+		};
+
+		// Triggers (LT/RT) are analog
 		auto checkMod = [](std::int32_t mod) -> bool {
 			if (mod <= 0)
 				return false;
-			if (mod == 281 || mod == 282)
-				return GetAnalogInput(static_cast<std::uint32_t>(mod)) > 0.4f;
-			return IsInputDown(static_cast<std::uint32_t>(mod));
+			if (mod == kGP_LT || mod == kGP_RT)
+				return GetAnalogInput(AsU32(mod)) > 0.4f;
+			return IsInputDown(AsU32(mod));
 		};
 
 		auto checkStrict = [&](const std::int32_t* mods, size_t count, std::int32_t req1, std::int32_t req2) {
 			for (size_t i = 0; i < count; ++i) {
-				if (checkMod(mods[i]) != (mods[i] == req1 || mods[i] == req2)) {
+				if (checkMod(mods[i]) != (mods[i] == req1 || mods[i] == req2))
 					return false;
-				}
 			}
 			return true;
 		};
@@ -1352,31 +1386,13 @@ namespace FUCK
 		bool pressed = false;
 
 		if (h.kKey != 0 && IsInputDown(h.kKey)) {
-			static const std::int32_t kbMods[] = {
-				static_cast<std::int32_t>(RE::BSWin32KeyboardDevice::Key::kLeftShift),
-				static_cast<std::int32_t>(RE::BSWin32KeyboardDevice::Key::kRightShift),
-				static_cast<std::int32_t>(RE::BSWin32KeyboardDevice::Key::kLeftControl),
-				static_cast<std::int32_t>(RE::BSWin32KeyboardDevice::Key::kRightControl),
-				static_cast<std::int32_t>(RE::BSWin32KeyboardDevice::Key::kLeftAlt),
-				static_cast<std::int32_t>(RE::BSWin32KeyboardDevice::Key::kRightAlt)
-			};
-
-			if (checkStrict(kbMods, 6, h.kMod1, h.kMod2)) {
+			if (checkStrict(kbMods, std::size(kbMods), h.kMod1, h.kMod2))
 				pressed = true;
-			}
 		}
 
 		if (!pressed && h.gKey != 0 && IsInputDown(h.gKey)) {
-			static const std::int32_t gpMods[] = {
-				static_cast<std::int32_t>(SKSE::InputMap::kMacro_GamepadOffset) + static_cast<std::int32_t>(SKSE::InputMap::kGamepadButtonOffset_LEFT_SHOULDER),
-				static_cast<std::int32_t>(SKSE::InputMap::kMacro_GamepadOffset) + static_cast<std::int32_t>(SKSE::InputMap::kGamepadButtonOffset_RIGHT_SHOULDER),
-				static_cast<std::int32_t>(SKSE::InputMap::kMacro_GamepadOffset) + static_cast<std::int32_t>(SKSE::InputMap::kGamepadButtonOffset_LT),
-				static_cast<std::int32_t>(SKSE::InputMap::kMacro_GamepadOffset) + static_cast<std::int32_t>(SKSE::InputMap::kGamepadButtonOffset_RT)
-			};
-
-			if (checkStrict(gpMods, 4, h.gMod1, h.gMod2)) {
+			if (checkStrict(gpMods, std::size(gpMods), h.gMod1, h.gMod2))
 				pressed = true;
-			}
 		}
 
 		if (pressed) {

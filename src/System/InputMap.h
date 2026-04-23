@@ -2,6 +2,15 @@
 
 namespace Input::Keymap
 {
+	inline constexpr std::uint32_t kGPBase = static_cast<std::uint32_t>(SKSE::InputMap::kMacro_GamepadOffset);
+	inline constexpr std::uint32_t kMBBase = static_cast<std::uint32_t>(SKSE::InputMap::kMacro_MouseButtonOffset);
+
+	template <typename T>
+	constexpr std::uint32_t AsKey(T a_enum) noexcept
+	{
+		return static_cast<std::uint32_t>(a_enum);
+	}
+
 	inline ImGuiKey ToImGuiKey(KEY a_key)
 	{
 		switch (a_key) {
@@ -313,12 +322,10 @@ namespace Input::Keymap
 
 	inline std::uint32_t GetUnifiedKey(RE::INPUT_DEVICE a_device, std::uint32_t a_key)
 	{
-		if (a_device == RE::INPUT_DEVICE::kMouse) {
-			return a_key + static_cast<std::uint32_t>(SKSE::InputMap::kMacro_MouseButtonOffset);
-		}
-		if (a_device == RE::INPUT_DEVICE::kGamepad) {
-			return SKSE::InputMap::GamepadMaskToKeycode(a_key) + static_cast<std::uint32_t>(SKSE::InputMap::kMacro_GamepadOffset);
-		}
+		if (a_device == RE::INPUT_DEVICE::kMouse)
+			return a_key + kMBBase;
+		if (a_device == RE::INPUT_DEVICE::kGamepad)
+			return SKSE::InputMap::GamepadMaskToKeycode(a_key) + kGPBase;
 		return a_key;
 	}
 }

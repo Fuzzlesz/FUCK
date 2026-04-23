@@ -5,6 +5,8 @@
 
 namespace Input
 {
+	using namespace Input::Keymap;
+
 	// Custom offsets for Stick Axis caching
 	constexpr uint32_t CUSTOM_LEFT_STICK_X = 32;
 	constexpr uint32_t CUSTOM_LEFT_STICK_Y = 33;
@@ -13,15 +15,15 @@ namespace Input
 
 	// Global Modifier Definitions for unified checks
 	static const std::uint32_t KB_MODS[] = {
-		(uint32_t)KEY::kLeftShift, (uint32_t)KEY::kRightShift,
-		(uint32_t)KEY::kLeftControl, (uint32_t)KEY::kRightControl,
-		(uint32_t)KEY::kLeftAlt, (uint32_t)KEY::kRightAlt
+		AsKey(KEY::kLeftShift),   AsKey(KEY::kRightShift),
+		AsKey(KEY::kLeftControl), AsKey(KEY::kRightControl),
+		AsKey(KEY::kLeftAlt),     AsKey(KEY::kRightAlt)
 	};
 	static const std::uint32_t GP_MODS[] = {
-		static_cast<std::uint32_t>(SKSE::InputMap::kMacro_GamepadOffset) + static_cast<std::uint32_t>(SKSE::InputMap::kGamepadButtonOffset_LEFT_SHOULDER),
-		static_cast<std::uint32_t>(SKSE::InputMap::kMacro_GamepadOffset) + static_cast<std::uint32_t>(SKSE::InputMap::kGamepadButtonOffset_RIGHT_SHOULDER),
-		static_cast<std::uint32_t>(SKSE::InputMap::kMacro_GamepadOffset) + static_cast<std::uint32_t>(SKSE::InputMap::kGamepadButtonOffset_LT),
-		static_cast<std::uint32_t>(SKSE::InputMap::kMacro_GamepadOffset) + static_cast<std::uint32_t>(SKSE::InputMap::kGamepadButtonOffset_RT)
+		kGPBase + SKSE::InputMap::kGamepadButtonOffset_LEFT_SHOULDER,
+		kGPBase + SKSE::InputMap::kGamepadButtonOffset_RIGHT_SHOULDER,
+		kGPBase + SKSE::InputMap::kGamepadButtonOffset_LT,
+		kGPBase + SKSE::InputMap::kGamepadButtonOffset_RT
 	};
 
 	void Manager::Register()
@@ -209,9 +211,9 @@ namespace Input
 				if (a > b)
 					std::swap(a, b);
 				return a == b ||
-				       (a == (uint32_t)KEY::kLeftShift && b == (uint32_t)KEY::kRightShift) ||
-				       (a == (uint32_t)KEY::kLeftControl && b == (uint32_t)KEY::kRightControl) ||
-				       (a == (uint32_t)KEY::kLeftAlt && b == (uint32_t)KEY::kRightAlt);
+				       (a == AsKey(KEY::kLeftShift) && b ==		AsKey(KEY::kRightShift)) ||
+				       (a == AsKey(KEY::kLeftControl) && b ==	AsKey(KEY::kRightControl)) ||
+				       (a == AsKey(KEY::kLeftAlt) && b ==		AsKey(KEY::kRightAlt));
 			};
 
 			if (std::ranges::any_of(pressedMods, [&](int32_t m) { return IsSameModPair(m, unifiedKey); })) {
@@ -239,18 +241,21 @@ namespace Input
 	}
 
 	bool Manager::IsModifierPressed(FUCK::Modifier a_modifier) const
-	{
-		switch (a_modifier) {
-		case FUCK::Modifier::kShift:
-			return IsInputDown((uint32_t)KEY::kLeftShift) || IsInputDown((uint32_t)KEY::kRightShift);
-		case FUCK::Modifier::kCtrl:
-			return IsInputDown((uint32_t)KEY::kLeftControl) || IsInputDown((uint32_t)KEY::kRightControl);
-		case FUCK::Modifier::kAlt:
-			return IsInputDown((uint32_t)KEY::kLeftAlt) || IsInputDown((uint32_t)KEY::kRightAlt);
-		default:
-			return false;
-		}
-	}
+{
+    switch (a_modifier) {
+    case FUCK::Modifier::kShift:
+        return IsInputDown(AsKey(KEY::kLeftShift))
+            || IsInputDown(AsKey(KEY::kRightShift));
+    case FUCK::Modifier::kCtrl:
+        return IsInputDown(AsKey(KEY::kLeftControl))
+            || IsInputDown(AsKey(KEY::kRightControl));
+    case FUCK::Modifier::kAlt:
+        return IsInputDown(AsKey(KEY::kLeftAlt))
+            || IsInputDown(AsKey(KEY::kRightAlt));
+    default:
+        return false;
+    }
+}
 
 	bool Manager::IsUnifiedModifier(std::uint32_t a_unifiedKey)
 	{
@@ -473,8 +478,8 @@ namespace Input
 						else
 							io.AddKeyEvent(imKey, isDown);
 
-						if (key == static_cast<uint32_t>(GAMEPAD_DIRECTX::kLeftThumb) ||
-							key == static_cast<uint32_t>(GAMEPAD_DIRECTX::kRightThumb)) {
+						if (key == AsKey(GAMEPAD_DIRECTX::kLeftThumb) ||
+							key == AsKey(GAMEPAD_DIRECTX::kRightThumb)) {
 							io.AddMouseButtonEvent(0, isDown);
 						}
 					}
@@ -487,8 +492,8 @@ namespace Input
 						else
 							io.AddKeyEvent(imKey, isDown);
 
-						if (key == static_cast<uint32_t>(GAMEPAD_ORBIS::kPS3_L3) ||
-							key == static_cast<uint32_t>(GAMEPAD_ORBIS::kPS3_R3)) {
+						if (key == AsKey(GAMEPAD_ORBIS::kPS3_L3) ||
+							key == AsKey(GAMEPAD_ORBIS::kPS3_R3)) {
 							io.AddMouseButtonEvent(0, isDown);
 						}
 					}
@@ -513,12 +518,12 @@ namespace Input
 
 		// Explicitly sync modifiers to ImGui
 		if (passKeyboardAndGamepad) {
-			io.AddKeyEvent(ImGuiMod_Ctrl, IsModifierPressed(FUCK::Modifier::kCtrl));
-			io.AddKeyEvent(ImGuiMod_Shift, IsModifierPressed(FUCK::Modifier::kShift));
-			io.AddKeyEvent(ImGuiMod_Alt, IsModifierPressed(FUCK::Modifier::kAlt));
+			io.AddKeyEvent(ImGuiMod_Ctrl,	IsModifierPressed(FUCK::Modifier::kCtrl));
+			io.AddKeyEvent(ImGuiMod_Shift,	IsModifierPressed(FUCK::Modifier::kShift));
+			io.AddKeyEvent(ImGuiMod_Alt,	IsModifierPressed(FUCK::Modifier::kAlt));
 
-			bool superDown = IsInputDown(static_cast<std::uint32_t>(KEY::kLeftWin)) ||
-			                 IsInputDown(static_cast<std::uint32_t>(KEY::kRightWin));
+			bool superDown = IsInputDown(AsKey(KEY::kLeftWin)) ||
+			                 IsInputDown(AsKey(KEY::kRightWin));
 			io.AddKeyEvent(ImGuiMod_Super, superDown);
 		}
 	}

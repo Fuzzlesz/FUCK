@@ -76,9 +76,9 @@ namespace Hooks
 
 		auto* input = MANAGER(Input);
 
-		constexpr std::uint32_t kKeyEnter = static_cast<std::uint32_t>(KEY::kEnter);
-		constexpr std::uint32_t kMouseLeft = static_cast<std::uint32_t>(SKSE::InputMap::kMacro_MouseButtonOffset);
-		constexpr std::uint32_t kGamepadA = static_cast<std::uint32_t>(SKSE::InputMap::kMacro_GamepadOffset) + SKSE::InputMap::kGamepadButtonOffset_A;
+		constexpr std::uint32_t kKeyEnter =  Input::Keymap::AsKey(KEY::kEnter);
+		constexpr std::uint32_t kMouseLeft = Input::Keymap::kMBBase;
+		constexpr std::uint32_t kGamepadA =  Input::Keymap::kGPBase + SKSE::InputMap::kGamepadButtonOffset_A;
 
 		if (input->IsInputPressed(a_events, kKeyEnter) ||
 			input->IsInputPressed(a_events, kMouseLeft) ||
