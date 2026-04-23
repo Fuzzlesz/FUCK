@@ -11,6 +11,19 @@ namespace Input
 	constexpr uint32_t CUSTOM_RIGHT_STICK_X = 34;
 	constexpr uint32_t CUSTOM_RIGHT_STICK_Y = 35;
 
+	// Global Modifier Definitions for unified checks
+	static const std::uint32_t KB_MODS[] = {
+		(uint32_t)KEY::kLeftShift, (uint32_t)KEY::kRightShift,
+		(uint32_t)KEY::kLeftControl, (uint32_t)KEY::kRightControl,
+		(uint32_t)KEY::kLeftAlt, (uint32_t)KEY::kRightAlt
+	};
+	static const std::uint32_t GP_MODS[] = {
+		static_cast<std::uint32_t>(SKSE::InputMap::kMacro_GamepadOffset) + static_cast<std::uint32_t>(SKSE::InputMap::kGamepadButtonOffset_LEFT_SHOULDER),
+		static_cast<std::uint32_t>(SKSE::InputMap::kMacro_GamepadOffset) + static_cast<std::uint32_t>(SKSE::InputMap::kGamepadButtonOffset_RIGHT_SHOULDER),
+		static_cast<std::uint32_t>(SKSE::InputMap::kMacro_GamepadOffset) + static_cast<std::uint32_t>(SKSE::InputMap::kGamepadButtonOffset_LT),
+		static_cast<std::uint32_t>(SKSE::InputMap::kMacro_GamepadOffset) + static_cast<std::uint32_t>(SKSE::InputMap::kGamepadButtonOffset_RT)
+	};
+
 	void Manager::Register()
 	{
 		logger::info("Input Manager Initialized");
@@ -69,20 +82,9 @@ namespace Input
 				continue;
 
 			auto key = button->GetIDCode();
+			uint32_t unifiedKey = Keymap::GetUnifiedKey(button->GetDevice(), key);
 
-			switch (button->GetDevice()) {
-			case RE::INPUT_DEVICE::kMouse:
-				key += SKSE::InputMap::kMacro_MouseButtonOffset;
-				break;
-			case RE::INPUT_DEVICE::kGamepad:
-				key = SKSE::InputMap::GamepadMaskToKeycode(key);
-				key += SKSE::InputMap::kMacro_GamepadOffset;
-				break;
-			default:
-				break;
-			}
-
-			if (key == a_unifiedKey)
+			if (unifiedKey == a_unifiedKey)
 				return true;
 		}
 		return false;
@@ -156,14 +158,6 @@ namespace Input
 		if (!a_event)
 			return FUCK::BindResult::kNone;
 
-		const auto gpOffset = static_cast<std::uint32_t>(SKSE::InputMap::kMacro_GamepadOffset);
-		const auto msOffset = static_cast<std::uint32_t>(SKSE::InputMap::kMacro_MouseButtonOffset);
-
-		const uint32_t lb = gpOffset + static_cast<uint32_t>(SKSE::InputMap::kGamepadButtonOffset_LEFT_SHOULDER);
-		const uint32_t rb = gpOffset + static_cast<uint32_t>(SKSE::InputMap::kGamepadButtonOffset_RIGHT_SHOULDER);
-		const uint32_t lt = gpOffset + static_cast<uint32_t>(SKSE::InputMap::kGamepadButtonOffset_LT);
-		const uint32_t rt = gpOffset + static_cast<uint32_t>(SKSE::InputMap::kGamepadButtonOffset_RT);
-
 		for (auto event = *a_event; event; event = event->next) {
 			auto button = event->AsButtonEvent();
 			if (!button || !button->HasIDCode() || button->Value() <= 0.0f)
@@ -171,13 +165,7 @@ namespace Input
 
 			auto key = button->GetIDCode();
 			auto device = button->GetDevice();
-			uint32_t unifiedKey = key;
-
-			if (device == RE::INPUT_DEVICE::kMouse) {
-				unifiedKey += msOffset;
-			} else if (device == RE::INPUT_DEVICE::kGamepad) {
-				unifiedKey = SKSE::InputMap::GamepadMaskToKeycode(key) + gpOffset;
-			}
+			uint32_t unifiedKey = Keymap::GetUnifiedKey(device, key);
 
 			// BLOCKERS
 			if (device == RE::INPUT_DEVICE::kMouse && (key == 0 || key == 1))
@@ -193,58 +181,41 @@ namespace Input
 			// MODIFIER COLLEC
 			std::vector<int32_t> pressedMods;
 			if (device == RE::INPUT_DEVICE::kKeyboard) {
-				// Check specific sides
-				if (IsInputDown(static_cast<uint32_t>(KEY::kLeftShift)))
-					pressedMods.push_back(static_cast<int32_t>(KEY::kLeftShift));
-				if (IsInputDown(static_cast<uint32_t>(KEY::kRightShift)))
-					pressedMods.push_back(static_cast<int32_t>(KEY::kRightShift));
-
-				if (IsInputDown(static_cast<uint32_t>(KEY::kLeftControl)))
-					pressedMods.push_back(static_cast<int32_t>(KEY::kLeftControl));
-				if (IsInputDown(static_cast<uint32_t>(KEY::kRightControl)))
-					pressedMods.push_back(static_cast<int32_t>(KEY::kRightControl));
-
-				if (IsInputDown(static_cast<uint32_t>(KEY::kLeftAlt)))
-					pressedMods.push_back(static_cast<int32_t>(KEY::kLeftAlt));
-				if (IsInputDown(static_cast<uint32_t>(KEY::kRightAlt)))
-					pressedMods.push_back(static_cast<int32_t>(KEY::kRightAlt));
+				for (auto m : KB_MODS) {
+					if (IsInputDown(m))
+						pressedMods.push_back(m);
+				}
 			} else if (device == RE::INPUT_DEVICE::kGamepad) {
-				if (IsInputDown(lb))
-					pressedMods.push_back(static_cast<int32_t>(lb));
-				if (IsInputDown(rb))
-					pressedMods.push_back(static_cast<int32_t>(rb));
-				if (GetAnalogInput(lt) > 0.15f)
-					pressedMods.push_back(static_cast<int32_t>(lt));
-				if (GetAnalogInput(rt) > 0.15f)
-					pressedMods.push_back(static_cast<int32_t>(rt));
+				for (auto m : GP_MODS) {
+					// Treat LT and RT as analog triggers, LB and RB as buttons
+					if (m == GP_MODS[2] || m == GP_MODS[3]) {
+						if (GetAnalogInput(m) > 0.15f)
+							pressedMods.push_back(m);
+					} else {
+						if (IsInputDown(m))
+							pressedMods.push_back(m);
+					}
+				}
 			}
 
 			// MODIFIER PROTEC
-			bool isModCandidate = (unifiedKey == lb || unifiedKey == rb || unifiedKey == lt || unifiedKey == rt ||
-								   unifiedKey == (uint32_t)KEY::kLeftShift || unifiedKey == (uint32_t)KEY::kRightShift ||
-								   unifiedKey == (uint32_t)KEY::kLeftControl || unifiedKey == (uint32_t)KEY::kRightControl ||
-								   unifiedKey == (uint32_t)KEY::kLeftAlt || unifiedKey == (uint32_t)KEY::kRightAlt);
-
-			if (isModCandidate) {
+			if (IsUnifiedModifier(unifiedKey)) {
 				if (button->Value() < 1.0f || !pressedMods.empty())
 					return FUCK::BindResult::kNone;
 			}
 
 			// PREVENT SELF-BIND
-			for (auto m : pressedMods) {
-				uint32_t uM = static_cast<uint32_t>(m);
-				bool match = (unifiedKey == uM);
-				if (!match && device == RE::INPUT_DEVICE::kKeyboard) {
-					// Check Right-sided pairs
-					if (uM == (uint32_t)KEY::kLeftShift && unifiedKey == (uint32_t)KEY::kRightShift)
-						match = true;
-					if (uM == (uint32_t)KEY::kLeftControl && unifiedKey == (uint32_t)KEY::kRightControl)
-						match = true;
-					if (uM == (uint32_t)KEY::kLeftAlt && unifiedKey == (uint32_t)KEY::kRightAlt)
-						match = true;
-				}
-				if (match)
-					return FUCK::BindResult::kNone;
+			auto IsSameModPair = [](uint32_t a, uint32_t b) {
+				if (a > b)
+					std::swap(a, b);
+				return a == b ||
+				       (a == (uint32_t)KEY::kLeftShift && b == (uint32_t)KEY::kRightShift) ||
+				       (a == (uint32_t)KEY::kLeftControl && b == (uint32_t)KEY::kRightControl) ||
+				       (a == (uint32_t)KEY::kLeftAlt && b == (uint32_t)KEY::kRightAlt);
+			};
+
+			if (std::ranges::any_of(pressedMods, [&](int32_t m) { return IsSameModPair(m, unifiedKey); })) {
+				return FUCK::BindResult::kNone;
 			}
 
 			// OUT
@@ -271,14 +242,19 @@ namespace Input
 	{
 		switch (a_modifier) {
 		case FUCK::Modifier::kShift:
-			return IsInputDown(KEY::kLeftShift) || IsInputDown(KEY::kRightShift);
+			return IsInputDown((uint32_t)KEY::kLeftShift) || IsInputDown((uint32_t)KEY::kRightShift);
 		case FUCK::Modifier::kCtrl:
-			return IsInputDown(KEY::kLeftControl) || IsInputDown(KEY::kRightControl);
+			return IsInputDown((uint32_t)KEY::kLeftControl) || IsInputDown((uint32_t)KEY::kRightControl);
 		case FUCK::Modifier::kAlt:
-			return IsInputDown(KEY::kLeftAlt) || IsInputDown(KEY::kRightAlt);
+			return IsInputDown((uint32_t)KEY::kLeftAlt) || IsInputDown((uint32_t)KEY::kRightAlt);
 		default:
 			return false;
 		}
+	}
+
+	bool Manager::IsUnifiedModifier(std::uint32_t a_unifiedKey)
+	{
+		return std::ranges::contains(KB_MODS, a_unifiedKey) || std::ranges::contains(GP_MODS, a_unifiedKey);
 	}
 
 	// ==========================================
@@ -358,22 +334,12 @@ namespace Input
 			if (auto button = event->AsButtonEvent()) {
 				if (button->HasIDCode()) {
 					auto key = button->GetIDCode();
-					switch (button->GetDevice()) {
-					case RE::INPUT_DEVICE::kMouse:
-						key += static_cast<std::uint32_t>(SKSE::InputMap::kMacro_MouseButtonOffset);
-						break;
-					case RE::INPUT_DEVICE::kGamepad:
-						key = SKSE::InputMap::GamepadMaskToKeycode(key);
-						key += static_cast<std::uint32_t>(SKSE::InputMap::kMacro_GamepadOffset);
-						break;
-					default:
-						break;
-					}
+					uint32_t unifiedKey = Keymap::GetUnifiedKey(button->GetDevice(), key);
 
 					if (button->IsHeld() || button->IsPressed()) {
-						keyStateCache[key] = button->Value();
+						keyStateCache[unifiedKey] = button->Value();
 					} else if (button->IsUp()) {
-						keyStateCache.erase(key);
+						keyStateCache.erase(unifiedKey);
 					}
 				}
 			} else if (auto stick = event->AsThumbstickEvent()) {

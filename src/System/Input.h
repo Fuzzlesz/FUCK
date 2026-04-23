@@ -67,6 +67,8 @@ namespace Input
 		float	GetAnalogInput(std::uint32_t a_unifiedKey) const;
 		bool	IsModifierPressed(FUCK::Modifier a_modifier) const;
 
+		static bool IsUnifiedModifier(std::uint32_t a_unifiedKey);
+
 		void PushContext(Context a_ctx);
 		void PopContext(std::string_view a_name);
 		bool IsContextActive(std::string_view a_name) const;

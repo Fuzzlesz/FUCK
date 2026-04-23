@@ -1331,22 +1331,52 @@ namespace FUCK
 	{
 		if (h.isBinding)
 			return false;
-		bool pressed = false;
+
 		auto checkMod = [](std::int32_t mod) -> bool {
 			if (mod <= 0)
-				return true;
+				return false;
 			if (mod == 281 || mod == 282)
 				return GetAnalogInput(static_cast<std::uint32_t>(mod)) > 0.4f;
 			return IsInputDown(static_cast<std::uint32_t>(mod));
 		};
 
-		if (h.kKey != 0) {
-			if (IsInputDown(h.kKey) && checkMod(h.kMod1) && checkMod(h.kMod2))
+		auto checkStrict = [&](const std::int32_t* mods, size_t count, std::int32_t req1, std::int32_t req2) {
+			for (size_t i = 0; i < count; ++i) {
+				if (checkMod(mods[i]) != (mods[i] == req1 || mods[i] == req2)) {
+					return false;
+				}
+			}
+			return true;
+		};
+
+		bool pressed = false;
+
+		if (h.kKey != 0 && IsInputDown(h.kKey)) {
+			static const std::int32_t kbMods[] = {
+				static_cast<std::int32_t>(RE::BSWin32KeyboardDevice::Key::kLeftShift),
+				static_cast<std::int32_t>(RE::BSWin32KeyboardDevice::Key::kRightShift),
+				static_cast<std::int32_t>(RE::BSWin32KeyboardDevice::Key::kLeftControl),
+				static_cast<std::int32_t>(RE::BSWin32KeyboardDevice::Key::kRightControl),
+				static_cast<std::int32_t>(RE::BSWin32KeyboardDevice::Key::kLeftAlt),
+				static_cast<std::int32_t>(RE::BSWin32KeyboardDevice::Key::kRightAlt)
+			};
+
+			if (checkStrict(kbMods, 6, h.kMod1, h.kMod2)) {
 				pressed = true;
+			}
 		}
-		if (!pressed && h.gKey != 0) {
-			if (IsInputDown(h.gKey) && checkMod(h.gMod1) && checkMod(h.gMod2))
+
+		if (!pressed && h.gKey != 0 && IsInputDown(h.gKey)) {
+			static const std::int32_t gpMods[] = {
+				static_cast<std::int32_t>(SKSE::InputMap::kMacro_GamepadOffset) + static_cast<std::int32_t>(SKSE::InputMap::kGamepadButtonOffset_LEFT_SHOULDER),
+				static_cast<std::int32_t>(SKSE::InputMap::kMacro_GamepadOffset) + static_cast<std::int32_t>(SKSE::InputMap::kGamepadButtonOffset_RIGHT_SHOULDER),
+				static_cast<std::int32_t>(SKSE::InputMap::kMacro_GamepadOffset) + static_cast<std::int32_t>(SKSE::InputMap::kGamepadButtonOffset_LT),
+				static_cast<std::int32_t>(SKSE::InputMap::kMacro_GamepadOffset) + static_cast<std::int32_t>(SKSE::InputMap::kGamepadButtonOffset_RT)
+			};
+
+			if (checkStrict(gpMods, 4, h.gMod1, h.gMod2)) {
 				pressed = true;
+			}
 		}
 
 		if (pressed) {

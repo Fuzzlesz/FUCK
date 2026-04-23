@@ -104,29 +104,7 @@ namespace Hooks
 		auto* userEvents = RE::UserEvents::GetSingleton();
 		auto* manager = FUCKMan::GetSingleton();
 
-		const bool allowGameMenus =	!manager->IsOpen() && manager->HasWindowWithFlag(FUCK::WindowFlags::kCloseOnGameMenu);
-
-		auto CheckIfModifier = [](RE::INPUT_DEVICE device, std::uint32_t rawKey) -> bool {
-			if (device == RE::INPUT_DEVICE::kKeyboard) {
-				return rawKey == static_cast<uint32_t>(KEY::kLeftShift) ||
-				       rawKey == static_cast<uint32_t>(KEY::kRightShift) ||
-				       rawKey == static_cast<uint32_t>(KEY::kLeftControl) ||
-				       rawKey == static_cast<uint32_t>(KEY::kRightControl) ||
-				       rawKey == static_cast<uint32_t>(KEY::kLeftAlt) ||
-				       rawKey == static_cast<uint32_t>(KEY::kRightAlt);
-			}
-
-			if (device == RE::INPUT_DEVICE::kGamepad) {
-				const uint32_t norm = SKSE::InputMap::GamepadMaskToKeycode(rawKey);
-
-				return norm == SKSE::InputMap::kGamepadButtonOffset_LEFT_SHOULDER ||
-				       norm == SKSE::InputMap::kGamepadButtonOffset_RIGHT_SHOULDER ||
-				       norm == SKSE::InputMap::kGamepadButtonOffset_LT ||
-				       norm == SKSE::InputMap::kGamepadButtonOffset_RT;
-			}
-
-			return false;
-		};
+		const bool allowGameMenus = !manager->IsOpen() && manager->HasWindowWithFlag(FUCK::WindowFlags::kCloseOnGameMenu);
 
 		RE::InputEvent* head = nullptr;
 		RE::InputEvent* tail = nullptr;
@@ -151,8 +129,9 @@ namespace Hooks
 				else if (button->HasIDCode()) {
 					const auto rawKey = button->GetIDCode();
 					const auto device = button->GetDevice();
+					const auto unifiedKey = Input::Keymap::GetUnifiedKey(device, rawKey);
 
-					if (CheckIfModifier(device, rawKey)) {
+					if (Input::Manager::IsUnifiedModifier(unifiedKey)) {
 						keep = true;
 					}
 					// Game menu passthrough — only relevant when a kCloseOnGameMenu window is open.

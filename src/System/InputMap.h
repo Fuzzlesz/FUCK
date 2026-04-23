@@ -310,4 +310,15 @@ namespace Input::Keymap
 			return { ImGuiKey_None, false };
 		}
 	}
+
+	inline std::uint32_t GetUnifiedKey(RE::INPUT_DEVICE a_device, std::uint32_t a_key)
+	{
+		if (a_device == RE::INPUT_DEVICE::kMouse) {
+			return a_key + static_cast<std::uint32_t>(SKSE::InputMap::kMacro_MouseButtonOffset);
+		}
+		if (a_device == RE::INPUT_DEVICE::kGamepad) {
+			return SKSE::InputMap::GamepadMaskToKeycode(a_key) + static_cast<std::uint32_t>(SKSE::InputMap::kMacro_GamepadOffset);
+		}
+		return a_key;
+	}
 }
