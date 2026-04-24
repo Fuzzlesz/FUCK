@@ -173,7 +173,7 @@ namespace Input
 			uint32_t unifiedKey = Keymap::GetUnifiedKey(device, key);
 
 			// BLOCKERS
-			if (device == RE::INPUT_DEVICE::kMouse && (key == 0 || key == 1))
+			if (device == RE::INPUT_DEVICE::kMouse && key == static_cast<uint32_t>(MOUSE::kLeftButton) || key == static_cast<uint32_t>(MOUSE::kRightButton))
 				return FUCK::BindResult::kNone;
 			if (device == RE::INPUT_DEVICE::kKeyboard && (key == KEY::kLeftWin || key == KEY::kRightWin))
 				return FUCK::BindResult::kNone;

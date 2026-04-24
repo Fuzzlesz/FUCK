@@ -214,9 +214,9 @@ void FUCKMan::LoadSettings(const CSimpleIniA& a_ini)
 	_themeEditorWindow._lastSize.x = { static_cast<float>(a_ini.GetDoubleValue("ThemeEditor", "Width", _themeEditorWindow._lastSize.x)) };
 	_themeEditorWindow._lastSize.y = { static_cast<float>(a_ini.GetDoubleValue("ThemeEditor", "Height", _themeEditorWindow._lastSize.y)) };
 
-	// Check for first-run sentinel (-1.0)
-	float loadedScale = (float)a_ini.GetDoubleValue("Settings", "fUserScale", -1.0);
-	if (loadedScale == -1.0f) {
+	// Check for first-run sentinel
+	const float loadedScale = static_cast<float>(a_ini.GetDoubleValue("Settings", "fUserScale", -1.0));
+	if (loadedScale < 0.0f) {
 		_userScale = 1.0f;
 	} else {
 		_userScale = std::clamp(loadedScale, 0.5f, 2.0f);

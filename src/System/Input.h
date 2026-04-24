@@ -47,28 +47,28 @@ namespace Input
 
 		void ClearState(); 
 
-		DEVICE	GetInputDevice() const;
-		bool	IsInputKBM() const;
-		bool	IsInputGamepad() const;
-		bool	CanNavigateWithMouse() const;
+		DEVICE  GetInputDevice() const;
+		bool    IsInputKBM() const;
+		bool    IsInputGamepad() const;
+		bool    CanNavigateWithMouse() const;
 
-		static void	ToggleCursor(bool a_enable);
-		void		ResetCursorState();
+		static void ToggleCursor(bool a_enable);
+		void        ResetCursorState();
 
 		void ProcessInputEvents(RE::InputEvent* const* a_events);
 
 		bool IsInputPressed(const RE::InputEvent* const* a_event, std::uint32_t a_unifiedKey);
 
 		// --- Rebinding API ---
-		void		     StartBinding(std::uint32_t a_currentKey, std::int32_t a_currentMod1, std::int32_t a_currentMod2);
+		void             StartBinding(std::uint32_t a_currentKey, std::int32_t a_currentMod1, std::int32_t a_currentMod2);
 		FUCK::BindResult UpdateBinding(const RE::InputEvent* const* a_event, std::uint32_t* outKey, std::int32_t* outMod1, std::int32_t* outMod2);
-		bool		     IsBinding() const { return _rebindCtx.active; }
-		void		     AbortBinding() { _rebindCtx.Reset(); }
+		bool             IsBinding() const { return _rebindCtx.active; }
+		void             AbortBinding() { _rebindCtx.Reset(); }
 		FUCK::BindResult GetInputBind(const RE::InputEvent* const* a_event, std::uint32_t* outKey, std::int32_t* outMod1, std::int32_t* outMod2);
 
-		bool	IsInputDown(std::uint32_t a_unifiedKey) const;
-		float	GetAnalogInput(std::uint32_t a_unifiedKey) const;
-		bool	IsModifierPressed(FUCK::Modifier a_modifier) const;
+		bool  IsInputDown(std::uint32_t a_unifiedKey) const;
+		float GetAnalogInput(std::uint32_t a_unifiedKey) const;
+		bool  IsModifierPressed(FUCK::Modifier a_modifier) const;
 
 		static bool IsUnifiedModifier(std::uint32_t a_unifiedKey);
 
