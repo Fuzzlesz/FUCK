@@ -649,12 +649,17 @@ void FUCKMan::Draw()
 				continue;
 			}
 
-			const std::string title = win->Title();
+			const char* title = win->Title();
 			int flags = 0;
 
 			// --- Flags Setup ---
 			bool noDecoration = (win->GetFlags() & FUCK::WindowFlags::kNoDecoration);
-			auto& winState = s_windowStates[title];
+
+			auto it = s_windowStates.find(title);
+			if (it == s_windowStates.end()) {
+				it = s_windowStates.emplace(std::string(title), WindowCollapseState{}).first;
+			}
+			auto& winState = it->second;
 
 			flags |= ImGuiWindowFlags_NoTitleBar;
 			if (noDecoration) {
@@ -713,7 +718,7 @@ void FUCKMan::Draw()
 				FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase, m.padBase));
 			}
 
-			if (FUCK::BeginWindow(title.c_str(), &open, flags)) {
+			if (FUCK::BeginWindow(title, &open, flags)) {
 				if (!isCollapsed) {
 					winState.preCollapseSize = FUCK::GetWindowSize();
 				}
@@ -760,7 +765,7 @@ void FUCKMan::Draw()
 
 					FUCK::SetCursorPos({ iconW, m.titleTextOffsetY });
 					ImGui::GetWindowDrawList()->AddText(baseFont, m.titleFontSize,
-						FUCK::GetCursorScreenPos(), ImGui::GetColorU32(ImGuiCol_Text), title.c_str());
+						FUCK::GetCursorScreenPos(), ImGui::GetColorU32(ImGuiCol_Text), title);
 
 					// 3. Close Button
 					const float btnSize = m.titleH;
@@ -826,11 +831,10 @@ void FUCKMan::Draw()
 
 						FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase, m.padBase));
 
-						std::string childId = "##Content_" + title;
 						ImGuiChildFlags childFlags = ImGuiChildFlags_AlwaysUseWindowPadding;
 						ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoBackground;
 
-						if (ImGui::BeginChild(childId.c_str(), ImVec2(0, 0), childFlags, windowFlags)) {
+						if (ImGui::BeginChild("##Content", ImVec2(0, 0), childFlags, windowFlags)) {
 							ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
 							pushContentScale();
 							win->Draw();
