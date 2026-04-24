@@ -23,6 +23,7 @@ public:
 	// --- Tool & Window Registration ---
 	void RegisterTool(FUCK::ITool* tool);
 	void RegisterWindow(FUCK::IWindow* window);
+	void UnregisterWindow(FUCK::IWindow* window);
 
 	// --- Rendering & Input ---
 	bool ShouldRender() const;

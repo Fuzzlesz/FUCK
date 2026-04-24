@@ -91,6 +91,21 @@ void FUCKMan::RegisterWindow(FUCK::IWindow* a_window)
 	_windows.push_back(a_window);
 }
 
+void FUCKMan::UnregisterWindow(FUCK::IWindow* a_window)
+{
+	if (!a_window)
+		return;
+
+	auto it = std::find(_windows.begin(), _windows.end(), a_window);
+	if (it != _windows.end()) {
+		// Clean up the persistent collapse/geometry state
+		s_windowStates.erase((*it)->Title());
+
+		// Remove from render list
+		_windows.erase(it);
+	}
+}
+
 // ==========================================
 // Input Processing
 // ==========================================

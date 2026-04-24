@@ -18,6 +18,7 @@ namespace FUCK::Host
 	// ==========================================
 	static void RegisterTool_Impl(ITool* t) { FUCKMan::GetSingleton()->RegisterTool(t); }
 	static void RegisterWindow_Impl(IWindow* w) { FUCKMan::GetSingleton()->RegisterWindow(w); }
+	static void UnregisterWindow_Impl(IWindow* w) { FUCKMan::GetSingleton()->UnregisterWindow(w); }
 
 	// ==========================================
 	// Display & Rendering
@@ -616,6 +617,7 @@ namespace FUCK::Host
 			.version = FUCK_API_VERSION,
 			.RegisterTool = RegisterTool_Impl,
 			.RegisterWindow = RegisterWindow_Impl,
+			.UnregisterWindow = UnregisterWindow_Impl,
 			.GetResolutionScale = GetResolutionScale_Impl,
 			.GetDisplaySize = GetDisplaySize_Impl,
 			.GetFont = GetFont_Impl,

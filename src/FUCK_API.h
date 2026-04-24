@@ -166,6 +166,7 @@ struct FUCK_Interface
 	// Registration
 	void (*RegisterTool)(FUCK::ITool*);
 	void (*RegisterWindow)(FUCK::IWindow*);
+	void (*UnregisterWindow)(FUCK::IWindow*);
 
 	// Display
 	float (*GetResolutionScale)();
@@ -416,6 +417,11 @@ namespace FUCK
 	{
 		if (auto i = GetInterface())
 			i->RegisterWindow(window);
+	}
+	inline void UnregisterWindow(IWindow* window)
+	{
+		if (auto i = GetInterface())
+			i->UnregisterWindow(window);
 	}
 
 	// ------------------------------------------------------------------------
