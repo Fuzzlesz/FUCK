@@ -52,12 +52,12 @@ void SettingsTool::Draw()
 			FUCK::Spacing(2);
 
 			const char* pauseTypes[] = { "$FUCK_Settings_PauseNone"_T, "$FUCK_Settings_PauseSoft"_T, "$FUCK_Settings_PauseHard"_T };
-			int currentPauseIdx = (int)manager->_globalPauseType;
+			int currentPauseIdx = static_cast<int>(manager->_globalPauseType);
 			FUCK::SetNextItemWidth(-1);
 			std::string pauseLabel = std::format("{}##GlobalPauseType", "$FUCK_Settings_GlobalPause"_T);
 
 			if (FUCK::Combo(pauseLabel.c_str(), &currentPauseIdx, pauseTypes, IM_ARRAYSIZE(pauseTypes))) {
-				manager->_globalPauseType = (FUCKMan::PauseType)currentPauseIdx;
+				manager->_globalPauseType = static_cast<FUCKMan::PauseType>(currentPauseIdx);
 			}
 			FUCK::Spacing();
 			FUCK::TextColoredWrapped(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "$FUCK_Settings_PauseDesc"_T);

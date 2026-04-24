@@ -428,8 +428,8 @@ namespace FUCK::Host
 	{
 		auto device = Input::Manager::GetSingleton()->GetInputDevice();
 		if (device == Input::DEVICE::kGamepadDirectX || device == Input::DEVICE::kGamepadOrbis)
-			return (int)FUCK::InputDevice::kGamepad;
-		return (int)FUCK::InputDevice::kMouseKeyboard;
+			return static_cast<int>(FUCK::InputDevice::kGamepad);
+		return static_cast<int>(FUCK::InputDevice::kMouseKeyboard);
 	}
 	static const char* GetKeyName_Impl(std::uint32_t key) { return Input::Manager::GetSingleton()->GetKeyName(key); }
 	static bool IsGamepadKey_Impl(std::uint32_t k) { return k >= static_cast<std::uint32_t>(SKSE::InputMap::kMacro_GamepadOffset); }
@@ -473,7 +473,7 @@ namespace FUCK::Host
 	static void DrawBackgroundImage_Impl(void* tex, float alpha)
 	{
 		if (auto srv = GetSRV(tex))
-			ImGui::GetBackgroundDrawList()->AddImage((ImTextureID)srv, { 0, 0 }, ImGui::GetIO().DisplaySize, { 0, 0 }, { 1, 1 }, IM_COL32(255, 255, 255, (int)(alpha * 255)));
+			ImGui::GetBackgroundDrawList()->AddImage((ImTextureID)srv, { 0, 0 }, ImGui::GetIO().DisplaySize, { 0, 0 }, { 1, 1 }, IM_COL32(255, 255, 255, static_cast<int>(alpha * 255)));
 	}
 	static void DrawBackgroundLine_Impl(float x1, float y1, float x2, float y2, unsigned int col, float t) { ImGui::GetBackgroundDrawList()->AddLine({ x1, y1 }, { x2, y2 }, col, t); }
 	static void DrawBackgroundRect_Impl(const ImVec2& min, const ImVec2& max, ImU32 col, float thickness) { ImGui::GetBackgroundDrawList()->AddRect(min, max, col, 0.0f, 0, thickness); }

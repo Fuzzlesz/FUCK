@@ -196,20 +196,20 @@ void FUCKMan::LoadSettings(const CSimpleIniA& a_ini)
 	if (x == -1.0 || y == -1.0 || w == -1.0 || h == -1.0) {
 		ResetSettings();
 	} else {
-		_windowPos = { (float)x, (float)y };
-		_windowSize = { (float)w, (float)h };
+		_windowPos = { static_cast<float>(x), static_cast<float>(y) };
+		_windowSize = { static_cast<float>(w), static_cast<float>(h) };
 	}
 
-	_globalPauseType = static_cast<PauseType>(a_ini.GetLongValue("Settings", "iGlobalPauseType", (int)_globalPauseType));
+	_globalPauseType = static_cast<PauseType>(a_ini.GetLongValue("Settings", "iGlobalPauseType", static_cast<int>(_globalPauseType)));
 	_sidebarOnRight = a_ini.GetBoolValue("Settings", "bSidebarOnRight", _sidebarOnRight);
 	_injectSystemMenu = a_ini.GetBoolValue("Settings", "bInjectSystemMenu", _injectSystemMenu);
 	_replaceHelpMenu = a_ini.GetBoolValue("Settings", "bReplaceHelpMenu", _replaceHelpMenu);
 
 	// Theme Editor State
-	_themeEditorWindow._lastPos.x = (float)a_ini.GetDoubleValue("ThemeEditor", "X", _themeEditorWindow._lastPos.x);
-	_themeEditorWindow._lastPos.y = (float)a_ini.GetDoubleValue("ThemeEditor", "Y", _themeEditorWindow._lastPos.y);
-	_themeEditorWindow._lastSize.x = (float)a_ini.GetDoubleValue("ThemeEditor", "Width", _themeEditorWindow._lastSize.x);
-	_themeEditorWindow._lastSize.y = (float)a_ini.GetDoubleValue("ThemeEditor", "Height", _themeEditorWindow._lastSize.y);
+	_themeEditorWindow._lastPos.x = { static_cast<float>(a_ini.GetDoubleValue("ThemeEditor", "X", _themeEditorWindow._lastPos.x)) };
+	_themeEditorWindow._lastPos.y = { static_cast<float>(a_ini.GetDoubleValue("ThemeEditor", "Y", _themeEditorWindow._lastPos.y)) };
+	_themeEditorWindow._lastSize.x = { static_cast<float>(a_ini.GetDoubleValue("ThemeEditor", "Width", _themeEditorWindow._lastSize.x)) };
+	_themeEditorWindow._lastSize.y = { static_cast<float>(a_ini.GetDoubleValue("ThemeEditor", "Height", _themeEditorWindow._lastSize.y)) };
 
 	// Check for first-run sentinel (-1.0)
 	float loadedScale = (float)a_ini.GetDoubleValue("Settings", "fUserScale", -1.0);
