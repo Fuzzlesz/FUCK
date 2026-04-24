@@ -125,32 +125,32 @@ namespace FUCK
 	class ITool
 	{
 	public:
-		virtual ~ITool() = default;
+		virtual            ~ITool() = default;
 		virtual const char* Name() const = 0;
 		virtual const char* Group() const { return nullptr; }
-		virtual void Draw() = 0;
-		virtual void RenderOverlay() {}
-		virtual void OnOpen() {}
-		virtual void OnClose() {}
-		virtual bool OnAsyncInput(const void*) { return false; }
-		virtual bool ShowInSidebar() const { return true; }
+		virtual void        Draw() = 0;
+		virtual void        RenderOverlay() {}
+		virtual void        OnOpen() {}
+		virtual void        OnClose() {}
+		virtual bool        OnAsyncInput(const void*) { return false; }
+		virtual bool        ShowInSidebar() const { return true; }
 	};
 
 	/// @brief Implement this to add a floating, independent Window to the FUCK framework.
 	class IWindow
 	{
 	public:
-		virtual ~IWindow() = default;
+		virtual            ~IWindow() = default;
 		virtual const char* Title() const = 0;
-		virtual void Draw() = 0;
-		virtual bool IsOpen() const = 0;
-		virtual void SetOpen(bool a_open) = 0;
+		virtual void        Draw() = 0;
+		virtual bool        IsOpen() const = 0;
+		virtual void        SetOpen(bool a_open) = 0;
 		virtual WindowFlags GetFlags() const { return WindowFlags::kNone; }
-		virtual ImVec2 GetDefaultSize() const { return ImVec2(400.0f, 300.0f); }
-		virtual ImVec2 GetDefaultPos() const { return ImVec2(0.0f, 0.0f); }
-		virtual bool GetRequestedPos(ImVec2& /*outPos*/) { return false; }
-		virtual void UpdateState(const ImVec2& /*currentPos*/, const ImVec2& /*currentSize*/) {}
-		virtual bool OnAsyncInput(const void*) { return false; }
+		virtual ImVec2      GetDefaultSize() const { return ImVec2(400.0f, 300.0f); }
+		virtual ImVec2      GetDefaultPos() const { return ImVec2(0.0f, 0.0f); }
+		virtual bool        GetRequestedPos(ImVec2& /*outPos*/) { return false; }
+		virtual void        UpdateState(const ImVec2& /*currentPos*/, const ImVec2& /*currentSize*/) {}
+		virtual bool        OnAsyncInput(const void*) { return false; }
 	};
 }
 

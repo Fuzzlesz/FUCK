@@ -432,7 +432,7 @@ namespace FUCK::Host
 		return static_cast<int>(FUCK::InputDevice::kMouseKeyboard);
 	}
 	static const char* GetKeyName_Impl(std::uint32_t key) { return Input::Manager::GetSingleton()->GetKeyName(key); }
-	static bool IsGamepadKey_Impl(std::uint32_t k) { return k >= static_cast<std::uint32_t>(SKSE::InputMap::kMacro_GamepadOffset); }
+	static bool IsGamepadKey_Impl(std::uint32_t k) { return k >= Input::Keymap::kGPBase; }
 	static bool IsBinding_Impl() { return Input::Manager::GetSingleton()->IsBinding(); }
 	static void AbortBinding_Impl() { Input::Manager::GetSingleton()->AbortBinding(); }
 	static void StartBinding_Impl(std::uint32_t k, std::int32_t m1, std::int32_t m2) { Input::Manager::GetSingleton()->StartBinding(k, m1, m2); }

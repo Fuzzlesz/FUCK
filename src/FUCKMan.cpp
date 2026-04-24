@@ -505,7 +505,6 @@ void FUCKMan::Draw()
 			}
 
 			if (closedSomething) {
-				UpdateGameState();
 				ImGui::ClearNavState();
 			}
 		}
@@ -553,7 +552,6 @@ void FUCKMan::Draw()
 	
 	m.titleH           = m.textH + (headerPadding * 2.0f);
 	m.titleFontSize    = 22.0f * 0.9f;
-	m.titleIconNudgeY  = 1.0f * m.uiScale;
 	m.titleIconPadX    = 8.0f * m.uiScale;
 	m.titleIconNudgeY  = 1.0f * m.uiScale;  // positive = down, negative = up
 	m.titleTextOffsetY = (m.titleH - m.titleFontSize) * 0.5f + (2.0f * m.uiScale);

@@ -71,6 +71,7 @@ public:
 
 	void DispatchMenuEvent(const char* menuName, bool opening)
 	{
+		// Copy so listeners can safely remove themselves during the callback
 		auto listenersCopy = _menuListeners;
 		for (auto& e : listenersCopy) {
 			e.callback(menuName, opening, e.userdata);
