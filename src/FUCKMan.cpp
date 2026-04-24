@@ -12,9 +12,13 @@
 #include "System/Input.h"
 #include "System/Settings.h"
 
-static std::unordered_map<std::string, bool> s_windowCollapseStates;
-static std::unordered_map<std::string, bool> s_windowWasCollapsed;
-static std::unordered_map<std::string, ImVec2> s_windowPreCollapseSizes;
+struct WindowCollapseState
+{
+	bool isCollapsed = false;
+	bool wasCollapsed = false;
+	ImVec2 preCollapseSize{};
+};
+static StringMap<WindowCollapseState> s_windowStates;
 
 // Helper to keep windows within the visible viewport
 static void ClampWindowToScreen(ImVec2& pos, const ImVec2& size)
@@ -179,8 +183,7 @@ void FUCKMan::ResetSettings()
 
 	if (_isOpen) {
 		ClampWindowToScreen(_windowPos, _windowSize);
-		ImGui::SetWindowPos(_windowPos);
-		ImGui::SetWindowSize(_windowSize);
+		_pendingWindowRestore = true;
 		ImGui::Styles::GetSingleton()->RefreshStyle();
 		MANAGER(IconFont)->ReloadFonts();
 	}
@@ -221,7 +224,7 @@ void FUCKMan::LoadSettings(const CSimpleIniA& a_ini)
 
 	_lastSavedPos = _windowPos;
 	_lastSavedSize = _windowSize;
-	_settingsLoaded = true;
+	_pendingWindowRestore = true;
 }
 
 void FUCKMan::SaveSettings(CSimpleIniA& a_ini)
@@ -397,7 +400,7 @@ void FUCKMan::Open()
 	if (_activeTool)
 		_activeTool->OnOpen();
 
-	_settingsLoaded = true;
+	_pendingWindowRestore = true;
 
 	RE::PlaySound("UIMenuOK");
 }
@@ -636,11 +639,12 @@ void FUCKMan::Draw()
 
 			// --- Flags Setup ---
 			bool noDecoration = (win->GetFlags() & FUCK::WindowFlags::kNoDecoration);
+			auto& winState = s_windowStates[title];
 
 			flags |= ImGuiWindowFlags_NoTitleBar;
 			if (noDecoration) {
-				s_windowCollapseStates[title] = false;
-				s_windowWasCollapsed[title] = false;
+				winState.isCollapsed = false;
+				winState.wasCollapsed = false;
 				flags |= ImGuiWindowFlags_NoDecoration;
 			} else {
 				flags |= ImGuiWindowFlags_NoScrollbar;
@@ -653,24 +657,21 @@ void FUCKMan::Draw()
 				flags |= ImGuiWindowFlags_NoInputs;
 
 			// --- Collapse Logic ---
-			bool isCollapsed = s_windowCollapseStates[title];
-			bool wasCollapsed = s_windowWasCollapsed[title];
-			s_windowWasCollapsed[title] = isCollapsed;
+			bool isCollapsed = winState.isCollapsed;
+			bool wasCollapsed = winState.wasCollapsed;
+			winState.wasCollapsed = isCollapsed;
 
 			// Get Metrics from Interface
 			ImVec2 targetSize = win->GetDefaultSize();
 
 			// Handle collapse override
 			if (isCollapsed) {
-				float targetW = targetSize.x;
-				if (s_windowPreCollapseSizes.find(title) != s_windowPreCollapseSizes.end()) {
-					targetW = s_windowPreCollapseSizes[title].x;
-				}
+				float targetW = (winState.preCollapseSize.x > 0.0f) ? winState.preCollapseSize.x : targetSize.x;
 				targetSize = ImVec2(targetW, m.titleH);
 				flags |= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar;
 			} else if (wasCollapsed) {
-				if (s_windowPreCollapseSizes.find(title) != s_windowPreCollapseSizes.end()) {
-					targetSize = s_windowPreCollapseSizes[title];
+				if (winState.preCollapseSize.x > 0.0f) {
+					targetSize = winState.preCollapseSize;
 				}
 			}
 
@@ -699,7 +700,7 @@ void FUCKMan::Draw()
 
 			if (FUCK::BeginWindow(title.c_str(), &open, flags)) {
 				if (!isCollapsed) {
-					s_windowPreCollapseSizes[title] = FUCK::GetWindowSize();
+					winState.preCollapseSize = FUCK::GetWindowSize();
 				}
 
 				win->UpdateState(FUCK::GetWindowPos(), FUCK::GetWindowSize());
@@ -721,7 +722,7 @@ void FUCKMan::Draw()
 
 					if (iconArrow) {
 						if (ImGui::InvisibleButton("##CollapseToggle", ImVec2(m.titleH + 20.0f, m.titleH))) {
-							s_windowCollapseStates[title] = !isCollapsed;
+							winState.isCollapsed = !isCollapsed;
 						}
 						bool isHovered = ImGui::IsItemHovered();
 						ImU32 iconColor = isHovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
@@ -786,7 +787,7 @@ void FUCKMan::Draw()
 					// Double Click Header Interaction
 					if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && !ImGui::IsAnyItemHovered()) {
 						if (ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly)) {
-							s_windowCollapseStates[title] = !isCollapsed;
+							winState.isCollapsed = !isCollapsed;
 						}
 					}
 
@@ -851,27 +852,24 @@ void FUCKMan::Draw()
 
 	ImGui::GetIO().MouseDrawCursor = false;
 
-	static bool isCollapsed = false;
-	static bool wasCollapsed = false;
-
-	if (_settingsLoaded) {
+	if (_pendingWindowRestore) {
 		ClampWindowToScreen(_windowPos, _windowSize);
 		FUCK::SetNextWindowPos(_windowPos, ImGuiCond_Always);
-		if (!isCollapsed) {
+		if (!_isCollapsed) {
 			FUCK::SetNextWindowSize(_windowSize, ImGuiCond_Always);
 		}
-		_settingsLoaded = false;
+		_pendingWindowRestore = false;
 	} else {
-		if (isCollapsed) {
+		if (_isCollapsed) {
 			FUCK::SetNextWindowSize(ImVec2(_windowSize.x, m.titleH));
-		} else if (wasCollapsed && !isCollapsed) {
+		} else if (_wasCollapsed && !_isCollapsed) {
 			FUCK::SetNextWindowSize(_windowSize);
 		} else {
 			FUCK::SetNextWindowSize(ImVec2(1000.0f * m.uiScale, 600.0f * m.uiScale), ImGuiCond_FirstUseEver);
 		}
 	}
 
-	wasCollapsed = isCollapsed;
+	_wasCollapsed = _isCollapsed;
 
 	FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 
@@ -879,13 +877,13 @@ void FUCKMan::Draw()
 	bool wantsOpen = true;
 
 	ImGuiWindowFlags winFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
-	if (isCollapsed)
+	if (_isCollapsed)
 		winFlags |= ImGuiWindowFlags_NoResize;
 
 	if (FUCK::BeginWindow(windowTitle.c_str(), &wantsOpen, winFlags)) {
 		FUCK::ExtendWindowPastBorder();
 
-		if (!isCollapsed) {
+		if (!_isCollapsed) {
 			_windowPos = FUCK::GetWindowPos();
 			_windowSize = FUCK::GetWindowSize();
 
@@ -914,13 +912,13 @@ void FUCKMan::Draw()
 			if (iconArrow) {
 				FUCK::SetCursorPos({ 0, 0 });
 				if (ImGui::InvisibleButton("##CollapseToggle", ImVec2(m.titleH + 20.0f, m.titleH))) {
-					isCollapsed = !isCollapsed;
+					_isCollapsed = !_isCollapsed;
 				}
 
 				bool isHovered = ImGui::IsItemHovered();
 				ImU32 iconColor = isHovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
 
-				bool pointsDown = !isCollapsed;
+				bool pointsDown = !_isCollapsed;
 				auto ap = chromeArrow(pointsDown, m.titleH);
 
 				ImVec2 drawPos = cursorScreen;
@@ -973,13 +971,13 @@ void FUCKMan::Draw()
 				ImVec2 wP = FUCK::GetWindowPos();
 				if (mousePos.x >= wP.x && mousePos.x <= wP.x + winWidth &&
 					mousePos.y >= wP.y && mousePos.y <= wP.y + m.titleH) {
-					isCollapsed = !isCollapsed;
+					_isCollapsed = !_isCollapsed;
 				}
 			}
 		}
 
 		// -- Content --
-		if (!isCollapsed) {
+		if (!_isCollapsed) {
 			float contentY = m.titleH;
 			FUCK::SetCursorPos({ 0, contentY });
 

@@ -120,10 +120,11 @@ private:
 	// Window Metrics
 	ImVec2 _windowPos{ 100.0f, 100.0f };
 	ImVec2 _windowSize{ 1000.0f, 600.0f };
-	bool _settingsLoaded = false;
+	bool _pendingWindowRestore = false;
 	ImVec2 _lastSavedPos{ 100.0f, 100.0f };
 	ImVec2 _lastSavedSize{ 1000.0f, 600.0f };
 	bool _isCollapsed = false;
+	bool _wasCollapsed = false;
 
 	// Built-in Tools
 	SettingsTool _settingsTool;
