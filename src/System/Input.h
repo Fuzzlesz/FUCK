@@ -34,6 +34,9 @@ namespace Input
 		{
 			active = false;
 			timer = 0.0f;
+			originalKey = 0;
+			originalMod1 = -1;
+			originalMod2 = -1;
 		}
 	};
 

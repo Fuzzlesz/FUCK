@@ -43,7 +43,6 @@ namespace FUCK
 		kNone,
 		kBound,
 		kCancelled,
-		kError
 	};
 
 	// --- Bitflags ---
@@ -1261,6 +1260,7 @@ namespace FUCK
 			kKey = gKey = 0;
 			kMod1 = gMod1 = kMod2 = gMod2 = -1;
 			isBinding = false;
+			wasTriggered = false;
 		}
 	};
 

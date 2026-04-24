@@ -26,6 +26,9 @@ namespace Input
 		kGPBase + SKSE::InputMap::kGamepadButtonOffset_RT
 	};
 
+	static constexpr std::uint32_t kGP_LT = kGPBase + SKSE::InputMap::kGamepadButtonOffset_LT;
+	static constexpr std::uint32_t kGP_RT = kGPBase + SKSE::InputMap::kGamepadButtonOffset_RT;
+
 	void Manager::Register()
 	{
 		logger::info("Input Manager Initialized");
@@ -173,7 +176,7 @@ namespace Input
 			if (device == RE::INPUT_DEVICE::kMouse && (key == 0 || key == 1))
 				return FUCK::BindResult::kNone;
 			if (device == RE::INPUT_DEVICE::kKeyboard && (key == KEY::kLeftWin || key == KEY::kRightWin))
-				return FUCK::BindResult::kError;
+				return FUCK::BindResult::kNone;
 
 			if (unifiedKey == Hotkeys::Manager::EscapeKey()) {
 				RE::PlaySound("UIMenuCancel");
@@ -189,8 +192,8 @@ namespace Input
 				}
 			} else if (device == RE::INPUT_DEVICE::kGamepad) {
 				for (auto m : GP_MODS) {
-					// Treat LT and RT as analog triggers, LB and RB as buttons
-					if (m == GP_MODS[2] || m == GP_MODS[3]) {
+					// LT and RT are analog — check threshold rather than digital state
+					if (m == kGP_LT || m == kGP_RT) {
 						if (GetAnalogInput(m) > 0.15f)
 							pressedMods.push_back(m);
 					} else {
@@ -309,9 +312,10 @@ namespace Input
 		// Mouse
 		if (a_key >= SKSE::InputMap::kMacro_MouseButtonOffset && a_key < SKSE::InputMap::kMacro_MouseButtonOffset + 10) {
 			static const char* mouseNames[] = { "Mouse1", "Mouse2", "Mouse3", "Mouse4", "Mouse5", "Mouse6", "Mouse7", "Mouse8" };
-			uint32_t idx = a_key - SKSE::InputMap::kMacro_MouseButtonOffset;
-			if (idx < 8)
+			if (a_key >= kMBBase && a_key < kMBBase + std::size(mouseNames)) {
+				uint32_t idx = a_key - kMBBase;
 				return mouseNames[idx];
+			}
 		}
 
 		// Gamepad
