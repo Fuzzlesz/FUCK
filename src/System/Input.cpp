@@ -244,21 +244,21 @@ namespace Input
 	}
 
 	bool Manager::IsModifierPressed(FUCK::Modifier a_modifier) const
-{
-    switch (a_modifier) {
-    case FUCK::Modifier::kShift:
-        return IsInputDown(AsKey(KEY::kLeftShift))
-            || IsInputDown(AsKey(KEY::kRightShift));
-    case FUCK::Modifier::kCtrl:
-        return IsInputDown(AsKey(KEY::kLeftControl))
-            || IsInputDown(AsKey(KEY::kRightControl));
-    case FUCK::Modifier::kAlt:
-        return IsInputDown(AsKey(KEY::kLeftAlt))
-            || IsInputDown(AsKey(KEY::kRightAlt));
-    default:
-        return false;
-    }
-}
+	{
+		switch (a_modifier) {
+			case FUCK::Modifier::kShift:
+				return IsInputDown(AsKey(KEY::kLeftShift))
+					|| IsInputDown(AsKey(KEY::kRightShift));
+			case FUCK::Modifier::kCtrl:
+				return IsInputDown(AsKey(KEY::kLeftControl))
+					|| IsInputDown(AsKey(KEY::kRightControl));
+			case FUCK::Modifier::kAlt:
+				return IsInputDown(AsKey(KEY::kLeftAlt))
+					|| IsInputDown(AsKey(KEY::kRightAlt));
+			default:
+				return false;
+		}
+	}
 
 	bool Manager::IsUnifiedModifier(std::uint32_t a_unifiedKey)
 	{
@@ -297,38 +297,100 @@ namespace Input
 
 	const char* Manager::GetKeyName(std::uint32_t a_key) const
 	{
-		// Basic lookup for common keys
-		static std::unordered_map<uint32_t, const char*> keyNames = {
-			{ KEY::kEscape, "Esc" }, { KEY::kEnter, "Enter" }, { KEY::kSpacebar, "Space" },
-			{ KEY::kLeftShift, "LShift" }, { KEY::kRightShift, "RShift" },
-			{ KEY::kLeftControl, "LCtrl" }, { KEY::kRightControl, "RCtrl" },
-			{ KEY::kLeftAlt, "LAlt" }, { KEY::kRightAlt, "RAlt" },
-			{ KEY::kTab, "Tab" }, { KEY::kCapsLock, "Caps" },
-			{ KEY::kLeft, "Left" }, { KEY::kRight, "Right" }, { KEY::kUp, "Up" }, { KEY::kDown, "Down" },
-			{ KEY::kBackspace, "Backspace" },
-			{ KEY::kF5, "F5" }, { KEY::kF9, "F9" }, { KEY::kF12, "F12" }
-		};
+		// Letters — QWERTY row ranges (DirectInput scancode order, not alphabetical)
+		if (a_key >= AsKey(KEY::kQ) && a_key <= AsKey(KEY::kP)) {
+			static const char* row1[] = { "Q","W","E","R","T","Y","U","I","O","P" };
+			return row1[a_key - AsKey(KEY::kQ)];
+		}
+		if (a_key >= AsKey(KEY::kA) && a_key <= AsKey(KEY::kL)) {
+			static const char* row2[] = { "A","S","D","F","G","H","J","K","L" };
+			return row2[a_key - AsKey(KEY::kA)];
+		}
+		if (a_key >= AsKey(KEY::kZ) && a_key <= AsKey(KEY::kM)) {
+			static const char* row3[] = { "Z","X","C","V","B","N","M" };
+			return row3[a_key - AsKey(KEY::kZ)];
+		}
+
+		// Numbers — scancode order is 1-9 then 0 (0x02-0x0B)
+		if (a_key >= AsKey(KEY::kNum1) && a_key <= AsKey(KEY::kNum0)) {
+			static const char* nums[] = { "1","2","3","4","5","6","7","8","9","0" };
+			return nums[a_key - AsKey(KEY::kNum1)];
+		}
+
+		// F-keys — F11/F12 (0x57-0x58) are not contiguous with F1-F10 (0x3B-0x44)
+		if (a_key >= AsKey(KEY::kF1) && a_key <= AsKey(KEY::kF10)) {
+			static const char* fkeys[] = { "F1","F2","F3","F4","F5","F6","F7","F8","F9","F10" };
+			return fkeys[a_key - AsKey(KEY::kF1)];
+		}
+		if (a_key >= AsKey(KEY::kF11) && a_key <= AsKey(KEY::kF12)) {
+			static const char* fkeys[] = { "F11","F12" };
+			return fkeys[a_key - AsKey(KEY::kF11)];
+		}
 
 		// Mouse
-		if (a_key >= SKSE::InputMap::kMacro_MouseButtonOffset && a_key < SKSE::InputMap::kMacro_MouseButtonOffset + 10) {
-			static const char* mouseNames[] = { "Mouse1", "Mouse2", "Mouse3", "Mouse4", "Mouse5", "Mouse6", "Mouse7", "Mouse8" };
-			if (a_key >= kMBBase && a_key < kMBBase + std::size(mouseNames)) {
-				uint32_t idx = a_key - kMBBase;
-				return mouseNames[idx];
-			}
+		if (a_key >= kMBBase && a_key < kMBBase + 8) {
+			static const char* mouse[] = {
+				"Mouse1","Mouse2","Mouse3","Mouse4","Mouse5","Mouse6","Mouse7","Mouse8"
+			};
+			return mouse[a_key - kMBBase];
 		}
 
 		// Gamepad
-		if (a_key >= SKSE::InputMap::kMacro_GamepadOffset) {
-			return "Gamepad";
+		if (a_key >= kGPBase) {
+			static const Map<uint32_t, const char*> gp = {
+				{ kGPBase + SKSE::InputMap::kGamepadButtonOffset_A,              "A"      },
+				{ kGPBase + SKSE::InputMap::kGamepadButtonOffset_B,              "B"      },
+				{ kGPBase + SKSE::InputMap::kGamepadButtonOffset_X,              "X"      },
+				{ kGPBase + SKSE::InputMap::kGamepadButtonOffset_Y,              "Y"      },
+				{ kGPBase + SKSE::InputMap::kGamepadButtonOffset_LEFT_SHOULDER,  "LB"     },
+				{ kGPBase + SKSE::InputMap::kGamepadButtonOffset_RIGHT_SHOULDER, "RB"     },
+				{ kGPBase + SKSE::InputMap::kGamepadButtonOffset_LT,             "LT"     },
+				{ kGPBase + SKSE::InputMap::kGamepadButtonOffset_RT,             "RT"     },
+				{ kGPBase + SKSE::InputMap::kGamepadButtonOffset_LEFT_THUMB,     "LS"     },
+				{ kGPBase + SKSE::InputMap::kGamepadButtonOffset_RIGHT_THUMB,    "RS"     },
+				{ kGPBase + SKSE::InputMap::kGamepadButtonOffset_START,          "Start"  },
+				{ kGPBase + SKSE::InputMap::kGamepadButtonOffset_BACK,           "Back"   },
+				{ kGPBase + SKSE::InputMap::kGamepadButtonOffset_DPAD_UP,        "DUp"    },
+				{ kGPBase + SKSE::InputMap::kGamepadButtonOffset_DPAD_DOWN,      "DDown"  },
+				{ kGPBase + SKSE::InputMap::kGamepadButtonOffset_DPAD_LEFT,      "DLeft"  },
+				{ kGPBase + SKSE::InputMap::kGamepadButtonOffset_DPAD_RIGHT,     "DRight" },
+			};
+			auto it = gp.find(a_key);
+			return it != gp.end() ? it->second : "GP?";
 		}
 
-		auto it = keyNames.find(a_key);
-		if (it != keyNames.end())
-			return it->second;
-
-		// Simple fallback
-		return "Key";
+		// Everything else — irregular keyboard keys + all KP digits (non-contiguous)
+		static const Map<uint32_t, const char*> kb = {
+			{ AsKey(KEY::kEscape),      "Esc"       }, { AsKey(KEY::kEnter),        "Enter"    },
+			{ AsKey(KEY::kSpacebar),    "Space"     }, { AsKey(KEY::kTab),          "Tab"      },
+			{ AsKey(KEY::kBackspace),   "Backspace" }, { AsKey(KEY::kCapsLock),     "Caps"     },
+			{ AsKey(KEY::kLeftShift),   "LShift"    }, { AsKey(KEY::kRightShift),   "RShift"   },
+			{ AsKey(KEY::kLeftControl), "LCtrl"     }, { AsKey(KEY::kRightControl), "RCtrl"    },
+			{ AsKey(KEY::kLeftAlt),     "LAlt"      }, { AsKey(KEY::kRightAlt),     "RAlt"     },
+			{ AsKey(KEY::kLeft),        "Left"      }, { AsKey(KEY::kRight),        "Right"    },
+			{ AsKey(KEY::kUp),          "Up"        }, { AsKey(KEY::kDown),         "Down"     },
+			{ AsKey(KEY::kHome),        "Home"      }, { AsKey(KEY::kEnd),          "End"      },
+			{ AsKey(KEY::kPageUp),      "PgUp"      }, { AsKey(KEY::kPageDown),     "PgDn"     },
+			{ AsKey(KEY::kInsert),      "Insert"    }, { AsKey(KEY::kDelete),       "Delete"   },
+			{ AsKey(KEY::kPrintScreen), "PrtSc"     }, { AsKey(KEY::kScrollLock),   "ScrLk"    },
+			{ AsKey(KEY::kPause),       "Pause"     }, { AsKey(KEY::kNumLock),      "NumLk"    },
+			{ AsKey(KEY::kMinus),       "-"         }, { AsKey(KEY::kEquals),       "="        },
+			{ AsKey(KEY::kBracketLeft), "["         }, { AsKey(KEY::kBracketRight), "]"        },
+			{ AsKey(KEY::kBackslash),   "\\"        }, { AsKey(KEY::kSemicolon),    ";"        },
+			{ AsKey(KEY::kApostrophe),  "'"         }, { AsKey(KEY::kComma),        ","        },
+			{ AsKey(KEY::kPeriod),      "."         }, { AsKey(KEY::kSlash),        "/"        },
+			{ AsKey(KEY::kTilde),       "`"         },
+			{ AsKey(KEY::kKP_0),        "KP0"       }, { AsKey(KEY::kKP_1),        "KP1"      },
+			{ AsKey(KEY::kKP_2),        "KP2"       }, { AsKey(KEY::kKP_3),        "KP3"      },
+			{ AsKey(KEY::kKP_4),        "KP4"       }, { AsKey(KEY::kKP_5),        "KP5"      },
+			{ AsKey(KEY::kKP_6),        "KP6"       }, { AsKey(KEY::kKP_7),        "KP7"      },
+			{ AsKey(KEY::kKP_8),        "KP8"       }, { AsKey(KEY::kKP_9),        "KP9"      },
+			{ AsKey(KEY::kKP_Decimal),  "KP."       }, { AsKey(KEY::kKP_Divide),   "KP/"      },
+			{ AsKey(KEY::kKP_Multiply), "KP*"       }, { AsKey(KEY::kKP_Subtract), "KP-"      },
+			{ AsKey(KEY::kKP_Plus),     "KP+"       }, { AsKey(KEY::kKP_Enter),    "KPEnter"  },
+		};
+		auto it = kb.find(a_key);
+		return it != kb.end() ? it->second : "?";
 	}
 
 	// ==========================================
