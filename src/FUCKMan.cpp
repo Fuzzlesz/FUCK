@@ -196,6 +196,16 @@ void FUCKMan::ResetSettings()
 	_injectSystemMenu = true;
 	_replaceHelpMenu = false;
 
+	auto& hotkey = MANAGER(Hotkeys)->GetToggleHotkey();
+	hotkey.kKey = 65;  // F7
+	hotkey.kMod1 = -1;
+	hotkey.kMod2 = -1;
+	hotkey.gKey = 0;
+	hotkey.gMod1 = -1;
+	hotkey.gMod2 = -1;
+	hotkey.isBinding = false;
+	hotkey.wasTriggered = false;
+
 	if (_isOpen) {
 		ClampWindowToScreen(_windowPos, _windowSize);
 		_pendingWindowRestore = true;
@@ -437,7 +447,6 @@ void FUCKMan::Close()
 
 	UpdateGameState();
 
-	// Save to FUCK_Custom.ini
 	Settings::GetSingleton()->Save(FileType::kSettings, [](CSimpleIniA& ini) {
 		FUCKMan::GetSingleton()->SaveSettings(ini);
 	});
