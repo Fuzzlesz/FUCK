@@ -38,8 +38,6 @@ static void ClampWindowToScreen(ImVec2& pos, const ImVec2& size)
 FUCKMan::FUCKMan()
 {
 	FUCK::GetInterface() = FUCK::Host::CreateInterface();
-	_activeTool = nullptr;
-
 	RegisterWindow(&_themeEditorWindow);
 }
 
@@ -576,16 +574,18 @@ void FUCKMan::Draw()
 	m.chromeIconBaseH = 16.0f * m.uiScale;
 
 	float headerPadding = 3.0f * m.uiScale;
-	
+
+	const float kChromeFontSize = 22.0f * 0.9f;
+
 	m.titleH           = m.textH + (headerPadding * 2.0f);
-	m.titleFontSize    = 22.0f * 0.9f;
+	m.titleFontSize    = kChromeFontSize;
 	m.titleIconPadX    = 8.0f * m.uiScale;
 	m.titleIconNudgeY  = 1.0f * m.uiScale;  // positive = down, negative = up
 	m.titleTextOffsetY = (m.titleH - m.titleFontSize) * 0.5f + (2.0f * m.uiScale);
 
 	m.sidebarWidth    = 250.0f * m.uiScale;
 	m.sidebarItemH    = 30.0f * m.uiScale;
-	m.sidebarFontSize = 22.0f * 0.9f;
+	m.sidebarFontSize = kChromeFontSize;
 	m.sidebarIndent   = 15.0f * m.uiScale;
 
 	auto chromeArrow = [&](bool pointsDown, float rowH) {
@@ -659,7 +659,7 @@ void FUCKMan::Draw()
 			}
 
 			const char* title = win->Title();
-			int flags = 0;
+			ImGuiWindowFlags flags = ImGuiWindowFlags_None;
 
 			// --- Flags Setup ---
 			bool noDecoration = (win->GetFlags() & FUCK::WindowFlags::kNoDecoration);
@@ -1022,7 +1022,7 @@ void FUCKMan::Draw()
 				ImFont* regularFont = MANAGER(IconFont)->GetRegularFont();
 
 				std::vector<FUCK::ITool*> looseTools;
-				std::map<std::string, std::vector<FUCK::ITool*>> toolGroups;
+				StringMap<std::vector<FUCK::ITool*>> toolGroups;
 
 				for (auto* tool : _tools) {
 					if (!tool->ShowInSidebar())
@@ -1037,7 +1037,7 @@ void FUCKMan::Draw()
 				struct SidebarEntry
 				{
 					std::string label;
-					bool isGroup;
+					bool isGroup = false;
 					FUCK::ITool* tool = nullptr;
 					std::vector<FUCK::ITool*>* tools = nullptr;
 				};

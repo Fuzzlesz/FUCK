@@ -64,15 +64,15 @@ namespace Hotkeys
 	const IconFont::IconTexture* Manager::ToggleIcon() const
 	{
 		bool isGP = (FUCK::GetInputDevice() == FUCK::InputDevice::kGamepad);
-		uint32_t key = isGP ? _toggleHotkey.gKey : _toggleHotkey.kKey;
+		std::uint32_t key = isGP ? _toggleHotkey.gKey : _toggleHotkey.kKey;
 		return (key != 0) ? MANAGER(IconFont)->GetIcon(key) : nullptr;
 	}
 
 	std::uint32_t Manager::EscapeKey()
 	{
-    return (FUCK::GetInputDevice() == FUCK::InputDevice::kGamepad)
-        ? Input::Keymap::kGPBase + SKSE::InputMap::kGamepadButtonOffset_B
-        : Input::Keymap::AsKey(KEY::kEscape);
+	return (FUCK::GetInputDevice() == FUCK::InputDevice::kGamepad)
+	? Input::Keymap::kGPBase + SKSE::InputMap::kGamepadButtonOffset_B
+	: Input::Keymap::AsKey(KEY::kEscape);
 	}
 
 	const IconFont::IconTexture* Manager::EscapeIcon() const
