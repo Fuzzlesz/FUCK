@@ -1,8 +1,8 @@
 #pragma once
 
-enum class FileType
-{
+enum class FileType {
 	kSettings,
+	kStyle,
 	kDisplayTweaks,
 };
 
@@ -17,26 +17,27 @@ public:
 		return &instance;
 	}
 
-	void Load(FileType type, INIFunc a_func, bool a_generate = false) const;
-	void Save(FileType type, INIFunc a_func, bool a_generate = false) const;
+	void Load(FileType type, INIFunc a_func) const;
+	void Save(FileType type, INIFunc a_func) const;
 
 	static std::vector<std::string> GetConfigs(const std::filesystem::path& a_path, const std::string& a_ext = ".ini");
 
-	const wchar_t* GetPresetsPath() const { return presetsRoot; }
-	const wchar_t* GetUserFontsPath() const { return userFontsPath; }
-	const wchar_t* GetLegacyFontsPath() const { return legacyFontsPath; }
+	const char* GetPresetsPath() const { return presetsRoot; }
+	const char* GetUserFontsPath() const { return userFontsPath; }
+	const char* GetLegacyFontsPath() const { return legacyFontsPath; }
 
-	static void LoadINI(const wchar_t* a_path, INIFunc a_func, bool a_generate = false);
-	static void LoadINI(const wchar_t* a_defaultPath, const wchar_t* a_userPath, INIFunc a_func);
+	static void LoadINI(const char* a_path, INIFunc a_func, bool a_generate = false);
+	static void LoadINI(const char* a_defaultPath, const char* a_userPath, INIFunc a_func);
 
 private:
-	const wchar_t* defaultSettingsPath{ L"Data/SKSE/Plugins/FUCK.ini" };
-	const wchar_t* userSettingsPath{ L"Data/SKSE/Plugins/FUCK_Custom.ini" };
+	const char* settingsPath			{ R"(Data\SKSE\Plugins\FUCK\FUCK_Settings.ini)" };
+	const char* stylePath				{ R"(Data\SKSE\Plugins\FUCK\FUCK_Style.ini)" };
 
-	const wchar_t* defaultDisplayTweaksPath{ L"Data/SKSE/Plugins/SSEDisplayTweaks.ini" };
-	const wchar_t* userDisplayTweaksPath{ L"Data/SKSE/Plugins/SSEDisplayTweaks_Custom.ini" };
+	const char* presetsRoot				{ R"(Data\SKSE\Plugins\FUCK\Presets)" };
+	const char* userFontsPath			{ R"(Data\SKSE\Plugins\FUCK\Fonts)" };
 
-	const wchar_t* presetsRoot{ L"Data/Interface/FUCK/Presets" };
-	const wchar_t* userFontsPath{ L"Data/Interface/FUCK/Fonts" };
-	const wchar_t* legacyFontsPath{ L"Data/Interface/ImGuiIcons/Fonts" };
+	const char* legacyFontsPath			{ R"(Data\Interface\ImGuiIcons\Fonts)" };
+	
+	const char* defaultDisplayTweaksPath{ R"(Data\SKSE\Plugins\SSEDisplayTweaks.ini)" };
+	const char* userDisplayTweaksPath	{ R"(Data\SKSE\Plugins\SSEDisplayTweaks_Custom.ini)" };
 };

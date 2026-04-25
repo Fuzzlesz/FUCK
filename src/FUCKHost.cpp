@@ -256,7 +256,7 @@ namespace FUCK::Host
 	static void LoadTranslation_Impl(const char* n) { Translation::Manager::GetSingleton()->LoadCustomTranslation(n); }
 	static const char* GetTranslation_Impl(const char* k) { return Translation::Manager::GetSingleton()->GetTranslation(k); }
 	static void SanitizePath_Impl(char* dest, const char* source, size_t size) { Utils::SanitizePath(dest, source, size); }
-	static void LoadPluginINI_Impl(const wchar_t* defaultPath, const wchar_t* userPath, void* userdata, void (*callback)(CSimpleIniA&, void*))
+	static void LoadPluginINI_Impl(const char* defaultPath, const char* userPath, void* userdata, void (*callback)(CSimpleIniA&, void*))
 	{
 		if (!callback)
 			return;
@@ -265,7 +265,7 @@ namespace FUCK::Host
 		});
 	}
 
-	static void SavePluginINI_Impl(const wchar_t* userPath, void* userdata, void (*callback)(CSimpleIniA&, void*))
+	static void SavePluginINI_Impl(const char* userPath, void* userdata, void (*callback)(CSimpleIniA&, void*))
 	{
 		if (!callback)
 			return;

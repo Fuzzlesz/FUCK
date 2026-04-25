@@ -27,19 +27,27 @@ std::vector<std::string> Settings::GetConfigs(const std::filesystem::path& a_pat
 	return configs;
 }
 
-void Settings::LoadINI(const wchar_t* a_path, const INIFunc a_func, bool a_generate)
+void Settings::LoadINI(const char* a_path, const INIFunc a_func, bool a_generate)
 {
 	CSimpleIniA ini;
 	ini.SetUnicode();
 
 	std::filesystem::path p(a_path);
+
+	p.make_preferred();
 	auto pathStr = p.string();
 
 	if (a_generate) {
 		std::filesystem::create_directories(p.parent_path());
 	}
 
-	if (ini.LoadFile(pathStr.c_str()) >= SI_OK || a_generate) {
+	SI_Error rc = ini.LoadFile(pathStr.c_str());
+
+	if (rc >= SI_OK && !a_generate) {
+		logger::info("Loaded INI from {}", pathStr);
+	}
+
+	if (rc >= SI_OK || a_generate) {
 		a_func(ini);
 
 		if (a_generate) {
@@ -48,20 +56,23 @@ void Settings::LoadINI(const wchar_t* a_path, const INIFunc a_func, bool a_gener
 	}
 }
 
-void Settings::LoadINI(const wchar_t* a_defaultPath, const wchar_t* a_userPath, INIFunc a_func)
+void Settings::LoadINI(const char* a_defaultPath, const char* a_userPath, INIFunc a_func)
 {
 	LoadINI(a_defaultPath, a_func);
 	LoadINI(a_userPath, a_func);
 }
 
-void Settings::Load(FileType type, INIFunc a_func, bool) const
+void Settings::Load(FileType type, INIFunc a_func) const
 {
 	if (!a_func)
 		return;
 
 	switch (type) {
 	case FileType::kSettings:
-		LoadINI(defaultSettingsPath, userSettingsPath, a_func);
+		LoadINI(settingsPath, a_func);
+		break;
+	case FileType::kStyle:
+		LoadINI(stylePath, a_func);
 		break;
 	case FileType::kDisplayTweaks:
 		LoadINI(defaultDisplayTweaksPath, userDisplayTweaksPath, a_func);
@@ -71,16 +82,17 @@ void Settings::Load(FileType type, INIFunc a_func, bool) const
 	}
 }
 
-void Settings::Save(FileType type, INIFunc a_func, bool) const
+void Settings::Save(FileType type, INIFunc a_func) const
 {
 	if (!a_func)
 		return;
 
-	const bool forceGenerate = true;
-
 	switch (type) {
 	case FileType::kSettings:
-		LoadINI(userSettingsPath, a_func, forceGenerate);
+		LoadINI(settingsPath, a_func, true);
+		break;
+	case FileType::kStyle:
+		LoadINI(stylePath, a_func, true);
 		break;
 	default:
 		break;

@@ -222,8 +222,8 @@ struct FUCK_Interface
 	void (*LoadTranslation)(const char*);
 	const char* (*GetTranslation)(const char*);
 	void (*SanitizePath)(char*, const char*, size_t);
-	void (*LoadPluginINI)(const wchar_t*, const wchar_t*, void*, void (*)(CSimpleIniA&, void*));
-	void (*SavePluginINI)(const wchar_t*, void*, void (*)(CSimpleIniA&, void*));
+	void (*LoadPluginINI)(const char*, const char*, void*, void (*)(CSimpleIniA&, void*));
+	void (*SavePluginINI)(const char*, void*, void (*)(CSimpleIniA&, void*));
 	void (*PushItemFlag)(FUCK::ItemFlags, bool);
 	void (*PopItemFlag)();
 	void (*HelpMarker)(const char*);
@@ -1185,7 +1185,7 @@ namespace FUCK
 	class PluginSettings
 	{
 	public:
-		PluginSettings(const wchar_t* a_defaultPath, const wchar_t* a_userPath) :
+		PluginSettings(const char* a_defaultPath, const char* a_userPath) :
 			_defaultPath(a_defaultPath), _userPath(a_userPath) {}
 		using INIFunc = std::function<void(CSimpleIniA&)>;
 
@@ -1205,8 +1205,8 @@ namespace FUCK
 		}
 
 	private:
-		const wchar_t* _defaultPath;
-		const wchar_t* _userPath;
+		const char* _defaultPath;
+		const char* _userPath;
 	};
 
 	/// @brief RAII Wrapper for listening to Skyrim UI Menu events.
