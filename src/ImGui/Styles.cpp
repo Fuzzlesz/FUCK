@@ -172,6 +172,11 @@ namespace ImGui
 	{
 		if (cachedPresets.empty()) {
 			cachedPresets = Settings::GetConfigs(Settings::GetSingleton()->GetPresetsPath());
+			static bool logged = false;
+			if (!logged) {
+				logger::info("Found [{}] style presets.", cachedPresets.size());
+				logged = true;
+			}
 		}
 		return cachedPresets;
 	}
@@ -189,11 +194,10 @@ namespace ImGui
 	void Styles::ResetToDefaults(bool a_saveToIni)
 	{
 		user = def;
-		currentPresetName = "";
-
 		if (a_saveToIni) {
-			Settings::GetSingleton()->Save(FileType::kSettings, [](auto& sIni) {
-				sIni.SetValue("Settings", "sLastPreset", "");
+			currentPresetName = "";
+			Settings::GetSingleton()->Save(FileType::kStyle, [](auto& sIni) {
+				sIni.SetValue("Style", "sLastPreset", "");
 			});
 		}
 
@@ -205,14 +209,16 @@ namespace ImGui
 	void Styles::LoadStyles()
 	{
 		std::string lastPreset = "";
-		Settings::GetSingleton()->Load(FileType::kSettings, [&](auto& ini) {
-			lastPreset = ini.GetValue("Settings", "sLastPreset", "");
+		Settings::GetSingleton()->Load(FileType::kStyle, [&](auto& ini) {
+			lastPreset = ini.GetValue("Style", "sLastPreset", "");
 		});
 
 		ResetToDefaults(false);
 
+		GetPresets();
+
 		if (!lastPreset.empty()) {
-			LoadPreset(lastPreset);
+			LoadPreset(lastPreset, false);
 		}
 
 		if (currentFont.empty()) {
@@ -240,14 +246,14 @@ namespace ImGui
 		ini.SetValue("Font", "sFontName", currentFont.c_str());
 		if (ini.SaveFile(p.string().c_str()) >= 0) {
 			currentPresetName = filename;
-			Settings::GetSingleton()->Save(FileType::kSettings, [this](auto& sIni) {
-				sIni.SetValue("Settings", "sLastPreset", currentPresetName.c_str());
+			Settings::GetSingleton()->Save(FileType::kStyle, [this](auto& sIni) {
+				sIni.SetValue("Style", "sLastPreset", currentPresetName.c_str());
 			});
 			cachedPresets.clear();
 		}
 	}
 
-	void Styles::LoadPreset(const std::string& a_name)
+	void Styles::LoadPreset(const std::string& a_name, bool a_saveToIni)
 	{
 		std::filesystem::path p(Settings::GetSingleton()->GetPresetsPath());
 		p /= a_name;
@@ -255,16 +261,25 @@ namespace ImGui
 		ini.SetUnicode();
 		if (ini.LoadFile(p.string().c_str()) < 0)
 			return;
+
+		logger::info("Loaded style preset: {}", a_name);
+
 		user = def;
 		LoadStylesFromIni(ini);
 		const char* fontName = ini.GetValue("Font", "sFontName");
 		if (fontName && *fontName)
 			SetCurrentFont(fontName);
 		MANAGER(IconFont)->LoadSettings(ini);
-		currentPresetName = a_name;
-		Settings::GetSingleton()->Save(FileType::kSettings, [this](auto& sIni) {
-			sIni.SetValue("Settings", "sLastPreset", currentPresetName.c_str());
-		});
+
+		if (currentPresetName != a_name) {
+			currentPresetName = a_name;
+			if (a_saveToIni) {
+				Settings::GetSingleton()->Save(FileType::kStyle, [this](auto& sIni) {
+					sIni.SetValue("Style", "sLastPreset", currentPresetName.c_str());
+				});
+			}
+		}
+
 		RefreshStyle();
 		MANAGER(IconFont)->ReloadFonts();
 	}
@@ -298,8 +313,8 @@ namespace ImGui
 
 		if (currentPresetName == filename || currentPresetName == a_name) {
 			currentPresetName = "";
-			Settings::GetSingleton()->Save(FileType::kSettings, [](auto& sIni) {
-				sIni.SetValue("Settings", "sLastPreset", "");
+			Settings::GetSingleton()->Save(FileType::kStyle, [](auto& sIni) {
+				sIni.SetValue("Style", "sLastPreset", "");
 			});
 		}
 	}

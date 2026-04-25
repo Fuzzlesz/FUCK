@@ -145,7 +145,7 @@ namespace ImGui
 		void ResetToDefaults(bool a_saveToIni = true);
 		void LoadStyles();
 		void SavePreset(const std::string& a_name);
-		void LoadPreset(const std::string& a_name);
+		void LoadPreset(const std::string& a_name, bool a_saveToIni = true);
 		void DeletePreset(const std::string& a_name);
 		std::string GetCurrentPresetName() const { return currentPresetName; }
 

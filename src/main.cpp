@@ -114,8 +114,6 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 		FUCKMan::GetSingleton()->LoadSettings(ini);
 	});
 
-	ImGui::Styles::GetSingleton()->LoadStyles();
-
 	SKSE::AllocTrampoline(14 * 3);
 	Hooks::Install();
 	ImGui::Renderer::Install();

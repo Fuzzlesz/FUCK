@@ -43,15 +43,18 @@ void ThemeEditorWindow::Draw()
 		FUCK::Spacing();
 
 		static char presetNameBuf[64] = "";
-		static std::string lastSeenPreset = "";
+		static std::string lastSeenPreset = "\xFF";
 
 		// Auto-fill the text box if the user selected a new preset from the Settings tab
 		std::string activePreset = style->GetCurrentPresetName();
 		if (activePreset != lastSeenPreset) {
 			lastSeenPreset = activePreset;
 			std::string display = activePreset;
-			if (display.ends_with(".ini"))
+			if (display.empty()) {
+				display = "MyNewPreset";
+			} else if (display.ends_with(".ini")) {
 				display = display.substr(0, display.length() - 4);
+			}
 			strncpy_s(presetNameBuf, display.c_str(), sizeof(presetNameBuf));
 		}
 
