@@ -719,10 +719,6 @@ void FUCKMan::Draw()
 			}
 
 			if (FUCK::BeginWindow(title, &open, flags)) {
-				if (!isCollapsed) {
-					winState.preCollapseSize = FUCK::GetWindowSize();
-				}
-
 				win->UpdateState(FUCK::GetWindowPos(), FUCK::GetWindowSize());
 
 				if (win->GetFlags() & FUCK::WindowFlags::kExtendBorder)
@@ -743,6 +739,9 @@ void FUCKMan::Draw()
 					if (iconArrow) {
 						if (ImGui::InvisibleButton("##CollapseToggle", ImVec2(m.titleH + 20.0f, m.titleH))) {
 							winState.isCollapsed = !isCollapsed;
+							if (!isCollapsed) {
+								winState.preCollapseSize = FUCK::GetWindowSize();
+							}
 						}
 						bool isHovered = ImGui::IsItemHovered();
 						ImU32 iconColor = isHovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
@@ -808,6 +807,9 @@ void FUCKMan::Draw()
 					if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && !ImGui::IsAnyItemHovered()) {
 						if (ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly)) {
 							winState.isCollapsed = !isCollapsed;
+							if (!isCollapsed) {
+								winState.preCollapseSize = FUCK::GetWindowSize();
+							}
 						}
 					}
 
