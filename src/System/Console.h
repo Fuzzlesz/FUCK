@@ -25,7 +25,7 @@ namespace Console
 				function->executeFunction = &T::Execute;
 				function->conditionFunction = nullptr;
 
-				logger::info("Installed {} console command", T::LONG_NAME);
+				logger::info("Installed \"fuck\" console command.", T::LONG_NAME);
 			}
 		}
 	};

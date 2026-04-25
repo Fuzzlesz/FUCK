@@ -13,8 +13,6 @@
 
 				if (disableGlobal) {
 					logger::info("Compat: Obtained ImmersiveHUD Control Global (0xDDD)");
-				} else {
-					logger::info("Compat: ImmersiveHUD not installed or global not found.");
 				}
 			}
 		}

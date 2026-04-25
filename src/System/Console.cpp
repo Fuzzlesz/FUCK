@@ -33,7 +33,6 @@ namespace Console
 
 	void Install()
 	{
-		logger::info("{:*^30}", "CONSOLE COMMANDS");
 		ConsoleCommandHandler<StartFUCK>::Install();
 	}
 }
