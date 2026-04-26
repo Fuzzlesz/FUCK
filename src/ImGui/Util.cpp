@@ -237,7 +237,7 @@ namespace ImGui
 		if (align.y > 0.0f)
 			pos.y = ImMax(pos.y, pos.y + (max.y - pos.y - texture_size.y) * align.y);
 
-		GetCurrentWindow()->DrawList->AddImage((ImU64)texID, pos, pos + texture_size, ImVec2(0, 0), ImVec2(1, 1), color);
+		GetCurrentWindow()->DrawList->AddImage(reinterpret_cast<ImTextureID>(texID), pos, pos + texture_size, ImVec2(0, 0), ImVec2(1, 1), color);
 
 		return MANAGER(Input)->CanNavigateWithMouse() ? IsMouseHoveringRect(pos, pos + texture_size) && IsMouseClicked(0) && (GetItemFlags() & ImGuiItemFlags_Disabled) == 0 : false;
 	}

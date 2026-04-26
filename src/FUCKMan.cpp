@@ -256,7 +256,7 @@ void FUCKMan::SaveSettings(CSimpleIniA& a_ini)
 	a_ini.SetDoubleValue("Window", "Y", _windowPos.y);
 	a_ini.SetDoubleValue("Window", "Width", _windowSize.x);
 	a_ini.SetDoubleValue("Window", "Height", _windowSize.y);
-	a_ini.SetLongValue("Settings", "iGlobalPauseType", (int)_globalPauseType);
+	a_ini.SetLongValue("Settings", "iGlobalPauseType", static_cast<long>(_globalPauseType));
 	a_ini.SetDoubleValue("Settings", "fUserScale", _userScale);
 	a_ini.SetBoolValue("Settings", "bSidebarOnRight", _sidebarOnRight);
 	a_ini.SetBoolValue("Settings", "bInjectSystemMenu", _injectSystemMenu);

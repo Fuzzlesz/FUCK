@@ -116,11 +116,11 @@ void SettingsTool::Draw()
 				}
 			}
 
-			if (FUCK::Combo("$FUCK_Styles_SelectPreset"_T, &currentIdx, comboItems.data(), (int)comboItems.size())) {
+			if (FUCK::Combo("$FUCK_Styles_SelectPreset"_T, &currentIdx, comboItems.data(), static_cast<int>(comboItems.size()))) {
 				if (currentIdx == 0) {
 					// User selected "----" -> Reset
 					style->ResetToDefaults();
-				} else if (currentIdx > 0 && currentIdx <= presets.size()) {
+				} else if (currentIdx > 0 && currentIdx <= static_cast<int>(presets.size())) {
 					// User selected a file
 					style->LoadPreset(presets[currentIdx - 1]);
 				}

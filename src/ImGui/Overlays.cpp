@@ -81,9 +81,9 @@ namespace ImGui
 			dl->AddLine(p1, p2, col, thick);
 		}
 
-		int linesY = (int)ceilf(radius / stepY);
+		int linesY = static_cast<int>(ceilf(radius / stepY));
 		for (int i = -linesY - 1; i <= linesY + 1; ++i) {
-			float y = (float)i * stepY;
+			float y = static_cast<float>(i) * stepY;
 
 			ImVec2 p1 = transform(-radius, y);
 			ImVec2 p2 = transform(radius, y);
@@ -104,10 +104,10 @@ namespace ImGui
 
 		float crossSize = 10.0f * std::max(1.0f, thick * 0.5f);
 
-		for (int i = 1; i <= (int)countX; ++i) {
-			for (int j = 1; j <= (int)countY; ++j) {
-				float cx = i * stepX;
-				float cy = j * stepY;
+		for (int i = 1; i <= static_cast<int>(countX); ++i) {
+			for (int j = 1; j <= static_cast<int>(countY); ++j) {
+				float cx = static_cast<float>(i) * stepX;
+				float cy = static_cast<float>(j) * stepY;
 				dl->AddLine({ cx - crossSize, cy }, { cx + crossSize, cy }, col, thick);
 				dl->AddLine({ cx, cy - crossSize }, { cx, cy + crossSize }, col, thick);
 			}

@@ -886,8 +886,8 @@ namespace FUCK
 			i->TextUnformatted(text, text_end);
 	}
 
-	inline bool ButtonIconWithLabel(const char* label, ImTextureID textureID, const ImVec2& size, bool alignFar = true, bool labelLeft = true) { return GetInterface() ? GetInterface()->ButtonIconWithLabel(label, (void*)textureID, size.x, size.y, alignFar, labelLeft) : false; }
-	inline bool ImageButton(const char* str_id, ImTextureID user_texture_id, const ImVec2& image_size, const ImVec4* tint = nullptr) { return GetInterface() ? GetInterface()->ImageButton(str_id, (void*)user_texture_id, image_size.x, image_size.y, tint) : false; }
+	inline bool ButtonIconWithLabel(const char* label, ImTextureID textureID, const ImVec2& size, bool alignFar = true, bool labelLeft = true) { return GetInterface() ? GetInterface()->ButtonIconWithLabel(label, reinterpret_cast<void*>(textureID), size.x, size.y, alignFar, labelLeft) : false; }
+	inline bool ImageButton(const char* str_id, ImTextureID user_texture_id, const ImVec2& image_size, const ImVec4* tint = nullptr) { return GetInterface() ? GetInterface()->ImageButton(str_id, reinterpret_cast<void*>(user_texture_id), image_size.x, image_size.y, tint) : false; }
 	inline void Stepper(const char* label, const char* text, bool* outLeft, bool* outRight)
 	{
 		if (auto i = GetInterface())
@@ -1012,9 +1012,9 @@ namespace FUCK
 		if (auto i = GetInterface()) {
 			if (outSize)
 				i->GetIconSizeForKey(key, &outSize->x, &outSize->y);
-			return (ImTextureID)i->GetIconForKey(key);
+			return reinterpret_cast<ImTextureID>(i->GetIconForKey(key));
 		}
-		return (ImTextureID)0;
+		return static_cast<ImTextureID>(0);
 	}
 	inline void Spinner(const char* label, float radius, float thickness, const ImVec4& color)
 	{
@@ -1458,16 +1458,16 @@ namespace FUCK
 		int idx = static_cast<int>(*current_val);
 		if (idx < 0)
 			idx = 0;
-		if (idx >= (int)items.size())
-			idx = (int)items.size() - 1;
+		if (idx >= static_cast<int>(items.size()))
+			idx = static_cast<int>(items.size()) - 1;
 		bool l = false, r = false;
 		Stepper(label, Translate(items[idx].c_str()), &l, &r);
 		if (l) {
-			*current_val = static_cast<T>((idx - 1 + (int)items.size()) % (int)items.size());
+			*current_val = static_cast<T>((idx - 1 + static_cast<int>(items.size())) % static_cast<int>(items.size()));
 			return true;
 		}
 		if (r) {
-			*current_val = static_cast<T>((idx + 1) % (int)items.size());
+			*current_val = static_cast<T>((idx + 1) % static_cast<int>(items.size()));
 			return true;
 		}
 		return false;

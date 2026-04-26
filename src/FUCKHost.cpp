@@ -464,17 +464,17 @@ namespace FUCK::Host
 	static void DrawImage_Impl(void* tex, const ImVec2& s, const ImVec2& u0, const ImVec2& u1, const ImVec4& tint)
 	{
 		if (auto srv = GetSRV(tex))
-			ImGui::ImageWithBg((ImTextureID)srv, s, u0, u1, ImVec4(0, 0, 0, 0), tint);
+			ImGui::ImageWithBg(reinterpret_cast<ImTextureID>(srv), s, u0, u1, ImVec4(0, 0, 0, 0), tint);
 	}
 	static void AddImage_Impl(void* tex, const ImVec2& min, const ImVec2& max, const ImVec2& u0, const ImVec2& u1, const ImVec4& col)
 	{
 		if (auto srv = GetSRV(tex))
-			ImGui::GetWindowDrawList()->AddImage((ImTextureID)srv, min, max, u0, u1, ImGui::ColorConvertFloat4ToU32(col));
+			ImGui::GetWindowDrawList()->AddImage(reinterpret_cast<ImTextureID>(srv), min, max, u0, u1, ImGui::ColorConvertFloat4ToU32(col));
 	}
 	static void DrawBackgroundImage_Impl(void* tex, float alpha)
 	{
 		if (auto srv = GetSRV(tex))
-			ImGui::GetBackgroundDrawList()->AddImage((ImTextureID)srv, { 0, 0 }, ImGui::GetIO().DisplaySize, { 0, 0 }, { 1, 1 }, IM_COL32(255, 255, 255, static_cast<int>(alpha * 255)));
+			ImGui::GetBackgroundDrawList()->AddImage(reinterpret_cast<ImTextureID>(srv), { 0, 0 }, ImGui::GetIO().DisplaySize, { 0, 0 }, { 1, 1 }, IM_COL32(255, 255, 255, static_cast<int>(alpha * 255)));
 	}
 	static void DrawBackgroundLine_Impl(float x1, float y1, float x2, float y2, unsigned int col, float t) { ImGui::GetBackgroundDrawList()->AddLine({ x1, y1 }, { x2, y2 }, col, t); }
 	static void DrawBackgroundRect_Impl(const ImVec2& min, const ImVec2& max, ImU32 col, float thickness) { ImGui::GetBackgroundDrawList()->AddRect(min, max, col, 0.0f, 0, thickness); }
@@ -553,7 +553,7 @@ namespace FUCK::Host
 		for (int i = 0; i < items_count; ++i) vecItems.emplace_back(items[i]);
 		return ImGui::ComboWithFilter(label, current_item, vecItems, popup_max_height);
 	}
-	static bool ComboForm_Impl(const char* label, std::uint32_t* id, std::uint8_t t) { return ImGui::ComboForm(label, (RE::FormID*)id, (RE::FormType)t); }
+	static bool ComboForm_Impl(const char* label, std::uint32_t* id, std::uint8_t t) { return ImGui::ComboForm(label, reinterpret_cast<RE::FormID*>(id), static_cast<RE::FormType>(t)); }
 	static bool Selectable_Impl(const char* label, bool selected, int flags, const ImVec2& size) { return ImGui::SelectableStyled(label, selected, flags, size); }
 	static void Header_Impl(const char* label) { ImGui::Header(label); }
 	static void LeftLabel_Impl(const char* label) { ImGui::LeftAlignedTextImpl(label); }
@@ -578,13 +578,13 @@ namespace FUCK::Host
 	{
 		ImVec2 size(x, y);
 		if (auto srv = GetSRV(tex))
-			return ImGui::ButtonIconWithLabelStyled(label, (void*)srv, size, alignFar, labelLeft);
+			return ImGui::ButtonIconWithLabelStyled(label, reinterpret_cast<void*>(srv), size, alignFar, labelLeft);
 		return false;
 	}
 	static bool ImageButton_Impl(const char* str_id, void* user_texture_id, float x, float y, const ImVec4* tint)
 	{
 		if (auto srv = GetSRV(user_texture_id))
-			return ImGui::ImageButton(str_id, (ImTextureID)srv, ImVec2(x, y), ImVec2(0, 0), ImVec2(1, 1), ImVec4(0, 0, 0, 0), tint ? *tint : ImVec4(1, 1, 1, 1));
+			return ImGui::ImageButton(str_id, reinterpret_cast<ImTextureID>(srv), ImVec2(x, y), ImVec2(0, 0), ImVec2(1, 1), ImVec4(0, 0, 0, 0), tint ? *tint : ImVec4(1, 1, 1, 1));
 		return false;
 	}
 	static void Stepper_Impl(const char* label, const char* text, bool* outLeft, bool* outRight) { ImGui::Stepper(label, text, outLeft, outRight); }

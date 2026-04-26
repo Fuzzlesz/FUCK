@@ -25,20 +25,20 @@
 
 		if (direction == IconDirection::kRight) {
 			// Normal (>): UVs {0,0} -> {1,1}
-			drawList->AddImage((ImTextureID)iconArrow->srView.Get(), p_min, p_max, { 0, 0 }, { 1, 1 }, color);
+			drawList->AddImage( reinterpret_cast<ImTextureID>(iconArrow->srView.Get()), p_min, p_max, { 0, 0 }, { 1, 1 }, color);
 		} else if (direction == IconDirection::kDown) {
 			// Rotate 90 CW (v): UVs {0,1}, {0,0}, {1,0}, {1,1}
-			drawList->AddImageQuad((ImTextureID)iconArrow->srView.Get(),
+			drawList->AddImageQuad(reinterpret_cast<ImTextureID>(iconArrow->srView.Get()),
 				p_min, { p_max.x, p_min.y }, p_max, { p_min.x, p_max.y },
 				{ 0, 1 }, { 0, 0 }, { 1, 0 }, { 1, 1 }, color);
 		} else if (direction == IconDirection::kLeft) {
 			// Mirror Horizontal (<): Swap U {1,0} -> {0,0}
-			drawList->AddImageQuad((ImTextureID)iconArrow->srView.Get(),
+			drawList->AddImageQuad(reinterpret_cast<ImTextureID>(iconArrow->srView.Get()),
 				p_min, { p_max.x, p_min.y }, p_max, { p_min.x, p_max.y },
 				{ 1, 0 }, { 0, 0 }, { 0, 1 }, { 1, 1 }, color);
 		} else if (direction == IconDirection::kUp) {
 			// Rotate 270 CW / 90 CCW (^): UVs {1,0}, {1,1}, {0,1}, {0,0}
-			drawList->AddImageQuad((ImTextureID)iconArrow->srView.Get(),
+			drawList->AddImageQuad(reinterpret_cast<ImTextureID>(iconArrow->srView.Get()),
 				p_min, { p_max.x, p_min.y }, p_max, { p_min.x, p_max.y },
 				{ 1, 0 }, { 1, 1 }, { 0, 1 }, { 0, 0 }, color);
 		}
@@ -114,7 +114,7 @@ namespace
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, { 0, 0, 0, 0 });
 		ImGui::PushStyleColor(ImGuiCol_Border, { 0, 0, 0, 0 });
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0, 0 });
-		bool result = ImGui::ImageButton(id, (ImTextureID)tex, size, { 0, 0 }, { 1, 1 }, { 0, 0, 0, 0 }, tint);
+		bool result = ImGui::ImageButton(id, reinterpret_cast<ImTextureID>(tex), size, { 0, 0 }, { 1, 1 }, { 0, 0, 0, 0 }, tint);
 		ImGui::PopStyleVar();
 		ImGui::PopStyleColor(4);
 		return result;
@@ -239,8 +239,8 @@ namespace ImGui
 		auto DrawContent = [&]() {
 			ImVec2 p = ImGui::GetCursorScreenPos();
 			bool h = ImGui::IsMouseHoveringRect(p, p + icon->size) || IsWidgetFocused(ImGui::GetID(idStr.c_str()));
-			ImTextureID tex = (ImTextureID)(*a_toggle ? iconFilled->srView.Get() : icon->srView.Get());
-			if (DrawTransparentButton(idStr.c_str(), (void*)tex, icon->size, GetHighlightTint(*a_toggle, h, false))) {
+			void* tex = *a_toggle ? iconFilled->srView.Get() : icon->srView.Get();
+			if (DrawTransparentButton(idStr.c_str(), tex, icon->size, GetHighlightTint(*a_toggle, h, false))) {
 				*a_toggle = !*a_toggle;
 				selected = true;
 			}
@@ -388,7 +388,7 @@ namespace ImGui
 			SetNextWindowSizeConstraints({ width, 0.0f }, { width, constraintH });
 		}
 
-		const char* preview = (*current_item >= 0 && *current_item < (int)items.size()) ? items[*current_item].c_str() : "";
+		const char* preview = (*current_item >= 0 && *current_item < static_cast<int>(items.size())) ? items[*current_item].c_str() : "";
 
 		ImVec4 textBoxColor = GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox);
 		PushStyleColor(ImGuiCol_FrameBg, textBoxColor);
@@ -443,7 +443,7 @@ namespace ImGui
 		std::vector<std::pair<int, double>> itemScoreVector;
 		bool filtering = states[id].pattern[0] != '\0';
 		if (filtering) {
-			for (int i = 0; i < (int)items.size(); i++) {
+			for (int i = 0; i < static_cast<int>(items.size()); i++) {
 				auto score = rapidfuzz::fuzz::partial_token_ratio(states[id].pattern, items[i].c_str());
 				if (score >= 65.0)
 					itemScoreVector.push_back({ i, score });
@@ -452,7 +452,7 @@ namespace ImGui
 		}
 
 		bool changed = false;
-		int show_count = filtering ? (int)itemScoreVector.size() : (int)items.size();
+		int show_count = filtering ? static_cast<int>(itemScoreVector.size()) : static_cast<int>(items.size());
 
 		// Calculate height for list
 		int heightInItems = show_count;
@@ -812,7 +812,7 @@ namespace ImGui
 						tint = GetHighlightTint(true, isHovered, false);
 					}
 
-					if (DrawTransparentButton(std::format("##{}", item.idSuffix).c_str(), (void*)item.icon->srView.Get(), item.size, tint)) {
+					if (DrawTransparentButton(std::format("##{}", item.idSuffix).c_str(), item.icon->srView.Get(), item.size, tint)) {
 						clicked = true;
 					}
 				} else {
