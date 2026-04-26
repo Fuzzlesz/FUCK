@@ -94,6 +94,7 @@ private:
 	std::vector<MenuListenerEntry> _menuListeners;
 	std::vector<FUCK::ITool*> _tools;
 	std::vector<FUCK::IWindow*> _windows;
+	std::vector<FUCK::IWindow*> _suspendedWindows;
 
 	FUCK::ITool* _activeTool = nullptr;
 	bool _isOpen = false;

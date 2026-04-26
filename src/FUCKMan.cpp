@@ -102,6 +102,9 @@ void FUCKMan::UnregisterWindow(FUCK::IWindow* a_window)
 		// Remove from render list
 		_windows.erase(it);
 	}
+
+	// Clean up from suspended windows
+	std::erase(_suspendedWindows, a_window);
 }
 
 // ==========================================
@@ -465,19 +468,19 @@ RE::BSEventNotifyControl FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_e
 
 	DispatchMenuEvent(a_event->menuName.c_str(), a_event->opening);
 
+	// Auto-Close list
+	static const std::vector<std::string> closeOnOpen = {
+		RE::Console::MENU_NAME.data(), RE::ContainerMenu::MENU_NAME.data(),
+		RE::JournalMenu::MENU_NAME.data(), RE::InventoryMenu::MENU_NAME.data(),
+		RE::MapMenu::MENU_NAME.data(), RE::DialogueMenu::MENU_NAME.data(),
+		RE::MagicMenu::MENU_NAME.data(), RE::StatsMenu::MENU_NAME.data(),
+		RE::TweenMenu::MENU_NAME.data(), RE::FavoritesMenu::MENU_NAME.data()
+	};
+
 	if (a_event->opening) {
 		if (a_event->menuName == RE::MainMenu::MENU_NAME) {
 			ImGui::ClearFormCaches();
 		}
-
-		// Auto-Close list
-		static const std::vector<std::string> closeOnOpen = {
-			RE::Console::MENU_NAME.data(), RE::ContainerMenu::MENU_NAME.data(),
-			RE::JournalMenu::MENU_NAME.data(), RE::InventoryMenu::MENU_NAME.data(),
-			RE::MapMenu::MENU_NAME.data(), RE::DialogueMenu::MENU_NAME.data(),
-			RE::MagicMenu::MENU_NAME.data(), RE::StatsMenu::MENU_NAME.data(),
-			RE::TweenMenu::MENU_NAME.data(), RE::FavoritesMenu::MENU_NAME.data()
-		};
 
 		if (std::ranges::find(closeOnOpen, a_event->menuName.data()) != closeOnOpen.end()) {
 			bool closedSomething = false;
@@ -490,6 +493,7 @@ RE::BSEventNotifyControl FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_e
 			for (auto* win : _windows) {
 				if (win->IsOpen() && (win->GetFlags() & FUCK::WindowFlags::kCloseOnGameMenu)) {
 					win->SetOpen(false);
+					_suspendedWindows.push_back(win);  // Track the suspended window
 					closedSomething = true;
 				}
 			}
@@ -497,6 +501,26 @@ RE::BSEventNotifyControl FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_e
 			if (closedSomething) {
 				UpdateGameState();
 				ImGui::ClearNavState();
+			}
+		}
+	} else {
+		if (std::ranges::find(closeOnOpen, a_event->menuName.data()) != closeOnOpen.end()) {
+			bool anyOpen = false;
+			if (auto ui = RE::UI::GetSingleton()) {
+				for (const auto& m : closeOnOpen) {
+					if (ui->IsMenuOpen(m)) {
+						anyOpen = true;
+						break;
+					}
+				}
+			}
+
+			if (!anyOpen && !_suspendedWindows.empty()) {
+				for (auto* win : _suspendedWindows) {
+					win->SetOpen(true);
+				}
+				_suspendedWindows.clear();
+				UpdateGameState();
 			}
 		}
 	}
