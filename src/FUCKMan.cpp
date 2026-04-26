@@ -716,15 +716,18 @@ void FUCKMan::Draw()
 				FUCK::SetNextWindowPos(defPos, ImGuiCond_FirstUseEver);
 			}
 
-			// Set size
-			FUCK::SetNextWindowSize(targetSize, isCollapsed || wasCollapsed ? ImGuiCond_Always : ImGuiCond_FirstUseEver);
+			// NoDecoration windows must auto-update their size dynamically since they lack resize grips
+			ImGuiCond sizeCond = (isCollapsed || wasCollapsed || noDecoration) ? ImGuiCond_Always : ImGuiCond_FirstUseEver;
+			FUCK::SetNextWindowSize(targetSize, sizeCond);
 
 			bool open = true;
 
 			if (!noDecoration) {
 				FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 			} else {
-				FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase, m.padBase));
+				// Drop padding to 0 if the window is frameless/background-less
+				bool noBackground = (win->GetFlags() & FUCK::WindowFlags::kNoBackground) != 0;
+				FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, noBackground ? ImVec2(0, 0) : ImVec2(m.padBase, m.padBase));
 			}
 
 			if (FUCK::BeginWindow(title, &open, flags)) {
