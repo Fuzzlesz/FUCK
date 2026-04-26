@@ -1451,17 +1451,23 @@ namespace FUCK
 	}
 
 	template <typename T>
-	bool EnumStepper(const char* label, T* current_val, const std::vector<std::string>& items)
+	bool EnumStepper(const char* label, T* current_val, const std::vector<std::string>& items, bool a_translate = true)
 	{
 		if (items.empty())
 			return false;
+
 		int idx = static_cast<int>(*current_val);
 		if (idx < 0)
 			idx = 0;
 		if (idx >= static_cast<int>(items.size()))
 			idx = static_cast<int>(items.size()) - 1;
+
 		bool l = false, r = false;
-		Stepper(label, Translate(items[idx].c_str()), &l, &r);
+
+		const char* displayText = a_translate ? Translate(items[idx].c_str()) : items[idx].c_str();
+
+		Stepper(label, displayText, &l, &r);
+
 		if (l) {
 			*current_val = static_cast<T>((idx - 1 + static_cast<int>(items.size())) % static_cast<int>(items.size()));
 			return true;
@@ -1471,34 +1477,6 @@ namespace FUCK
 			return true;
 		}
 		return false;
-	}
-
-	template <class E>
-	bool EnumSlider(const char* label, E* index, const std::vector<std::string>& enum_names, bool a_translate = true)
-	{
-		bool value_changed = false;
-		std::size_t uIndex = (std::is_enum_v<E>) ? static_cast<std::size_t>(*index) : *index;
-		LeftLabel(label);
-		std::string centerText = a_translate ? std::string(Translate(enum_names[uIndex].c_str())) : enum_names[uIndex];
-		bool hovered, clickedLeft, clickedRight;
-		if (auto i = GetInterface())
-			i->CenteredTextWithArrows(label, centerText.c_str(), &hovered, &clickedLeft, &clickedRight);
-		else
-			return false;
-
-		if (hovered || IsWidgetFocused(label)) {
-			const bool pL = clickedLeft || ImGui::IsKeyPressed(ImGuiKey_LeftArrow) || ImGui::IsKeyPressed(ImGuiKey_GamepadDpadLeft);
-			const bool pR = clickedRight || ImGui::IsKeyPressed(ImGuiKey_RightArrow) || ImGui::IsKeyPressed(ImGuiKey_GamepadDpadRight);
-			if (pL)
-				uIndex = (uIndex - 1 + enum_names.size()) % enum_names.size();
-			if (pR)
-				uIndex = (uIndex + 1) % enum_names.size();
-			if (pL || pR) {
-				value_changed = true;
-				*index = static_cast<E>(uIndex);
-			}
-		}
-		return value_changed;
 	}
 }  // namespace FUCK
 

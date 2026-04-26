@@ -119,32 +119,6 @@ namespace ImGui
 	void DrawTabBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered);
 	inline void LeftLabel(const char* label) { LeftAlignedTextImpl(label); }
 
-	// Templates
-	template <class E>
-	bool EnumSlider(const char* label, E* index, const std::ranges::random_access_range auto& a_enum, bool a_translate = true)
-	{
-		bool value_changed = false;
-		std::size_t uIndex = (std::is_enum_v<E>) ? static_cast<std::size_t>(*index) : *index;
-
-		LeftLabel(label);
-		auto [hovered, clickedLeft, clickedRight] = CenteredTextWithArrows(label, a_translate ? TRANSLATE(a_enum[uIndex]) : a_enum[uIndex]);
-
-		if (hovered || IsWidgetFocused(label)) {
-			const bool pL = clickedLeft || IsKeyPressed(ImGuiKey_LeftArrow) || IsKeyPressed(ImGuiKey_GamepadDpadLeft);
-			const bool pR = clickedRight || IsKeyPressed(ImGuiKey_RightArrow) || IsKeyPressed(ImGuiKey_GamepadDpadRight);
-			if (pL)
-				uIndex = (uIndex - 1 + a_enum.size()) % a_enum.size();
-			if (pR)
-				uIndex = (uIndex + 1) % a_enum.size();
-			if (pL || pR) {
-				value_changed = true;
-				*index = static_cast<E>(uIndex);
-				RE::PlaySound("UIMenuPrevNext");
-			}
-		}
-		return value_changed;
-	}
-
 	bool DragScalarEx(const char* label, ImGuiDataType data_type, void* p_data, float v_speed, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags);
 	template <class T>
 	bool DragOnHover(const char* label, T* v, float v_speed = 1.0f, T v_min = 0, T v_max = 100, const char* format = nullptr, ImGuiSliderFlags flags = ImGuiSliderFlags_AlwaysClamp)
