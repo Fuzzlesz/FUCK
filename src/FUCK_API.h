@@ -45,6 +45,14 @@ namespace FUCK
 		kCancelled,
 	};
 
+	enum class EditorBoundsState
+	{
+		kLocked,    // Grey
+		kNormal,    // Purple
+		kSelected,  // Green
+		kHovered    // Bright Green
+	};
+
 	// --- Bitflags ---
 	enum class WindowFlags
 	{
@@ -1314,6 +1322,47 @@ namespace FUCK
 	// ------------------------------------------------------------------------
 	// Overloads & Templates
 	// ------------------------------------------------------------------------
+
+	/// @brief Standardized visual for UI widget editing. Handles both Screen-Space and Window-Space rendering.
+	inline void DrawEditorBounds(const ImVec2& min, const ImVec2& max, EditorBoundsState state = EditorBoundsState::kNormal, float thickness = 2.0f, bool screenSpace = false, const ImVec2* customAnchor = nullptr)
+	{
+		ImU32 boundsColor;
+		switch (state) {
+		case EditorBoundsState::kLocked:
+			boundsColor = IM_COL32(150, 150, 150, 150); // Grey
+			break;
+		case EditorBoundsState::kSelected:
+			boundsColor = IM_COL32(51, 204, 51, 255);   // Green
+			break;
+		case EditorBoundsState::kHovered:
+			boundsColor = IM_COL32(0, 255, 0, 255);     // Bright Green
+			break;	
+		case EditorBoundsState::kNormal:
+		default:
+			boundsColor = IM_COL32(204, 51, 255, 255);  // Purple
+			break;
+		}
+
+		if (screenSpace) {
+			DrawScreenRect(min, max, boundsColor, 0.0f, thickness);
+		} else {
+			ImVec4 colV4 = ImGui::ColorConvertU32ToFloat4(boundsColor);
+			DrawRect(min, max, colV4, 0.0f, thickness);
+		}
+
+		ImVec2 anchor = customAnchor ? *customAnchor : ImVec2(min.x + (max.x - min.x) * 0.5f, min.y + (max.y - min.y) * 0.5f);
+		float crossSize = 10.0f;
+		ImU32 anchorColor = IM_COL32(255, 0, 0, 204);
+
+		if (screenSpace) {
+			DrawScreenLine({ anchor.x - crossSize, anchor.y }, { anchor.x + crossSize, anchor.y }, anchorColor, 2.0f);
+			DrawScreenLine({ anchor.x, anchor.y - crossSize }, { anchor.x, anchor.y + crossSize }, anchorColor, 2.0f);
+		} else {
+			ImVec4 anchorV4 = ImGui::ColorConvertU32ToFloat4(anchorColor);
+			DrawLine({ anchor.x - crossSize, anchor.y }, { anchor.x + crossSize, anchor.y }, anchorV4, 2.0f);
+			DrawLine({ anchor.x, anchor.y - crossSize }, { anchor.x, anchor.y + crossSize }, anchorV4, 2.0f);
+		}
+	}
 
 	inline bool Combo(const char* label, int* current_item, const std::vector<std::string>& items)
 	{
