@@ -305,6 +305,7 @@ struct FUCK_Interface
 	// Drawing Primitives
 	void (*DrawRect)(const ImVec2&, const ImVec2&, const ImVec4&, float, float);
 	void (*DrawRectFilled)(const ImVec2&, const ImVec2&, const ImVec4&, float);
+	void (*DrawLine)(const ImVec2&, const ImVec2&, const ImVec4&, float);
 	void (*DrawImage)(void*, const ImVec2&, const ImVec2&, const ImVec2&, const ImVec4&);
 	void (*AddImage)(void*, const ImVec2&, const ImVec2&, const ImVec2&, const ImVec2&, const ImVec4&);
 	void (*DrawBackgroundImage)(void*, float);
@@ -1073,6 +1074,11 @@ namespace FUCK
 	{
 		if (auto i = GetInterface())
 			i->DrawRectFilled(min, max, col, rounding);
+	}
+	inline void DrawLine(const ImVec2& p1, const ImVec2& p2, const ImVec4& col, float thickness = 1.0f)
+	{
+		if (auto i = GetInterface())
+			i->DrawLine(p1, p2, col, thickness);
 	}
 	inline void DrawImage(ImTextureID textureId, const ImVec2& size, const ImVec2& uv0 = ImVec2(0, 0), const ImVec2& uv1 = ImVec2(1, 1), const ImVec4& tint_col = ImVec4(1, 1, 1, 1))
 	{

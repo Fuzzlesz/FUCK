@@ -476,6 +476,10 @@ namespace FUCK::Host
 	// ==========================================
 	static void DrawRect_Impl(const ImVec2& min, const ImVec2& max, const ImVec4& col, float r, float t) { ImGui::GetWindowDrawList()->AddRect(min, max, ImGui::ColorConvertFloat4ToU32(col), r, 0, t); }
 	static void DrawRectFilled_Impl(const ImVec2& min, const ImVec2& max, const ImVec4& col, float r) { ImGui::GetWindowDrawList()->AddRectFilled(min, max, ImGui::ColorConvertFloat4ToU32(col), r); }
+	static void DrawLine_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec4& col, float t)
+	{
+		ImGui::GetWindowDrawList()->AddLine(p1, p2, ImGui::ColorConvertFloat4ToU32(col), t);
+	}
 	static void DrawImage_Impl(void* tex, const ImVec2& s, const ImVec2& u0, const ImVec2& u1, const ImVec4& tint)
 	{
 		if (auto srv = GetSRV(tex))
@@ -728,6 +732,7 @@ namespace FUCK::Host
 			.SetItemDefaultFocus = SetItemDefaultFocus_Impl,
 			.DrawRect = DrawRect_Impl,
 			.DrawRectFilled = DrawRectFilled_Impl,
+			.DrawLine = DrawLine_Impl,
 			.DrawImage = DrawImage_Impl,
 			.AddImage = AddImage_Impl,
 			.DrawBackgroundImage = DrawBackgroundImage_Impl,
