@@ -1,7 +1,7 @@
 #pragma once
 
-#include "System/Hooks.h"
 #include "ImGui/Widgets.h"
+#include "System/Hooks.h"
 
 namespace ImGui
 {
@@ -18,6 +18,7 @@ namespace ImGui
 				edids.push_back(a_edid);
 			}
 		}
+
 		void UpdateValidForms(RE::Actor* a_actor = nullptr)
 		{
 			if (valid) {
@@ -38,6 +39,7 @@ namespace ImGui
 				}
 			}
 		}
+
 		void ResetIndex()
 		{
 			index = 0;
@@ -50,9 +52,21 @@ namespace ImGui
 				}
 			}
 		}
+
 		void SetValid(bool a_valid)
 		{
 			valid = a_valid;
+		}
+
+		bool Sync(RE::FormID a_formID)
+		{
+			for (size_t i = 0; i < edids.size(); ++i) {
+				if (edidForms[edids[i]]->GetFormID() == a_formID) {
+					index = static_cast<std::int32_t>(i);
+					return true;
+				}
+			}
+			return false;
 		}
 
 		T* GetComboWithFilterResult(RE::Actor* a_actor = nullptr)
@@ -107,11 +121,11 @@ namespace ImGui
 
 			const auto& formArray = dataHandler->GetFormArray(a_type);
 			for (auto* form : formArray) {
-				if (form) {
+				if (auto* typedForm = form->As<T>()) {
 					std::string edid = editorID::get_editorID(form);
 					if (edid.empty())
 						edid = std::format("0x{:X}", form->GetFormID());
-					AddForm(edid, static_cast<T*>(form));
+					AddForm(edid, typedForm);
 				}
 			}
 
@@ -140,6 +154,26 @@ namespace ImGui
 			for (auto& [modName, formData] : modNameForms) {
 				formData.ResetIndex();
 				formData.SetValid(false);
+			}
+		}
+
+		void Sync(RE::FormID a_formID)
+		{
+			if (a_formID == 0)
+				return;
+
+			// Check the currently active mod list first (fast path)
+			if (modNameForms[curMod].Sync(a_formID))
+				return;
+
+			// Otherwise, search all mod lists
+			for (size_t i = 0; i < modNames.size(); ++i) {
+				const auto& mod = modNames[i];
+				if (modNameForms[mod].Sync(a_formID)) {
+					index = static_cast<std::int32_t>(i);
+					curMod = mod;
+					return;
+				}
 			}
 		}
 

@@ -967,13 +967,27 @@ namespace ImGui
 
 	static Map<ImGuiID, FormComboBoxFiltered<RE::TESForm>> s_FormCaches;
 	void ClearFormCaches() { s_FormCaches.clear(); }
+
 	bool ComboForm(const char* label, RE::FormID* currentFormID, RE::FormType formType)
 	{
-		auto [it, inserted] = s_FormCaches.try_emplace(formType, label);
+		ImGuiID id = ImGui::GetID(label);
+		ImGuiID cacheKey = ImHashData(&formType, sizeof(formType), id);
+
+		auto [it, inserted] = s_FormCaches.try_emplace(cacheKey, label);
 		it->second.InitForms(formType);
+
+		if (currentFormID && *currentFormID != 0) {
+			it->second.Sync(*currentFormID);
+		}
+
 		bool changed = false;
 
-		it->second.GetFormResultFromCombo([&](RE::TESForm* form) { if (form) { *currentFormID = form->GetFormID(); changed = true; } });
+		it->second.GetFormResultFromCombo([&](RE::TESForm* form) {
+			if (form) {
+				*currentFormID = form->GetFormID();
+				changed = true;
+			}
+		});
 
 		return changed;
 	}
