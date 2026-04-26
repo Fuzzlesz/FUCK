@@ -104,7 +104,9 @@ namespace Hooks
 		auto* userEvents = RE::UserEvents::GetSingleton();
 		auto* manager = FUCKMan::GetSingleton();
 
-		const bool allowGameMenus = !manager->IsOpen() && manager->HasWindowWithFlag(FUCK::WindowFlags::kCloseOnGameMenu);
+		const bool allowGameMenus = !manager->IsOpen() &&
+		                            manager->HasWindowWithFlag(FUCK::WindowFlags::kCloseOnGameMenu) &&
+		                            !ImGui::GetIO().WantTextInput;
 
 		RE::InputEvent* head = nullptr;
 		RE::InputEvent* tail = nullptr;
