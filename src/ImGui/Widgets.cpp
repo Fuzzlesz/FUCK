@@ -375,7 +375,7 @@ namespace ImGui
 		{
 			char pattern[256] = { 0 };
 		};
-		static std::unordered_map<ImGuiID, State> states;
+		static Map<ImGuiID, State> states;
 		ImGuiID id = window->GetID(idStr.c_str());
 
 		if (popup_max_height_in_items == -1)
@@ -965,7 +965,7 @@ namespace ImGui
 		return changed;
 	}
 
-	static std::map<RE::FormType, FormComboBoxFiltered<RE::TESForm>> s_FormCaches;
+	static Map<ImGuiID, FormComboBoxFiltered<RE::TESForm>> s_FormCaches;
 	void ClearFormCaches() { s_FormCaches.clear(); }
 	bool ComboForm(const char* label, RE::FormID* currentFormID, RE::FormType formType)
 	{
