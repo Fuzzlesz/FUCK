@@ -176,6 +176,7 @@ struct FUCK_Interface
 	void (*PopFont)();
 	void (*SuspendRendering)(bool);
 	void (*SetMenuOpen)(bool);
+	bool (*IsMenuOpen)();
 
 	// IO
 	float (*GetDeltaTime)();
@@ -447,6 +448,12 @@ namespace FUCK
 	{
 		if (auto i = GetInterface())
 			i->SetMenuOpen(open);
+	}
+	inline bool IsMenuOpen()
+	{
+		if (auto i = GetInterface())
+			return i->IsMenuOpen();
+		return false;
 	}
 
 	inline ImFont* GetFont(Font font) { return GetInterface() ? GetInterface()->GetFont(font) : nullptr; }

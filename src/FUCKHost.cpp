@@ -52,6 +52,7 @@ namespace FUCK::Host
 	static void PopFont_Impl() { ImGui::PopFont(); }
 	static void SuspendRendering_Impl(bool suspend) { FUCKMan::GetSingleton()->SuspendRendering(suspend); }
 	static void SetMenuOpen_Impl(bool open) { open ? FUCKMan::GetSingleton()->Open() : FUCKMan::GetSingleton()->Close(); }
+	static bool IsMenuOpen_Impl() { return FUCKMan::GetSingleton()->IsOpen(); }
 
 	// ==========================================
 	// Style & Stack
@@ -625,6 +626,7 @@ namespace FUCK::Host
 			.PopFont = PopFont_Impl,
 			.SuspendRendering = SuspendRendering_Impl,
 			.SetMenuOpen = SetMenuOpen_Impl,
+			.IsMenuOpen = IsMenuOpen_Impl,
 			.GetDeltaTime = GetDeltaTime_Impl,
 			.GetMouseDelta = GetMouseDelta_Impl,
 			.GetMousePos = GetMousePos_Impl,
