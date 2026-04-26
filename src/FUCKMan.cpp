@@ -533,12 +533,16 @@ RE::BSEventNotifyControl FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_e
 
 void FUCKMan::Draw()
 {
-	// --- Auto-Close on forced camera states ---
+	// --- Auto-Suspend on forced camera states ---
 	if (auto camera = RE::PlayerCamera::GetSingleton(); camera && camera->currentState) {
 		auto* activeState = camera->currentState.get();
 
-		if (activeState == camera->cameraStates[RE::CameraState::kVATS].get() ||
-			activeState == camera->cameraStates[RE::CameraState::kBleedout].get()) {
+		bool isForcedCamera = (activeState == camera->cameraStates[RE::CameraState::kVATS].get() ||
+							   activeState == camera->cameraStates[RE::CameraState::kBleedout].get() ||
+							   activeState == camera->cameraStates[RE::CameraState::kAutoVanity].get()
+		);
+
+		if (isForcedCamera) {
 			bool closedSomething = false;
 
 			if (_isOpen) {
@@ -549,12 +553,41 @@ void FUCKMan::Draw()
 			for (auto* win : _windows) {
 				if (win->IsOpen()) {
 					win->SetOpen(false);
+					if (std::find(_suspendedWindows.begin(), _suspendedWindows.end(), win) == _suspendedWindows.end()) {
+						_suspendedWindows.push_back(win);
+					}
 					closedSomething = true;
 				}
 			}
 
 			if (closedSomething) {
 				ImGui::ClearNavState();
+			}
+		} else if (!_suspendedWindows.empty()) {
+			bool blockingMenuOpen = false;
+			static const std::vector<std::string> closeOnOpen = {
+				RE::Console::MENU_NAME.data(), RE::ContainerMenu::MENU_NAME.data(),
+				RE::JournalMenu::MENU_NAME.data(), RE::InventoryMenu::MENU_NAME.data(),
+				RE::MapMenu::MENU_NAME.data(), RE::DialogueMenu::MENU_NAME.data(),
+				RE::MagicMenu::MENU_NAME.data(), RE::StatsMenu::MENU_NAME.data(),
+				RE::TweenMenu::MENU_NAME.data(), RE::FavoritesMenu::MENU_NAME.data()
+			};
+
+			if (auto ui = RE::UI::GetSingleton()) {
+				for (const auto& m : closeOnOpen) {
+					if (ui->IsMenuOpen(m)) {
+						blockingMenuOpen = true;
+						break;
+					}
+				}
+			}
+
+			if (!blockingMenuOpen) {
+				for (auto* win : _suspendedWindows) {
+					win->SetOpen(true);
+				}
+				_suspendedWindows.clear();
+				UpdateGameState();
 			}
 		}
 	}
