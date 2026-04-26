@@ -119,6 +119,23 @@ namespace FUCK
 	inline TableFlags operator|(TableFlags a, TableFlags b) { return static_cast<TableFlags>(static_cast<int>(a) | static_cast<int>(b)); }
 	inline TableColumnFlags operator|(TableColumnFlags a, TableColumnFlags b) { return static_cast<TableColumnFlags>(static_cast<int>(a) | static_cast<int>(b)); }
 
+	struct ManagedHotkey
+	{
+		std::uint32_t kKey = 0, gKey = 0;
+		std::int32_t kMod1 = -1, gMod1 = -1;
+		std::int32_t kMod2 = -1, gMod2 = -1;
+		bool isBinding = false;
+		bool wasTriggered = false;
+
+		void Clear()
+		{
+			kKey = gKey = 0;
+			kMod1 = gMod1 = kMod2 = gMod2 = -1;
+			isBinding = false;
+			wasTriggered = false;
+		}
+	};
+	
 	// --- Extension Interfaces ---
 
 	/// @brief Implement this to add a new Tool to the FUCK Sidebar.
@@ -266,6 +283,10 @@ struct FUCK_Interface
 	void (*StartBinding)(std::uint32_t, std::int32_t, std::int32_t);
 	FUCK::BindResult (*UpdateBinding)(const void*, std::uint32_t*, std::int32_t*, std::int32_t*);
 	FUCK::BindResult (*GetInputBind)(const void*, std::uint32_t*, std::int32_t*, std::int32_t*);
+
+	void (*DrawManagedHotkey)(const char*, FUCK::ManagedHotkey*, bool);
+	bool (*UpdateManagedHotkey)(const void*, FUCK::ManagedHotkey*);
+	bool (*ProcessManagedHotkey)(const void*, FUCK::ManagedHotkey*);
 
 	// Interaction
 	bool (*IsItemHovered)(int);
@@ -1260,163 +1281,20 @@ namespace FUCK
 	};
 
 	/// @brief Used for assigning Hotkeys within the FUCK interface.
-	struct ManagedHotkey
-	{
-		std::uint32_t kKey = 0, gKey = 0;
-		std::int32_t kMod1 = -1, gMod1 = -1;
-		std::int32_t kMod2 = -1, gMod2 = -1;
-		bool isBinding = false;
-		bool wasTriggered = false;
-
-		void Clear()
-		{
-			kKey = gKey = 0;
-			kMod1 = gMod1 = kMod2 = gMod2 = -1;
-			isBinding = false;
-			wasTriggered = false;
-		}
-	};
-
 	inline void DrawManagedHotkey(const char* label, ManagedHotkey& h, bool alignFar = true)
 	{
-		bool inputIsGP = (GetInputDevice() == InputDevice::kGamepad);
-		bool gpSlotValid = (h.gKey != 0) && IsGamepadKey(h.gKey);
-		bool kbSlotValid = (h.kKey != 0) && !IsGamepadKey(h.kKey);
-		bool showGP = inputIsGP;
-		if (showGP && !gpSlotValid && kbSlotValid)
-			showGP = false;
-		if (!showGP && !kbSlotValid && gpSlotValid)
-			showGP = true;
-
-		std::uint32_t k = showGP ? h.gKey : h.kKey;
-		std::int32_t m1 = showGP ? h.gMod1 : h.kMod1;
-		std::int32_t m2 = showGP ? h.gMod2 : h.kMod2;
-
-		std::string dynamicLabel;
-		const char* finalLabel = label;
-		if (h.isBinding) {
-			dynamicLabel = std::string(Translate("$FUCK_Settings_PressKeyBind")) + "###" + label;
-			finalLabel = dynamicLabel.c_str();
-		}
-
-		if (Hotkey(finalLabel, k, m1, m2, alignFar, true, h.isBinding)) {
-			if (!h.isBinding) {
-				h.isBinding = true;
-				StartBinding(k, m1, m2);
-			}
-		}
+		if (auto i = GetInterface())
+			i->DrawManagedHotkey(label, &h, alignFar);
 	}
 
 	inline bool UpdateManagedHotkey(const void* e, ManagedHotkey& h)
 	{
-		if (!h.isBinding)
-			return false;
-		if (!IsBinding()) {
-			h.isBinding = false;
-			return false;
-		}
-
-		std::uint32_t k;
-		std::int32_t m1, m2;
-		BindResult res = UpdateBinding(e, &k, &m1, &m2);
-
-		if (res == BindResult::kBound) {
-			if (IsGamepadKey(k)) {
-				h.gKey = k;
-				h.gMod1 = m1;
-				h.gMod2 = m2;
-			} else {
-				h.kKey = k;
-				h.kMod1 = m1;
-				h.kMod2 = m2;
-			}
-			h.isBinding = false;
-			h.wasTriggered = true;
-			return true;
-		} else if (res == BindResult::kCancelled) {
-			h.isBinding = false;
-			return true;
-		}
-		return true;
+		return GetInterface() ? GetInterface()->UpdateManagedHotkey(e, &h) : false;
 	}
 
-	// --- Hotkey Cast Helpers ---
-	template <typename T>
-	constexpr std::uint32_t AsU32(T a_enum) noexcept
+	inline bool ProcessManagedHotkey(const void* e, ManagedHotkey& h)
 	{
-		return static_cast<std::uint32_t>(a_enum);
-	}
-
-	template <typename T>
-	constexpr std::int32_t AsI32(T a_enum) noexcept
-	{
-		return static_cast<std::int32_t>(a_enum);
-	}
-
-	inline constexpr std::int32_t kGPBaseI32 = static_cast<std::int32_t>(SKSE::InputMap::kMacro_GamepadOffset);
-
-	inline bool ProcessManagedHotkey(const void*, ManagedHotkey& h)
-	{
-		if (h.isBinding)
-			return false;
-
-		static constexpr std::int32_t kGP_LT = kGPBaseI32 + SKSE::InputMap::kGamepadButtonOffset_LT;
-		static constexpr std::int32_t kGP_RT = kGPBaseI32 + SKSE::InputMap::kGamepadButtonOffset_RT;
-
-		static constexpr std::int32_t kbMods[] = {
-			AsI32(RE::BSWin32KeyboardDevice::Key::kLeftShift),
-			AsI32(RE::BSWin32KeyboardDevice::Key::kRightShift),
-			AsI32(RE::BSWin32KeyboardDevice::Key::kLeftControl),
-			AsI32(RE::BSWin32KeyboardDevice::Key::kRightControl),
-			AsI32(RE::BSWin32KeyboardDevice::Key::kLeftAlt),
-			AsI32(RE::BSWin32KeyboardDevice::Key::kRightAlt),
-		};
-
-		static constexpr std::int32_t gpMods[] = {
-			kGPBaseI32 + SKSE::InputMap::kGamepadButtonOffset_LEFT_SHOULDER,
-			kGPBaseI32 + SKSE::InputMap::kGamepadButtonOffset_RIGHT_SHOULDER,
-			kGP_LT,
-			kGP_RT,
-		};
-
-		// Triggers (LT/RT) are analog
-		auto checkMod = [](std::int32_t mod) -> bool {
-			if (mod <= 0)
-				return false;
-			if (mod == kGP_LT || mod == kGP_RT)
-				return GetAnalogInput(AsU32(mod)) > 0.4f;
-			return IsInputDown(AsU32(mod));
-		};
-
-		auto checkStrict = [&](const std::int32_t* mods, size_t count, std::int32_t req1, std::int32_t req2) {
-			for (size_t i = 0; i < count; ++i) {
-				if (checkMod(mods[i]) != (mods[i] == req1 || mods[i] == req2))
-					return false;
-			}
-			return true;
-		};
-
-		bool pressed = false;
-
-		if (h.kKey != 0 && IsInputDown(h.kKey)) {
-			if (checkStrict(kbMods, std::size(kbMods), h.kMod1, h.kMod2))
-				pressed = true;
-		}
-
-		if (!pressed && h.gKey != 0 && IsInputDown(h.gKey)) {
-			if (checkStrict(gpMods, std::size(gpMods), h.gMod1, h.gMod2))
-				pressed = true;
-		}
-
-		if (pressed) {
-			if (!h.wasTriggered) {
-				h.wasTriggered = true;
-				return true;
-			}
-		} else {
-			h.wasTriggered = false;
-		}
-		return false;
+		return GetInterface() ? GetInterface()->ProcessManagedHotkey(e, &h) : false;
 	}
 
 	inline void AbortManagedHotkey(ManagedHotkey& h)
@@ -1426,7 +1304,7 @@ namespace FUCK
 			h.isBinding = false;
 		}
 	}
-
+	
 	// ------------------------------------------------------------------------
 	// Overloads & Templates
 	// ------------------------------------------------------------------------

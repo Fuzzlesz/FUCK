@@ -66,6 +66,9 @@ namespace Input
 		void             AbortBinding() { _rebindCtx.Reset(); }
 		FUCK::BindResult GetInputBind(const RE::InputEvent* const* a_event, std::uint32_t* outKey, std::int32_t* outMod1, std::int32_t* outMod2);
 
+		bool UpdateManagedHotkey(const RE::InputEvent* const* a_event, FUCK::ManagedHotkey& h);
+		bool ProcessManagedHotkey(const RE::InputEvent* const* a_event, FUCK::ManagedHotkey& h);
+
 		bool  IsInputDown(std::uint32_t a_unifiedKey) const;
 		float GetAnalogInput(std::uint32_t a_unifiedKey) const;
 		bool  IsModifierPressed(FUCK::Modifier a_modifier) const;

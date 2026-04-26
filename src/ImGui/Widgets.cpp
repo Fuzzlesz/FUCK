@@ -833,6 +833,40 @@ namespace ImGui
 		return clicked;
 	}
 
+	void DrawManagedHotkey(const char* label, FUCK::ManagedHotkey& h, bool alignFar)
+	{
+		auto inputMgr = Input::Manager::GetSingleton();
+		bool inputIsGP = (inputMgr->GetInputDevice() == Input::DEVICE::kGamepadDirectX || inputMgr->GetInputDevice() == Input::DEVICE::kGamepadOrbis);
+
+		bool gpSlotValid = (h.gKey != 0) && (h.gKey >= Input::Keymap::kGPBase);
+		bool kbSlotValid = (h.kKey != 0) && (h.kKey < Input::Keymap::kGPBase);
+
+		bool showGP = inputIsGP;
+		if (showGP && !gpSlotValid && kbSlotValid)
+			showGP = false;
+		if (!showGP && !kbSlotValid && gpSlotValid)
+			showGP = true;
+
+		std::uint32_t k = showGP ? h.gKey : h.kKey;
+		std::int32_t m1 = showGP ? h.gMod1 : h.kMod1;
+		std::int32_t m2 = showGP ? h.gMod2 : h.kMod2;
+
+		std::string dynamicLabel;
+		const char* finalLabel = label;
+
+		if (h.isBinding) {
+			dynamicLabel = TRANSLATE_S("$FUCK_Settings_PressKeyBind") + "###" + label;
+			finalLabel = dynamicLabel.c_str();
+		}
+
+		if (Hotkey(finalLabel, k, m1, m2, alignFar, true, h.isBinding)) {
+			if (!h.isBinding) {
+				h.isBinding = true;
+				inputMgr->StartBinding(k, m1, m2);
+			}
+		}
+	}
+
 	bool DragScalarEx(const char* label, ImGuiDataType type, void* data, float speed, const void* min, const void* max, const char* fmt, ImGuiSliderFlags flags)
 	{
 		ImGuiWindow* window = GetCurrentWindow();

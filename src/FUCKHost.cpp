@@ -441,6 +441,20 @@ namespace FUCK::Host
 	static FUCK::BindResult UpdateBinding_Impl(const void* evt, std::uint32_t* k, std::int32_t* m1, std::int32_t* m2) { return Input::Manager::GetSingleton()->UpdateBinding(static_cast<const RE::InputEvent* const*>(evt), k, m1, m2); }
 	static FUCK::BindResult GetInputBind_Impl(const void* evt, std::uint32_t* k, std::int32_t* m1, std::int32_t* m2) { return Input::Manager::GetSingleton()->GetInputBind(static_cast<const RE::InputEvent* const*>(evt), k, m1, m2); }
 
+	static void DrawManagedHotkey_Impl(const char* label, FUCK::ManagedHotkey* h, bool alignFar)
+	{
+		if (h)
+			ImGui::DrawManagedHotkey(label, *h, alignFar);
+	}
+	static bool UpdateManagedHotkey_Impl(const void* evt, FUCK::ManagedHotkey* h)
+	{
+		return h ? Input::Manager::GetSingleton()->UpdateManagedHotkey(static_cast<const RE::InputEvent* const*>(evt), *h) : false;
+	}
+	static bool ProcessManagedHotkey_Impl(const void* evt, FUCK::ManagedHotkey* h)
+	{
+		return h ? Input::Manager::GetSingleton()->ProcessManagedHotkey(static_cast<const RE::InputEvent* const*>(evt), *h) : false;
+	}
+
 	// ==========================================
 	// Interaction
 	// ==========================================
@@ -697,6 +711,9 @@ namespace FUCK::Host
 			.StartBinding = StartBinding_Impl,
 			.UpdateBinding = UpdateBinding_Impl,
 			.GetInputBind = GetInputBind_Impl,
+			.DrawManagedHotkey = DrawManagedHotkey_Impl,
+			.UpdateManagedHotkey = UpdateManagedHotkey_Impl,
+			.ProcessManagedHotkey = ProcessManagedHotkey_Impl,
 			.IsItemHovered = IsItemHovered_Impl,
 			.IsItemClicked = IsItemClicked_Impl,
 			.IsItemActive = IsItemActive_Impl,

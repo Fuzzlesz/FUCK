@@ -236,6 +236,87 @@ namespace Input
 		return FUCK::BindResult::kNone;
 	}
 
+	bool Manager::UpdateManagedHotkey(const RE::InputEvent* const* a_event, FUCK::ManagedHotkey& h)
+	{
+		if (!h.isBinding)
+			return false;
+		if (!IsBinding()) {
+			h.isBinding = false;
+			return false;
+		}
+
+		std::uint32_t k;
+		std::int32_t m1, m2;
+		FUCK::BindResult res = UpdateBinding(a_event, &k, &m1, &m2);
+
+		if (res == FUCK::BindResult::kBound) {
+			if (k >= Keymap::kGPBase) {
+				h.gKey = k;
+				h.gMod1 = m1;
+				h.gMod2 = m2;
+			} else {
+				h.kKey = k;
+				h.kMod1 = m1;
+				h.kMod2 = m2;
+			}
+			h.isBinding = false;
+			h.wasTriggered = true;
+			return true;
+		} else if (res == FUCK::BindResult::kCancelled) {
+			h.isBinding = false;
+			return true;
+		}
+		return true;
+	}
+
+	bool Manager::ProcessManagedHotkey(const RE::InputEvent* const*, FUCK::ManagedHotkey& h)
+	{
+		if (h.isBinding)
+			return false;
+
+		auto checkMod = [this](std::int32_t mod) -> bool {
+			if (mod <= 0)
+				return false;
+
+			std::uint32_t umod = static_cast<std::uint32_t>(mod);
+			if (umod == kGP_LT || umod == kGP_RT)
+				return GetAnalogInput(umod) > 0.15f;
+
+			return IsInputDown(umod);
+		};
+
+		auto checkStrict = [&](const std::uint32_t* mods, size_t count, std::int32_t req1, std::int32_t req2) {
+			for (size_t i = 0; i < count; ++i) {
+				std::int32_t currentMod = static_cast<std::int32_t>(mods[i]);
+				if (checkMod(currentMod) != (currentMod == req1 || currentMod == req2))
+					return false;
+			}
+			return true;
+		};
+
+		bool pressed = false;
+
+		if (h.kKey != 0 && IsInputDown(h.kKey)) {
+			if (checkStrict(KB_MODS, std::size(KB_MODS), h.kMod1, h.kMod2))
+				pressed = true;
+		}
+
+		if (!pressed && h.gKey != 0 && IsInputDown(h.gKey)) {
+			if (checkStrict(GP_MODS, std::size(GP_MODS), h.gMod1, h.gMod2))
+				pressed = true;
+		}
+
+		if (pressed) {
+			if (!h.wasTriggered) {
+				h.wasTriggered = true;
+				return true;
+			}
+		} else {
+			h.wasTriggered = false;
+		}
+		return false;
+	}
+
 	float Manager::GetAnalogInput(std::uint32_t a_unifiedKey) const
 	{
 		std::shared_lock lock(_dataLock);
