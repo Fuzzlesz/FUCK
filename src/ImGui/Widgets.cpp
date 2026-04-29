@@ -25,7 +25,7 @@
 
 		if (direction == IconDirection::kRight) {
 			// Normal (>): UVs {0,0} -> {1,1}
-			drawList->AddImage( reinterpret_cast<ImTextureID>(iconArrow->srView.Get()), p_min, p_max, { 0, 0 }, { 1, 1 }, color);
+			drawList->AddImage(reinterpret_cast<ImTextureID>(iconArrow->srView.Get()), p_min, p_max, { 0, 0 }, { 1, 1 }, color);
 		} else if (direction == IconDirection::kDown) {
 			// Rotate 90 CW (v): UVs {0,1}, {0,0}, {1,0}, {1,1}
 			drawList->AddImageQuad(reinterpret_cast<ImTextureID>(iconArrow->srView.Get()),
