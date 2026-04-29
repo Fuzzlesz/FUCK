@@ -446,6 +446,10 @@ void FUCKMan::Close()
 	_forceCursor = false;
 	MANAGER(Input)->ResetCursorState();
 
+	if (!IsInputBlocked()) {
+		MANAGER(Input)->ClearState();
+	}
+
 	UpdateGameState();
 
 	Settings::GetSingleton()->Save(FileType::kSettings, [](CSimpleIniA& ini) {
@@ -930,6 +934,10 @@ void FUCKMan::Draw()
 			if (!open) {
 				win->SetOpen(false);
 				UpdateGameState();
+
+				if (!IsInputBlocked()) {
+					MANAGER(Input)->ClearState();
+				}
 			}
 		}
 	}

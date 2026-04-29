@@ -269,7 +269,7 @@ namespace Input
 		return true;
 	}
 
-	bool Manager::ProcessManagedHotkey(const RE::InputEvent* const*, FUCK::ManagedHotkey& h)
+	bool Manager::ProcessManagedHotkey(const RE::InputEvent* const* a_event, FUCK::ManagedHotkey& h)
 	{
 		if (h.isBinding)
 			return false;
@@ -296,12 +296,12 @@ namespace Input
 
 		bool pressed = false;
 
-		if (h.kKey != 0 && IsInputDown(h.kKey)) {
+		if (h.kKey != 0 && IsInputPressed(a_event, h.kKey)) {
 			if (checkStrict(KB_MODS, std::size(KB_MODS), h.kMod1, h.kMod2))
 				pressed = true;
 		}
 
-		if (!pressed && h.gKey != 0 && IsInputDown(h.gKey)) {
+		if (!pressed && h.gKey != 0 && IsInputPressed(a_event, h.gKey)) {
 			if (checkStrict(GP_MODS, std::size(GP_MODS), h.gMod1, h.gMod2))
 				pressed = true;
 		}
