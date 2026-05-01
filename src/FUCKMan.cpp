@@ -646,23 +646,25 @@ void FUCKMan::Draw()
 		return ImGui::CalcArrowIconParams(m.iconAspect, pointsDown, rowH, m.chromeIconBaseH);
 	};
 
-	// Content scale helper — pushes _userScale on top of the base style for content regions only
-	auto pushContentScale = [&]() {
+	// Content scale helper — respects kIgnoreUserScale flag
+	auto pushContentScale = [&](bool ignoreUserScale = false) {
+		float scaleToUse = ignoreUserScale ? 1.0f : _userScale;
+
 		ImFont* defaultFont = ImGui::GetFont();
-		float targetSize = defaultFont->LegacySize * _userScale;
+		float targetSize = defaultFont->LegacySize * scaleToUse;
 		ImGui::PushFont(defaultFont, targetSize);
 
 		float borderSize = ImGui::GetStyle().FrameBorderSize;
 
-		float spaceX = (8.0f * m.uiScale * _userScale) + borderSize;
-		float spaceY = (4.0f * m.uiScale * _userScale) + borderSize;
-		float innerSpaceX = (4.0f * m.uiScale * _userScale) + borderSize;
-		float innerSpaceY = (4.0f * m.uiScale * _userScale) + borderSize;
+		float spaceX = (8.0f * m.uiScale * scaleToUse) + borderSize;
+		float spaceY = (4.0f * m.uiScale * scaleToUse) + borderSize;
+		float innerSpaceX = (4.0f * m.uiScale * scaleToUse) + borderSize;
+		float innerSpaceY = (4.0f * m.uiScale * scaleToUse) + borderSize;
 
-		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f * m.uiScale * _userScale, 3.0f * m.uiScale * _userScale));
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f * m.uiScale * scaleToUse, 3.0f * m.uiScale * scaleToUse));
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spaceX, spaceY));
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(innerSpaceX, innerSpaceY));
-		ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, 20.0f * m.uiScale * _userScale);
+		ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, 20.0f * m.uiScale * scaleToUse);
 		ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 12.0f * m.uiScale);
 		ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, 10.0f * m.uiScale);
 	};
@@ -688,7 +690,7 @@ void FUCKMan::Draw()
 
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 		if (ImGui::Begin("##ToolOverlayLayer", nullptr, flags)) {
-			pushContentScale();
+			pushContentScale(false);
 			if (_activeTool)
 				_activeTool->RenderOverlay();
 
@@ -717,6 +719,9 @@ void FUCKMan::Draw()
 
 			// --- Flags Setup ---
 			bool noDecoration = (win->GetFlags() & FUCK::WindowFlags::kNoDecoration);
+			bool ignoreUserScale = (win->GetFlags() & FUCK::WindowFlags::kIgnoreUserScale) != 0;
+			bool noResize = (win->GetFlags() & FUCK::WindowFlags::kNoResize) != 0;
+			bool autoResize = (win->GetFlags() & FUCK::WindowFlags::kAutoResize) != 0;
 
 			auto it = s_windowStates.find(title);
 			if (it == s_windowStates.end()) {
@@ -728,13 +733,30 @@ void FUCKMan::Draw()
 			if (noDecoration) {
 				winState.isCollapsed = false;
 				winState.wasCollapsed = false;
-				flags |= ImGuiWindowFlags_NoDecoration;
+				flags |= ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar;
 			} else {
 				flags |= ImGuiWindowFlags_NoScrollbar;
 			}
 
-			if (win->GetFlags() & FUCK::WindowFlags::kNoBackground)
-				flags |= ImGuiWindowFlags_NoBackground;
+			if (noResize) {
+				flags |= ImGuiWindowFlags_NoResize;
+			}
+			if (autoResize) {
+				flags |= ImGuiWindowFlags_AlwaysAutoResize;
+			}
+
+			bool poppedInvisibleBg = false;
+			if (win->GetFlags() & FUCK::WindowFlags::kNoBackground) {
+				if (!IsInputBlocked()) {
+					flags |= ImGuiWindowFlags_NoBackground;
+				} else {
+					// Give kNoBackground windows a 0.1% invisible background so they can be easily dragged.
+					// We also suppress the Border, otherwise ImGui draws a 1px grey frame.
+					ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.001f));
+					ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+					poppedInvisibleBg = true;
+				}
+			}
 
 			if ((win->GetFlags() & FUCK::WindowFlags::kPassInputToGame) && !IsInputBlocked())
 				flags |= ImGuiWindowFlags_NoInputs;
@@ -770,21 +792,27 @@ void FUCKMan::Draw()
 				FUCK::SetNextWindowPos(defPos, ImGuiCond_FirstUseEver);
 			}
 
-			// NoDecoration windows must auto-update their size dynamically since they lack resize grips
-			ImGuiCond sizeCond = (isCollapsed || wasCollapsed || noDecoration) ? ImGuiCond_Always : ImGuiCond_FirstUseEver;
-			FUCK::SetNextWindowSize(targetSize, sizeCond);
+			// If AutoResize is active, ImGui shrinks the window dynamically. We bypass hard size forcing.
+			if (!autoResize) {
+				ImGuiCond sizeCond = (isCollapsed || wasCollapsed || noResize) ? ImGuiCond_Always : ImGuiCond_FirstUseEver;
+				FUCK::SetNextWindowSize(targetSize, sizeCond);
+			}
 
 			bool open = true;
 
 			if (!noDecoration) {
+				// Push 0 padding here because the custom chrome is drawn flush to the edges,
+				// and the inner child window handles the actual content padding.
 				FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 			} else {
-				// Drop padding to 0 if the window is frameless/background-less
-				bool noBackground = (win->GetFlags() & FUCK::WindowFlags::kNoBackground) != 0;
-				FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, noBackground ? ImVec2(0, 0) : ImVec2(m.padBase, m.padBase));
+				// Give standard padding to all frameless windows
+				FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase, m.padBase));
 			}
 
 			if (FUCK::BeginWindow(title, &open, flags)) {
+				if (poppedInvisibleBg) {
+					ImGui::PopStyleColor(2);  // Clear WindowBg and Border
+				}
 				win->UpdateState(FUCK::GetWindowPos(), FUCK::GetWindowSize());
 
 				if (win->GetFlags() & FUCK::WindowFlags::kExtendBorder)
@@ -904,7 +932,7 @@ void FUCKMan::Draw()
 
 						if (ImGui::BeginChild("##Content", ImVec2(0, 0), childFlags, windowFlags)) {
 							ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
-							pushContentScale();
+							pushContentScale(ignoreUserScale);
 							win->Draw();
 							popContentScale();
 							ImGui::PopItemWidth();
@@ -915,7 +943,7 @@ void FUCKMan::Draw()
 					}
 				} else {
 					// --- No Chrome Decoration ---
-					pushContentScale();
+					pushContentScale(ignoreUserScale);
 					win->Draw();
 					popContentScale();
 				}
@@ -1296,7 +1324,7 @@ void FUCKMan::Draw()
 				FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase, m.padBase));
 				FUCK::BeginChild("Content", ImVec2(width, availHeight), true, ImGuiChildFlags_AlwaysUseWindowPadding);
 				{
-					pushContentScale();
+					pushContentScale(false);
 					if (_activeTool)
 						_activeTool->Draw();
 					else
