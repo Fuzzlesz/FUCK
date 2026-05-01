@@ -274,7 +274,7 @@ namespace FUCK::Host
 	}
 	static void PushItemFlag_Impl(ItemFlags flag, bool enabled) { ImGui::PushItemFlag(static_cast<ImGuiItemFlags>(flag), enabled); }
 	static void PopItemFlag_Impl() { ImGui::PopItemFlag(); }
-	
+
 	static void PushID_Str_Impl(const char* str_id) { ImGui::PushID(str_id); }
 	static void PushID_Int_Impl(int int_id) { ImGui::PushID(int_id); }
 	static void PopID_Impl() { ImGui::PopID(); }
@@ -283,9 +283,22 @@ namespace FUCK::Host
 	{
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) {
 			const float scale = ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
-			const float offset = 32.0f * scale;
-			ImGui::SetNextWindowPos(ImGui::GetMousePos() + ImVec2(offset, offset), ImGuiCond_Always);
+			ImVec2 offset(32.0f * scale, 32.0f * scale);
+			ImVec2 pivot(0.0f, 0.0f);
+			ImVec2 mousePos = ImGui::GetMousePos();
+			ImVec2 screenSize = ImGui::GetIO().DisplaySize;
 
+			// Flip pivot if near the right or bottom edges
+			if (mousePos.x > screenSize.x * 0.6f) {
+				offset.x = -offset.x;
+				pivot.x = 1.0f;
+			}
+			if (mousePos.y > screenSize.y * 0.6f) {
+				offset.y = -offset.y;
+				pivot.y = 1.0f;
+			}
+
+			ImGui::SetNextWindowPos(mousePos + offset, ImGuiCond_Always, pivot);
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * scale, 12.0f * scale));
 
 			if (ImGui::BeginTooltip()) {
@@ -301,9 +314,21 @@ namespace FUCK::Host
 		ImGui::TextDisabled("(?)");
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
 			const float scale = ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
-			const float offset = 32.0f * scale;
-			ImGui::SetNextWindowPos(ImGui::GetMousePos() + ImVec2(offset, offset), ImGuiCond_Always);
+			ImVec2 offset(32.0f * scale, 32.0f * scale);
+			ImVec2 pivot(0.0f, 0.0f);
+			ImVec2 mousePos = ImGui::GetMousePos();
+			ImVec2 screenSize = ImGui::GetIO().DisplaySize;
 
+			if (mousePos.x > screenSize.x * 0.6f) {
+				offset.x = -offset.x;
+				pivot.x = 1.0f;
+			}
+			if (mousePos.y > screenSize.y * 0.6f) {
+				offset.y = -offset.y;
+				pivot.y = 1.0f;
+			}
+
+			ImGui::SetNextWindowPos(mousePos + offset, ImGuiCond_Always, pivot);
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * scale, 12.0f * scale));
 
 			if (ImGui::BeginTooltip()) {
