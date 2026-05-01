@@ -20,6 +20,15 @@ struct WindowCollapseState
 };
 static StringMap<WindowCollapseState> s_windowStates;
 
+// Auto-Close list for Game Menus
+static const std::vector<std::string> s_closeOnOpen = {
+	RE::Console::MENU_NAME.data(), RE::ContainerMenu::MENU_NAME.data(),
+	RE::JournalMenu::MENU_NAME.data(), RE::InventoryMenu::MENU_NAME.data(),
+	RE::MapMenu::MENU_NAME.data(), RE::DialogueMenu::MENU_NAME.data(),
+	RE::MagicMenu::MENU_NAME.data(), RE::StatsMenu::MENU_NAME.data(),
+	RE::TweenMenu::MENU_NAME.data(), RE::FavoritesMenu::MENU_NAME.data()
+};
+
 // Helper to keep windows within the visible viewport
 static void ClampWindowToScreen(ImVec2& pos, const ImVec2& size)
 {
@@ -472,21 +481,12 @@ RE::BSEventNotifyControl FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_e
 
 	DispatchMenuEvent(a_event->menuName.c_str(), a_event->opening);
 
-	// Auto-Close list
-	static const std::vector<std::string> closeOnOpen = {
-		RE::Console::MENU_NAME.data(), RE::ContainerMenu::MENU_NAME.data(),
-		RE::JournalMenu::MENU_NAME.data(), RE::InventoryMenu::MENU_NAME.data(),
-		RE::MapMenu::MENU_NAME.data(), RE::DialogueMenu::MENU_NAME.data(),
-		RE::MagicMenu::MENU_NAME.data(), RE::StatsMenu::MENU_NAME.data(),
-		RE::TweenMenu::MENU_NAME.data(), RE::FavoritesMenu::MENU_NAME.data()
-	};
-
 	if (a_event->opening) {
 		if (a_event->menuName == RE::MainMenu::MENU_NAME) {
 			ImGui::ClearFormCaches();
 		}
 
-		if (std::ranges::find(closeOnOpen, a_event->menuName.data()) != closeOnOpen.end()) {
+		if (std::ranges::find(s_closeOnOpen, a_event->menuName.data()) != s_closeOnOpen.end()) {
 			bool closedSomething = false;
 
 			if (_isOpen && a_event->menuName != RE::Console::MENU_NAME) {
@@ -508,10 +508,10 @@ RE::BSEventNotifyControl FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_e
 			}
 		}
 	} else {
-		if (std::ranges::find(closeOnOpen, a_event->menuName.data()) != closeOnOpen.end()) {
+		if (std::ranges::find(s_closeOnOpen, a_event->menuName.data()) != s_closeOnOpen.end()) {
 			bool anyOpen = false;
 			if (auto ui = RE::UI::GetSingleton()) {
-				for (const auto& m : closeOnOpen) {
+				for (const auto& m : s_closeOnOpen) {
 					if (ui->IsMenuOpen(m)) {
 						anyOpen = true;
 						break;
@@ -569,16 +569,9 @@ void FUCKMan::Draw()
 			}
 		} else if (!_suspendedWindows.empty()) {
 			bool blockingMenuOpen = false;
-			static const std::vector<std::string> closeOnOpen = {
-				RE::Console::MENU_NAME.data(), RE::ContainerMenu::MENU_NAME.data(),
-				RE::JournalMenu::MENU_NAME.data(), RE::InventoryMenu::MENU_NAME.data(),
-				RE::MapMenu::MENU_NAME.data(), RE::DialogueMenu::MENU_NAME.data(),
-				RE::MagicMenu::MENU_NAME.data(), RE::StatsMenu::MENU_NAME.data(),
-				RE::TweenMenu::MENU_NAME.data(), RE::FavoritesMenu::MENU_NAME.data()
-			};
 
 			if (auto ui = RE::UI::GetSingleton()) {
-				for (const auto& m : closeOnOpen) {
+				for (const auto& m : s_closeOnOpen) {
 					if (ui->IsMenuOpen(m)) {
 						blockingMenuOpen = true;
 						break;
