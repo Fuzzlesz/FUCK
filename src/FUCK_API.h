@@ -333,6 +333,8 @@ struct FUCK_Interface
 	void (*SetNextWindowSize)(float, float, int);
 	void (*GetWindowPos)(float*, float*);
 	void (*GetWindowSize)(float*, float*);
+	void (*SetWindowPos)(float, float, int);
+	void (*SetWindowSize)(float, float, int);
 	bool (*BeginWindow)(const char*, bool*, int);
 	void (*EndWindow)();
 	void (*ExtendWindowPastBorder)();
@@ -340,6 +342,8 @@ struct FUCK_Interface
 	void (*EndChild)();
 	bool (*TreeNode)(const char*);
 	void (*TreePop)();
+	bool (*BeginPopupContextItem)(const char*, int);
+	void (*EndPopup)();
 
 	// Widgets
 	bool (*Button)(const char*);
@@ -967,6 +971,16 @@ namespace FUCK
 		}
 		return ImVec2(0, 0);
 	}
+	inline void SetWindowPos(const ImVec2& pos, int cond = 0)
+	{
+		if (auto i = GetInterface())
+			i->SetWindowPos(pos.x, pos.y, cond);
+	}
+	inline void SetWindowSize(const ImVec2& size, int cond = 0)
+	{
+		if (auto i = GetInterface())
+			i->SetWindowSize(size.x, size.y, cond);
+	}
 	inline void SetNextWindowPos(const ImVec2& pos, int cond = 0, const ImVec2& pivot = ImVec2(0, 0))
 	{
 		if (auto i = GetInterface())
@@ -995,6 +1009,16 @@ namespace FUCK
 			i->TreePop();
 	}
 	inline bool CollapsingHeader(const char* label, int flags = 0) { return GetInterface() ? GetInterface()->CollapsingHeader(label, flags) : false; }
+
+	inline bool BeginPopupContextItem(const char* str_id = nullptr, int mouse_button = 1)
+	{
+		return GetInterface() ? GetInterface()->BeginPopupContextItem(str_id, mouse_button) : false;
+	}
+	inline void EndPopup()
+	{
+		if (auto i = GetInterface())
+			i->EndPopup();
+	}
 
 	inline bool BeginTabBar(const char* str_id, int flags = 0) { return GetInterface() ? GetInterface()->BeginTabBar(str_id, flags) : false; }
 	inline void EndTabBar()

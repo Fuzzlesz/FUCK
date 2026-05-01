@@ -549,6 +549,8 @@ namespace FUCK::Host
 		if (y)
 			*y = s.y;
 	}
+	static void SetWindowPos_Impl(float x, float y, int c) { ImGui::SetWindowPos({ x, y }, c); }
+	static void SetWindowSize_Impl(float x, float y, int c) { ImGui::SetWindowSize({ x, y }, c); }
 	static bool BeginWindow_Impl(const char* n, bool* o, int f) { return ImGui::Begin(n, o, f); }
 	static void EndWindow_Impl() { ImGui::End(); }
 	static void ExtendWindowPastBorder_Impl() { ImGui::ExtendWindowPastBorder(); }
@@ -559,6 +561,8 @@ namespace FUCK::Host
 	static void EndChild_Impl() { ImGui::EndChild(); }
 	static bool TreeNode_Impl(const char* label) { return ImGui::TreeNodeIcon(label, 0); }
 	static void TreePop_Impl() { ImGui::TreePop(); }
+	static bool BeginPopupContextItem_Impl(const char* str_id, int mb) { return ImGui::BeginPopupContextItem(str_id, mb); }
+	static void EndPopup_Impl() { ImGui::EndPopup(); }
 
 	// ==========================================
 	// Widgets
@@ -568,7 +572,7 @@ namespace FUCK::Host
 	static bool Hotkey_Impl(const char* label, std::uint32_t key, std::int32_t m1, std::int32_t m2, bool alignFar, bool labelLeft, bool flashing) { return ImGui::Hotkey(label, key, m1, m2, alignFar, labelLeft, flashing); }
 	static bool ToggleButton_Impl(const char* label, bool* v, bool alignFar, bool labelLeft) { return ImGui::ToggleButton(label, v, alignFar, labelLeft); }
 	static ImGuiTableSortSpecs* GetTableSortSpecs_Impl() { return ImGui::TableGetSortSpecs(); }
-	
+
 	static bool InputText_Impl(const char* label, char* buf, size_t buf_size, int flags)
 	{
 		if (!buf || buf_size == 0)
@@ -770,6 +774,8 @@ namespace FUCK::Host
 			.SetNextWindowSize = SetNextWindowSize_Impl,
 			.GetWindowPos = GetWindowPos_Impl,
 			.GetWindowSize = GetWindowSize_Impl,
+			.SetWindowPos = SetWindowPos_Impl,
+			.SetWindowSize = SetWindowSize_Impl,
 			.BeginWindow = BeginWindow_Impl,
 			.EndWindow = EndWindow_Impl,
 			.ExtendWindowPastBorder = ExtendWindowPastBorder_Impl,
@@ -777,6 +783,8 @@ namespace FUCK::Host
 			.EndChild = EndChild_Impl,
 			.TreeNode = TreeNode_Impl,
 			.TreePop = TreePop_Impl,
+			.BeginPopupContextItem = BeginPopupContextItem_Impl,
+			.EndPopup = EndPopup_Impl,
 			.Button = Button_Impl,
 			.Checkbox = Checkbox_Impl,
 			.Hotkey = Hotkey_Impl,
