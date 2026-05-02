@@ -682,12 +682,12 @@ namespace Input
 				const float value = buttonEvent->Value();
 				const bool isDown = value > 0.0f;
 
-				switch (inputDevice) {
-				case DEVICE::kKeyboard:
+				switch (event->GetDevice()) {
+				case RE::INPUT_DEVICE::kKeyboard:
 					if (passKeyboardAndGamepad)
 						io.AddKeyEvent(Keymap::ToImGuiKey(static_cast<KEY>(key)), isDown);
 					break;
-				case DEVICE::kMouse:
+				case RE::INPUT_DEVICE::kMouse:
 					if (passMouse) {
 						switch (auto mouseKey = static_cast<MOUSE>(key)) {
 						case MOUSE::kWheelUp:
@@ -702,31 +702,30 @@ namespace Input
 						}
 					}
 					break;
-				case DEVICE::kGamepadDirectX:
+				case RE::INPUT_DEVICE::kGamepad:
 					if (passKeyboardAndGamepad) {
-						auto [imKey, analog] = Keymap::ToImGuiKey(static_cast<GAMEPAD_DIRECTX>(key));
-						if (analog)
-							io.AddKeyAnalogEvent(imKey, isDown, value);
-						else
-							io.AddKeyEvent(imKey, isDown);
+						if (RE::ControlMap::GetSingleton()->GetGamePadType() == RE::PC_GAMEPAD_TYPE::kOrbis) {
+							auto [imKey, analog] = Keymap::ToImGuiKey(static_cast<GAMEPAD_ORBIS>(key));
+							if (analog)
+								io.AddKeyAnalogEvent(imKey, isDown, value);
+							else
+								io.AddKeyEvent(imKey, isDown);
 
-						if (key == AsKey(GAMEPAD_DIRECTX::kLeftThumb) ||
-							key == AsKey(GAMEPAD_DIRECTX::kRightThumb)) {
-							io.AddMouseButtonEvent(0, isDown);
-						}
-					}
-					break;
-				case DEVICE::kGamepadOrbis:
-					if (passKeyboardAndGamepad) {
-						auto [imKey, analog] = Keymap::ToImGuiKey(static_cast<GAMEPAD_ORBIS>(key));
-						if (analog)
-							io.AddKeyAnalogEvent(imKey, isDown, value);
-						else
-							io.AddKeyEvent(imKey, isDown);
+							if (key == AsKey(GAMEPAD_ORBIS::kPS3_L3) ||
+								key == AsKey(GAMEPAD_ORBIS::kPS3_R3)) {
+								io.AddMouseButtonEvent(0, isDown);
+							}
+						} else {
+							auto [imKey, analog] = Keymap::ToImGuiKey(static_cast<GAMEPAD_DIRECTX>(key));
+							if (analog)
+								io.AddKeyAnalogEvent(imKey, isDown, value);
+							else
+								io.AddKeyEvent(imKey, isDown);
 
-						if (key == AsKey(GAMEPAD_ORBIS::kPS3_L3) ||
-							key == AsKey(GAMEPAD_ORBIS::kPS3_R3)) {
-							io.AddMouseButtonEvent(0, isDown);
+							if (key == AsKey(GAMEPAD_DIRECTX::kLeftThumb) ||
+								key == AsKey(GAMEPAD_DIRECTX::kRightThumb)) {
+								io.AddMouseButtonEvent(0, isDown);
+							}
 						}
 					}
 					break;
