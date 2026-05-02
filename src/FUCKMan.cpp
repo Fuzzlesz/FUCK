@@ -426,8 +426,6 @@ void FUCKMan::Open()
 	Input::Manager::GetSingleton()->PushContext({ "FUCK", 100, true });
 	_forceCursor = false;
 
-	MANAGER(Input)->ResetCursorState();
-
 	ImGui::ClearNavState();
 
 	ImGui::Styles::GetSingleton()->OnStyleRefresh();
@@ -453,7 +451,6 @@ void FUCKMan::Close()
 
 	Input::Manager::GetSingleton()->PopContext("FUCK");
 	_forceCursor = false;
-	MANAGER(Input)->ResetCursorState();
 
 	if (!IsInputBlocked()) {
 		MANAGER(Input)->ClearState();

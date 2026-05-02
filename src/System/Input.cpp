@@ -567,15 +567,27 @@ namespace Input
 			}
 		}
 
-		if (shouldShowCursor) {
-			if (auto ui = RE::UI::GetSingleton(); !ui->IsMenuOpen(RE::CursorMenu::MENU_NAME)) {
-				cursorInit = std::nullopt;
-			}
+		bool cursorCurrentlyOpen = false;
+		if (auto ui = RE::UI::GetSingleton()) {
+			cursorCurrentlyOpen = ui->IsMenuOpen(RE::CursorMenu::MENU_NAME);
 		}
 
-		if (!cursorInit.has_value() || shouldShowCursor != cursorInit.value()) {
-			ToggleCursor(shouldShowCursor);
-			cursorInit = shouldShowCursor;
+		if (shouldShowCursor) {
+			if (!cursorInit.has_value() || (*cursorInit == false && !cursorCurrentlyOpen)) {
+				if (!cursorCurrentlyOpen) {
+					ToggleCursor(true);
+					cursorInit = true;
+				} else {
+					cursorInit = false;
+				}
+			}
+		} else {
+			if (cursorInit.has_value()) {
+				if (*cursorInit == true) {
+					ToggleCursor(false);
+				}
+				cursorInit = std::nullopt;
+			}
 		}
 
 		// -- Event Forwarding --
@@ -650,8 +662,10 @@ namespace Input
 				}
 			} else if (passMouse) {
 				if (auto mouseEvent = event->AsMouseMoveEvent()) {
-					if (auto cursorMenu = RE::UI::GetSingleton()->GetMenu<RE::CursorMenu>()) {
-						cursorMenu->ProcessMouseMove(mouseEvent);
+					if (cursorMenuOpen) {
+						if (auto cursorMenu = RE::UI::GetSingleton()->GetMenu<RE::CursorMenu>()) {
+							cursorMenu->ProcessMouseMove(mouseEvent);
+						}
 					}
 				} else if (const auto thumbstickEvent = event->AsThumbstickEvent()) {
 					if (cursorMenuOpen) {
