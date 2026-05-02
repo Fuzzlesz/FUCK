@@ -645,6 +645,9 @@ namespace ImGui
 	bool OutlineButton(const char* label, bool* wasFocused)
 	{
 		ImGuiWindow* window = GetCurrentWindow();
+		if (window->SkipItems)
+			return false;
+
 		float scale = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
 		float rounding = GetUserStyleVar(USER_STYLE::kButtonRounding) * scale;
 		float borderSize = ImGui::GetStyle().FrameBorderSize;
@@ -658,15 +661,26 @@ namespace ImGui
 		// Consistent vertical size based on line height
 		ImVec2 contentSize = ImVec2(textSize.x, GetTextLineHeight());
 
-		ImVec2 sz = contentSize + (textPad * 2.0f) + ImVec2(outlineInset * 2.0f, outlineInset * 2.0f);
-		sz.x = ImMax(sz.x, sz.y);  // minimum square
+		// VISUAL SIZE (What the user actually sees)
+		ImVec2 visual_sz = contentSize + (textPad * 2.0f) + ImVec2(outlineInset * 2.0f, outlineInset * 2.0f);
+		visual_sz.x = ImMax(visual_sz.x, visual_sz.y);  // minimum square
 
-		ImRect bb(window->DC.CursorPos, window->DC.CursorPos + sz);
-		ItemSize(sz);
+		// LOGICAL SIZE (What the layout engine sees)
+		// We clamp the layout height to standard FrameHeight so SameLine() aligns natively
+		ImVec2 logical_sz = ImVec2(visual_sz.x, GetFrameHeight());
+
+		ImVec2 pos = window->DC.CursorPos;
+		ImRect bb(pos, pos + logical_sz);
+
+		ItemSize(logical_sz);
 		if (!ItemAdd(bb, window->GetID(label)))
 			return false;
 
-		ImRect drawBb = { bb.Min + ImVec2(outlineInset, outlineInset), bb.Max - ImVec2(outlineInset, outlineInset) };
+		// 3. RENDER BOX (Centered vertically over the logical box)
+		float offY = (visual_sz.y - logical_sz.y) * 0.5f;
+		ImRect render_bb(pos.x, pos.y - offY, pos.x + visual_sz.x, pos.y - offY + visual_sz.y);
+
+		ImRect drawBb = { render_bb.Min + ImVec2(outlineInset, outlineInset), render_bb.Max - ImVec2(outlineInset, outlineInset) };
 
 		bool h, held;
 		bool p = ButtonBehavior(bb, window->GetID(label), &h, &held);
@@ -681,7 +695,8 @@ namespace ImGui
 			PushStyleColor(ImGuiCol_Text, GetColorU32(ImGuiCol_TextDisabled));
 
 		// Centre using contentSize so vertical position is consistent across all glyphs
-		RenderTextClipped(bb.Min, bb.Max, label, NULL, &contentSize, { 0.5f, 0.5f });
+		// Render text relative to the VISUAL box so it sits properly in the paddings
+		RenderTextClipped(render_bb.Min, render_bb.Max, label, NULL, &contentSize, { 0.5f, 0.5f });
 
 		if (dim)
 			PopStyleColor();
