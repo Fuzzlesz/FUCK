@@ -462,14 +462,15 @@ namespace FUCK::Host
 	static bool IsGamepadKey_Impl(std::uint32_t k) { return k >= Input::Keymap::kGPBase; }
 	static bool IsBinding_Impl() { return Input::Manager::GetSingleton()->IsBinding(); }
 	static void AbortBinding_Impl() { Input::Manager::GetSingleton()->AbortBinding(); }
-	static void StartBinding_Impl(std::uint32_t k, std::int32_t m1, std::int32_t m2) { Input::Manager::GetSingleton()->StartBinding(k, m1, m2); }
+	static void StartBinding_Impl(std::uint32_t k, std::int32_t m1, std::int32_t m2, bool disallowModifiers) { Input::Manager::GetSingleton()->StartBinding(k, m1, m2, disallowModifiers); }
 	static FUCK::BindResult UpdateBinding_Impl(const void* evt, std::uint32_t* k, std::int32_t* m1, std::int32_t* m2) { return Input::Manager::GetSingleton()->UpdateBinding(static_cast<const RE::InputEvent* const*>(evt), k, m1, m2); }
 	static FUCK::BindResult GetInputBind_Impl(const void* evt, std::uint32_t* k, std::int32_t* m1, std::int32_t* m2) { return Input::Manager::GetSingleton()->GetInputBind(static_cast<const RE::InputEvent* const*>(evt), k, m1, m2); }
 
-	static void DrawManagedHotkey_Impl(const char* label, FUCK::ManagedHotkey* h, bool alignFar)
+	static bool DrawManagedHotkey_Impl(const char* label, FUCK::ManagedHotkey* h, int flags, float iconScale)
 	{
 		if (h)
-			ImGui::DrawManagedHotkey(label, *h, alignFar);
+			return ImGui::DrawManagedHotkey(label, *h, flags, iconScale);
+		return false;
 	}
 	static bool UpdateManagedHotkey_Impl(const void* evt, FUCK::ManagedHotkey* h)
 	{
@@ -478,6 +479,10 @@ namespace FUCK::Host
 	static bool ProcessManagedHotkey_Impl(const void* evt, FUCK::ManagedHotkey* h)
 	{
 		return h ? Input::Manager::GetSingleton()->ProcessManagedHotkey(static_cast<const RE::InputEvent* const*>(evt), *h) : false;
+	}
+	static bool IsManagedHotkeyDown_Impl(FUCK::ManagedHotkey* h)
+	{
+		return h ? Input::Manager::GetSingleton()->IsManagedHotkeyDown(*h) : false;
 	}
 
 	// ==========================================
@@ -579,7 +584,7 @@ namespace FUCK::Host
 			return false;
 		return ImGui::InputTextStyled(label, buf, buf_size, flags);
 	}
-	
+
 	static bool ColorEdit3_Impl(const char* label, float col[3], int flags) { return ImGui::ColorEdit3Styled(label, col, flags); }
 	static bool ColorEdit4_Impl(const char* label, float col[4], int flags) { return ImGui::ColorEdit4Styled(label, col, flags); }
 
@@ -658,7 +663,7 @@ namespace FUCK::Host
 	static void BeginDisabled_Impl(bool disabled) { ImGui::BeginDisabled(disabled); }
 	static void EndDisabled_Impl() { ImGui::EndDisabled(); }
 	static bool IsWidgetFocused_Impl(const char* label) { return ImGui::IsWidgetFocused(label); }
-	
+
 	FUCK_Interface* CreateInterface()
 	{
 		static FUCK_Interface api = {
@@ -747,6 +752,7 @@ namespace FUCK::Host
 			.DrawManagedHotkey = DrawManagedHotkey_Impl,
 			.UpdateManagedHotkey = UpdateManagedHotkey_Impl,
 			.ProcessManagedHotkey = ProcessManagedHotkey_Impl,
+			.IsManagedHotkeyDown = IsManagedHotkeyDown_Impl,
 			.IsItemHovered = IsItemHovered_Impl,
 			.IsItemClicked = IsItemClicked_Impl,
 			.IsItemActive = IsItemActive_Impl,

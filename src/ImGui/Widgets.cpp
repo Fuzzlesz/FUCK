@@ -5,7 +5,7 @@
 #include "Renderer.h"
 #include "System/Input.h"
 
-	namespace ImGui
+namespace ImGui
 {
 	// =========================================================================================
 	// HELPER IMPLEMENTATION
@@ -712,7 +712,7 @@ namespace ImGui
 		return clicked;
 	}
 
-	bool ImGui::Hotkey(const char* label, std::uint32_t key, std::int32_t m1, std::int32_t m2, bool alignFar, bool labelLeft, bool flashing)
+	bool ImGui::Hotkey(const char* label, std::uint32_t key, std::int32_t m1, std::int32_t m2, bool alignFar, bool labelLeft, bool flashing, bool alwaysHighlight, float iconScale)
 	{
 		bool clicked = false;
 		std::string baseId = std::format("##HOTKEY_{}", label);
@@ -726,7 +726,7 @@ namespace ImGui
 		const auto* m1Icon = (m1 != -1) ? iconFont->GetIcon(static_cast<uint32_t>(m1)) : nullptr;
 		const auto* m2Icon = (m2 != -1) ? iconFont->GetIcon(static_cast<uint32_t>(m2)) : nullptr;
 
-		// Generic item to unify rendering loop
+		// Internal struct to unify the rendering loop for both text and icons
 		struct RenderItem
 		{
 			enum Type
@@ -740,20 +740,22 @@ namespace ImGui
 			ImVec2 size;
 		};
 
-		// Build list: Anchor (Key) -> Leftward items
+		// Build render sequence (Rendered Right-to-Left)
 		std::vector<RenderItem> items;
 		items.reserve(5);
 
 		auto AddIcon = [&](const IconFont::IconTexture* icon, const char* suffix) {
-			if (icon)
-				items.push_back({ RenderItem::kIcon, icon, nullptr, suffix, icon->size });
+			if (icon) {
+				ImVec2 scaledSize = ImVec2(icon->size.x * iconScale, icon->size.y * iconScale);
+				items.push_back({ RenderItem::kIcon, icon, nullptr, suffix, scaledSize });
+			}
 		};
 
 		auto AddText = [&](const char* text) {
 			items.push_back({ RenderItem::kText, nullptr, text, nullptr, ImGui::CalcTextSize(text) });
 		};
 
-		// 1. Primary Key (The Anchor)
+		// 1. Primary Key ( The Anchor )
 		if (kIcon) {
 			AddIcon(kIcon, "key");
 		} else {
@@ -772,30 +774,51 @@ namespace ImGui
 			AddIcon(m1Icon, "m1");
 		}
 
-		// --- Rendering Phase ---
+		// Compute total dimensions
+		float anchorWidth = items.empty() ? 0.0f : items[0].size.x;
+		float totalWidth = 0.0f;
+		float maxItemH = 0.0f;
 
-		// Pass just the primary key width to AlignedWidgetLayout
-		float anchorWidth = items[0].size.x;
+		for (const auto& item : items) {
+			totalWidth += item.size.x + spacing;
+			if (item.size.y > maxItemH) {
+				maxItemH = item.size.y;
+			}
+		}
+		if (!items.empty()) {
+			totalWidth -= spacing;
+		}
+
+		// Determine the reported width for the layout engine:
+		// - Right-aligned: Report only the anchor width (modifiers spill to the left).
+		// - Left-aligned: Report the total block width so the adjacent label positions correctly.
+		float contentWidth = alignFar ? anchorWidth : totalWidth;
+
+		// Scale frame height to accommodate the largest rendered item
+		float actualFrameH = ImMax(frameH, maxItemH);
 
 		auto DrawContent = [&]() {
 			ImGuiID id = ImGui::GetID(baseId.c_str());
 			const float lineTop = ImGui::GetCursorPosY();
+			const float startX = ImGui::GetCursorPosX();
 
-			// AlignedWidgetLayout starts cursor where the primary key should be centred
-			float currentX = ImGui::GetCursorPosX();
+			// Determine the starting X coordinate:
+			// For right-aligned layouts, the anchor key starts at startX.
+			// For left-aligned layouts, the entire block begins at startX.
+			float currentX = alignFar ? startX : startX + (totalWidth - anchorWidth);
 
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 
 			for (size_t i = 0; i < items.size(); ++i) {
 				const auto& item = items[i];
 
-				// Move the cursor leftwards for modifiers, leaving the primary key at the initial (centred) currentX
+				// Shift the cursor leftwards for modifier keys while keeping the primary key anchored
 				if (i > 0) {
 					currentX -= (item.size.x + spacing);
 				}
 
-				// Vertical Centre Logic
-				float offY = (frameH - item.size.y) * 0.5f;
+				// Vertically center the item within the frame
+				float offY = (actualFrameH - item.size.y) * 0.5f;
 
 				ImGui::SetCursorPosX(currentX);
 				ImGui::SetCursorPosY(lineTop + offY);
@@ -809,32 +832,43 @@ namespace ImGui
 						float alpha = 0.4f + (0.6f * (float)fabs(sin(ImGui::GetTime() * 5.0f)));
 						tint = ImVec4(1.0f, 0.8f, 0.2f, alpha);
 					} else {
-						tint = GetHighlightTint(true, isHovered, false);
+						tint = GetHighlightTint(true, isHovered || alwaysHighlight, false);
 					}
 
 					if (DrawTransparentButton(std::format("##{}", item.idSuffix).c_str(), item.icon->srView.Get(), item.size, tint)) {
 						clicked = true;
 					}
 				} else {
-					ImGui::TextDisabled("%s", item.text);
+					// Draw text manually to prevent ImGui from advancing the cursor and breaking the inline layout
+					ImVec2 screenPos = ImGui::GetCursorScreenPos();
+					ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), ImGui::GetFontSize(), screenPos, ImGui::GetColorU32(ImGuiCol_TextDisabled), item.text);
 				}
 			}
 
 			ImGui::PopStyleVar();
-			
-			ImGui::SetCursorPosY(lineTop + frameH);
-			ImGui::Dummy(ImVec2(0.0f, 0.0f));
+
+			ImGui::SetCursorPosX(startX);
+			ImGui::SetCursorPosY(lineTop);
+			ImGui::Dummy(ImVec2(contentWidth, actualFrameH));
 		};
 
-		AlignedWidgetLayout(label, alignFar, labelLeft, anchorWidth, DrawContent, frameH);
+		AlignedWidgetLayout(label, alignFar, labelLeft, contentWidth, DrawContent, actualFrameH);
 
 		if (clicked)
 			RE::PlaySound("UIMenuFocus");
 		return clicked;
 	}
 
-	void DrawManagedHotkey(const char* label, FUCK::ManagedHotkey& h, bool alignFar)
+	bool DrawManagedHotkey(const char* label, FUCK::ManagedHotkey& h, int flags, float iconScale)
 	{
+		bool alignFar = (flags & static_cast<int>(FUCK::HotkeyFlags::kAlignNear)) == 0;
+		bool labelLeft = (flags & static_cast<int>(FUCK::HotkeyFlags::kLabelRight)) == 0;
+		bool ctrlToRebind = (flags & static_cast<int>(FUCK::HotkeyFlags::kCtrlToRebind)) != 0;
+		bool alwaysHighlight = (flags & static_cast<int>(FUCK::HotkeyFlags::kAlwaysHighlight)) != 0;
+		bool noModifiers = (flags & static_cast<int>(FUCK::HotkeyFlags::kNoModifiers)) != 0;
+
+		h.disallowModifiers = noModifiers;
+
 		auto inputMgr = Input::Manager::GetSingleton();
 		bool inputIsGP = (inputMgr->GetInputDevice() == Input::DEVICE::kGamepadDirectX || inputMgr->GetInputDevice() == Input::DEVICE::kGamepadOrbis);
 
@@ -851,6 +885,9 @@ namespace ImGui
 		std::int32_t m1 = showGP ? h.gMod1 : h.kMod1;
 		std::int32_t m2 = showGP ? h.gMod2 : h.kMod2;
 
+		bool triggered = false;
+		bool clicked = false;
+
 		std::string dynamicLabel;
 		const char* finalLabel = label;
 
@@ -859,12 +896,31 @@ namespace ImGui
 			finalLabel = dynamicLabel.c_str();
 		}
 
-		if (Hotkey(finalLabel, k, m1, m2, alignFar, true, h.isBinding)) {
-			if (!h.isBinding) {
-				h.isBinding = true;
-				inputMgr->StartBinding(k, m1, m2);
+		if (ImGui::Hotkey(finalLabel, k, m1, m2, alignFar, labelLeft, h.isBinding, alwaysHighlight, iconScale)) {
+			clicked = true;
+		}
+
+		if (clicked) {
+			if (ctrlToRebind) {
+				if (inputMgr->IsModifierPressed(FUCK::Modifier::kCtrl)) {
+					if (!h.isBinding) {
+						h.isBinding = true;
+						inputMgr->StartBinding(k, m1, m2, h.disallowModifiers);
+					}
+				} else {
+					if (!h.isBinding) {
+						triggered = true;  // Act as button!
+					}
+				}
+			} else {
+				if (!h.isBinding) {
+					h.isBinding = true;
+					inputMgr->StartBinding(k, m1, m2, h.disallowModifiers);
+				}
 			}
 		}
+
+		return triggered;
 	}
 
 	bool DragScalarEx(const char* label, ImGuiDataType type, void* data, float speed, const void* min, const void* max, const char* fmt, ImGuiSliderFlags flags)

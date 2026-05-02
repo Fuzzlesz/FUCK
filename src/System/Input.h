@@ -25,18 +25,23 @@ namespace Input
 	struct RebindContext
 	{
 		bool active{ false };
+		bool disallowModifiers{ false };
 		float timer{ 0.0f };
 		std::uint32_t originalKey{ 0 };
 		std::int32_t originalMod1{ -1 };
 		std::int32_t originalMod2{ -1 };
 
+		std::set<std::uint32_t> ignoredKeys;
+
 		void Reset()
 		{
 			active = false;
+			disallowModifiers = false;
 			timer = 0.0f;
 			originalKey = 0;
 			originalMod1 = -1;
 			originalMod2 = -1;
+			ignoredKeys.clear();
 		}
 	};
 
@@ -60,7 +65,7 @@ namespace Input
 		bool IsInputPressed(const RE::InputEvent* const* a_event, std::uint32_t a_unifiedKey);
 
 		// --- Rebinding API ---
-		void             StartBinding(std::uint32_t a_currentKey, std::int32_t a_currentMod1, std::int32_t a_currentMod2);
+		void             StartBinding(std::uint32_t a_currentKey, std::int32_t a_currentMod1, std::int32_t a_currentMod2, bool a_disallowModifiers = false);
 		FUCK::BindResult UpdateBinding(const RE::InputEvent* const* a_event, std::uint32_t* outKey, std::int32_t* outMod1, std::int32_t* outMod2);
 		bool             IsBinding() const { return _rebindCtx.active; }
 		void             AbortBinding() { _rebindCtx.Reset(); }
@@ -68,6 +73,7 @@ namespace Input
 
 		bool UpdateManagedHotkey(const RE::InputEvent* const* a_event, FUCK::ManagedHotkey& h);
 		bool ProcessManagedHotkey(const RE::InputEvent* const* a_event, FUCK::ManagedHotkey& h);
+		bool IsManagedHotkeyDown(FUCK::ManagedHotkey& h);
 
 		bool  IsInputDown(std::uint32_t a_unifiedKey) const;
 		float GetAnalogInput(std::uint32_t a_unifiedKey) const;
@@ -85,6 +91,8 @@ namespace Input
 	private:
 		void UpdateInputDevice(RE::INPUT_DEVICE a_device);
 		void CacheInputState(const RE::InputEvent* const* a_events);
+
+		bool CheckModifiersStrict(const std::uint32_t* mods, size_t count, std::int32_t req1, std::int32_t req2, std::uint32_t primaryKey) const;
 
 		DEVICE inputDevice{ DEVICE::kNone };
 		DEVICE lastInputDevice{ DEVICE::kNone };

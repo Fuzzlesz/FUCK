@@ -102,13 +102,24 @@ namespace Input
 		return it != keyStateCache.end() && it->second > 0.0f;
 	}
 
-	void Manager::StartBinding(std::uint32_t k, std::int32_t m1, std::int32_t m2)
+	// --- Rebinding API ---
+	void Manager::StartBinding(std::uint32_t k, std::int32_t m1, std::int32_t m2, bool disallowModifiers) 
 	{
 		_rebindCtx.active = true;
+		_rebindCtx.disallowModifiers = disallowModifiers;
 		_rebindCtx.timer = 0.0f;
 		_rebindCtx.originalKey = k;
 		_rebindCtx.originalMod1 = m1;
 		_rebindCtx.originalMod2 = m2;
+		_rebindCtx.ignoredKeys.clear();
+
+		// Snapshot any keys currently held down so they don't instantly register as the new keybind
+		std::shared_lock lock(_dataLock);
+		for (const auto& [key, value] : keyStateCache) {
+			if (value > 0.0f) {
+				_rebindCtx.ignoredKeys.insert(key);
+			}
+		}
 	}
 
 	FUCK::BindResult Manager::UpdateBinding(const RE::InputEvent* const* a_event, std::uint32_t* outKey, std::int32_t* outMod1, std::int32_t* outMod2)
@@ -165,18 +176,29 @@ namespace Input
 
 		for (auto event = *a_event; event; event = event->next) {
 			auto button = event->AsButtonEvent();
-			if (!button || !button->HasIDCode() || button->Value() <= 0.0f)
+			if (!button || !button->HasIDCode())
 				continue;
 
 			auto key = button->GetIDCode();
 			auto device = button->GetDevice();
 			uint32_t unifiedKey = Keymap::GetUnifiedKey(device, key);
 
+			// If a key is released, it is no longer ignored and can be used in future bindings
+			if (button->Value() <= 0.0f) {
+				_rebindCtx.ignoredKeys.erase(unifiedKey);
+				continue;
+			}
+
+			// If the key was held down *before* we started binding, completely ignore it
+			if (_rebindCtx.ignoredKeys.contains(unifiedKey)) {
+				continue;
+			}
+
 			// BLOCKERS
 			if (device == RE::INPUT_DEVICE::kMouse && (key == static_cast<uint32_t>(MOUSE::kLeftButton) || key == static_cast<uint32_t>(MOUSE::kRightButton)))
-				return FUCK::BindResult::kNone;
-			if (device == RE::INPUT_DEVICE::kKeyboard && (key == KEY::kLeftWin || key == KEY::kRightWin))
-				return FUCK::BindResult::kNone;
+				continue;
+			if (device == RE::INPUT_DEVICE::kKeyboard && (key == static_cast<uint32_t>(KEY::kLeftWin) || key == static_cast<uint32_t>(KEY::kRightWin)))
+				continue;
 
 			if (unifiedKey == Hotkeys::Manager::EscapeKey()) {
 				RE::PlaySound("UIMenuCancel");
@@ -185,20 +207,24 @@ namespace Input
 
 			// MODIFIER COLLEC
 			std::vector<int32_t> pressedMods;
-			if (device == RE::INPUT_DEVICE::kKeyboard) {
-				for (auto m : KB_MODS) {
-					if (IsInputDown(m))
-						pressedMods.push_back(m);
-				}
-			} else if (device == RE::INPUT_DEVICE::kGamepad) {
-				for (auto m : GP_MODS) {
-					// LT and RT are analog — check threshold rather than digital state
-					if (m == kGP_LT || m == kGP_RT) {
-						if (GetAnalogInput(m) > 0.15f)
+			if (!_rebindCtx.disallowModifiers) {
+				if (device == RE::INPUT_DEVICE::kKeyboard) {
+					for (auto m : KB_MODS) {
+						// Don't register a modifier if it is currently ignored
+						if (!_rebindCtx.ignoredKeys.contains(m) && IsInputDown(m))
 							pressedMods.push_back(m);
-					} else {
-						if (IsInputDown(m))
-							pressedMods.push_back(m);
+					}
+				} else if (device == RE::INPUT_DEVICE::kGamepad) {
+					for (auto m : GP_MODS) {
+						if (!_rebindCtx.ignoredKeys.contains(m)) {
+							if (m == kGP_LT || m == kGP_RT) {
+								if (GetAnalogInput(m) > 0.15f)
+									pressedMods.push_back(m);
+							} else {
+								if (IsInputDown(m))
+									pressedMods.push_back(m);
+							}
+						}
 					}
 				}
 			}
@@ -206,7 +232,7 @@ namespace Input
 			// MODIFIER PROTEC
 			if (IsUnifiedModifier(unifiedKey)) {
 				if (button->Value() < 1.0f || !pressedMods.empty())
-					return FUCK::BindResult::kNone;
+					continue;
 			}
 
 			// PREVENT SELF-BIND
@@ -220,7 +246,7 @@ namespace Input
 			};
 
 			if (std::ranges::any_of(pressedMods, [&](int32_t m) { return IsSameModPair(m, unifiedKey); })) {
-				return FUCK::BindResult::kNone;
+				continue;
 			}
 
 			// OUT
@@ -260,7 +286,8 @@ namespace Input
 				h.kMod2 = m2;
 			}
 			h.isBinding = false;
-			h.wasTriggered = true;
+			h.wasTriggered = false;   // Do not trigger immediately upon binding
+			h.waitForRelease = true;  // Flag for debounce
 			return true;
 		} else if (res == FUCK::BindResult::kCancelled) {
 			h.isBinding = false;
@@ -269,40 +296,86 @@ namespace Input
 		return true;
 	}
 
+	bool Manager::CheckModifiersStrict(const std::uint32_t* mods, size_t count, std::int32_t req1, std::int32_t req2, std::uint32_t primaryKey) const
+	{
+		for (size_t i = 0; i < count; ++i) {
+			std::int32_t currentMod = static_cast<std::int32_t>(mods[i]);
+
+			// Ignore the primary key itself from the strictness check!
+			if (static_cast<std::uint32_t>(currentMod) == primaryKey)
+				continue;
+
+			bool isModDown = false;
+			if (currentMod > 0) {
+				std::uint32_t umod = static_cast<std::uint32_t>(currentMod);
+				if (umod == kGP_LT || umod == kGP_RT) {
+					isModDown = GetAnalogInput(umod) > 0.15f;
+				} else {
+					isModDown = IsInputDown(umod);
+				}
+			}
+
+			if (isModDown != (currentMod == req1 || currentMod == req2))
+				return false;
+		}
+		return true;
+	}
+
+	bool Manager::IsManagedHotkeyDown(FUCK::ManagedHotkey& h)
+	{
+		if (h.isBinding)
+			return false;
+
+		bool isDown = false;
+
+		if (h.kKey != 0 && IsInputDown(h.kKey)) {
+			if (CheckModifiersStrict(KB_MODS, std::size(KB_MODS), h.kMod1, h.kMod2, h.kKey))
+				isDown = true;
+		}
+
+		if (!isDown && h.gKey != 0 && IsInputDown(h.gKey)) {
+			if (CheckModifiersStrict(GP_MODS, std::size(GP_MODS), h.gMod1, h.gMod2, h.gKey))
+				isDown = true;
+		}
+
+		if (h.waitForRelease) {
+			if (!isDown) {
+				h.waitForRelease = false;
+			} else {
+				return false;
+			}
+		}
+		return isDown;
+	}
+
 	bool Manager::ProcessManagedHotkey(const RE::InputEvent* const* a_event, FUCK::ManagedHotkey& h)
 	{
 		if (h.isBinding)
 			return false;
 
-		auto checkMod = [this](std::int32_t mod) -> bool {
-			if (mod <= 0)
+		if (h.waitForRelease) {
+			bool currentlyHeld = false;
+			if (h.kKey != 0 && IsInputDown(h.kKey))
+				currentlyHeld = true;
+			if (h.gKey != 0 && IsInputDown(h.gKey))
+				currentlyHeld = true;
+
+			if (!currentlyHeld) {
+				h.waitForRelease = false;
+			} else {
 				return false;
-
-			std::uint32_t umod = static_cast<std::uint32_t>(mod);
-			if (umod == kGP_LT || umod == kGP_RT)
-				return GetAnalogInput(umod) > 0.15f;
-
-			return IsInputDown(umod);
-		};
-
-		auto checkStrict = [&](const std::uint32_t* mods, size_t count, std::int32_t req1, std::int32_t req2) {
-			for (size_t i = 0; i < count; ++i) {
-				std::int32_t currentMod = static_cast<std::int32_t>(mods[i]);
-				if (checkMod(currentMod) != (currentMod == req1 || currentMod == req2))
-					return false;
 			}
-			return true;
-		};
+		}
 
 		bool pressed = false;
 
 		if (h.kKey != 0 && IsInputPressed(a_event, h.kKey)) {
-			if (checkStrict(KB_MODS, std::size(KB_MODS), h.kMod1, h.kMod2))
+			if (CheckModifiersStrict(KB_MODS, std::size(KB_MODS), h.kMod1, h.kMod2, h.kKey))
 				pressed = true;
 		}
 
 		if (!pressed && h.gKey != 0 && IsInputPressed(a_event, h.gKey)) {
-			if (checkStrict(GP_MODS, std::size(GP_MODS), h.gMod1, h.gMod2))
+			if (CheckModifiersStrict(GP_MODS, std::size(GP_MODS), h.gMod1, h.gMod2, h.gKey))
 				pressed = true;
 		}
 
@@ -488,9 +561,9 @@ namespace Input
 					auto key = button->GetIDCode();
 					uint32_t unifiedKey = Keymap::GetUnifiedKey(button->GetDevice(), key);
 
-					if (button->IsHeld() || button->IsPressed()) {
+					if (button->Value() > 0.0f) {
 						keyStateCache[unifiedKey] = button->Value();
-					} else if (button->IsUp()) {
+					} else {
 						keyStateCache.erase(unifiedKey);
 					}
 				}

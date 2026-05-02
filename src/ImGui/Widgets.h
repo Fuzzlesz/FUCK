@@ -95,8 +95,8 @@ namespace ImGui
 	bool CheckBox(const char* label, bool* a_toggle, bool alignFar = true, bool labelLeft = true);
 	bool ToggleButton(const char* label, bool* v, bool alignFar = true, bool labelLeft = true);
 	bool ButtonIconWithLabelStyled(const char* label, void* tex, const ImVec2& size, bool alignFar = true, bool labelLeft = true);
-	bool Hotkey(const char* label, std::uint32_t key, std::int32_t modifier, std::int32_t modifier2, bool alignFar = true, bool labelLeft = true, bool flashing = false);
-	void DrawManagedHotkey(const char* label, FUCK::ManagedHotkey& h, bool alignFar = true);
+	bool Hotkey(const char* label, std::uint32_t key, std::int32_t modifier, std::int32_t modifier2, bool alignFar = true, bool labelLeft = true, bool flashing = false, bool alwaysHighlight = false, float iconScale = 1.0f);
+	bool DrawManagedHotkey(const char* label, FUCK::ManagedHotkey& h, int flags, float iconScale = 1.0f);
 
 	// Specialized Inputs
 	bool InputTextStyled(const char* label, char* buf, size_t buf_size, int flags = 0);

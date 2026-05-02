@@ -99,7 +99,7 @@ namespace Hooks
 	}
 
 	// Filters the input event list. Allows Screenshot/Console, and conditionally Game Menus.
-	[[nodiscard]] static RE::InputEvent* FilterInputEvents(RE::InputEvent* const* a_events)
+	static RE::InputEvent* FilterInputEvents(RE::InputEvent* const* a_events)
 	{
 		auto* userEvents = RE::UserEvents::GetSingleton();
 		auto* manager = FUCKMan::GetSingleton();
@@ -124,7 +124,7 @@ namespace Hooks
 				}
 
 				// Always allow Screenshot and Console
-				else if (eventName == userEvents->screenshot || eventName == userEvents->console) {
+				else if (userEvents && (eventName == userEvents->screenshot || eventName == userEvents->console)) {
 					keep = true;
 				}
 				// Pass menu inputs to the game so MenuOpenCloseEvent can trigger
@@ -137,7 +137,7 @@ namespace Hooks
 						keep = true;
 					}
 					// Game menu passthrough — only relevant when a kCloseOnGameMenu window is open.
-					else if (allowGameMenus) {
+					else if (allowGameMenus && userEvents) {
 						if (eventName == userEvents->tweenMenu ||
 							eventName == userEvents->journal ||
 							eventName == userEvents->map ||
@@ -185,19 +185,19 @@ namespace Hooks
 				return;
 			}
 
-			constexpr RE::InputEvent* const dummy[] = { nullptr };
-
 			MANAGER(Input)->ProcessInputEvents(a_events);
 
 			const bool wasBlocked = FUCKMan::GetSingleton()->IsInputBlocked();
 			const bool consumed = FUCKMan::GetSingleton()->ProcessAsyncInput(a_events);
 
 			if (CheckForJournalAccept(a_events)) {
-				func(a_dispatcher, dummy);
+				constexpr RE::InputEvent* const empty_events[] = { nullptr };
+				func(a_dispatcher, empty_events);
 				return;
 			}
 
 			if (consumed || wasBlocked) {
+				// Get the new filtered list head
 				RE::InputEvent* filteredHead = FilterInputEvents(a_events);
 
 				auto ui = RE::UI::GetSingleton();
@@ -214,6 +214,7 @@ namespace Hooks
 					RE::InputEvent* const filtered[] = { filteredHead };
 					func(a_dispatcher, filtered);
 				} else {
+					constexpr RE::InputEvent* const dummy[] = { nullptr };
 					func(a_dispatcher, dummy);
 				}
 

@@ -130,6 +130,18 @@ namespace FUCK
 	inline TableFlags operator|(TableFlags a, TableFlags b) { return static_cast<TableFlags>(static_cast<int>(a) | static_cast<int>(b)); }
 	inline TableColumnFlags operator|(TableColumnFlags a, TableColumnFlags b) { return static_cast<TableColumnFlags>(static_cast<int>(a) | static_cast<int>(b)); }
 
+	enum class HotkeyFlags : int
+	{
+		kNone = 0,
+		kAlignNear = 1 << 0,
+		kLabelRight = 1 << 1,
+		kCtrlToRebind = 1 << 2,
+		kAlwaysHighlight = 1 << 3,
+		kNoModifiers = 1 << 4
+	};
+	inline HotkeyFlags operator|(HotkeyFlags a, HotkeyFlags b) { return static_cast<HotkeyFlags>(static_cast<int>(a) | static_cast<int>(b)); }
+	inline bool operator&(HotkeyFlags a, HotkeyFlags b) { return (static_cast<int>(a) & static_cast<int>(b)) != 0; }
+
 	struct ManagedHotkey
 	{
 		std::uint32_t kKey = 0, gKey = 0;
@@ -137,6 +149,8 @@ namespace FUCK
 		std::int32_t kMod2 = -1, gMod2 = -1;
 		bool isBinding = false;
 		bool wasTriggered = false;
+		bool waitForRelease = false;
+		bool disallowModifiers = false;  // Prevent binding Shift/Ctrl/Alt to this
 
 		void Clear()
 		{
@@ -144,6 +158,7 @@ namespace FUCK
 			kMod1 = gMod1 = kMod2 = gMod2 = -1;
 			isBinding = false;
 			wasTriggered = false;
+			waitForRelease = false;
 		}
 	};
 	
@@ -291,13 +306,14 @@ struct FUCK_Interface
 
 	bool (*IsBinding)();
 	void (*AbortBinding)();
-	void (*StartBinding)(std::uint32_t, std::int32_t, std::int32_t);
+	void (*StartBinding)(std::uint32_t, std::int32_t, std::int32_t, bool);
 	FUCK::BindResult (*UpdateBinding)(const void*, std::uint32_t*, std::int32_t*, std::int32_t*);
 	FUCK::BindResult (*GetInputBind)(const void*, std::uint32_t*, std::int32_t*, std::int32_t*);
 
-	void (*DrawManagedHotkey)(const char*, FUCK::ManagedHotkey*, bool);
+	bool (*DrawManagedHotkey)(const char*, FUCK::ManagedHotkey*, int, float);
 	bool (*UpdateManagedHotkey)(const void*, FUCK::ManagedHotkey*);
 	bool (*ProcessManagedHotkey)(const void*, FUCK::ManagedHotkey*);
+	bool (*IsManagedHotkeyDown)(FUCK::ManagedHotkey*);
 
 	// Interaction
 	bool (*IsItemHovered)(int);
@@ -784,10 +800,10 @@ namespace FUCK
 			i->AbortBinding();
 	}
 	inline bool IsBinding() { return GetInterface() ? GetInterface()->IsBinding() : false; }
-	inline void StartBinding(std::uint32_t key, std::int32_t mod1, std::int32_t mod2)
+	inline void StartBinding(std::uint32_t key, std::int32_t mod1, std::int32_t mod2, bool disallowModifiers = false)
 	{
 		if (auto i = GetInterface())
-			i->StartBinding(key, mod1, mod2);
+			i->StartBinding(key, mod1, mod2, disallowModifiers);
 	}
 	inline BindResult UpdateBinding(const void* inputEvent, std::uint32_t* outKey, std::int32_t* outMod1, std::int32_t* outMod2) { return GetInterface() ? GetInterface()->UpdateBinding(inputEvent, outKey, outMod1, outMod2) : BindResult::kNone; }
 	inline BindResult GetInputBind(const void* inputEvent, std::uint32_t* outKey, std::int32_t* outMod1, std::int32_t* outMod2) { return GetInterface() ? GetInterface()->GetInputBind(inputEvent, outKey, outMod1, outMod2) : BindResult::kNone; }
@@ -1322,10 +1338,11 @@ namespace FUCK
 	};
 
 	/// @brief Used for assigning Hotkeys within the FUCK interface.
-	inline void DrawManagedHotkey(const char* label, ManagedHotkey& h, bool alignFar = true)
+	inline bool DrawManagedHotkey(const char* label, ManagedHotkey& h, HotkeyFlags flags = HotkeyFlags::kNone, float iconScale = 1.0f)
 	{
 		if (auto i = GetInterface())
-			i->DrawManagedHotkey(label, &h, alignFar);
+			return i->DrawManagedHotkey(label, &h, static_cast<int>(flags), iconScale);
+		return false;
 	}
 
 	inline bool UpdateManagedHotkey(const void* e, ManagedHotkey& h)
@@ -1338,14 +1355,19 @@ namespace FUCK
 		return GetInterface() ? GetInterface()->ProcessManagedHotkey(e, &h) : false;
 	}
 
-	inline void AbortManagedHotkey(ManagedHotkey& h)
+	inline bool IsManagedHotkeyDown(ManagedHotkey & h)
+	{
+		return GetInterface() ? GetInterface()->IsManagedHotkeyDown(&h) : false;
+	}
+
+	inline void AbortManagedHotkey(ManagedHotkey & h)
 	{
 		if (h.isBinding) {
 			AbortBinding();
 			h.isBinding = false;
 		}
 	}
-	
+
 	// ------------------------------------------------------------------------
 	// Overloads & Templates
 	// ------------------------------------------------------------------------
