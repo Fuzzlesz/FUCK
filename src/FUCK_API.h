@@ -243,6 +243,7 @@ struct FUCK_Interface
 	void (*SetCursorPos)(float, float);
 	void (*GetCursorScreenPos)(float*, float*);
 	void (*SetCursorScreenPos)(float, float);
+	void (*AlignTextToFramePadding)();
 	void (*GetContentRegionAvail)(float*, float*);
 	float (*CalcItemWidth)();
 	void (*CalcTextSize)(const char*, const char*, bool, float, float*, float*);
@@ -605,6 +606,11 @@ namespace FUCK
 	{
 		if (auto i = GetInterface())
 			i->SetCursorScreenPos(pos.x, pos.y);
+	}
+	inline void AlignTextToFramePadding()
+	{
+		if (auto i = GetInterface())
+			i->AlignTextToFramePadding();
 	}
 	inline ImVec2 GetContentRegionAvail()
 	{

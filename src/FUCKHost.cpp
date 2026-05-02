@@ -184,6 +184,7 @@ namespace FUCK::Host
 			*y = p.y;
 	}
 	static void SetCursorScreenPos_Impl(float x, float y) { ImGui::SetCursorScreenPos({ x, y }); }
+	static void AlignTextToFramePadding_Impl() { ImGui::AlignTextToFramePadding(); }
 	static void GetContentRegionAvail_Impl(float* x, float* y)
 	{
 		ImVec2 p = ImGui::GetContentRegionAvail();
@@ -696,6 +697,7 @@ namespace FUCK::Host
 			.SetCursorPos = SetCursorPos_Impl,
 			.GetCursorScreenPos = GetCursorScreenPos_Impl,
 			.SetCursorScreenPos = SetCursorScreenPos_Impl,
+			.AlignTextToFramePadding = AlignTextToFramePadding_Impl,
 			.GetContentRegionAvail = GetContentRegionAvail_Impl,
 			.CalcItemWidth = CalcItemWidth_Impl,
 			.CalcTextSize = CalcTextSize_Impl,
