@@ -15,19 +15,29 @@ namespace Translation
 
 	void Manager::LoadCustomTranslation(std::string_view a_name)
 	{
+		if (a_name.empty())
+			return;
+
 		// Construct path: Data\Interface\Translations\{NAME}_{LANG}.txt
-		std::filesystem::path path{ std::format(R"(Data\Interface\Translations\{}_{}.txt)", a_name, GetGameLanguage()) };
+		std::string lang = GetGameLanguage();
+		std::filesystem::path path{ std::format(R"(Data\Interface\Translations\{}_{}.txt)", a_name, lang) };
 
 		if (!ParseFile(path)) {
 			// Fallback to ENGLISH if specific language fails
 			std::filesystem::path fallback{ std::format(R"(Data\Interface\Translations\{}_ENGLISH.txt)", a_name) };
 			if (std::filesystem::exists(fallback)) {
 				logger::info("Failed to load translation file in {}, loading default ENGLISH file...", path.string());
+
+				std::lock_guard<std::mutex> lock(trackingMutex);
+				trackedTranslations.insert(std::string(a_name) + " (ENGLISH)");
+
 				ParseFile(fallback);
 			} else {
-				// If neither exists, that's okay, maybe the user wants to use shared strings
 				logger::warn("No translation file found for {} (Expected: {})", a_name, path.string());
 			}
+		} else {
+			std::lock_guard<std::mutex> lock(trackingMutex);
+			trackedTranslations.insert(std::string(a_name) + " (" + lang + ")");
 		}
 	}
 

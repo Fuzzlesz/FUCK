@@ -29,6 +29,9 @@ std::vector<std::string> Settings::GetConfigs(const std::filesystem::path& a_pat
 
 void Settings::LoadINI(const char* a_path, const INIFunc a_func, bool a_generate)
 {
+	if (!a_path || a_path[0] == '\0')
+		return;
+
 	CSimpleIniA ini;
 	ini.SetUnicode();
 
@@ -36,6 +39,11 @@ void Settings::LoadINI(const char* a_path, const INIFunc a_func, bool a_generate
 
 	p.make_preferred();
 	auto pathStr = p.string();
+
+	{
+		std::lock_guard<std::mutex> lock(GetSingleton()->trackingMutex);
+		GetSingleton()->trackedINIs.insert(pathStr);
+	}
 
 	if (a_generate) {
 		std::filesystem::create_directories(p.parent_path());

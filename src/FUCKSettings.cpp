@@ -4,6 +4,9 @@
 #include "ImGui/IconsFonts.h"
 #include "ImGui/Styles.h"
 #include "System/Hotkeys.h"
+#include "System/Settings.h"
+#include "System/Translation.h"
+#include "System/Utils.h"
 
 const char* SettingsTool::Name() const
 {
@@ -78,15 +81,6 @@ void SettingsTool::Draw()
 			}
 			FUCK::Spacing(4);
 
-			FUCK::Header("$FUCK_Settings_Info"_T);
-			FUCK::Spacing(2);
-
-			FUCK::PushStyleColor(ImGuiCol_Text, FUCK::GetStyleColorVec4(ImGuiCol_CheckMark));
-			FUCK::TextWrapped("$FUCK_Settings_Desc"_T);
-			FUCK::PopStyleColor();
-			FUCK::Spacing(2);
-			FUCK::TextDisabled("FUCK API Version: %d", FUCK_API_VERSION);
-
 			FUCK::EndTabItem();
 		}
 
@@ -140,6 +134,140 @@ void SettingsTool::Draw()
 
 			if (FUCK::Button("$FUCK_Styles_ResetDefaults"_T)) {
 				style->ResetToDefaults();
+			}
+
+			FUCK::EndTabItem();
+		}
+
+		// --------------------------------------------------------
+		// TAB 3: INFO
+		// --------------------------------------------------------
+		if (FUCK::BeginTabItem("$FUCK_Settings_TabInfo"_T)) {
+			FUCK::Spacing(2);
+
+			FUCK::Header("$FUCK_Settings_Info"_T);
+			FUCK::Spacing(2);
+
+			FUCK::PushStyleColor(ImGuiCol_Text, FUCK::GetStyleColorVec4(ImGuiCol_CheckMark));
+			FUCK::TextWrapped("$FUCK_Settings_Desc"_T);
+			FUCK::PopStyleColor();
+			FUCK::Spacing(2);
+			FUCK::TextDisabled("FUCK API Version: %d", FUCK_API_VERSION);
+			FUCK::Spacing(4);
+
+			// --- ONE-TIME SCAN CACHING ---
+			static std::vector<std::string> pluginsList;
+			static std::vector<std::string> iniList;
+			static std::vector<std::string> transList;
+			static bool s_infoCached = false;
+
+			if (!s_infoCached) {
+				// 1. Gather DLLs via the VTable Poly Pointer Trick
+				std::set<std::string> consumerDLLs;
+				auto extractDLL = [&](void* polyPtr) {
+					if (!polyPtr)
+						return;
+					void* vtableAddr = *reinterpret_cast<void**>(polyPtr);
+					HMODULE hModule = nullptr;
+
+					if (::GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+							static_cast<LPCSTR>(vtableAddr), &hModule)) {
+						char path[MAX_PATH];
+						if (::GetModuleFileNameA(hModule, path, MAX_PATH)) {
+							std::string filename = std::filesystem::path(path).filename().string();
+							if (!Utils::IContains(filename, "FUCK.dll")) {
+								consumerDLLs.insert(filename);
+							}
+						}
+					}
+				};
+
+				for (auto* tool : manager->_tools) {
+					extractDLL(dynamic_cast<void*>(tool));
+				}
+				for (auto* win : manager->_windows) {
+					extractDLL(dynamic_cast<void*>(win));
+				}
+				pluginsList.assign(consumerDLLs.begin(), consumerDLLs.end());
+
+				// 2. Gather INIs Dynamically
+				{
+					std::lock_guard<std::mutex> iniLock(Settings::GetSingleton()->trackingMutex);
+					for (const auto& iniPath : Settings::GetSingleton()->trackedINIs) {
+						std::string filename = std::filesystem::path(iniPath).filename().string();
+						// Exclude SSEDisplayTweaks inis we use in backend.
+						if (!Utils::IContains(filename, "SSEDisplayTweaks")) {
+							iniList.push_back(filename);
+						}
+					}
+				}
+
+				// 3. Gather Translations Dynamically
+				{
+					std::lock_guard<std::mutex> transLock(Translation::Manager::GetSingleton()->trackingMutex);
+					for (const auto& transName : Translation::Manager::GetSingleton()->trackedTranslations) {
+						transList.push_back(transName);
+					}
+				}
+				s_infoCached = true;
+			}
+
+			// Helper Lambda: Print a sorted list inside a dynamic scrolling panel
+			auto PrintListInPanel = [&](std::vector<std::string>& items, const char* panelId) {
+				if (items.empty()) {
+					FUCK::TextDisabled("$FUCK_Info_NoneFound"_T);
+				} else {
+					// Case-Insensitive Alphabetical Sort
+					std::sort(items.begin(), items.end(), [](const std::string& a, const std::string& b) {
+						return _stricmp(a.c_str(), b.c_str()) < 0;
+					});
+
+					// Calculate how many columns we can fit inside this specific panel
+					float availWidth = FUCK::GetContentRegionAvail().x;
+					float minColWidth = 280.0f * FUCK::GetResolutionScale() * manager->_userScale;
+					int numCols = std::max(1, static_cast<int>(availWidth / minColWidth));
+
+					// Let the panel stretch to the bottom of the window
+					float childHeight = FUCK::GetContentRegionAvail().y;
+
+					// Draw an inset scrolling panel
+					FUCK::PushStyleColor(ImGuiCol_ChildBg, FUCK::GetStyleColorVec4(ImGuiCol_FrameBg));
+					FUCK::BeginChild(panelId, ImVec2(0, childHeight), true, 0);
+
+					if (FUCK::BeginTable(panelId, numCols, FUCK::TableFlags::kNone)) {
+						for (const auto& item : items) {
+							FUCK::TableNextColumn();
+							FUCK::Text("  - %s", item.c_str());
+						}
+						FUCK::EndTable();
+					}
+
+					FUCK::EndChild();
+					FUCK::PopStyleColor();
+				}
+			};
+
+			// --- 3-COLUMN SIDE-BY-SIDE LAYOUT ---
+			if (FUCK::BeginTable("InfoLayoutTable", 3, FUCK::TableFlags::kNone)) {
+				// Column 1: Plugins
+				FUCK::TableNextColumn();
+				FUCK::Header("$FUCK_Info_RegisteredMods"_T);
+				FUCK::Spacing(2);
+				PrintListInPanel(pluginsList, "PluginsPanel");
+
+				// Column 2: INIs
+				FUCK::TableNextColumn();
+				FUCK::Header("$FUCK_Info_SettingsFiles"_T);
+				FUCK::Spacing(2);
+				PrintListInPanel(iniList, "InisPanel");
+
+				// Column 3: Translations
+				FUCK::TableNextColumn();
+				FUCK::Header("$FUCK_Info_Translations"_T);
+				FUCK::Spacing(2);
+				PrintListInPanel(transList, "TransPanel");
+
+				FUCK::EndTable();
 			}
 
 			FUCK::EndTabItem();
