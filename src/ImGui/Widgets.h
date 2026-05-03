@@ -69,7 +69,7 @@ namespace ImGui
 	};
 
 	inline ArrowIconParams CalcArrowIconParams(float iconAspect, bool pointsDown, float rowH,
-		float baseSize = 16.0f, float userScale = 1.0f)
+		float baseSize = 24.0f, float userScale = 1.0f)
 	{
 		float scaledH = baseSize * userScale;
 		float scaledW = scaledH * iconAspect;
