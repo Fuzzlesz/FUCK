@@ -125,17 +125,11 @@ namespace ImGui
 
 	float Styles::GetVar(USER_STYLE a_style) const
 	{
-		float scale = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
+		float scale = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
 
 		switch (a_style) {
-		case USER_STYLE::kButtons:
-			return user.buttonScale;
 		case USER_STYLE::kButtonRounding:
 			return user.buttonRounding;
-		case USER_STYLE::kCheckbox:
-			return user.checkboxScale;
-		case USER_STYLE::kStepper:
-			return user.stepperScale;
 		case USER_STYLE::kGridLines:
 			return user.gridThickness * scale;
 		case USER_STYLE::kDisabledTextAlpha:
@@ -269,7 +263,6 @@ namespace ImGui
 		const char* fontName = ini.GetValue("Font", "sFontName");
 		if (fontName && *fontName)
 			SetCurrentFont(fontName);
-		MANAGER(IconFont)->LoadSettings(ini);
 
 		if (currentPresetName != a_name) {
 			currentPresetName = a_name;
@@ -328,9 +321,6 @@ namespace ImGui
 #define SET_VALUE(a_value, a_section, a_key) a_ini.SetValue(a_section, a_key, ToString(user.a_value, true).c_str())
 
 		SET_VALUE(iconDisabled, "Icon", "rDisabledColor");
-		SET_VALUE(buttonScale, "Icon", "fButtonScale");
-		SET_VALUE(checkboxScale, "Icon", "fCheckboxScale");
-		SET_VALUE(stepperScale, "Icon", "fStepperScale");
 		SET_VALUE(widgetToggleActive, "Icon", "rToggleActiveColor");
 		SET_VALUE(widgetFlash, "Icon", "rFlashColor");
 
@@ -399,9 +389,6 @@ namespace ImGui
 	std::tie(user.a_value, a_value##_hex) = ToStyle<decltype(user.a_value)>(a_ini.GetValue(a_section, a_key, ToString(def.a_value, true).c_str()));
 
 		GET_VALUE(iconDisabled, "Icon", "rDisabledColor");
-		GET_VALUE(buttonScale, "Icon", "fButtonScale");
-		GET_VALUE(checkboxScale, "Icon", "fCheckboxScale");
-		GET_VALUE(stepperScale, "Icon", "fStepperScale");
 		GET_VALUE(widgetToggleActive, "Icon", "rToggleActiveColor");
 		GET_VALUE(widgetFlash, "Icon", "rFlashColor");
 
@@ -546,7 +533,6 @@ namespace ImGui
 		colors[ImGuiCol_ScrollbarBg] = user.scrollbarBG;
 		colors[ImGuiCol_NavHighlight] = user.navHighlight;
 
-		MANAGER(IconFont)->ResizeIcons();
 		refreshStyle = false;
 	}
 

@@ -4,10 +4,8 @@ namespace ImGui
 {
 	enum class USER_STYLE
 	{
-		// Widget Scales
+		// Widget
 		kButtons,
-		kCheckbox,
-		kStepper,
 
 		// General Colours
 		kTextButton,
@@ -58,10 +56,6 @@ namespace ImGui
 			// Helpers / Vars
 			float bgAlpha{ 0.68f };
 			float disabledAlpha{ 0.30f };
-
-			float buttonScale{ 0.5f };
-			float checkboxScale{ 0.5f };
-			float stepperScale{ 0.3f };
 
 			// Layout Metrics
 			ImVec2 windowPadding{ 8.0f, 8.0f };

@@ -26,15 +26,6 @@ namespace IconFont
 		return result;
 	}
 
-	void IconTexture::Resize(float a_scale)
-	{
-		float userScale = FUCKMan::GetSingleton()->GetUserScale();
-		auto height = RE::BSGraphics::Renderer::GetScreenSize().height;
-		float relativeHeight = height / 1080.0f;
-		float finalScale = a_scale * relativeHeight * userScale;
-		size = imageSize * finalScale;
-	}
-
 	std::string Manager::ResolveFontPath(const std::string& a_filename) const
 	{
 		// Check User Fonts (Data/Interface/FUCK/Fonts)
@@ -61,22 +52,8 @@ namespace IconFont
 		}
 	}
 
-	void Manager::LoadFontSettings(CSimpleIniA& a_ini)
-	{
-		const char* iniFont = a_ini.GetValue("Fonts", "sFont");
-		if (iniFont && *iniFont && fontName.empty()) {
-			fontName = iniFont;
-		}
-
-		baseFontSize = static_cast<float>(a_ini.GetDoubleValue("Fonts", "iFontSize", baseFontSize));
-		baseLargeFontSize = static_cast<float>(a_ini.GetDoubleValue("Fonts", "iLargeFontSize", baseLargeFontSize));
-		baseIconSize = static_cast<float>(a_ini.GetDoubleValue("Fonts", "iIconSize", baseIconSize));
-		baseLargeIconSize = static_cast<float>(a_ini.GetDoubleValue("Fonts", "iLargeIconSize", baseLargeIconSize));
-	}
-
 	void Manager::LoadSettings(CSimpleIniA& a_ini)
 	{
-		LoadFontSettings(a_ini);
 		buttonScheme = static_cast<BUTTON_SCHEME>(a_ini.GetLongValue("Controls", "iButtonScheme", std::to_underlying(buttonScheme)));
 	}
 
@@ -302,35 +279,6 @@ namespace IconFont
 			ps4.Load();
 		});
 		std::for_each(mouse.begin(), mouse.end(), [](auto& Icon) { Icon.second.Load(); });
-	}
-
-	void Manager::ResizeIcons()
-	{
-		float buttonScale = ImGui::GetUserStyleVar(ImGui::USER_STYLE::kButtons);
-		float checkboxScale = ImGui::GetUserStyleVar(ImGui::USER_STYLE::kCheckbox);
-		float stepperScale = ImGui::GetUserStyleVar(ImGui::USER_STYLE::kStepper);
-
-		unknownKey.Resize(buttonScale);
-		upKey.Resize(buttonScale);
-		downKey.Resize(buttonScale);
-		leftKey.Resize(buttonScale);
-		rightKey.Resize(buttonScale);
-
-		std::ranges::for_each(keyboard, [&](auto& IconTexture) {
-			IconTexture.second.Resize(buttonScale);
-		});
-		std::ranges::for_each(gamePad, [&](auto& IconTexture) {
-			auto& [xbox, ps4] = IconTexture.second;
-			xbox.Resize(buttonScale);
-			ps4.Resize(buttonScale);
-		});
-		std::ranges::for_each(mouse, [&](auto& IconTexture) {
-			IconTexture.second.Resize(buttonScale);
-		});
-
-		stepperRight.Resize(stepperScale);
-		checkbox.Resize(checkboxScale);
-		checkboxFilled.Resize(checkboxScale);
 	}
 
 	ImFont* Manager::GetLargeFont() const { return largeFont; }

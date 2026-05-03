@@ -12,7 +12,6 @@ namespace IconFont
 		~IconTexture() override = default;
 
 		bool Load(bool a_resizeToScreenRes = false) override;
-		void Resize(float a_scale);
 
 		// members
 		ImVec2 imageSize{};
@@ -36,9 +35,6 @@ namespace IconFont
 		// Actually performs the heavy lifting, called at start of frame
 		bool ProcessPendingReload();
 
-		void ResizeIcons();
-
-		// New API for Styles integration
 		void SetFontName(const std::string& a_fontName);
 		std::string GetFontName() const { return fontName; }
 
@@ -62,7 +58,6 @@ namespace IconFont
 			kPS4
 		};
 
-		void LoadFontSettings(CSimpleIniA& a_ini);
 		ImFont* LoadFontIconSet(float a_fontSize, float a_iconSize, const ImVector<ImWchar>& a_ranges) const;
 		// Internal helper that actually clears the atlas
 		void RebuildFontAtlas();

@@ -59,7 +59,7 @@ namespace
 
 		ImU32 col = ImGui::GetDynamicTextColor(isHovered);
 		float uiScale = ImGui::Renderer::GetResolutionScale();
-		float userScale = FUCKMan::GetSingleton()->GetUserScale();
+		float userScale = (FUCKMan::GetSingleton()->GetActiveScale());
 		float aspect = iconArrow->imageSize.y > 0.0f ? (iconArrow->imageSize.x / iconArrow->imageSize.y) : 1.0f;
 
 		auto ap = ImGui::CalcArrowIconParams(aspect, isOpen, frameHeight, 24.0f * uiScale, userScale);
@@ -77,7 +77,7 @@ namespace
 
 		ImU32 col = ImGui::GetDynamicTextColor(isHovered || isOpen);
 		float uiScale = ImGui::Renderer::GetResolutionScale();
-		float userScale = FUCKMan::GetSingleton()->GetUserScale();
+		float userScale = (FUCKMan::GetSingleton()->GetActiveScale());
 		float aspect = iconArrow->imageSize.y > 0.0f ? (iconArrow->imageSize.x / iconArrow->imageSize.y) : 1.0f;
 
 		auto ap = ImGui::CalcArrowIconParams(aspect, isOpen, bSize.y, 24.0f * uiScale, userScale);
@@ -173,6 +173,9 @@ namespace
 			drawContent();
 		};
 
+		// Tighter gap globally for near-aligned widgets to closely mimic vanilla grouping
+		float nearSpacing = std::max(1.0f, std::floor(g.Style.ItemInnerSpacing.x * 0.25f));
+
 		if (alignFar) {
 			if (labelLeft) {
 				ImGui::SetCursorPosX(startX);
@@ -194,12 +197,12 @@ namespace
 			if (labelLeft) {
 				ImGui::SetCursorPosX(startX);
 				DrawLabel();
-				ImGui::SameLine(0, g.Style.ItemInnerSpacing.x);
+				ImGui::SameLine(0, nearSpacing);
 				DrawWidget();
 			} else {
 				ImGui::SetCursorPosX(startX);
 				DrawWidget();
-				ImGui::SameLine(0, g.Style.ItemInnerSpacing.x);
+				ImGui::SameLine(0, nearSpacing);
 				DrawLabel();
 			}
 		}
@@ -236,16 +239,20 @@ namespace ImGui
 		auto iconFilled = MANAGER(IconFont)->GetCheckboxFilled();
 		std::string idStr = std::format("##{}", label);
 
+		float targetH = ImGui::GetFrameHeight() * 0.85f;
+		float targetW = targetH * (icon->imageSize.y > 0.0f ? (icon->imageSize.x / icon->imageSize.y) : 1.0f);
+		ImVec2 scaledSize(targetW, targetH);
+
 		auto DrawContent = [&]() {
 			ImVec2 p = ImGui::GetCursorScreenPos();
-			bool h = ImGui::IsMouseHoveringRect(p, p + icon->size) || IsWidgetFocused(ImGui::GetID(idStr.c_str()));
+			bool h = ImGui::IsMouseHoveringRect(p, p + scaledSize) || IsWidgetFocused(ImGui::GetID(idStr.c_str()));
 			void* tex = *a_toggle ? iconFilled->srView.Get() : icon->srView.Get();
-			if (DrawTransparentButton(idStr.c_str(), tex, icon->size, GetHighlightTint(*a_toggle, h, false))) {
+			if (DrawTransparentButton(idStr.c_str(), tex, scaledSize, GetHighlightTint(*a_toggle, h, false))) {
 				*a_toggle = !*a_toggle;
 				selected = true;
 			}
 		};
-		AlignedWidgetLayout(label, alignFar, labelLeft, icon->size.x, DrawContent, icon->size.y);
+		AlignedWidgetLayout(label, alignFar, labelLeft, scaledSize.x, DrawContent, scaledSize.y);
 		if (selected)
 			RE::PlaySound("UIMenuFocus");
 		return selected;
@@ -266,7 +273,7 @@ namespace ImGui
 
 			ImGuiContext& g = *GImGui;
 			const ImGuiID id = window->GetID(idStr.c_str());
-			float scale = ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
+			float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
 
 			ImVec2 p = ImGui::GetCursorScreenPos();
 			ImRect bb(p, p + ImVec2(width, frameH));
@@ -350,7 +357,7 @@ namespace ImGui
 
 	bool ComboWithFilter(const char* label, int* current_item, const std::vector<std::string>& items, int popup_max_height_in_items)
 	{
-		float scale = ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
+		float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
 
 		ImGuiContext& g = *GImGui;
 		ImGuiWindow* window = GetCurrentWindow();
@@ -484,7 +491,7 @@ namespace ImGui
 
 	bool ComboStyled(const char* label, int* current_item, const char* const* items, int items_count, int popup_max_height_in_items)
 	{
-		float scale = ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
+		float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
 
 		PushStyleVar(ImGuiStyleVar_FramePadding, { GetStyle().FramePadding.x, 4.0f * scale });
 
@@ -553,7 +560,7 @@ namespace ImGui
 	{
 		float borderSize = ImGui::GetStyle().FrameBorderSize;
 		float round = ImGui::GetStyle().TabRounding;
-		float scale = ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
+		float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
 		float outlining = borderSize + (2.5f * scale);
 
 		auto buildPath = [&](ImDrawList* dl, float botY) {
@@ -584,7 +591,7 @@ namespace ImGui
 		ImGuiID lastActive = window->StateStorage.GetInt(storageKey, 0);
 
 		bool wasActive = (lastActive == id);
-		float scale = ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
+		float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
 
 		PushStyleColor(ImGuiCol_Tab, ImVec4(0, 0, 0, 0));
 		PushStyleColor(ImGuiCol_TabHovered, ImVec4(0, 0, 0, 0));
@@ -644,7 +651,7 @@ namespace ImGui
 		if (window->SkipItems)
 			return false;
 
-		float scale = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
+		float scale = Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
 		float rounding = GetUserStyleVar(USER_STYLE::kButtonRounding) * scale;
 		float borderSize = ImGui::GetStyle().FrameBorderSize;
 
@@ -731,7 +738,7 @@ namespace ImGui
 
 		ImGuiContext& g = *GImGui;
 		const float frameH = ImGui::GetFrameHeight();
-		const float spacing = g.Style.ItemInnerSpacing.x;
+		const float spacing = std::max(1.0f, std::floor(g.Style.ItemInnerSpacing.x * 0.5f));
 
 		const auto* kIcon = iconFont->GetIcon(key);
 		const auto* m1Icon = (m1 != -1) ? iconFont->GetIcon(static_cast<uint32_t>(m1)) : nullptr;
@@ -755,9 +762,18 @@ namespace ImGui
 		std::vector<RenderItem> items;
 		items.reserve(5);
 
+		float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
+		float resScale = ImGui::Renderer::GetResolutionScale();
+		auto* regularFont = MANAGER(IconFont)->GetRegularFont();
+		float baseSize = regularFont ? regularFont->LegacySize : 30.0f;
+		float nativeIconH = baseSize * resScale * activeScale * 1.215f;
+
 		auto AddIcon = [&](const IconFont::IconTexture* icon, const char* suffix) {
 			if (icon) {
-				ImVec2 scaledSize = ImVec2(icon->size.x * iconScale, icon->size.y * iconScale);
+				float targetH = nativeIconH * iconScale;
+				float targetW = targetH * (icon->imageSize.y > 0.0f ? (icon->imageSize.x / icon->imageSize.y) : 1.0f);
+				ImVec2 scaledSize(targetW, targetH);
+
 				items.push_back({ RenderItem::kIcon, icon, nullptr, suffix, scaledSize });
 			}
 		};
@@ -831,8 +847,11 @@ namespace ImGui
 				// Vertically center the item within the frame
 				float offY = (actualFrameH - item.size.y) * 0.5f;
 
+				// Nudge text down slightly (1-2px) to visually align the baseline with physical button icons
+				float visualNudgeY = (item.type == RenderItem::kText) ? std::floor(1.5f * ImGui::Renderer::GetResolutionScale()) : 0.0f;
+
 				ImGui::SetCursorPosX(currentX);
-				ImGui::SetCursorPosY(lineTop + offY);
+				ImGui::SetCursorPosY(lineTop + offY + visualNudgeY);
 
 				if (item.type == RenderItem::kIcon) {
 					ImVec2 p = ImGui::GetCursorScreenPos();
@@ -1199,7 +1218,7 @@ namespace ImGui
 
 		auto arrowIcon = MANAGER(IconFont)->GetStepperRight();
 		float uiScale = ImGui::Renderer::GetResolutionScale();
-		float userScale = FUCKMan::GetSingleton()->GetUserScale();
+		float userScale = FUCKMan::GetSingleton()->GetActiveScale();
 
 		// Extract ratio (steppers always point left/right, so height is height)
 		float targetH = 24.0f * uiScale * userScale;
@@ -1236,7 +1255,7 @@ namespace ImGui
 			PushStyleColor(ImGuiCol_Text, GetColorU32(ImGuiCol_TextDisabled));
 
 		auto largeFont = MANAGER(IconFont)->GetLargeFont();
-		float fontScale = FUCKMan::GetSingleton()->GetUserScale();
+		float fontScale = FUCKMan::GetSingleton()->GetActiveScale();
 		float fontSize = (largeFont ? largeFont->LegacySize : GetStyle().FontSizeBase) * fontScale;
 
 		PushFont(largeFont, fontSize);

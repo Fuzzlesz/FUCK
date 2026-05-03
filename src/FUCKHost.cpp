@@ -39,15 +39,11 @@ namespace FUCK::Host
 	}
 	static void PushFont_Impl(ImFont* f, float size)
 	{
-		float userScale = FUCKMan::GetSingleton()->GetUserScale();
-
 		if (size <= 0.0f) {
-			size = (f ? f->LegacySize : ImGui::GetStyle().FontSizeBase) * userScale;
+			ImGui::PushFont(f);
 		} else {
-			size *= userScale;
+			ImGui::PushFont(f, size * FUCKMan::GetSingleton()->GetActiveScale());
 		}
-
-		ImGui::PushFont(f, size);
 	}
 	static void PopFont_Impl() { ImGui::PopFont(); }
 	static void SuspendRendering_Impl(bool suspend) { FUCKMan::GetSingleton()->SuspendRendering(suspend); }
@@ -283,7 +279,7 @@ namespace FUCK::Host
 	static void SetTooltip_Impl(const char* fmt)
 	{
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) {
-			const float scale = ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
+			const float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
 			ImVec2 offset(32.0f * scale, 32.0f * scale);
 			ImVec2 pivot(0.0f, 0.0f);
 			ImVec2 mousePos = ImGui::GetMousePos();
@@ -314,7 +310,7 @@ namespace FUCK::Host
 	{
 		ImGui::TextDisabled("(?)");
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
-			const float scale = ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetUserScale();
+			const float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
 			ImVec2 offset(32.0f * scale, 32.0f * scale);
 			ImVec2 pivot(0.0f, 0.0f);
 			ImVec2 mousePos = ImGui::GetMousePos();
@@ -393,10 +389,19 @@ namespace FUCK::Host
 	{
 		auto icon = IconFont::Manager::GetSingleton()->GetIcon(k);
 		if (icon) {
+			float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
+			float resScale = ImGui::Renderer::GetResolutionScale();
+
+			auto* regularFont = IconFont::Manager::GetSingleton()->GetRegularFont();
+			float baseSize = regularFont ? regularFont->LegacySize : 30.0f;
+			float targetH = baseSize * resScale * activeScale * 1.215f;
+
+			float targetW = targetH * (icon->imageSize.y > 0.0f ? (icon->imageSize.x / icon->imageSize.y) : 1.0f);
+
 			if (w)
-				*w = icon->size.x;
+				*w = targetW;
 			if (h)
-				*h = icon->size.y;
+				*h = targetH;
 		} else {
 			if (w)
 				*w = 0.0f;

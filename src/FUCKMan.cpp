@@ -645,30 +645,28 @@ void FUCKMan::Draw()
 
 	// Content scale helper — respects kIgnoreUserScale flag
 	auto pushContentScale = [&](bool ignoreUserScale = false) {
-		float scaleToUse = ignoreUserScale ? 1.0f : _userScale;
+		_activeScale = ignoreUserScale ? 1.0f : _userScale;
 
-		ImFont* defaultFont = ImGui::GetFont();
-		float targetSize = defaultFont->LegacySize * scaleToUse;
-		ImGui::PushFont(defaultFont, targetSize);
+		ImGui::SetWindowFontScale(_activeScale);
 
 		float borderSize = ImGui::GetStyle().FrameBorderSize;
+		float spaceX = (8.0f * m.uiScale * _activeScale) + borderSize;
+		float spaceY = (4.0f * m.uiScale * _activeScale) + borderSize;
+		float innerSpaceX = (4.0f * m.uiScale * _activeScale) + borderSize;
+		float innerSpaceY = (4.0f * m.uiScale * _activeScale) + borderSize;
 
-		float spaceX = (8.0f * m.uiScale * scaleToUse) + borderSize;
-		float spaceY = (4.0f * m.uiScale * scaleToUse) + borderSize;
-		float innerSpaceX = (4.0f * m.uiScale * scaleToUse) + borderSize;
-		float innerSpaceY = (4.0f * m.uiScale * scaleToUse) + borderSize;
-
-		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f * m.uiScale * scaleToUse, 3.0f * m.uiScale * scaleToUse));
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f * m.uiScale * _activeScale, 3.0f * m.uiScale * _activeScale));
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spaceX, spaceY));
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(innerSpaceX, innerSpaceY));
-		ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, 20.0f * m.uiScale * scaleToUse);
+		ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, 20.0f * m.uiScale * _activeScale);
 		ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 12.0f * m.uiScale);
 		ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, 10.0f * m.uiScale);
 	};
 
 	auto popContentScale = [&]() {
+		ImGui::SetWindowFontScale(1.0f);
 		ImGui::PopStyleVar(6);
-		ImGui::PopFont();
+		_activeScale = _userScale;
 	};
 
 	// ------------------------------------------------------------------------

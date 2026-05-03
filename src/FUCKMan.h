@@ -46,6 +46,7 @@ public:
 	void SaveSettings(CSimpleIniA& a_ini);
 	void ResetSettings();
 
+	float GetActiveScale() const { return _activeScale; }
 	float GetUserScale() const { return _userScale; }
 	bool GetInjectSystemMenu() const { return _injectSystemMenu; }
 	bool GetReplaceHelpMenu() const { return _replaceHelpMenu; }
@@ -114,6 +115,7 @@ private:
 
 	// Config / Settings
 	PauseType _globalPauseType = PauseType::kNone;
+	float _activeScale = 1.0f;
 	float _userScale = 1.0f;
 	bool _sidebarOnRight = false;
 	bool _injectSystemMenu = true;
