@@ -472,10 +472,10 @@ namespace FUCK::Host
 	static FUCK::BindResult UpdateBinding_Impl(const void* evt, std::uint32_t* k, std::int32_t* m1, std::int32_t* m2) { return Input::Manager::GetSingleton()->UpdateBinding(static_cast<const RE::InputEvent* const*>(evt), k, m1, m2); }
 	static FUCK::BindResult GetInputBind_Impl(const void* evt, std::uint32_t* k, std::int32_t* m1, std::int32_t* m2) { return Input::Manager::GetSingleton()->GetInputBind(static_cast<const RE::InputEvent* const*>(evt), k, m1, m2); }
 
-	static bool DrawManagedHotkey_Impl(const char* label, FUCK::ManagedHotkey* h, int flags, float iconScale)
+	static bool DrawManagedHotkey_Impl(const char* label, FUCK::ManagedHotkey* h, int flags, float iconScale, float labelScale)
 	{
 		if (h)
-			return ImGui::DrawManagedHotkey(label, *h, flags, iconScale);
+			return ImGui::DrawManagedHotkey(label, *h, flags, iconScale, labelScale);
 		return false;
 	}
 	static bool UpdateManagedHotkey_Impl(const void* evt, FUCK::ManagedHotkey* h)

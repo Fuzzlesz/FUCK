@@ -889,8 +889,12 @@ namespace ImGui
 		return clicked;
 	}
 
-	bool DrawManagedHotkey(const char* label, FUCK::ManagedHotkey& h, int flags, float iconScale)
+	bool DrawManagedHotkey(const char* label, FUCK::ManagedHotkey& h, int flags, float iconScale, float labelScale)
 	{
+		float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
+		float resScale = ImGui::Renderer::GetResolutionScale();
+		ImGui::PushFont(IconFont::Manager::GetSingleton()->GetLargeFont(), 24.0f * resScale * labelScale * activeScale);
+
 		bool alignFar = (flags & static_cast<int>(FUCK::HotkeyFlags::kAlignNear)) == 0;
 		bool labelLeft = (flags & static_cast<int>(FUCK::HotkeyFlags::kLabelRight)) == 0;
 		bool ctrlToRebind = (flags & static_cast<int>(FUCK::HotkeyFlags::kCtrlToRebind)) != 0;
@@ -950,6 +954,7 @@ namespace ImGui
 			}
 		}
 
+		ImGui::PopFont();
 		return triggered;
 	}
 

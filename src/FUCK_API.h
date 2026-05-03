@@ -311,7 +311,7 @@ struct FUCK_Interface
 	FUCK::BindResult (*UpdateBinding)(const void*, std::uint32_t*, std::int32_t*, std::int32_t*);
 	FUCK::BindResult (*GetInputBind)(const void*, std::uint32_t*, std::int32_t*, std::int32_t*);
 
-	bool (*DrawManagedHotkey)(const char*, FUCK::ManagedHotkey*, int, float);
+	bool (*DrawManagedHotkey)(const char*, FUCK::ManagedHotkey*, int, float, float); 
 	bool (*UpdateManagedHotkey)(const void*, FUCK::ManagedHotkey*);
 	bool (*ProcessManagedHotkey)(const void*, FUCK::ManagedHotkey*);
 	bool (*IsManagedHotkeyDown)(FUCK::ManagedHotkey*);
@@ -1344,10 +1344,10 @@ namespace FUCK
 	};
 
 	/// @brief Used for assigning Hotkeys within the FUCK interface.
-	inline bool DrawManagedHotkey(const char* label, ManagedHotkey& h, HotkeyFlags flags = HotkeyFlags::kNone, float iconScale = 1.0f)
+	inline bool DrawManagedHotkey(const char* label, ManagedHotkey& h, HotkeyFlags flags = HotkeyFlags::kNone, float iconScale = 1.0f, float labelScale = 1.0f)
 	{
 		if (auto i = GetInterface())
-			return i->DrawManagedHotkey(label, &h, static_cast<int>(flags), iconScale);
+			return i->DrawManagedHotkey(label, &h, static_cast<int>(flags), iconScale, labelScale);
 		return false;
 	}
 
