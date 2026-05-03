@@ -150,7 +150,7 @@ namespace FUCK
 		bool isBinding = false;
 		bool wasTriggered = false;
 		bool waitForRelease = false;
-		bool disallowModifiers = false;  // Prevent binding Shift/Ctrl/Alt to this
+		bool disallowModifiers = false;  // Single-key binds only, modifier keys treated as bindable.
 
 		void Clear()
 		{

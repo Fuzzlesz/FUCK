@@ -26,8 +26,6 @@ namespace IconFont
 			IconTexture ps4;
 		};
 
-		void LoadSettings(CSimpleIniA& a_ini);
-
 		void LoadIcons();
 
 		// Called internally, but now just sets a flag

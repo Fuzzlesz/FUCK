@@ -52,11 +52,6 @@ namespace IconFont
 		}
 	}
 
-	void Manager::LoadSettings(CSimpleIniA& a_ini)
-	{
-		buttonScheme = static_cast<BUTTON_SCHEME>(a_ini.GetLongValue("Controls", "iButtonScheme", std::to_underlying(buttonScheme)));
-	}
-
 	void Manager::ReloadFonts()
 	{
 		_pendingReload = true;
