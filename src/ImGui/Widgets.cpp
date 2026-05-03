@@ -257,7 +257,7 @@ namespace ImGui
 		std::string idStr = std::format("##{}", label);
 
 		float frameH = ImGui::GetFrameHeight();
-		float width = frameH * 1.25f;
+		float width = frameH * 1.15f;
 
 		auto DrawContent = [&]() {
 			ImGuiWindow* window = GetCurrentWindow();
@@ -317,27 +317,23 @@ namespace ImGui
 				draw_list->AddRect(bb.Min, bb.Max, col_frame, ImGui::GetStyle().FrameRounding, 0, 2.0f * scale);
 			}
 
-			float railH = frameH * 0.25f;
-			float railY = p.y + (frameH - railH) * 0.5f;
+			float knobRadius = frameH * 0.28f;
+			float knobMinX = p.x + knobRadius + (2.0f * scale);
+			float knobMaxX = p.x + width - knobRadius - (2.0f * scale);
+			float knobX = knobMinX + (t * (knobMaxX - knobMinX));
+			ImVec2 knobCenter = { knobX, p.y + (frameH * 0.5f) };
 
-			ImVec2 railMin = { p.x + 8.0f * scale, railY };
-			ImVec2 railMax = { p.x + width - 8.0f * scale, railY + railH };
+			float railH = frameH * 0.18f;
+			ImVec2 railMin = { knobMinX, p.y + (frameH - railH) * 0.5f };
+			ImVec2 railMax = { knobMaxX, p.y + (frameH + railH) * 0.5f };
 			ImRect railBB(railMin, railMax);
 
 			draw_list->AddRectFilled(railMin, railMax, col_rail_fill, ImGui::GetStyle().FrameRounding);
 			DrawWidgetBorder(draw_list, railBB, hovered, ImGui::GetStyle().FrameRounding);
 
-			float knobRadius = frameH * 0.32f;
-			float knobStart = railMin.x - (knobRadius * 0.1f);
-			float knobEnd = railMax.x + (knobRadius * 0.1f);
-			float knobRange = knobEnd - knobStart;
-
-			float knobX = knobStart + (t * knobRange);
-			ImVec2 knobCenter = { knobX, p.y + (frameH * 0.5f) };
-
 			draw_list->AddCircleFilled(knobCenter, knobRadius, col_knob_fill);
 
-			float ringThick = 2.0f * scale;
+			float ringThick = 3.0f * scale;
 			float ringPadding = 4.0f * scale;
 			float ringRadius = knobRadius - ringPadding;
 
