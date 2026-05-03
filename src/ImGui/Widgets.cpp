@@ -218,6 +218,49 @@ namespace ImGui
 	// CORE DRAWING & WIDGETS
 	// =========================================================================================
 
+	// Helper function for adjusting hovered sliders with WASD
+	static bool ApplyWASDNudge(ImGuiDataType type, void* data, const void* min, const void* max, float speed)
+	{
+		float moveX = 0.0f;
+		float moveY = 0.0f;
+
+		if (ImGui::IsKeyPressed(ImGuiKey_A, true)) moveX -= 1.0f;
+		if (ImGui::IsKeyPressed(ImGuiKey_D, true)) moveX += 1.0f;
+		if (ImGui::IsKeyPressed(ImGuiKey_W, true)) moveY += 1.0f;
+		if (ImGui::IsKeyPressed(ImGuiKey_S, true)) moveY -= 1.0f;
+
+		if (moveX == 0.0f && moveY == 0.0f)
+			return false;
+
+		float stepSmall = (speed > 0.0f) ? speed : 1.0f;
+		float stepLarge = stepSmall * 10.0f;
+
+		float totalMove = (moveX * stepSmall) + (moveY * stepLarge);
+
+		if (type == ImGuiDataType_Float || type == ImGuiDataType_Double) {
+			auto* v = static_cast<float*>(data);
+			*v += totalMove;
+			if (min && max) {
+				float mn = *static_cast<const float*>(min);
+				float mx = *static_cast<const float*>(max);
+				if (mn < mx)
+					*v = ImClamp(*v, mn, mx);
+			}
+			return true;
+		} else if (type == ImGuiDataType_S32) {
+			auto* v = static_cast<int*>(data);
+			*v += static_cast<int>(totalMove);
+			if (min && max) {
+				int mn = *static_cast<const int*>(min);
+				int mx = *static_cast<const int*>(max);
+				if (mn < mx)
+					*v = ImClamp(*v, mn, mx);
+			}
+			return true;
+		}
+		return false;
+	}
+
 	void DrawWidgetBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered, float rounding)
 	{
 		float thickness = ImGui::GetStyle().FrameBorderSize;
@@ -997,14 +1040,23 @@ namespace ImGui
 			return TempInputScalar(bb, id, label, type, data, fmt, min, max);
 		}
 
-		bool active = (g.ActiveId == id);
+		bool changed = false;
+		if (h && !temp_input_is_active && MANAGER(Input)->IsInputKBM()) {
+			if (ApplyWASDNudge(type, data, min, max, speed)) {
+				changed = true;
+				MarkItemEdited(id);
+			}
+		}
 
+		bool active = (g.ActiveId == id);
 		RenderFrame(bb.Min, bb.Max, GetColorU32(active ? ImGuiCol_FrameBgActive : h ? ImGuiCol_FrameBgHovered :
 																					  ImGuiCol_FrameBg),
 			true, ImGui::GetStyle().FrameRounding);
 		DrawWidgetBorder(window->DrawList, bb, active || h || IsWidgetFocused(id), ImGui::GetStyle().FrameRounding);
 
-		bool changed = DragBehavior(id, type, data, speed, min, max, fmt, flags);
+		if (DragBehavior(id, type, data, speed, min, max, fmt, flags)) {
+			changed = true;
+		}
 		if (changed)
 			MarkItemEdited(id);
 
@@ -1060,8 +1112,25 @@ namespace ImGui
 			return TempInputScalar(bb, id, label, type, data, fmt, min, max);
 		}
 
+		bool changed = false;
+		if (h && !temp_input_is_active && MANAGER(Input)->IsInputKBM()) {
+			float inferredSpeed = 1.0f;
+			if (type == ImGuiDataType_Float && min && max) {
+				inferredSpeed = (*(const float*)max - *(const float*)min) * 0.01f;
+			} else if (type == ImGuiDataType_S32 && min && max) {
+				inferredSpeed = std::max(1.0f, (*(const int*)max - *(const int*)min) * 0.01f);
+			}
+
+			if (ApplyWASDNudge(type, data, min, max, inferredSpeed)) {
+				changed = true;
+				MarkItemEdited(id);
+			}
+		}
+
 		ImRect grab;
-		bool changed = SliderBehavior(bb, id, type, data, min, max, fmt, flags, &grab);
+		if (SliderBehavior(bb, id, type, data, min, max, fmt, flags, &grab)) {
+			changed = true;
+		}
 		if (changed)
 			MarkItemEdited(id);
 

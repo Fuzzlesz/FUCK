@@ -1423,6 +1423,28 @@ namespace FUCK
 		}
 	}
 
+	/// @brief Helper for handling WASD Key widget nudging. Returns true if movement occurred, outputting the delta.
+	inline bool WASDNudge(float& outDeltaX, float& outDeltaY, bool isActiveOrHovered, float step = 1.0f, float sprintMult = 10.0f)
+	{
+		if (!isActiveOrHovered || IsMouseDown(0))
+			return false;
+
+		float moveStep = step / GetResolutionScale();
+
+		outDeltaX = 0.0f;
+		outDeltaY = 0.0f;
+		if (IsKeyPressed(ImGuiKey_W, true))
+			outDeltaY -= moveStep;
+		if (IsKeyPressed(ImGuiKey_S, true))
+			outDeltaY += moveStep;
+		if (IsKeyPressed(ImGuiKey_A, true))
+			outDeltaX -= moveStep;
+		if (IsKeyPressed(ImGuiKey_D, true))
+			outDeltaX += moveStep;
+
+		return (outDeltaX != 0.0f || outDeltaY != 0.0f);
+	}
+
 	inline bool Combo(const char* label, int* current_item, const std::vector<std::string>& items)
 	{
 		std::vector<const char*> ptrs(items.size());
