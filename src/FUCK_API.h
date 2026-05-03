@@ -327,6 +327,8 @@ struct FUCK_Interface
 	bool (*IsWindowHovered)(int);
 	bool (*IsMouseDown)(int);
 	bool (*IsMouseReleased)(int);
+	bool (*IsKeyDown)(ImGuiKey);
+	bool (*IsKeyPressed)(ImGuiKey, bool);
 	void (*SetKeyboardFocusHere)(int);
 	void (*SetItemDefaultFocus)();
 
@@ -828,6 +830,8 @@ namespace FUCK
 	inline bool IsWindowHovered(int flags = 0) { return GetInterface() ? GetInterface()->IsWindowHovered(flags) : false; }
 	inline bool IsMouseDown(int button) { return GetInterface() ? GetInterface()->IsMouseDown(button) : false; }
 	inline bool IsMouseReleased(int button) { return GetInterface() ? GetInterface()->IsMouseReleased(button) : false; }
+	inline bool IsKeyDown(ImGuiKey key) { return GetInterface() ? GetInterface()->IsKeyDown(key) : false; }
+	inline bool IsKeyPressed(ImGuiKey key, bool repeat = true) { return GetInterface() ? GetInterface()->IsKeyPressed(key, repeat) : false; }
 	inline void SetKeyboardFocusHere(int offset = 0)
 	{
 		if (auto i = GetInterface())
