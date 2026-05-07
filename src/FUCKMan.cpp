@@ -264,21 +264,22 @@ void FUCKMan::LoadSettings(const CSimpleIniA& a_ini)
 
 void FUCKMan::SaveSettings(CSimpleIniA& a_ini)
 {
-	a_ini.SetDoubleValue("Window", "X", _windowPos.x);
-	a_ini.SetDoubleValue("Window", "Y", _windowPos.y);
-	a_ini.SetDoubleValue("Window", "Width", _windowSize.x);
-	a_ini.SetDoubleValue("Window", "Height", _windowSize.y);
+	a_ini.SetValue("Window", "X", std::format("{:.2f}", _windowPos.x).c_str());
+	a_ini.SetValue("Window", "Y", std::format("{:.2f}", _windowPos.y).c_str());
+	a_ini.SetValue("Window", "Width", std::format("{:.2f}", _windowSize.x).c_str());
+	a_ini.SetValue("Window", "Height", std::format("{:.2f}", _windowSize.y).c_str());
+
 	a_ini.SetLongValue("Settings", "iGlobalPauseType", static_cast<long>(_globalPauseType));
-	a_ini.SetDoubleValue("Settings", "fUserScale", _userScale);
+	a_ini.SetValue("Settings", "fUserScale", std::format("{:.2f}", _userScale).c_str());
 	a_ini.SetBoolValue("Settings", "bSidebarOnRight", _sidebarOnRight);
 	a_ini.SetBoolValue("Settings", "bInjectSystemMenu", _injectSystemMenu);
 	a_ini.SetBoolValue("Settings", "bReplaceHelpMenu", _replaceHelpMenu);
 
 	// Theme Editor State
-	a_ini.SetDoubleValue("ThemeEditor", "X", _themeEditorWindow._lastPos.x);
-	a_ini.SetDoubleValue("ThemeEditor", "Y", _themeEditorWindow._lastPos.y);
-	a_ini.SetDoubleValue("ThemeEditor", "Width", _themeEditorWindow._lastSize.x);
-	a_ini.SetDoubleValue("ThemeEditor", "Height", _themeEditorWindow._lastSize.y);
+	a_ini.SetValue("ThemeEditor", "X", std::format("{:.2f}", _themeEditorWindow._lastPos.x).c_str());
+	a_ini.SetValue("ThemeEditor", "Y", std::format("{:.2f}", _themeEditorWindow._lastPos.y).c_str());
+	a_ini.SetValue("ThemeEditor", "Width", std::format("{:.2f}", _themeEditorWindow._lastSize.x).c_str());
+	a_ini.SetValue("ThemeEditor", "Height", std::format("{:.2f}", _themeEditorWindow._lastSize.y).c_str());
 
 	MANAGER(Hotkeys)->SaveHotKeys(a_ini);
 }

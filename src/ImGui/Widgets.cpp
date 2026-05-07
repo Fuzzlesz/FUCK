@@ -1469,8 +1469,8 @@ namespace ImGui
 		*outLeft = false;
 		*outRight = false;
 		if (hovered || IsWidgetFocused(label)) {
-			bool pL = l || IsKeyPressed(ImGuiKey_LeftArrow, false) || IsKeyPressed(ImGuiKey_GamepadDpadLeft, false);
-			bool pR = r || IsKeyPressed(ImGuiKey_RightArrow, false) || IsKeyPressed(ImGuiKey_GamepadDpadRight, false);
+			bool pL = l || IsKeyPressed(ImGuiKey_A, false) || IsKeyPressed(ImGuiKey_GamepadDpadLeft, false);
+			bool pR = r || IsKeyPressed(ImGuiKey_D, false) || IsKeyPressed(ImGuiKey_GamepadDpadRight, false);
 			if (pL) {
 				*outLeft = true;
 				RE::PlaySound("UIMenuPrevNext");
