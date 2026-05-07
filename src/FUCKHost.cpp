@@ -32,6 +32,22 @@ namespace FUCK::Host
 		if (y)
 			*y = size.y;
 	}
+	static void TranslateScaleformToScreen_Impl(float stageX, float stageY, float* screenX, float* screenY)
+	{
+		auto screenSize = RE::BSGraphics::Renderer::GetScreenSize();
+		float screenW = static_cast<float>(screenSize.width);
+		float screenH = static_cast<float>(screenSize.height);
+
+		float scaleY = screenH / 720.0f;
+		float scaleX = scaleY;
+		float offsetX = (screenW - (1280.0f * scaleX)) / 2.0f;
+		float offsetY = (screenH - (720.0f * scaleY)) / 2.0f;
+
+		if (screenX)
+			*screenX = offsetX + (stageX * scaleX);
+		if (screenY)
+			*screenY = offsetY + (stageY * scaleY);
+	}
 	static ImFont* GetFont_Impl(FUCK::Font f)
 	{
 		auto mgr = IconFont::Manager::GetSingleton();
@@ -681,6 +697,7 @@ namespace FUCK::Host
 			.UnregisterWindow = UnregisterWindow_Impl,
 			.GetResolutionScale = GetResolutionScale_Impl,
 			.GetDisplaySize = GetDisplaySize_Impl,
+			.TranslateScaleformToScreen = TranslateScaleformToScreen_Impl,
 			.GetFont = GetFont_Impl,
 			.PushFont = PushFont_Impl,
 			.PopFont = PopFont_Impl,

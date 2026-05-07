@@ -214,6 +214,7 @@ struct FUCK_Interface
 	// Display
 	float (*GetResolutionScale)();
 	void (*GetDisplaySize)(float*, float*);
+	void (*TranslateScaleformToScreen)(float, float, float*, float*);
 	ImFont* (*GetFont)(FUCK::Font);
 	void (*PushFont)(ImFont*, float);
 	void (*PopFont)();
@@ -495,6 +496,19 @@ namespace FUCK
 		}
 		return ImVec2(0, 0);
 	}
+
+	inline ImVec2 TranslateScaleformToScreen(float stageX, float stageY)
+	{
+		ImVec2 screenPos;
+		if (auto i = GetInterface())
+			i->TranslateScaleformToScreen(stageX, stageY, &screenPos.x, &screenPos.y);
+		return screenPos;
+	}
+	inline ImVec2 TranslateScaleformToScreen(const ImVec2& stagePos)
+	{
+		return TranslateScaleformToScreen(stagePos.x, stagePos.y);
+	}
+
 	inline void SuspendRendering(bool suspend)
 	{
 		if (auto i = GetInterface())
