@@ -314,22 +314,7 @@ namespace FUCK::Host
 	{
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) {
 			const float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
-			ImVec2 offset(32.0f * scale, 32.0f * scale);
-			ImVec2 pivot(0.0f, 0.0f);
-			ImVec2 mousePos = ImGui::GetMousePos();
-			ImVec2 screenSize = ImGui::GetIO().DisplaySize;
 
-			// Flip pivot if near the right or bottom edges
-			if (mousePos.x > screenSize.x * 0.6f) {
-				offset.x = -offset.x;
-				pivot.x = 1.0f;
-			}
-			if (mousePos.y > screenSize.y * 0.6f) {
-				offset.y = -offset.y;
-				pivot.y = 1.0f;
-			}
-
-			ImGui::SetNextWindowPos(mousePos + offset, ImGuiCond_Always, pivot);
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * scale, 12.0f * scale));
 
 			if (ImGui::BeginTooltip()) {
@@ -343,23 +328,9 @@ namespace FUCK::Host
 	static void HelpMarker_Impl(const char* desc)
 	{
 		ImGui::TextDisabled("(?)");
-		if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) {
 			const float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
-			ImVec2 offset(32.0f * scale, 32.0f * scale);
-			ImVec2 pivot(0.0f, 0.0f);
-			ImVec2 mousePos = ImGui::GetMousePos();
-			ImVec2 screenSize = ImGui::GetIO().DisplaySize;
 
-			if (mousePos.x > screenSize.x * 0.6f) {
-				offset.x = -offset.x;
-				pivot.x = 1.0f;
-			}
-			if (mousePos.y > screenSize.y * 0.6f) {
-				offset.y = -offset.y;
-				pivot.y = 1.0f;
-			}
-
-			ImGui::SetNextWindowPos(mousePos + offset, ImGuiCond_Always, pivot);
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * scale, 12.0f * scale));
 
 			if (ImGui::BeginTooltip()) {
