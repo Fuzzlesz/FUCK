@@ -270,21 +270,39 @@ namespace FUCK::Host
 	static void LoadTranslation_Impl(const char* n) { Translation::Manager::GetSingleton()->LoadCustomTranslation(n); }
 	static const char* GetTranslation_Impl(const char* k) { return Translation::Manager::GetSingleton()->GetTranslation(k); }
 	static void SanitizePath_Impl(char* dest, const char* source, size_t size) { Utils::SanitizePath(dest, source, size); }
-	static void LoadPluginINI_Impl(const char* defaultPath, const char* userPath, void* userdata, void (*callback)(CSimpleIniA&, void*))
+	
+	static void LoadPluginINI_Impl(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*))
 	{
-		if (!callback)
+		if (!callback || !pluginName)
 			return;
-		Settings::GetSingleton()->LoadINI(defaultPath, userPath, [userdata, callback](CSimpleIniA& ini) {
+		std::string defaultPath = std::format(R"(Data\SKSE\Plugins\FUCK\settings\{}.ini)", pluginName);
+		std::string userPath = std::format(R"(Data\SKSE\Plugins\FUCK\settings-user\{}_user.ini)", pluginName);
+
+		Settings::GetSingleton()->LoadINI(defaultPath.c_str(), userPath.c_str(), [userdata, callback](CSimpleIniA& ini) {
 			callback(ini, userdata);
 		});
 	}
 
-	static void SavePluginINI_Impl(const char* userPath, void* userdata, void (*callback)(CSimpleIniA&, void*))
+	static void SavePluginINI_Impl(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*))
 	{
-		if (!callback)
+		if (!callback || !pluginName)
 			return;
-		Settings::GetSingleton()->LoadINI(userPath, [userdata, callback](CSimpleIniA& ini) { callback(ini, userdata); }, true);
+		std::string userPath = std::format(R"(Data\SKSE\Plugins\FUCK\settings-user\{}_user.ini)", pluginName);
+
+		Settings::GetSingleton()->LoadINI(userPath.c_str(), [userdata, callback](CSimpleIniA& ini) { callback(ini, userdata); }, true);
 	}
+
+	static void LoadPluginINIDefaults_Impl(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*))
+	{
+		if (!callback || !pluginName)
+			return;
+		std::string defaultPath = std::format(R"(Data\SKSE\Plugins\FUCK\settings\{}.ini)", pluginName);
+
+		Settings::GetSingleton()->LoadINI(defaultPath.c_str(), [userdata, callback](CSimpleIniA& ini) {
+			callback(ini, userdata);
+		});
+	}
+
 	static void PushItemFlag_Impl(ItemFlags flag, bool enabled) { ImGui::PushItemFlag(static_cast<ImGuiItemFlags>(flag), enabled); }
 	static void PopItemFlag_Impl() { ImGui::PopItemFlag(); }
 
@@ -766,6 +784,7 @@ namespace FUCK::Host
 			.SanitizePath = SanitizePath_Impl,
 			.LoadPluginINI = LoadPluginINI_Impl,
 			.SavePluginINI = SavePluginINI_Impl,
+			.LoadPluginINIDefaults = LoadPluginINIDefaults_Impl,
 			.PushItemFlag = PushItemFlag_Impl,
 			.PopItemFlag = PopItemFlag_Impl,
 			.HelpMarker = HelpMarker_Impl,

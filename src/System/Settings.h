@@ -33,11 +33,14 @@ public:
 	static void LoadINI(const char* a_defaultPath, const char* a_userPath, INIFunc a_func);
 
 private:
-	const char* settingsPath			{ R"(Data\SKSE\Plugins\FUCK\FUCK_Settings.ini)" };
-	const char* stylePath				{ R"(Data\SKSE\Plugins\FUCK\FUCK_Style.ini)" };
+	const char* settingsDefaultPath{ R"(Data\SKSE\Plugins\FUCK\settings\FUCK.ini)" };
+	const char* settingsUserPath{ R"(Data\SKSE\Plugins\FUCK\settings-user\FUCK_user.ini)" };
 
-	const char* presetsRoot				{ R"(Data\SKSE\Plugins\FUCK\Presets)" };
-	const char* userFontsPath			{ R"(Data\SKSE\Plugins\FUCK\Fonts)" };
+	const char* stylePath{ R"(Data\SKSE\Plugins\FUCK\FUCK_Style.ini)" };
+
+	const char* presetsRoot{ R"(Data\SKSE\Plugins\FUCK\styles)" };
+
+	const char* userFontsPath{ R"(Data\SKSE\Plugins\FUCK\fonts)" };
 
 	const char* legacyFontsPath			{ R"(Data\Interface\ImGuiIcons\Fonts)" };
 	

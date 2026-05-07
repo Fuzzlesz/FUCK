@@ -268,8 +268,9 @@ struct FUCK_Interface
 	void (*LoadTranslation)(const char*);
 	const char* (*GetTranslation)(const char*);
 	void (*SanitizePath)(char*, const char*, size_t);
-	void (*LoadPluginINI)(const char*, const char*, void*, void (*)(CSimpleIniA&, void*));
-	void (*SavePluginINI)(const char*, void*, void (*)(CSimpleIniA&, void*));
+	void (*LoadPluginINI)(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*));
+	void (*SavePluginINI)(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*));
+	void (*LoadPluginINIDefaults)(const char*, void*, void (*)(CSimpleIniA&, void*));
 	void (*PushItemFlag)(FUCK::ItemFlags, bool);
 	void (*PopItemFlag)();
 	void (*HelpMarker)(const char*);
@@ -1294,8 +1295,8 @@ namespace FUCK
 	class PluginSettings
 	{
 	public:
-		PluginSettings(const char* a_defaultPath, const char* a_userPath) :
-			_defaultPath(a_defaultPath), _userPath(a_userPath) {}
+		PluginSettings(const char* a_pluginName) :
+			_pluginName(a_pluginName) {}
 		using INIFunc = std::function<void(CSimpleIniA&)>;
 
 		void Load(INIFunc a_func) const
@@ -1303,19 +1304,28 @@ namespace FUCK
 			if (!a_func)
 				return;
 			if (auto* i = GetInterface())
-				i->LoadPluginINI(_defaultPath, _userPath, &a_func, [](CSimpleIniA& ini, void* ud) { (*static_cast<INIFunc*>(ud))(ini); });
+				i->LoadPluginINI(_pluginName, &a_func,[](CSimpleIniA& ini, void* ud) { (*static_cast<INIFunc*>(ud))(ini); });
 		}
+
 		void Save(INIFunc a_func) const
 		{
 			if (!a_func)
 				return;
 			if (auto* i = GetInterface())
-				i->SavePluginINI(_userPath, &a_func, [](CSimpleIniA& ini, void* ud) { (*static_cast<INIFunc*>(ud))(ini); });
+				i->SavePluginINI(_pluginName, &a_func,[](CSimpleIniA& ini, void* ud) { (*static_cast<INIFunc*>(ud))(ini); });
+		}
+
+		/// @brief Loads the default shipped INI, ignoring user settings.
+		void LoadDefaults(INIFunc a_func) const
+		{
+			if (!a_func)
+				return;
+			if (auto* i = GetInterface())
+				i->LoadPluginINIDefaults(_pluginName, &a_func,[](CSimpleIniA& ini, void* ud) { (*static_cast<INIFunc*>(ud))(ini); });
 		}
 
 	private:
-		const char* _defaultPath;
-		const char* _userPath;
+		const char* _pluginName;
 	};
 
 	/// @brief RAII Wrapper for listening to Skyrim UI Menu events.

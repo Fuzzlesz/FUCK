@@ -77,7 +77,7 @@ void Settings::Load(FileType type, INIFunc a_func) const
 
 	switch (type) {
 	case FileType::kSettings:
-		LoadINI(settingsPath, a_func);
+		LoadINI(settingsDefaultPath, settingsUserPath, a_func);
 		break;
 	case FileType::kStyle:
 		LoadINI(stylePath, a_func);
@@ -97,7 +97,7 @@ void Settings::Save(FileType type, INIFunc a_func) const
 
 	switch (type) {
 	case FileType::kSettings:
-		LoadINI(settingsPath, a_func, true);
+		LoadINI(settingsUserPath, a_func, true);
 		break;
 	case FileType::kStyle:
 		LoadINI(stylePath, a_func, true);
