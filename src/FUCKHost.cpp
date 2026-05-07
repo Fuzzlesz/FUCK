@@ -637,9 +637,32 @@ namespace FUCK::Host
 	static void TextColored_Impl(const ImVec4& col, const char* text) { ImGui::TextColored(col, "%s", text); }
 	static void TextDisabled_Impl(const char* text) { ImGui::TextDisabled("%s", text); }
 	static void Text_Impl(const char* text) { ImGui::TextUnformatted(text); }
-	static void TextWrapped_Impl(const char* text) { ImGui::TextWrapped("%s", text); }
 	static void TextUnformatted_Impl(const char* text, const char* text_end) { ImGui::TextUnformatted(text, text_end); }
-	static void TextColoredWrapped_Impl(const ImVec4& col, const char* text) { ImGui::TextColoredWrapped(col, "%s", text); }
+	static void TextColoredWrapped_Impl(const ImVec4& col, const char* text)
+	{
+		// Protect against ImGui Frame 1 Auto-Resize height spike
+		if (ImGui::GetContentRegionAvail().x < 15.0f) {
+			ImGui::PushStyleColor(ImGuiCol_Text, col);
+			ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + (350.0f * ImGui::Renderer::GetResolutionScale()));
+			ImGui::TextUnformatted(text);
+			ImGui::PopTextWrapPos();
+			ImGui::PopStyleColor();
+		} else {
+			ImGui::TextColoredWrapped(col, "%s", text);
+		}
+	}
+
+	static void TextWrapped_Impl(const char* text)
+	{
+		// Protect against ImGui Frame 1 Auto-Resize height spike
+		if (ImGui::GetContentRegionAvail().x < 15.0f) {
+			ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + (350.0f * ImGui::Renderer::GetResolutionScale()));
+			ImGui::TextUnformatted(text);
+			ImGui::PopTextWrapPos();
+		} else {
+			ImGui::TextWrapped("%s", text);
+		}
+	}
 	static void CenteredText_Impl(const char* label, bool v) { ImGui::CenteredText(label, v); }
 	static void CenteredTextWithArrows_Impl(const char* label, const char* text, bool* h, bool* l, bool* r)
 	{
