@@ -121,14 +121,15 @@ namespace FUCK
 		kNone = 0,
 		kNoTabStop = 1 << 0,
 		kButtonRepeat = 1 << 1,
-		kDisabled = 1 << 2,
-		kNoNav = 1 << 3
+		kNoNav = 1 << 2
 	};
 
 	inline WindowFlags operator|(WindowFlags a, WindowFlags b) { return static_cast<WindowFlags>(static_cast<int>(a) | static_cast<int>(b)); }
 	inline bool operator&(WindowFlags a, WindowFlags b) { return (static_cast<int>(a) & static_cast<int>(b)) != 0; }
 	inline TableFlags operator|(TableFlags a, TableFlags b) { return static_cast<TableFlags>(static_cast<int>(a) | static_cast<int>(b)); }
 	inline TableColumnFlags operator|(TableColumnFlags a, TableColumnFlags b) { return static_cast<TableColumnFlags>(static_cast<int>(a) | static_cast<int>(b)); }
+	inline ItemFlags operator|(ItemFlags a, ItemFlags b) { return static_cast<ItemFlags>(static_cast<int>(a) | static_cast<int>(b)); }
+	inline bool operator&(ItemFlags a, ItemFlags b) { return (static_cast<int>(a) & static_cast<int>(b)) != 0; }
 
 	enum class HotkeyFlags : int
 	{
@@ -498,6 +499,7 @@ namespace FUCK
 		return ImVec2(0, 0);
 	}
 
+	/// @brief Converts standard 1280x720 Flash Stage coordinates into physical screen pixels (accounting for Aspect Ratio borders).
 	inline ImVec2 TranslateScaleformToScreen(float stageX, float stageY)
 	{
 		ImVec2 screenPos;
@@ -505,6 +507,8 @@ namespace FUCK
 			i->TranslateScaleformToScreen(stageX, stageY, &screenPos.x, &screenPos.y);
 		return screenPos;
 	}
+
+	/// @brief Converts standard 1280x720 Flash Stage coordinates into physical screen pixels (accounting for Aspect Ratio borders).
 	inline ImVec2 TranslateScaleformToScreen(const ImVec2& stagePos)
 	{
 		return TranslateScaleformToScreen(stagePos.x, stagePos.y);
@@ -1454,6 +1458,8 @@ namespace FUCK
 			return false;
 
 		float moveStep = step / GetResolutionScale();
+		if (IsKeyDown(ImGuiMod_Shift))
+			moveStep = (step * sprintMult) / GetResolutionScale();
 
 		outDeltaX = 0.0f;
 		outDeltaY = 0.0f;
