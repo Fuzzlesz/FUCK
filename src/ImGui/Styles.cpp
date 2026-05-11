@@ -129,7 +129,9 @@ namespace ImGui
 
 		switch (a_style) {
 		case USER_STYLE::kButtonRounding:
-			return user.buttonRounding;
+			return user.buttonRounding * scale;
+		case USER_STYLE::kButtonBorderSize:
+			return user.buttonBorderSize * scale;
 		case USER_STYLE::kGridLines:
 			return user.gridThickness * scale;
 		case USER_STYLE::kDisabledTextAlpha:
@@ -320,6 +322,7 @@ namespace ImGui
 	{
 #define SET_VALUE(a_value, a_section, a_key) a_ini.SetValue(a_section, a_key, ToString(user.a_value, true).c_str())
 
+		SET_VALUE(iconScale, "Icon", "fScale");
 		SET_VALUE(iconDisabled, "Icon", "rDisabledColor");
 		SET_VALUE(widgetToggleActive, "Icon", "rToggleActiveColor");
 		SET_VALUE(widgetFlash, "Icon", "rFlashColor");
@@ -370,6 +373,7 @@ namespace ImGui
 
 		SET_VALUE(frameRounding, "Widget", "fFrameRounding");
 		SET_VALUE(buttonRounding, "Widget", "fButtonRounding");
+		SET_VALUE(buttonBorderSize, "Widget", "fButtonBorderSize");
 		SET_VALUE(tabRounding, "Widget", "fTabRounding");
 		SET_VALUE(itemSpacing, "Widget", "vItemSpacing");
 
@@ -388,6 +392,7 @@ namespace ImGui
 	bool a_value##_hex = false;              \
 	std::tie(user.a_value, a_value##_hex) = ToStyle<decltype(user.a_value)>(a_ini.GetValue(a_section, a_key, ToString(def.a_value, true).c_str()));
 
+		GET_VALUE(iconScale, "Icon", "fScale");
 		GET_VALUE(iconDisabled, "Icon", "rDisabledColor");
 		GET_VALUE(widgetToggleActive, "Icon", "rToggleActiveColor");
 		GET_VALUE(widgetFlash, "Icon", "rFlashColor");
@@ -438,6 +443,7 @@ namespace ImGui
 
 		GET_VALUE(frameRounding, "Widget", "fFrameRounding");
 		GET_VALUE(buttonRounding, "Widget", "fButtonRounding");
+		GET_VALUE(buttonBorderSize, "Widget", "fButtonBorderSize");
 		GET_VALUE(tabRounding, "Widget", "fTabRounding");
 		GET_VALUE(itemSpacing, "Widget", "vItemSpacing");
 

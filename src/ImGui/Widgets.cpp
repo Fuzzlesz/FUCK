@@ -263,18 +263,29 @@ namespace ImGui
 
 	void DrawWidgetBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered, float rounding)
 	{
-		float thickness = ImGui::GetStyle().FrameBorderSize;
+		float borderSize = ImGui::GetUserStyleVar(USER_STYLE::kButtonBorderSize);
 
-		if (thickness < 1.0f && thickness > 0.0f)
-			thickness = 1.0f;
+		if (borderSize <= 0.0f)
+			return;
+
+		float scale = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
+
+		float tColor = std::max(1.0f, std::round(borderSize));
+		float tBlack = std::max(1.0f, std::round(1.0f * scale));
 
 		ImU32 col = isActiveOrHovered ?
 		                GetUserStyleColorU32(USER_STYLE::kSliderBorderActive) :
 		                GetUserStyleColorU32(USER_STYLE::kSliderBorder);
 
-		drawList->AddRect(bb.Min, bb.Max, col, rounding, 0, thickness);
-	}
+		// Outer Black: Expands strictly outwards
+		float halfB = tBlack * 0.5f;
+		drawList->AddRect(bb.Min - ImVec2(halfB, halfB), bb.Max + ImVec2(halfB, halfB), IM_COL32(0, 0, 0, 255), rounding + halfB, 0, tBlack);
 
+		// Inner Colour: Shrinks strictly inwards
+		float halfC = tColor * 0.5f;
+		drawList->AddRect(bb.Min + ImVec2(halfC, halfC), bb.Max - ImVec2(halfC, halfC), col, rounding, 0, tColor);
+	}
+		
 	bool CheckBox(const char* label, bool* a_toggle, bool alignFar, bool labelLeft)
 	{
 		bool selected = false;
@@ -282,7 +293,7 @@ namespace ImGui
 		auto iconFilled = MANAGER(IconFont)->GetCheckboxFilled();
 		std::string idStr = std::format("##{}", label);
 
-		float targetH = ImGui::GetFrameHeight() * 0.85f;
+		float targetH = ImGui::GetFrameHeight() * 1.15f;
 		float targetW = targetH * (icon->imageSize.y > 0.0f ? (icon->imageSize.x / icon->imageSize.y) : 1.0f);
 		ImVec2 scaledSize(targetW, targetH);
 
@@ -307,7 +318,7 @@ namespace ImGui
 		std::string idStr = std::format("##{}", label);
 
 		float frameH = ImGui::GetFrameHeight();
-		float width = frameH * 1.15f;
+		float width = frameH * 1.35f;
 
 		auto DrawContent = [&]() {
 			ImGuiWindow* window = GetCurrentWindow();
@@ -373,13 +384,13 @@ namespace ImGui
 			float knobX = knobMinX + (t * (knobMaxX - knobMinX));
 			ImVec2 knobCenter = { knobX, p.y + (frameH * 0.5f) };
 
-			float railH = frameH * 0.18f;
+			float railH = frameH * 0.35f;
 			ImVec2 railMin = { knobMinX, p.y + (frameH - railH) * 0.5f };
 			ImVec2 railMax = { knobMaxX, p.y + (frameH + railH) * 0.5f };
 			ImRect railBB(railMin, railMax);
 
 			draw_list->AddRectFilled(railMin, railMax, col_rail_fill, ImGui::GetStyle().FrameRounding);
-			DrawWidgetBorder(draw_list, railBB, hovered, ImGui::GetStyle().FrameRounding);
+			DrawWidgetBorder(draw_list, railBB, hovered || isFocused, ImGui::GetStyle().FrameRounding);
 
 			draw_list->AddCircleFilled(knobCenter, knobRadius, col_knob_fill);
 
@@ -407,7 +418,12 @@ namespace ImGui
 		if (window->SkipItems)
 			return false;
 
-		PushStyleVar(ImGuiStyleVar_FramePadding, { GetStyle().FramePadding.x, 4.0f * scale });
+		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize);
+		float padX = std::max(GetStyle().FramePadding.x, borderSize + (8.0f * scale));
+		float padY = 7.0f * scale;
+
+		PushStyleVar(ImGuiStyleVar_FramePadding, { padX, padY });
+		PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);  // Prevents double frame
 
 		const bool isHidden = std::string_view(label).starts_with("##");
 		std::string idStr = isHidden ? label : "##"s + label;
@@ -451,7 +467,7 @@ namespace ImGui
 
 		bool isOpen = BeginCombo(idStr.c_str(), preview, ImGuiComboFlags_NoArrowButton);
 
-		PopStyleVar();
+		PopStyleVar(2);
 		PopStyleColor(5);
 
 		// Detect if opened Upwards
@@ -468,7 +484,8 @@ namespace ImGui
 		if (!isOpen)
 			return false;
 
-		float fontSize = std::round(ImGui::GetStyle().FontSizeBase * 2.0f) / 2.0f;
+		float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
+		float fontSize = std::round(ImGui::GetStyle().FontSizeBase * activeScale * 2.0f) / 2.0f;
 		ImGui::PushFont(nullptr, fontSize);
 
 		if (IsWindowAppearing())
@@ -536,7 +553,12 @@ namespace ImGui
 	{
 		float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
 
-		PushStyleVar(ImGuiStyleVar_FramePadding, { GetStyle().FramePadding.x, 4.0f * scale });
+		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize);
+		float padX = std::max(GetStyle().FramePadding.x, borderSize + (8.0f * scale));
+		float padY = 7.0f * scale;
+
+		PushStyleVar(ImGuiStyleVar_FramePadding, { padX, padY });
+		PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);  // Prevents double frame
 
 		std::string idStr = "##"s + label;
 		LeftAlignedTextImpl(label, idStr);
@@ -565,7 +587,7 @@ namespace ImGui
 
 		bool isOpen = BeginCombo(idStr.c_str(), preview, ImGuiComboFlags_NoArrowButton);
 
-		PopStyleVar();
+		PopStyleVar(2);
 		PopStyleColor(6);
 
 		bool opensUp = false;
@@ -580,7 +602,8 @@ namespace ImGui
 
 		bool changed = false;
 		if (isOpen) {
-			float fontSize = std::round(ImGui::GetStyle().FontSizeBase * 2.0f) / 2.0f;
+			float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
+			float fontSize = std::round(ImGui::GetStyle().FontSizeBase * activeScale * 2.0f) / 2.0f;
 			ImGui::PushFont(nullptr, fontSize);
 
 			for (int i = 0; i < items_count; i++) {
@@ -601,29 +624,35 @@ namespace ImGui
 
 	void DrawTabBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered)
 	{
-		float borderSize = ImGui::GetStyle().FrameBorderSize;
+		float borderSize = ImGui::GetUserStyleVar(USER_STYLE::kButtonBorderSize);
 		float round = ImGui::GetStyle().TabRounding;
 		float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
-		float outlining = borderSize + (2.5f * scale);
 
-		auto buildPath = [&](ImDrawList* dl, float botY) {
-			dl->PathLineTo({ bb.Min.x, botY });
-			dl->PathArcToFast({ bb.Min.x + round, bb.Min.y + round }, round, 6, 9);
-			dl->PathArcToFast({ bb.Max.x - round, bb.Min.y + round }, round, 9, 12);
-			dl->PathLineTo({ bb.Max.x, botY });
-		};
+		if (borderSize <= 0.0f)
+			return;
 
-		buildPath(drawList, bb.Max.y);
-		drawList->PathFillConvex(GetColorU32(ImGuiCol_Button));
-
-		buildPath(drawList, bb.Max.y);
-		drawList->PathStroke(IM_COL32(0, 0, 0, 255), 0, outlining);
+		float tColor = std::max(1.0f, std::round(borderSize));
+		float tBlack = std::max(1.0f, std::round(1.0f * scale));
 
 		ImU32 col = isActiveOrHovered ?
 		                GetUserStyleColorU32(USER_STYLE::kTabBorderActive) :
 		                GetUserStyleColorU32(USER_STYLE::kTabBorder);
-		buildPath(drawList, bb.Max.y);
-		drawList->PathStroke(col, 0, borderSize);
+
+		auto buildPath = [&](ImDrawList* dl, float botY, float inset) {
+			float r = std::max(0.0f, round - inset);
+			dl->PathLineTo({ bb.Min.x + inset, botY });
+			dl->PathArcToFast({ bb.Min.x + inset + r, bb.Min.y + inset + r }, r, 6, 9);
+			dl->PathArcToFast({ bb.Max.x - inset - r, bb.Min.y + inset + r }, r, 9, 12);
+			dl->PathLineTo({ bb.Max.x - inset, botY });
+		};
+
+		// Outer Black stroke (No bottom line)
+		buildPath(drawList, bb.Max.y, -tBlack * 0.5f);
+		drawList->PathStroke(IM_COL32(0, 0, 0, 255), 0, tBlack);
+
+		// Inner Color stroke (No bottom line)
+		buildPath(drawList, bb.Max.y, tColor * 0.5f);
+		drawList->PathStroke(col, 0, tColor);
 	}
 
 	bool BeginTabItemEx(const char* label, ImGuiTabItemFlags flags)
@@ -642,10 +671,12 @@ namespace ImGui
 		PushStyleColor(ImGuiCol_TabUnfocused, ImVec4(0, 0, 0, 0));
 		PushStyleColor(ImGuiCol_TabUnfocusedActive, ImVec4(0, 0, 0, 0));
 
-		if (!wasActive)
-			PushStyleColor(ImGuiCol_Text, GetStyleColorVec4(ImGuiCol_TextDisabled));
+		// Hide the native text rendering by passing a transparent color
+		PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 0));
 
-		PushStyleVar(ImGuiStyleVar_FramePadding, { ImGui::GetStyle().FramePadding.x, 6.0f * scale });
+		// Widen the X padding to match OutlineButtons, but LEAVE Y ALONE so we don't break the layout engine
+		float padX = 8.0f * scale;
+		PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(padX, ImGui::GetStyle().FramePadding.y));
 
 		window->DrawList->ChannelsSplit(2);
 		window->DrawList->ChannelsSetCurrent(1);
@@ -653,26 +684,51 @@ namespace ImGui
 		bool active = BeginTabItem(label, nullptr, flags);
 
 		PopStyleVar();
-
-		if (!wasActive)
-			PopStyleColor();
-		PopStyleColor(5);
+		PopStyleColor(6);  // Transparent text + 5 tab colors
 
 		// Switch to background channel for custom border
 		window->DrawList->ChannelsSetCurrent(0);
 
 		ImVec2 min = GetItemRectMin();
 		ImVec2 max = GetItemRectMax();
-		float borderSize = ImGui::GetStyle().FrameBorderSize;
-		float outlineInset = borderSize * 0.5f;
-		float clampedMaxY = min.y + GetFrameHeight() - 2.0f;  // hug the bar tighter
 
-		ImRect drawBb = {
-			ImVec2(min.x + outlineInset, min.y),
-			ImVec2(max.x - outlineInset, clampedMaxY)
-		};
+		// Mathematically match OutlineButton's visual geometry
+		ImVec2 textSize = CalcTextSize(label);
+		float padY = 7.0f * scale;
+		float visualH = textSize.y + (padY * 2.0f);
+		float logicalH = GetFrameHeight();
+		float offY = (logicalH - visualH) * 0.5f;
+
+		// This ideal bounding box is identical to OutlineButton in size and vertical position
+		ImRect idealBb = { min.x, min.y + offY, max.x, min.y + offY + visualH };
+
+		// Chop the bottom of the drawn rect at max.y so it rests flush on the separator line
+		ImRect drawBb = { idealBb.Min.x, idealBb.Min.y, idealBb.Max.x, max.y };
+
+		// Draw standard button fill (Only rounding the TOP corners so the bottom sits flush against the separator)
+		float rounding = ImGui::GetStyle().TabRounding;
+		window->DrawList->AddRectFilled(drawBb.Min, drawBb.Max, GetColorU32(ImGuiCol_Button), rounding, ImDrawFlags_RoundCornersTop);
 
 		DrawTabBorder(window->DrawList, drawBb, active || IsItemHovered());
+
+		// Switch to foreground channel to render our custom centered text
+		window->DrawList->ChannelsSetCurrent(1);
+
+		ImU32 textColor;
+		if (active) {
+			textColor = GetColorU32(ImGuiCol_Text);
+		} else if (IsItemHovered()) {
+			textColor = GetUserStyleColorU32(USER_STYLE::kTextHovered);
+		} else {
+			textColor = GetColorU32(ImGuiCol_TextDisabled);
+		}
+
+		PushStyleColor(ImGuiCol_Text, textColor);
+
+		// Mathematically center the text inside the IDEAL un-chopped box, locking it to the OutlineButton baseline
+		RenderTextClipped(idealBb.Min, idealBb.Max, label, NULL, &textSize, { 0.5f, 0.5f });
+
+		PopStyleColor();
 
 		// Merge channels back to normal
 		window->DrawList->ChannelsMerge();
@@ -695,25 +751,19 @@ namespace ImGui
 			return false;
 
 		float scale = Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
-		float rounding = GetUserStyleVar(USER_STYLE::kButtonRounding) * scale;
-		float borderSize = ImGui::GetStyle().FrameBorderSize;
+		float rounding = GetUserStyleVar(USER_STYLE::kButtonRounding);
 
 		ImVec2 textSize = CalcTextSize(label);
-		ImVec2 textPad = ImVec2(5.0f * scale, 4.0f * scale);
 
-		float outlining = borderSize + (2.5f * scale);
-		float outlineInset = outlining * 0.5f;
+		// Tight Vertical padding so it hugs the text
+		float padY = 7.0f * scale;
+		float padX = 8.0f * scale;
 
-		// Consistent vertical size based on line height
-		ImVec2 contentSize = ImVec2(textSize.x, GetTextLineHeight());
+		float visualH = textSize.y + (padY * 2.0f);
+		float width = textSize.x + (padX * 2.0f);
 
-		// VISUAL SIZE (What the user actually sees)
-		ImVec2 visual_sz = contentSize + (textPad * 2.0f) + ImVec2(outlineInset * 2.0f, outlineInset * 2.0f);
-		visual_sz.x = ImMax(visual_sz.x, visual_sz.y);  // minimum square
-
-		// LOGICAL SIZE (What the layout engine sees)
-		// We clamp the layout height to standard FrameHeight so SameLine() aligns natively
-		ImVec2 logical_sz = ImVec2(visual_sz.x, GetFrameHeight());
+		// Keep structural layout anchored to FrameHeight
+		ImVec2 logical_sz = ImVec2(width, GetFrameHeight());
 
 		ImVec2 pos = window->DC.CursorPos;
 		ImRect bb(pos, pos + logical_sz);
@@ -722,27 +772,21 @@ namespace ImGui
 		if (!ItemAdd(bb, window->GetID(label)))
 			return false;
 
-		// 3. RENDER BOX (Centered vertically over the logical box)
-		float offY = (visual_sz.y - logical_sz.y) * 0.5f;
-		ImRect render_bb(pos.x, pos.y - offY, pos.x + visual_sz.x, pos.y - offY + visual_sz.y);
-
-		ImRect drawBb = { render_bb.Min + ImVec2(outlineInset, outlineInset), render_bb.Max - ImVec2(outlineInset, outlineInset) };
+		// Shift visual rect vertically to center it cleanly
+		float offY = (logical_sz.y - visualH) * 0.5f;
+		ImRect bbVisual(pos.x, pos.y + offY, pos.x + width, pos.y + offY + visualH);
 
 		bool h, held;
 		bool p = ButtonBehavior(bb, window->GetID(label), &h, &held);
 
-		RenderFrame(drawBb.Min, drawBb.Max, GetColorU32(ImGuiCol_Button), true, rounding);
-
-		window->DrawList->AddRect(drawBb.Min, drawBb.Max, IM_COL32(0, 0, 0, 255), rounding, 0, outlining);
-		DrawWidgetBorder(window->DrawList, drawBb, h || held, rounding);
+		window->DrawList->AddRectFilled(bbVisual.Min, bbVisual.Max, GetColorU32(ImGuiCol_Button), rounding);
+		DrawWidgetBorder(window->DrawList, bbVisual, h || held, rounding);
 
 		bool dim = MANAGER(Input)->IsInputGamepad() && !h;
 		if (dim)
 			PushStyleColor(ImGuiCol_Text, GetColorU32(ImGuiCol_TextDisabled));
 
-		// Centre using contentSize so vertical position is consistent across all glyphs
-		// Render text relative to the VISUAL box so it sits properly in the paddings
-		RenderTextClipped(render_bb.Min, render_bb.Max, label, NULL, &contentSize, { 0.5f, 0.5f });
+		RenderTextClipped(bbVisual.Min, bbVisual.Max, label, NULL, &textSize, { 0.5f, 0.5f });
 
 		if (dim)
 			PopStyleColor();
@@ -753,7 +797,7 @@ namespace ImGui
 			*wasFocused = h;
 		return p;
 	}
-	
+
 	bool ButtonIconWithLabelStyled(const char* label, void* tex, const ImVec2& size, bool alignFar, bool labelLeft)
 	{
 		bool clicked = false;
@@ -805,16 +849,13 @@ namespace ImGui
 		std::vector<RenderItem> items;
 		items.reserve(5);
 
-		float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
-		float resScale = ImGui::Renderer::GetResolutionScale();
-		auto* regularFont = MANAGER(IconFont)->GetRegularFont();
-		float baseSize = regularFont ? regularFont->LegacySize : 30.0f;
-		float nativeIconH = baseSize * resScale * activeScale * 1.215f;
-
 		auto AddIcon = [&](const IconFont::IconTexture* icon, const char* suffix) {
 			if (icon) {
-				float targetH = nativeIconH * iconScale;
-				float targetW = targetH * (icon->imageSize.y > 0.0f ? (icon->imageSize.x / icon->imageSize.y) : 1.0f);
+				float userIconScale = FUCKMan::GetSingleton()->IsIgnoringUserScale() ? 1.0f : ImGui::Styles::GetSingleton()->user.iconScale;
+				float iconTargetH = std::round(frameH * userIconScale);
+
+				float targetH = std::round(iconTargetH * iconScale);
+				float targetW = std::round(targetH * (icon->imageSize.y > 0.0f ? (icon->imageSize.x / icon->imageSize.y) : 1.0f));
 				ImVec2 scaledSize(targetW, targetH);
 
 				items.push_back({ RenderItem::kIcon, icon, nullptr, suffix, scaledSize });
@@ -934,9 +975,15 @@ namespace ImGui
 
 	bool DrawManagedHotkey(const char* label, FUCK::ManagedHotkey& h, int flags, float iconScale, float labelScale)
 	{
-		float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
-		float resScale = ImGui::Renderer::GetResolutionScale();
-		ImGui::PushFont(IconFont::Manager::GetSingleton()->GetLargeFont(), 24.0f * resScale * labelScale * activeScale);
+		auto* regularFont = IconFont::Manager::GetSingleton()->GetRegularFont();
+		bool popFont = false;
+
+		if (labelScale != 1.0f) {
+			float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
+			float targetSize = regularFont->LegacySize * labelScale * activeScale;
+			ImGui::PushFont(regularFont, targetSize);
+			popFont = true;
+		}
 
 		bool alignFar = (flags & static_cast<int>(FUCK::HotkeyFlags::kAlignNear)) == 0;
 		bool labelLeft = (flags & static_cast<int>(FUCK::HotkeyFlags::kLabelRight)) == 0;
@@ -997,7 +1044,9 @@ namespace ImGui
 			}
 		}
 
-		ImGui::PopFont();
+		if (popFont) {
+			ImGui::PopFont();
+		}
 		return triggered;
 	}
 
@@ -1073,7 +1122,7 @@ namespace ImGui
 		return changed;
 	}
 
-	bool ThinSliderScalar(const char* label, ImGuiDataType type, void* data, const void* min, const void* max, const char* fmt, ImGuiSliderFlags flags, float thick)
+	bool ThinSliderScalar(const char* label, ImGuiDataType type, void* data, const void* min, const void* max, const char* fmt, ImGuiSliderFlags flags)
 	{
 		ImGuiWindow* window = GetCurrentWindow();
 		float w = CalcItemWidth();
@@ -1134,14 +1183,19 @@ namespace ImGui
 		if (changed)
 			MarkItemEdited(id);
 
-		ImRect track = bb;
-		float s = track.GetHeight() * (1.0f - thick) * 0.5f;
-		track.Min.y += s;
-		track.Max.y -= s;
 		bool active = (g.ActiveId == id);
 
-		window->DrawList->AddRectFilled(track.Min, track.Max, GetColorU32(active ? ImGuiCol_FrameBgActive : ImGuiCol_FrameBg), ImGui::GetStyle().FrameRounding);
-		DrawWidgetBorder(window->DrawList, track, IsWidgetFocused(id) || active, ImGui::GetStyle().FrameRounding);
+		ImRect track = bb;
+		// Shrink Y-axis significantly so the track is barrow
+		float trackH = std::max(4.0f, 6.0f * ImGui::Renderer::GetResolutionScale());
+		float s = (track.GetHeight() - trackH) * 0.8f;
+		track.Min.y += s;
+		track.Max.y -= s;
+
+		window->DrawList->AddRectFilled(track.Min, track.Max, GetColorU32(active ? ImGuiCol_FrameBgActive : h ? ImGuiCol_FrameBgHovered :
+																												ImGuiCol_FrameBg),
+			ImGui::GetStyle().FrameRounding);
+		DrawWidgetBorder(window->DrawList, track, IsWidgetFocused(id) || active || h, ImGui::GetStyle().FrameRounding);
 
 		if (grab.Max.x > grab.Min.x)
 			window->DrawList->AddRectFilled(grab.Min, grab.Max, GetColorU32(active ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab), ImGui::GetStyle().GrabRounding);
@@ -1218,11 +1272,12 @@ namespace ImGui
 		if (h || is_open)
 			RenderFrame(bb.Min, bb.Max, GetColorU32(is_open ? ImGuiCol_HeaderActive : ImGuiCol_HeaderHovered), true, GImGui->Style.FrameRounding);
 
-		// Draw Arrow Icon using helper
-		DrawTreeIcon(window->DrawList, { bb.Min.x + GImGui->Style.ItemInnerSpacing.x, bb.Min.y }, frameHeight, is_open, h);
-
+		float padding = GImGui->Style.ItemInnerSpacing.x;
 		float fontSize = GImGui->FontSize;
-		float textOff = fontSize + GImGui->Style.ItemInnerSpacing.x * 2.0f;
+		float textOff = fontSize + padding * 3.0f;
+
+		// Draw Arrow Icon using helper
+		DrawTreeIcon(window->DrawList, { bb.Min.x + padding, bb.Min.y }, frameHeight, is_open, h);
 
 		// Vertically centre text
 		ImVec2 textSize = CalcTextSize(label);
@@ -1249,6 +1304,11 @@ namespace ImGui
 		ImRect bb(pos, pos + ImVec2(GetContentRegionAvail().x, frameHeight));
 
 		ItemSize(bb);
+
+		float padding = GImGui->Style.ItemInnerSpacing.x;
+		float fontSize = GImGui->FontSize;
+		float textOff = fontSize + padding * 3.0f;  // Indent text past icon
+
 		if (!ItemAdd(bb, id)) {
 			if (is_open)
 				TreePush(label);
@@ -1265,12 +1325,9 @@ namespace ImGui
 			RenderFrame(bb.Min, bb.Max, GetColorU32(ImGuiCol_HeaderHovered), false, GImGui->Style.FrameRounding);
 
 		// Draw Arrow Icon using helper
-		float padding = GImGui->Style.ItemInnerSpacing.x;
 		DrawTreeIcon(window->DrawList, { pos.x + padding, pos.y }, frameHeight, is_open, h);
 
 		// Align text
-		float fontSize = GImGui->FontSize;
-		float textOff = fontSize + padding * 3.0f;  // Indent text past icon
 		float textY = bb.Min.y + (frameHeight - CalcTextSize(label).y) * 0.5f;
 
 		RenderText({ pos.x + textOff, textY }, label);
@@ -1363,10 +1420,17 @@ namespace ImGui
 	bool OutsetFramedWidget(const char* label, TWidgetFunc drawWidget)
 	{
 		std::string id = "##"s + label;
-		LeftAlignedTextImpl(label, id);
 
-		float borderSize = ImGui::GetStyle().FrameBorderSize;
+		float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
+		float borderSize = ImGui::GetUserStyleVar(USER_STYLE::kButtonBorderSize);
 		float rounding = ImGui::GetStyle().FrameRounding;
+
+		float padX = std::max(ImGui::GetStyle().FramePadding.x, borderSize + (8.0f * scale));
+		float padY = 7.0f * scale;
+
+		PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(padX, padY));
+
+		LeftAlignedTextImpl(label, id);
 
 		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorU32(USER_STYLE::kFrameBG_Widget));
 		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
@@ -1375,7 +1439,7 @@ namespace ImGui
 
 		bool result = drawWidget(id.c_str());
 
-		PopStyleVar();
+		PopStyleVar(2);
 		PopStyleColor(3);
 
 		if (borderSize > 0.0f) {
@@ -1384,14 +1448,7 @@ namespace ImGui
 			bool active = ImGui::IsItemActive();
 			bool focused = IsWidgetFocused(id);
 
-			ImU32 borderColor = (hovered || active || focused) ?
-			                        GetUserStyleColorU32(USER_STYLE::kSliderBorderActive) :
-			                        GetUserStyleColorU32(USER_STYLE::kSliderBorder);
-
-			float outset = borderSize * 0.5f;
-			ImRect drawBb = { bb.Min - ImVec2(outset, outset), bb.Max + ImVec2(outset, outset) };
-
-			ImGui::GetWindowDrawList()->AddRect(drawBb.Min, drawBb.Max, borderColor, rounding, 0, borderSize);
+			DrawWidgetBorder(ImGui::GetWindowDrawList(), bb, hovered || active || focused, rounding);
 		}
 		ActivateOnHover();
 

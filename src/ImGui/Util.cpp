@@ -1,6 +1,8 @@
 #include "Util.h"
 
 #include "System/Input.h"
+#include "FUCKMan.h"
+#include "IconsFonts.h"
 #include "Renderer.h"
 #include "Styles.h"
 
@@ -183,9 +185,15 @@ namespace ImGui
 
 	void Header(const char* label)
 	{
+		auto largeFont = MANAGER(IconFont)->GetLargeFont();
+		float scale = FUCKMan::GetSingleton()->GetActiveScale();
+		float size = (largeFont ? largeFont->LegacySize : ImGui::GetStyle().FontSizeBase) * scale;
+
+		ImGui::PushFont(largeFont, size);
 		PushStyleColor(ImGuiCol_Text, GetUserStyleColorU32(USER_STYLE::kHeaderText));
 		TextUnformatted(label);
 		PopStyleColor();
+		ImGui::PopFont();
 		Separator();
 	}
 

@@ -38,6 +38,7 @@ namespace ImGui
 
 		// Layout
 		kButtonRounding,
+		kButtonBorderSize,
 		kWindowPadding,
 		kItemSpacing,
 
@@ -54,26 +55,27 @@ namespace ImGui
 		struct Style
 		{
 			// Helpers / Vars
-			float bgAlpha{ 0.68f };
-			float disabledAlpha{ 0.30f };
+			float  bgAlpha{ 0.68f };
+			float  disabledAlpha{ 0.30f };
 
 			// Layout Metrics
 			ImVec2 windowPadding{ 8.0f, 8.0f };
 			ImVec2 itemSpacing{ 8.0f, 4.0f };
-			float indentSpacing{ 20.0f };
+			float  indentSpacing{ 80.0f };
 
-			float windowRounding{ 0.0f };
-			float frameRounding{ 0.0f };
-			float grabRounding{ 0.0f };
-			float tabRounding{ 6.0f };
-			float popupRounding{ 0.0f };
-			float scrollbarRounding{ 0.0f };
-			float buttonRounding{ 6.0f };
+			float  windowRounding{ 0.0f };
+			float  frameRounding{ 0.0f };
+			float  grabRounding{ 0.0f };
+			float  tabRounding{ 6.0f };
+			float  popupRounding{ 0.0f };
+			float  scrollbarRounding{ 0.0f };
+			float  buttonRounding{ 6.0f };
+			float  buttonBorderSize{ 3.0f };
 
 			// Windows & Borders
 			ImVec4 background{ 0.0f, 0.0f, 0.0f, bgAlpha };
 			ImVec4 border{ 0.25f, 0.25f, 0.25f, 1.0f };
-			float borderSize{ 4.0f };
+			float  borderSize{ 4.0f };
 
 			// Text
 			ImVec4 text{ 0.733f, 0.741f, 0.749f, 1.0f };
@@ -116,7 +118,7 @@ namespace ImGui
 
 			// Decorations
 			ImVec4 gridLines{ 1.0f, 1.0f, 1.0f, 0.329f };
-			float gridThickness{ 2.5f };
+			float  gridThickness{ 2.5f };
 			ImVec4 separator{ 0.25f, 0.25f, 0.25f, 1.0f };
 
 			// Scrollbars
@@ -126,27 +128,28 @@ namespace ImGui
 			ImVec4 scrollbarGrabActive{ 0.51f, 0.51f, 0.51f, 1.0f };
 
 			// Custom Icons
+			float  iconScale{ 1.32f };
 			ImVec4 iconDisabled{ 1.0f, 1.0f, 1.0f, disabledAlpha };
 			ImVec4 widgetToggleActive{ 1.0f, 1.0f, 1.0f, 0.65f };
 			ImVec4 widgetFlash{ 1.0f, 0.8f, 0.2f, 1.0f };
 		};
 
 		// --- API ---
-		ImU32 GetColorU32(USER_STYLE a_style) const;
+		ImU32  GetColorU32(USER_STYLE a_style) const;
 		ImVec4 GetColorVec4(USER_STYLE a_style) const;
-		float GetVar(USER_STYLE a_style) const;
+		float  GetVar(USER_STYLE a_style) const;
 
-		void ResetToDefaults(bool a_saveToIni = true);
-		void LoadStyles();
-		void SavePreset(const std::string& a_name);
-		void LoadPreset(const std::string& a_name, bool a_saveToIni = true);
-		void DeletePreset(const std::string& a_name);
+		void        ResetToDefaults(bool a_saveToIni = true);
+		void        LoadStyles();
+		void        SavePreset(const std::string& a_name);
+		void        LoadPreset(const std::string& a_name, bool a_saveToIni = true);
+		void        DeletePreset(const std::string& a_name);
 		std::string GetCurrentPresetName() const { return currentPresetName; }
 
 		// Font Management
 		std::vector<std::string> GetAvailableFonts() const;
-		std::string GetCurrentFont() const { return currentFont; }
-		void SetCurrentFont(const std::string& a_fontName);
+		std::string              GetCurrentFont() const { return currentFont; }
+		void                     SetCurrentFont(const std::string& a_fontName);
 
 		const std::vector<std::string>& GetPresets();
 
@@ -183,7 +186,7 @@ namespace ImGui
 		ImU32 scrollbarBGU32;
 		ImU32 navHighlightU32;
 
-		bool refreshStyle{ false };
+		bool        refreshStyle{ false };
 		std::string currentFont{ "Jost-Regular.ttf" };
 		std::string currentPresetName{ "" };
 
@@ -191,9 +194,9 @@ namespace ImGui
 	};
 
 	// Free functions
-	ImU32 GetUserStyleColorU32(USER_STYLE a_style);
+	ImU32  GetUserStyleColorU32(USER_STYLE a_style);
 	ImVec4 GetUserStyleColorVec4(USER_STYLE a_style);
-	float GetUserStyleVar(USER_STYLE a_style);
+	float  GetUserStyleVar(USER_STYLE a_style);
 
 	// Template Implementations
 	template <class T>
@@ -207,15 +210,15 @@ namespace ImGui
 			srell::smatch hex_matches;
 
 			if (srell::regex_match(a_str, rgb_matches, rgb_pattern)) {
-				auto red = std::stoi(rgb_matches[1]);
+				auto red   = std::stoi(rgb_matches[1]);
 				auto green = std::stoi(rgb_matches[2]);
-				auto blue = std::stoi(rgb_matches[3]);
+				auto blue  = std::stoi(rgb_matches[3]);
 				auto alpha = std::stoi(rgb_matches[4]);
 				return { { red / 255.0f, green / 255.0f, blue / 255.0f, alpha / 255.0f }, false };
 			} else if (srell::regex_match(a_str, hex_matches, hex_pattern)) {
-				auto red = std::stoi(hex_matches[1], 0, 16);
+				auto red   = std::stoi(hex_matches[1], 0, 16);
 				auto green = std::stoi(hex_matches[2], 0, 16);
-				auto blue = std::stoi(hex_matches[3], 0, 16);
+				auto blue  = std::stoi(hex_matches[3], 0, 16);
 				auto alpha = std::stoi(hex_matches[4], 0, 16);
 				return { { red / 255.0f, green / 255.0f, blue / 255.0f, alpha / 255.0f }, true };
 			}

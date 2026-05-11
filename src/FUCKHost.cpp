@@ -55,10 +55,12 @@ namespace FUCK::Host
 	}
 	static void PushFont_Impl(ImFont* f, float size)
 	{
+		float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
 		if (size <= 0.0f) {
-			ImGui::PushFont(f);
+			float defaultSize = f ? f->LegacySize : ImGui::GetStyle().FontSizeBase;
+			ImGui::PushFont(f, defaultSize * activeScale);
 		} else {
-			ImGui::PushFont(f, size * FUCKMan::GetSingleton()->GetActiveScale());
+			ImGui::PushFont(f, size * activeScale);
 		}
 	}
 	static void PopFont_Impl() { ImGui::PopFont(); }
@@ -413,14 +415,9 @@ namespace FUCK::Host
 	{
 		auto icon = IconFont::Manager::GetSingleton()->GetIcon(k);
 		if (icon) {
-			float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
-			float resScale = ImGui::Renderer::GetResolutionScale();
-
-			auto* regularFont = IconFont::Manager::GetSingleton()->GetRegularFont();
-			float baseSize = regularFont ? regularFont->LegacySize : 30.0f;
-			float targetH = baseSize * resScale * activeScale * 1.215f;
-
-			float targetW = targetH * (icon->imageSize.y > 0.0f ? (icon->imageSize.x / icon->imageSize.y) : 1.0f);
+			float userIconScale = FUCKMan::GetSingleton()->IsIgnoringUserScale() ? 1.0f : ImGui::Styles::GetSingleton()->user.iconScale;
+			float targetH = std::round(ImGui::GetFrameHeight() * userIconScale);
+			float targetW = std::round(targetH * (icon->imageSize.y > 0.0f ? (icon->imageSize.x / icon->imageSize.y) : 1.0f));
 
 			if (w)
 				*w = targetW;
@@ -697,7 +694,7 @@ namespace FUCK::Host
 	}
 	static void Stepper_Impl(const char* label, const char* text, bool* outLeft, bool* outRight) { ImGui::Stepper(label, text, outLeft, outRight); }
 
-	static bool BeginTabBar_Impl(const char* s, int f) { return ImGui::BeginTabBar(s, f); }
+	static bool BeginTabBar_Impl(const char* s, int f) { return ImGui::BeginTabBar(s, f | ImGuiTabBarFlags_NoTabListScrollingButtons); }
 	static void EndTabBar_Impl() { ImGui::EndTabBar(); }
 	static bool BeginTabItem_Impl(const char* label, int flags) { return ImGui::BeginTabItemEx(label, static_cast<ImGuiTabItemFlags>(flags)); }
 	static void EndTabItem_Impl() { ImGui::EndTabItem(); }

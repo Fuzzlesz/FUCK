@@ -33,6 +33,7 @@ public:
 	// --- State Queries ---
 	bool IsInputBlocked() const;
 	bool IsCursorForced() const;
+	bool IsIgnoringUserScale() const { return _isIgnoringUserScale; }
 	bool HasWindowWithFlag(FUCK::WindowFlags a_flag) const;
 	bool IsOpen() const { return _isOpen; }
 
@@ -117,6 +118,7 @@ private:
 	PauseType _globalPauseType = PauseType::kNone;
 	float _activeScale = 1.0f;
 	float _userScale = 1.0f;
+	bool _isIgnoringUserScale = false;
 	bool _sidebarOnRight = false;
 	bool _injectSystemMenu = true;
 	bool _replaceHelpMenu = false;
