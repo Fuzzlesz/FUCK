@@ -314,10 +314,21 @@ namespace FUCK::Host
 	{
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) {
 			const float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
-
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * scale, 12.0f * scale));
 
-			if (ImGui::BeginTooltip()) {
+			// Temporarily spoof the mouse position so ImGui spawns the tooltip offset,
+			// while still utilising its native screen-edge clamping
+			ImVec2 origMousePos = ImGui::GetIO().MousePos;
+			float offset = 20.0f * scale;
+			ImGui::GetIO().MousePos.x += offset;
+			ImGui::GetIO().MousePos.y += offset;
+
+			bool begin_tooltip = ImGui::BeginTooltip();
+
+			// Instantly restore real mouse pos
+			ImGui::GetIO().MousePos = origMousePos;
+
+			if (begin_tooltip) {
 				ImGui::TextUnformatted(fmt);
 				ImGui::EndTooltip();
 			}
@@ -330,10 +341,18 @@ namespace FUCK::Host
 		ImGui::TextDisabled("(?)");
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) {
 			const float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
-
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * scale, 12.0f * scale));
 
-			if (ImGui::BeginTooltip()) {
+			ImVec2 origMousePos = ImGui::GetIO().MousePos;
+			float offset = 20.0f * scale;
+			ImGui::GetIO().MousePos.x += offset;
+			ImGui::GetIO().MousePos.y += offset;
+
+			bool begin_tooltip = ImGui::BeginTooltip();
+
+			ImGui::GetIO().MousePos = origMousePos;
+
+			if (begin_tooltip) {
 				ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
 				ImGui::TextUnformatted(desc);
 				ImGui::PopTextWrapPos();
