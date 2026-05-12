@@ -645,13 +645,23 @@ namespace Input
 			cursorCurrentlyOpen = ui->IsMenuOpen(RE::CursorMenu::MENU_NAME);
 		}
 
+		static double lastCursorToggleTime = 0.0;
+		double currentTime = ImGui::GetTime();
+
 		if (shouldShowCursor) {
 			if (!cursorInit.has_value() || (*cursorInit == false && !cursorCurrentlyOpen)) {
 				if (!cursorCurrentlyOpen) {
 					ToggleCursor(true);
 					cursorInit = true;
+					lastCursorToggleTime = currentTime;
 				} else {
 					cursorInit = false;
+				}
+			} else if (*cursorInit == true && !cursorCurrentlyOpen) {
+				// Recover the cursor if it was unexpectedly closed by the game engine
+				if (currentTime - lastCursorToggleTime > 0.1) {
+					ToggleCursor(true);
+					lastCursorToggleTime = currentTime;
 				}
 			}
 		} else {
