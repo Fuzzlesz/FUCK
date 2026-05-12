@@ -14,14 +14,14 @@
 namespace FUCK::Host
 {
 	// ==========================================
-	// Framework Registration
+	// Registration
 	// ==========================================
 	static void RegisterTool_Impl(ITool* t) { FUCKMan::GetSingleton()->RegisterTool(t); }
 	static void RegisterWindow_Impl(IWindow* w) { FUCKMan::GetSingleton()->RegisterWindow(w); }
 	static void UnregisterWindow_Impl(IWindow* w) { FUCKMan::GetSingleton()->UnregisterWindow(w); }
 
 	// ==========================================
-	// Display & Rendering
+	// Display
 	// ==========================================
 	static float GetResolutionScale_Impl() { return ImGui::Renderer::GetResolutionScale(); }
 	static void GetDisplaySize_Impl(float* x, float* y)
@@ -69,7 +69,28 @@ namespace FUCK::Host
 	static bool IsMenuOpen_Impl() { return FUCKMan::GetSingleton()->IsOpen(); }
 
 	// ==========================================
-	// Style & Stack
+	// IO
+	// ==========================================
+	static float GetDeltaTime_Impl() { return ImGui::GetIO().DeltaTime; }
+	static void GetMouseDelta_Impl(float* x, float* y)
+	{
+		auto d = ImGui::GetIO().MouseDelta;
+		if (x)
+			*x = d.x;
+		if (y)
+			*y = d.y;
+	}
+	static void GetMousePos_Impl(float* x, float* y)
+	{
+		auto p = ImGui::GetIO().MousePos;
+		if (x)
+			*x = p.x;
+		if (y)
+			*y = p.y;
+	}
+
+	// ==========================================
+	// Styling
 	// ==========================================
 	static void PushStyleColor_Impl(ImGuiCol idx, const ImVec4& col) { ImGui::PushStyleColor(idx, col); }
 	static void PopStyleColor_Impl(int count) { ImGui::PopStyleColor(count); }
@@ -176,7 +197,7 @@ namespace FUCK::Host
 	}
 
 	// ==========================================
-	// Layout & Cursor
+	// Layout
 	// ==========================================
 	static void SetCursorPosX_Impl(float x) { ImGui::SetCursorPosX(x); }
 	static void SetCursorPosY_Impl(float y) { ImGui::SetCursorPosY(y); }
@@ -207,6 +228,15 @@ namespace FUCK::Host
 		if (y)
 			*y = p.y;
 	}
+	static float CalcItemWidth_Impl() { return ImGui::CalcItemWidth(); }
+	static void CalcTextSize_Impl(const char* text, const char* text_end, bool hide_text_after_double_hash, float wrap_width, float* x, float* y)
+	{
+		ImVec2 s = ImGui::CalcTextSize(text, text_end, hide_text_after_double_hash, wrap_width);
+		if (x)
+			*x = s.x;
+		if (y)
+			*y = s.y;
+	}
 	static void GetItemRectMin_Impl(float* x, float* y)
 	{
 		ImVec2 p = ImGui::GetItemRectMin();
@@ -223,15 +253,6 @@ namespace FUCK::Host
 		if (y)
 			*y = p.y;
 	}
-	static float CalcItemWidth_Impl() { return ImGui::CalcItemWidth(); }
-	static void CalcTextSize_Impl(const char* text, const char* text_end, bool hide_text_after_double_hash, float wrap_width, float* x, float* y)
-	{
-		ImVec2 s = ImGui::CalcTextSize(text, text_end, hide_text_after_double_hash, wrap_width);
-		if (x)
-			*x = s.x;
-		if (y)
-			*y = s.y;
-	}
 	static void SetNextItemWidth_Impl(float w) { ImGui::SetNextItemWidth(w); }
 	static void SetNextItemOpen_Impl(bool is_open, int cond) { ImGui::SetNextItemOpen(is_open, cond); }
 	static void Dummy_Impl(float w, float h) { ImGui::Dummy(ImVec2(w, h)); }
@@ -240,39 +261,21 @@ namespace FUCK::Host
 	static void SeparatorThick_Impl() { ImGui::SeparatorThick(); }
 	static void SeparatorText_Impl(const char* label) { ImGui::SeparatorText(label); }
 
+	// ==========================================
+	// Metrics
+	// ==========================================
 	static float GetTextLineHeight_Impl() { return ImGui::GetTextLineHeight(); }
 	static float GetTextLineHeightWithSpacing_Impl() { return ImGui::GetTextLineHeightWithSpacing(); }
 	static float GetFrameHeight_Impl() { return ImGui::GetFrameHeight(); }
 	static float GetFrameHeightWithSpacing_Impl() { return ImGui::GetFrameHeightWithSpacing(); }
 
 	// ==========================================
-	// IO Helpers
-	// ==========================================
-	static float GetDeltaTime_Impl() { return ImGui::GetIO().DeltaTime; }
-	static void GetMouseDelta_Impl(float* x, float* y)
-	{
-		auto d = ImGui::GetIO().MouseDelta;
-		if (x)
-			*x = d.x;
-		if (y)
-			*y = d.y;
-	}
-	static void GetMousePos_Impl(float* x, float* y)
-	{
-		auto p = ImGui::GetIO().MousePos;
-		if (x)
-			*x = p.x;
-		if (y)
-			*y = p.y;
-	}
-
-	// ==========================================
-	// Translation & Utils
+	// Utils
 	// ==========================================
 	static void LoadTranslation_Impl(const char* n) { Translation::Manager::GetSingleton()->LoadCustomTranslation(n); }
 	static const char* GetTranslation_Impl(const char* k) { return Translation::Manager::GetSingleton()->GetTranslation(k); }
 	static void SanitizePath_Impl(char* dest, const char* source, size_t size) { Utils::SanitizePath(dest, source, size); }
-	
+
 	static void LoadPluginINI_Impl(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*))
 	{
 		if (!callback || !pluginName)
@@ -308,36 +311,6 @@ namespace FUCK::Host
 	static void PushItemFlag_Impl(ItemFlags flag, bool enabled) { ImGui::PushItemFlag(static_cast<ImGuiItemFlags>(flag), enabled); }
 	static void PopItemFlag_Impl() { ImGui::PopItemFlag(); }
 
-	static void PushID_Str_Impl(const char* str_id) { ImGui::PushID(str_id); }
-	static void PushID_Int_Impl(int int_id) { ImGui::PushID(int_id); }
-	static void PopID_Impl() { ImGui::PopID(); }
-
-	static void SetTooltip_Impl(const char* fmt)
-	{
-		if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) {
-			const float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * scale, 12.0f * scale));
-
-			// Temporarily spoof the mouse position so ImGui spawns the tooltip offset,
-			// while still utilising its native screen-edge clamping
-			ImVec2 origMousePos = ImGui::GetIO().MousePos;
-			float offset = 20.0f * scale;
-			ImGui::GetIO().MousePos.x += offset;
-			ImGui::GetIO().MousePos.y += offset;
-
-			bool begin_tooltip = ImGui::BeginTooltip();
-
-			// Instantly restore real mouse pos
-			ImGui::GetIO().MousePos = origMousePos;
-
-			if (begin_tooltip) {
-				ImGui::TextUnformatted(fmt);
-				ImGui::EndTooltip();
-			}
-
-			ImGui::PopStyleVar();
-		}
-	}
 	static void HelpMarker_Impl(const char* desc)
 	{
 		ImGui::TextDisabled("(?)");
@@ -365,17 +338,18 @@ namespace FUCK::Host
 		}
 	}
 
-	static void AddMenuListener_Impl(void* userdata, void (*callback)(const char*, bool, void*))
-	{
-		FUCKMan::GetSingleton()->AddMenuListener(userdata, callback);
-	}
-	static void RemoveMenuListener_Impl(void* userdata)
-	{
-		FUCKMan::GetSingleton()->RemoveMenuListener(userdata);
-	}
+	static void PushID_Str_Impl(const char* str_id) { ImGui::PushID(str_id); }
+	static void PushID_Int_Impl(int int_id) { ImGui::PushID(int_id); }
+	static void PopID_Impl() { ImGui::PopID(); }
 
 	// ==========================================
-	// Textures & Icons
+	// Menu Events
+	// ==========================================
+	static void AddMenuListener_Impl(void* userdata, void (*callback)(const char*, bool, void*)) { FUCKMan::GetSingleton()->AddMenuListener(userdata, callback); }
+	static void RemoveMenuListener_Impl(void* userdata) { FUCKMan::GetSingleton()->RemoveMenuListener(userdata); }
+
+	// ==========================================
+	// Assets
 	// ==========================================
 	static ID3D11ShaderResourceView* GetSRV(void* tex)
 	{
@@ -466,7 +440,7 @@ namespace FUCK::Host
 		if (auto main = RE::Main::GetSingleton())
 			main->freezeTime = frozen;
 	}
-	static void SetAutoVanityBlocked(bool blocked) { FUCKMan::GetSingleton()->SetVanityBlocked(blocked); }
+	static void SetAutoVanityBlocked_Impl(bool blocked) { FUCKMan::GetSingleton()->SetVanityBlocked(blocked); }
 	static void SetHardPause_Impl(bool paused) { FUCKMan::GetSingleton()->SetManualHardPause(paused); }
 	static void SetSoftPause_Impl(bool paused) { FUCKMan::GetSingleton()->SetManualSoftPause(paused); }
 	static void ForceCursor_Impl(bool force) { FUCKMan::GetSingleton()->SetForceCursor(force); }
@@ -531,7 +505,7 @@ namespace FUCK::Host
 	static void SetItemDefaultFocus_Impl() { ImGui::SetItemDefaultFocus(); }
 
 	// ==========================================
-	// Drawing
+	// Drawing Primitives
 	// ==========================================
 	static void DrawRect_Impl(const ImVec2& min, const ImVec2& max, const ImVec4& col, float r, float t) { ImGui::GetWindowDrawList()->AddRect(min, max, ImGui::ColorConvertFloat4ToU32(col), r, 0, t); }
 	static void DrawRectFilled_Impl(const ImVec2& min, const ImVec2& max, const ImVec4& col, float r) { ImGui::GetWindowDrawList()->AddRectFilled(min, max, ImGui::ColorConvertFloat4ToU32(col), r); }
@@ -557,13 +531,15 @@ namespace FUCK::Host
 	static void DrawBackgroundLine_Impl(float x1, float y1, float x2, float y2, unsigned int col, float t) { ImGui::GetBackgroundDrawList()->AddLine({ x1, y1 }, { x2, y2 }, col, t); }
 	static void DrawBackgroundRect_Impl(const ImVec2& min, const ImVec2& max, ImU32 col, float thickness) { ImGui::GetBackgroundDrawList()->AddRect(min, max, col, 0.0f, 0, thickness); }
 
+	// ==========================================
 	// Screen primitives
+	// ==========================================
 	static void DrawScreenRect_Impl(const ImVec2& min, const ImVec2& max, ImU32 col, float rounding, float thickness) { ImGui::GetBackgroundDrawList()->AddRect(min, max, col, rounding, 0, thickness); }
 	static void DrawScreenRectFilled_Impl(const ImVec2& min, const ImVec2& max, ImU32 col, float rounding) { ImGui::GetBackgroundDrawList()->AddRectFilled(min, max, col, rounding); }
 	static void DrawScreenLine_Impl(float x1, float y1, float x2, float y2, ImU32 col, float thickness) { ImGui::GetBackgroundDrawList()->AddLine({ x1, y1 }, { x2, y2 }, col, thickness); }
 
 	// ==========================================
-	// Windows & Containers
+	// Windows
 	// ==========================================
 	static void SetNextWindowPos_Impl(float x, float y, int c, float px, float py) { ImGui::SetNextWindowPos({ x, y }, c, { px, py }); }
 	static void SetNextWindowSize_Impl(float x, float y, int c) { ImGui::SetNextWindowSize({ x, y }, c); }
@@ -588,10 +564,7 @@ namespace FUCK::Host
 	static bool BeginWindow_Impl(const char* n, bool* o, int f) { return ImGui::Begin(n, o, f); }
 	static void EndWindow_Impl() { ImGui::End(); }
 	static void ExtendWindowPastBorder_Impl() { ImGui::ExtendWindowPastBorder(); }
-	static void BeginChild_Impl(const char* id, float w, float h, bool border, int flags)
-	{
-		ImGui::BeginChild(id, ImVec2(w, h), border, flags);
-	}
+	static void BeginChild_Impl(const char* id, float w, float h, bool border, int flags) { ImGui::BeginChild(id, ImVec2(w, h), border, flags); }
 	static void EndChild_Impl() { ImGui::EndChild(); }
 	static bool TreeNode_Impl(const char* label) { return ImGui::TreeNodeIcon(label, 0); }
 	static void TreePop_Impl() { ImGui::TreePop(); }
@@ -605,7 +578,6 @@ namespace FUCK::Host
 	static bool Checkbox_Impl(const char* label, bool* v, bool alignFar, bool labelLeft) { return ImGui::CheckBox(label, v, alignFar, labelLeft); }
 	static bool Hotkey_Impl(const char* label, std::uint32_t key, std::int32_t m1, std::int32_t m2, bool alignFar, bool labelLeft, bool flashing) { return ImGui::Hotkey(label, key, m1, m2, alignFar, labelLeft, flashing); }
 	static bool ToggleButton_Impl(const char* label, bool* v, bool alignFar, bool labelLeft) { return ImGui::ToggleButton(label, v, alignFar, labelLeft); }
-	static ImGuiTableSortSpecs* GetTableSortSpecs_Impl() { return ImGui::TableGetSortSpecs(); }
 
 	static bool InputText_Impl(const char* label, char* buf, size_t buf_size, int flags)
 	{
@@ -636,13 +608,13 @@ namespace FUCK::Host
 		return ImGui::ComboWithFilter(label, current_item, vecItems, popup_max_height);
 	}
 	static bool ComboForm_Impl(const char* label, std::uint32_t* id, std::uint8_t t) { return ImGui::ComboForm(label, reinterpret_cast<RE::FormID*>(id), static_cast<RE::FormType>(t)); }
+	static ImGuiTableSortSpecs* GetTableSortSpecs_Impl() { return ImGui::TableGetSortSpecs(); }
+
 	static bool Selectable_Impl(const char* label, bool selected, int flags, const ImVec2& size) { return ImGui::SelectableStyled(label, selected, flags, size); }
 	static void Header_Impl(const char* label) { ImGui::Header(label); }
 	static void LeftLabel_Impl(const char* label) { ImGui::LeftAlignedTextImpl(label); }
+
 	static void TextColored_Impl(const ImVec4& col, const char* text) { ImGui::TextColored(col, "%s", text); }
-	static void TextDisabled_Impl(const char* text) { ImGui::TextDisabled("%s", text); }
-	static void Text_Impl(const char* text) { ImGui::TextUnformatted(text); }
-	static void TextUnformatted_Impl(const char* text, const char* text_end) { ImGui::TextUnformatted(text, text_end); }
 	static void TextColoredWrapped_Impl(const ImVec4& col, const char* text)
 	{
 		// Protect against ImGui Frame 1 Auto-Resize height spike
@@ -656,18 +628,7 @@ namespace FUCK::Host
 			ImGui::TextColoredWrapped(col, "%s", text);
 		}
 	}
-
-	static void TextWrapped_Impl(const char* text)
-	{
-		// Protect against ImGui Frame 1 Auto-Resize height spike
-		if (ImGui::GetContentRegionAvail().x < 15.0f) {
-			ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + (350.0f * ImGui::Renderer::GetResolutionScale()));
-			ImGui::TextUnformatted(text);
-			ImGui::PopTextWrapPos();
-		} else {
-			ImGui::TextWrapped("%s", text);
-		}
-	}
+	static void TextDisabled_Impl(const char* text) { ImGui::TextDisabled("%s", text); }
 	static void CenteredText_Impl(const char* label, bool v) { ImGui::CenteredText(label, v); }
 	static void CenteredTextWithArrows_Impl(const char* label, const char* text, bool* h, bool* l, bool* r)
 	{
@@ -679,6 +640,7 @@ namespace FUCK::Host
 		if (r)
 			*r = bR;
 	}
+
 	static bool ButtonIconWithLabel_Impl(const char* label, void* tex, float x, float y, bool alignFar, bool labelLeft)
 	{
 		ImVec2 size(x, y);
@@ -698,31 +660,80 @@ namespace FUCK::Host
 	static void EndTabBar_Impl() { ImGui::EndTabBar(); }
 	static bool BeginTabItem_Impl(const char* label, int flags) { return ImGui::BeginTabItemEx(label, static_cast<ImGuiTabItemFlags>(flags)); }
 	static void EndTabItem_Impl() { ImGui::EndTabItem(); }
+
 	static bool BeginTable_Impl(const char* id, int col, int f, const ImVec2& os, float iw) { return ImGui::BeginTable(id, col, f, os, iw); }
 	static void EndTable_Impl() { ImGui::EndTable(); }
 	static void TableSetupColumn_Impl(const char* label, int flags, float init_width, std::uint32_t user_id) { ImGui::TableSetupColumn(label, flags, init_width, user_id); }
 	static void TableNextRow_Impl(int f, float h) { ImGui::TableNextRow(f, h); }
 	static bool TableNextColumn_Impl() { return ImGui::TableNextColumn(); }
 	static void TableHeadersRow_Impl() { ImGui::TableHeadersRow(); }
+
 	static void Columns_Impl(int count, const char* id, bool border) { ImGui::Columns(count, id, border); }
 	static void NextColumn_Impl() { ImGui::NextColumn(); }
+
 	static void SameLine_Impl(float offset, float spacing) { ImGui::SameLine(offset, spacing); }
-	static void Indent_Impl(float w) { ImGui::Indent(w); }
-	static void Unindent_Impl(float w) { ImGui::Unindent(w); }
 	static bool CollapsingHeader_Impl(const char* label, int flags) { return ImGui::CollapsingHeaderIcon(label, flags); }
 	static void BeginGroup_Impl() { ImGui::BeginGroup(); }
 	static void EndGroup_Impl() { ImGui::EndGroup(); }
 	static void BeginDisabled_Impl(bool disabled) { ImGui::BeginDisabled(disabled); }
 	static void EndDisabled_Impl() { ImGui::EndDisabled(); }
-	static bool IsWidgetFocused_Impl(const char* label) { return ImGui::IsWidgetFocused(label); }
 
+	static bool IsWidgetFocused_Impl(const char* label) { return ImGui::IsWidgetFocused(label); }
+	static void SetTooltip_Impl(const char* fmt)
+	{
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) {
+			const float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * scale, 12.0f * scale));
+
+			// Temporarily spoof the mouse position so ImGui spawns the tooltip offset,
+			// while still utilising its native screen-edge clamping
+			ImVec2 origMousePos = ImGui::GetIO().MousePos;
+			float offset = 20.0f * scale;
+			ImGui::GetIO().MousePos.x += offset;
+			ImGui::GetIO().MousePos.y += offset;
+
+			bool begin_tooltip = ImGui::BeginTooltip();
+
+			// Instantly restore real mouse pos
+			ImGui::GetIO().MousePos = origMousePos;
+
+			if (begin_tooltip) {
+				ImGui::TextUnformatted(fmt);
+				ImGui::EndTooltip();
+			}
+
+			ImGui::PopStyleVar();
+		}
+	}
+	static void Indent_Impl(float w) { ImGui::Indent(w); }
+	static void Unindent_Impl(float w) { ImGui::Unindent(w); }
+
+	static void Text_Impl(const char* text) { ImGui::TextUnformatted(text); }
+	static void TextWrapped_Impl(const char* text)
+	{
+		// Protect against ImGui Frame 1 Auto-Resize height spike
+		if (ImGui::GetContentRegionAvail().x < 15.0f) {
+			ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + (350.0f * ImGui::Renderer::GetResolutionScale()));
+			ImGui::TextUnformatted(text);
+			ImGui::PopTextWrapPos();
+		} else {
+			ImGui::TextWrapped("%s", text);
+		}
+	}
+	static void TextUnformatted_Impl(const char* text, const char* text_end) { ImGui::TextUnformatted(text, text_end); }
+
+	// ==========================================
+	// CreateInterface
+	// ==========================================
 	FUCK_Interface* CreateInterface()
 	{
 		static FUCK_Interface api = {
 			.version = FUCK_API_VERSION,
+			// Registration
 			.RegisterTool = RegisterTool_Impl,
 			.RegisterWindow = RegisterWindow_Impl,
 			.UnregisterWindow = UnregisterWindow_Impl,
+			// Display
 			.GetResolutionScale = GetResolutionScale_Impl,
 			.GetDisplaySize = GetDisplaySize_Impl,
 			.TranslateScaleformToScreen = TranslateScaleformToScreen_Impl,
@@ -732,9 +743,11 @@ namespace FUCK::Host
 			.SuspendRendering = SuspendRendering_Impl,
 			.SetMenuOpen = SetMenuOpen_Impl,
 			.IsMenuOpen = IsMenuOpen_Impl,
+			// IO
 			.GetDeltaTime = GetDeltaTime_Impl,
 			.GetMouseDelta = GetMouseDelta_Impl,
 			.GetMousePos = GetMousePos_Impl,
+			// Styling
 			.PushStyleColor = PushStyleColor_Impl,
 			.PopStyleColor = PopStyleColor_Impl,
 			.PushStyleVar = PushStyleVar_Impl,
@@ -743,6 +756,7 @@ namespace FUCK::Host
 			.GetStyleVar = GetStyleVar_Impl,
 			.GetStyleVarVec = GetStyleVarVec_Impl,
 			.GetStyleColorVec4 = GetStyleColorVec4_Impl,
+			// Layout
 			.SetCursorPosX = SetCursorPosX_Impl,
 			.SetCursorPosY = SetCursorPosY_Impl,
 			.GetCursorPos = GetCursorPos_Impl,
@@ -762,10 +776,12 @@ namespace FUCK::Host
 			.Separator = Separator_Impl,
 			.SeparatorThick = SeparatorThick_Impl,
 			.SeparatorText = SeparatorText_Impl,
+			// Metrics
 			.GetTextLineHeight = GetTextLineHeight_Impl,
 			.GetTextLineHeightWithSpacing = GetTextLineHeightWithSpacing_Impl,
 			.GetFrameHeight = GetFrameHeight_Impl,
 			.GetFrameHeightWithSpacing = GetFrameHeightWithSpacing_Impl,
+			// Utils
 			.LoadTranslation = LoadTranslation_Impl,
 			.GetTranslation = GetTranslation_Impl,
 			.SanitizePath = SanitizePath_Impl,
@@ -778,8 +794,10 @@ namespace FUCK::Host
 			.PushID_Str = PushID_Str_Impl,
 			.PushID_Int = PushID_Int_Impl,
 			.PopID = PopID_Impl,
+			// Menu Events
 			.AddMenuListener = AddMenuListener_Impl,
 			.RemoveMenuListener = RemoveMenuListener_Impl,
+			// Assets
 			.LoadImage = LoadImage_Impl,
 			.ReleaseImage = ReleaseImage_Impl,
 			.GetImageInfo = GetImageInfo_Impl,
@@ -787,11 +805,13 @@ namespace FUCK::Host
 			.GetIconSizeForKey = GetIconSizeForKey_Impl,
 			.Spinner = Spinner_Impl,
 			.DrawOverlay = DrawOverlay_Impl,
+			// Game Control
 			.SetGameTimeFrozen = SetGameTimeFrozen_Impl,
-			.SetAutoVanityBlocked = SetAutoVanityBlocked,
+			.SetAutoVanityBlocked = SetAutoVanityBlocked_Impl,
 			.SetHardPause = SetHardPause_Impl,
 			.SetSoftPause = SetSoftPause_Impl,
 			.ForceCursor = ForceCursor_Impl,
+			// Input
 			.IsInputPressed = IsInputPressed_Impl,
 			.IsInputDown = IsInputDown_Impl,
 			.GetAnalogInput = GetAnalogInput_Impl,
@@ -808,6 +828,7 @@ namespace FUCK::Host
 			.UpdateManagedHotkey = UpdateManagedHotkey_Impl,
 			.ProcessManagedHotkey = ProcessManagedHotkey_Impl,
 			.IsManagedHotkeyDown = IsManagedHotkeyDown_Impl,
+			// Interaction
 			.IsItemHovered = IsItemHovered_Impl,
 			.IsItemClicked = IsItemClicked_Impl,
 			.IsItemActive = IsItemActive_Impl,
@@ -822,6 +843,7 @@ namespace FUCK::Host
 			.IsKeyPressed = IsKeyPressed_Impl,
 			.SetKeyboardFocusHere = SetKeyboardFocusHere_Impl,
 			.SetItemDefaultFocus = SetItemDefaultFocus_Impl,
+			// Drawing Primitives
 			.DrawRect = DrawRect_Impl,
 			.DrawRectFilled = DrawRectFilled_Impl,
 			.DrawLine = DrawLine_Impl,
@@ -830,9 +852,11 @@ namespace FUCK::Host
 			.DrawBackgroundImage = DrawBackgroundImage_Impl,
 			.DrawBackgroundLine = DrawBackgroundLine_Impl,
 			.DrawBackgroundRect = DrawBackgroundRect_Impl,
+			// Screen primitives
 			.DrawScreenRect = DrawScreenRect_Impl,
 			.DrawScreenRectFilled = DrawScreenRectFilled_Impl,
 			.DrawScreenLine = DrawScreenLine_Impl,
+			// Windows
 			.SetNextWindowPos = SetNextWindowPos_Impl,
 			.SetNextWindowSize = SetNextWindowSize_Impl,
 			.GetWindowPos = GetWindowPos_Impl,
@@ -848,6 +872,7 @@ namespace FUCK::Host
 			.TreePop = TreePop_Impl,
 			.BeginPopupContextItem = BeginPopupContextItem_Impl,
 			.EndPopup = EndPopup_Impl,
+			// Widgets
 			.Button = Button_Impl,
 			.Checkbox = Checkbox_Impl,
 			.Hotkey = Hotkey_Impl,
