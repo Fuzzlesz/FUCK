@@ -365,7 +365,38 @@ void FUCKMan::UpdateGameState()
 	if (targetVanity && RE::PlayerCamera::GetSingleton()) {
 		RE::PlayerCamera::GetSingleton()->idleTimer = 0.0f;
 	}
-}
+
+	// Scaleform Movie Pausing (to prevent background hover detection)
+	bool blockInput = IsInputBlocked();
+	if (auto ui = RE::UI::GetSingleton()) {
+		if (blockInput) {
+			for (auto& [name, entry] : ui->menuMap) {
+				// pause menus that are actively on the screen
+				if (entry.menu && entry.menu->OnStack() && entry.menu->uiMovie) {
+					if (name == RE::CursorMenu::MENU_NAME ||
+						name == RE::Console::MENU_NAME ||
+						name == RE::LoadingMenu::MENU_NAME ||
+						name == RE::HUDMenu::MENU_NAME ||
+						name == RE::FaderMenu::MENU_NAME) {
+						continue;
+					}
+					if (_pausedMenus.find(name.c_str()) == _pausedMenus.end()) {
+						entry.menu->uiMovie->SetPause(true);
+						_pausedMenus.insert(name.c_str());
+					}
+				}
+			}
+		} else {
+			for (const auto& name : _pausedMenus) {
+				auto menu = ui->GetMenu(name);
+				if (menu && menu->uiMovie) {
+					menu->uiMovie->SetPause(false);
+				}
+			}
+			_pausedMenus.clear();
+		}
+	}
+ }
 
 // ==========================================
 // Accessors & Queries

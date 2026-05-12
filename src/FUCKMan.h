@@ -97,6 +97,7 @@ private:
 	std::vector<FUCK::ITool*> _tools;
 	std::vector<FUCK::IWindow*> _windows;
 	std::vector<FUCK::IWindow*> _suspendedWindows;
+	std::set<std::string> _pausedMenus;
 
 	FUCK::ITool* _activeTool = nullptr;
 	bool _isOpen = false;
