@@ -518,6 +518,11 @@ namespace FUCK::Host
 		if (auto srv = GetSRV(tex))
 			ImGui::ImageWithBg(reinterpret_cast<ImTextureID>(srv), s, u0, u1, ImVec4(0, 0, 0, 0), tint);
 	}
+	static void DrawImageQuad_Impl(void* tex, const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& u1, const ImVec2& u2, const ImVec2& u3, const ImVec2& u4, const ImVec4& tint)
+	{
+		if (auto srv = GetSRV(tex))
+			ImGui::GetWindowDrawList()->AddImageQuad(reinterpret_cast<ImTextureID>(srv), p1, p2, p3, p4, u1, u2, u3, u4, ImGui::ColorConvertFloat4ToU32(tint));
+	}
 	static void AddImage_Impl(void* tex, const ImVec2& min, const ImVec2& max, const ImVec2& u0, const ImVec2& u1, const ImVec4& col)
 	{
 		if (auto srv = GetSRV(tex))
@@ -848,6 +853,7 @@ namespace FUCK::Host
 			.DrawRectFilled = DrawRectFilled_Impl,
 			.DrawLine = DrawLine_Impl,
 			.DrawImage = DrawImage_Impl,
+			.DrawImageQuad = DrawImageQuad_Impl,
 			.AddImage = AddImage_Impl,
 			.DrawBackgroundImage = DrawBackgroundImage_Impl,
 			.DrawBackgroundLine = DrawBackgroundLine_Impl,

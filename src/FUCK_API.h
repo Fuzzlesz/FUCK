@@ -340,6 +340,7 @@ struct FUCK_Interface
 	void (*DrawRectFilled)(const ImVec2&, const ImVec2&, const ImVec4&, float);
 	void (*DrawLine)(const ImVec2&, const ImVec2&, const ImVec4&, float);
 	void (*DrawImage)(void*, const ImVec2&, const ImVec2&, const ImVec2&, const ImVec4&);
+	void (*DrawImageQuad)(void*, const ImVec2&, const ImVec2&, const ImVec2&, const ImVec2&, const ImVec2&, const ImVec2&, const ImVec2&, const ImVec2&, const ImVec4&);
 	void (*AddImage)(void*, const ImVec2&, const ImVec2&, const ImVec2&, const ImVec2&, const ImVec4&);
 	void (*DrawBackgroundImage)(void*, float);
 	void (*DrawBackgroundLine)(float, float, float, float, unsigned int, float);
@@ -1164,6 +1165,11 @@ namespace FUCK
 	{
 		if (auto i = GetInterface())
 			i->DrawImage((void*)textureId, size, uv0, uv1, tint_col);
+	}
+	inline void DrawImageQuad(ImTextureID textureId, const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& uv1, const ImVec2& uv2, const ImVec2& uv3, const ImVec2& uv4, const ImVec4& tint_col = ImVec4(1, 1, 1, 1))
+	{
+		if (auto i = GetInterface())
+			i->DrawImageQuad((void*)textureId, p1, p2, p3, p4, uv1, uv2, uv3, uv4, tint_col);
 	}
 	inline void AddImage(ImTextureID textureId, const ImVec2& min, const ImVec2& max, const ImVec2& uv0 = ImVec2(0, 0), const ImVec2& uv1 = ImVec2(1, 1), const ImVec4& col = ImVec4(1, 1, 1, 1))
 	{
