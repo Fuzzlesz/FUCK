@@ -1314,7 +1314,7 @@ namespace FUCK
 			if (!a_func)
 				return;
 			if (auto* i = GetInterface())
-				i->LoadPluginINI(_pluginName, &a_func,[](CSimpleIniA& ini, void* ud) { (*static_cast<INIFunc*>(ud))(ini); });
+				i->LoadPluginINI(_pluginName, &a_func, [](CSimpleIniA& ini, void* ud) { (*static_cast<INIFunc*>(ud))(ini); });
 		}
 
 		void Save(INIFunc a_func) const
@@ -1322,7 +1322,7 @@ namespace FUCK
 			if (!a_func)
 				return;
 			if (auto* i = GetInterface())
-				i->SavePluginINI(_pluginName, &a_func,[](CSimpleIniA& ini, void* ud) { (*static_cast<INIFunc*>(ud))(ini); });
+				i->SavePluginINI(_pluginName, &a_func, [](CSimpleIniA& ini, void* ud) { (*static_cast<INIFunc*>(ud))(ini); });
 		}
 
 		/// @brief Loads the default shipped INI, ignoring user settings.
@@ -1331,7 +1331,7 @@ namespace FUCK
 			if (!a_func)
 				return;
 			if (auto* i = GetInterface())
-				i->LoadPluginINIDefaults(_pluginName, &a_func,[](CSimpleIniA& ini, void* ud) { (*static_cast<INIFunc*>(ud))(ini); });
+				i->LoadPluginINIDefaults(_pluginName, &a_func, [](CSimpleIniA& ini, void* ud) { (*static_cast<INIFunc*>(ud))(ini); });
 		}
 
 	private:
