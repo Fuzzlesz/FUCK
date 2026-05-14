@@ -171,6 +171,17 @@ namespace ImGui::Renderer
 		static inline std::size_t idx{ 0x6 };
 	};
 
+	struct StatsMenu_PostDisplay
+	{
+		static void thunk(RE::IMenu* a_menu)
+		{
+			func(a_menu);
+			Draw();
+		}
+		static inline REL::Relocation<decltype(thunk)> func;
+		static inline std::size_t idx{ 0x6 };
+	};
+
 	void Install()
 	{
 		REL::Relocation<std::uintptr_t> target{ RELOCATION_ID(75595, 77226), OFFSET(0x9, 0x275) };
@@ -178,5 +189,6 @@ namespace ImGui::Renderer
 
 		stl::write_vfunc<RE::HUDMenu, HUDMenu_PostDisplay>();
 		stl::write_vfunc<RE::MainMenu, MainMenu_PostDisplay>();
+		stl::write_vfunc<RE::StatsMenu, StatsMenu_PostDisplay>(); 
 	}
 }
