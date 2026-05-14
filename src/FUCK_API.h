@@ -324,6 +324,8 @@ struct FUCK_Interface
 	bool (*IsItemClicked)(int);
 	bool (*IsItemActive)();
 	bool (*IsItemFocused)();
+	bool (*IsItemDeactivated)();
+	bool (*IsItemDeactivatedAfterEdit)();
 	bool (*IsAnyItemActive)();
 	bool (*IsAnyItemHovered)();
 	bool (*IsWindowFocused)(int);
@@ -844,6 +846,8 @@ namespace FUCK
 	inline bool IsItemClicked(int mouse_button = 0) { return GetInterface() ? GetInterface()->IsItemClicked(mouse_button) : false; }
 	inline bool IsItemActive() { return GetInterface() ? GetInterface()->IsItemActive() : false; }
 	inline bool IsItemFocused() { return GetInterface() ? GetInterface()->IsItemFocused() : false; }
+	inline bool IsItemDeactivated() { return GetInterface() ? GetInterface()->IsItemDeactivated() : false; }
+	inline bool IsItemDeactivatedAfterEdit() { return GetInterface() ? GetInterface()->IsItemDeactivatedAfterEdit() : false; }
 	inline bool IsAnyItemActive() { return GetInterface() ? GetInterface()->IsAnyItemActive() : false; }
 	inline bool IsAnyItemHovered() { return GetInterface() ? GetInterface()->IsAnyItemHovered() : false; }
 	inline bool IsWindowFocused(int flags = 0) { return GetInterface() ? GetInterface()->IsWindowFocused(flags) : false; }
