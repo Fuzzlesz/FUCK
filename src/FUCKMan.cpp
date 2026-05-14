@@ -750,10 +750,10 @@ void FUCKMan::Draw()
 			ImGuiWindowFlags flags = ImGuiWindowFlags_None;
 
 			// --- Flags Setup ---
-			bool noDecoration = (win->GetFlags() & FUCK::WindowFlags::kNoDecoration);
+			bool noDecoration    = (win->GetFlags() & FUCK::WindowFlags::kNoDecoration);
 			bool ignoreUserScale = (win->GetFlags() & FUCK::WindowFlags::kIgnoreUserScale) != 0;
-			bool noResize = (win->GetFlags() & FUCK::WindowFlags::kNoResize) != 0;
-			bool autoResize = (win->GetFlags() & FUCK::WindowFlags::kAutoResize) != 0;
+			bool noResize        = (win->GetFlags() & FUCK::WindowFlags::kNoResize) != 0;
+			bool autoResize      = (win->GetFlags() & FUCK::WindowFlags::kAutoResize) != 0;
 
 			auto it = s_windowStates.find(title);
 			if (it == s_windowStates.end()) {
