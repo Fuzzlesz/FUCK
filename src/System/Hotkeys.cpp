@@ -33,7 +33,8 @@ namespace Hotkeys
 		if (!enabled)
 			return false;
 
-		if (_toggleHotkey.isBinding)
+		// Block global toggle from triggering if ANY widget is actively binding
+		if (Input::Manager::GetSingleton()->IsBinding())
 			return false;
 
 		// Prevent toggle while typing in ImGui widgets

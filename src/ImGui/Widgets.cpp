@@ -1020,9 +1020,17 @@ namespace ImGui
 			finalLabel = dynamicLabel.c_str();
 		}
 
+		// Disable interactions completely if another hotkey is currently binding
+		bool disabled = inputMgr->IsBinding() && !h.isBinding;
+		if (disabled)
+			ImGui::BeginDisabled();
+
 		if (ImGui::Hotkey(finalLabel, k, m1, m2, alignFar, labelLeft, h.isBinding, alwaysHighlight, iconScale)) {
 			clicked = true;
 		}
+
+		if (disabled)
+			ImGui::EndDisabled();
 
 		if (clicked) {
 			if (ctrlToRebind) {

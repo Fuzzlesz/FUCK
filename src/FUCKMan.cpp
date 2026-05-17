@@ -129,7 +129,8 @@ bool FUCKMan::ProcessAsyncInput(const RE::InputEvent* const* a_event)
 		consumed = true;
 	}
 
-	if (!consumed && (_isOpen || IsInputBlocked())) {
+	// Make sure we skip the global Escape-to-Close override if rebinding
+	if (!consumed && !MANAGER(Input)->IsBinding() && (_isOpen || IsInputBlocked())) {
 		// ESC / Close Logic (Priority over Global Hotkeys)
 		if (MANAGER(Input)->IsInputPressed(a_event, Hotkeys::Manager::EscapeKey())) {
 			bool handled = false;
