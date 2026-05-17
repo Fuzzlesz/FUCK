@@ -15,6 +15,20 @@ public:
 		kHard = 2
 	};
 
+	struct FUCKConfig
+	{
+		ImVec2 windowPos{ 132.0f, 74.0f };
+		ImVec2 windowSize{ 1020.0f, 800.0f };
+		PauseType globalPauseType{ PauseType::kNone };
+		float userScale{ 1.0f };
+		bool sidebarOnRight{ false };
+		bool injectSystemMenu{ true };
+		bool replaceHelpMenu{ false };
+		std::string currentFont{ "Default" };
+		ImVec2 themeEditorPos{ -1.0f, -1.0f };
+		ImVec2 themeEditorSize{ -1.0f, -1.0f };
+	};
+
 	friend class SettingsTool;
 	friend class ThemeEditorWindow;
 
@@ -47,10 +61,13 @@ public:
 	void SaveSettings(CSimpleIniA& a_ini);
 	void ResetSettings();
 
+	void Save();
+	void SaveKeybinds();
+
 	float GetActiveScale() const { return _activeScale; }
-	float GetUserScale() const { return _userScale; }
-	bool GetInjectSystemMenu() const { return _injectSystemMenu; }
-	bool GetReplaceHelpMenu() const { return _replaceHelpMenu; }
+	float GetUserScale() const { return _cfg.userScale; }
+	bool GetInjectSystemMenu() const { return _cfg.injectSystemMenu; }
+	bool GetReplaceHelpMenu() const { return _cfg.replaceHelpMenu; }
 
 	// --- API Overrides ---
 	void SetVanityBlocked(bool blocked);
@@ -115,21 +132,17 @@ private:
 	bool _forceCursor = false;
 	bool _suspendRendering = false;
 
-	// Config / Settings
-	PauseType _globalPauseType = PauseType::kNone;
+	// Config / Settings State
+	FUCKConfig _cfg;
+	const FUCKConfig _def;  // defaults
+
 	float _activeScale = 1.0f;
-	float _userScale = 1.0f;
 	bool _isIgnoringUserScale = false;
-	bool _sidebarOnRight = false;
-	bool _injectSystemMenu = true;
-	bool _replaceHelpMenu = false;
 
 	// Window Metrics
-	ImVec2 _windowPos{ 100.0f, 100.0f };
-	ImVec2 _windowSize{ 1000.0f, 600.0f };
 	bool _pendingWindowRestore = false;
 	ImVec2 _lastSavedPos{ 100.0f, 100.0f };
-	ImVec2 _lastSavedSize{ 1000.0f, 600.0f };
+	ImVec2 _lastSavedSize{ 1020.0f, 800.0f };
 	bool _isCollapsed = false;
 	bool _wasCollapsed = false;
 

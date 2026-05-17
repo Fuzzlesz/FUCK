@@ -1,32 +1,5 @@
 #include "Settings.h"
 
-std::vector<std::string> Settings::GetConfigs(const std::filesystem::path& a_path, const std::string& a_ext)
-{
-	std::vector<std::string> configs;
-
-	if (!std::filesystem::exists(a_path)) {
-		try {
-			std::filesystem::create_directories(a_path);
-		} catch (...) {
-			return configs;
-		}
-	}
-
-	for (const auto& entry : std::filesystem::directory_iterator(a_path)) {
-		if (entry.is_regular_file()) {
-			auto path = entry.path();
-			std::string ext = path.extension().string();
-
-			if (ext == a_ext) {
-				configs.push_back(path.filename().string());
-			}
-		}
-	}
-
-	std::sort(configs.begin(), configs.end());
-	return configs;
-}
-
 void Settings::LoadINI(const char* a_path, const INIFunc a_func, bool a_generate)
 {
 	if (!a_path || a_path[0] == '\0')
@@ -76,11 +49,8 @@ void Settings::Load(FileType type, INIFunc a_func) const
 		return;
 
 	switch (type) {
-	case FileType::kSettings:
-		LoadINI(settingsDefaultPath, settingsUserPath, a_func);
-		break;
 	case FileType::kStyle:
-		LoadINI(stylePath, a_func);
+		LoadINI(GetDefaultStylePath().c_str(), a_func);
 		break;
 	case FileType::kDisplayTweaks:
 		LoadINI(defaultDisplayTweaksPath, userDisplayTweaksPath, a_func);
@@ -96,11 +66,8 @@ void Settings::Save(FileType type, INIFunc a_func) const
 		return;
 
 	switch (type) {
-	case FileType::kSettings:
-		LoadINI(settingsUserPath, a_func, true);
-		break;
 	case FileType::kStyle:
-		LoadINI(stylePath, a_func, true);
+		LoadINI(GetDefaultStylePath().c_str(), a_func, true);
 		break;
 	default:
 		break;

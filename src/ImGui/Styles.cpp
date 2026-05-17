@@ -3,6 +3,7 @@
 #include "IconsFonts.h"
 #include "Renderer.h"
 #include "System/Settings.h"
+#include "System/Utils.h"
 
 #include <shellapi.h>
 
@@ -148,14 +149,22 @@ namespace ImGui
 	std::vector<std::string> Styles::GetAvailableFonts() const
 	{
 		auto settings = Settings::GetSingleton();
-		auto userFonts = Settings::GetConfigs(settings->GetUserFontsPath(), ".ttf");
-		auto gameFonts = Settings::GetConfigs(settings->GetLegacyFontsPath(), ".ttf");
-		auto userOtf = Settings::GetConfigs(settings->GetUserFontsPath(), ".otf");
-		auto gameOtf = Settings::GetConfigs(settings->GetLegacyFontsPath(), ".otf");
+
+		// Passing 'true' enables recursion
+		auto userFonts = Utils::GetDirectoryFiles(settings->GetUserFontsPath(), ".ttf", true);
+		auto gameFonts = Utils::GetDirectoryFiles(settings->GetLegacyFontsPath(), ".ttf", true);
+		auto csFonts = Utils::GetDirectoryFiles(settings->GetCSFontsPath(), ".ttf", true);
+
+		auto userOtf = Utils::GetDirectoryFiles(settings->GetUserFontsPath(), ".otf", true);
+		auto gameOtf = Utils::GetDirectoryFiles(settings->GetLegacyFontsPath(), ".otf", true);
+		auto csOtf = Utils::GetDirectoryFiles(settings->GetCSFontsPath(), ".otf", true);
 
 		userFonts.insert(userFonts.end(), gameFonts.begin(), gameFonts.end());
+		userFonts.insert(userFonts.end(), csFonts.begin(), csFonts.end());
+
 		userFonts.insert(userFonts.end(), userOtf.begin(), userOtf.end());
 		userFonts.insert(userFonts.end(), gameOtf.begin(), gameOtf.end());
+		userFonts.insert(userFonts.end(), csOtf.begin(), csOtf.end());
 
 		std::sort(userFonts.begin(), userFonts.end());
 		userFonts.erase(std::unique(userFonts.begin(), userFonts.end()), userFonts.end());
@@ -167,7 +176,7 @@ namespace ImGui
 	const std::vector<std::string>& Styles::GetPresets()
 	{
 		if (cachedPresets.empty()) {
-			cachedPresets = Settings::GetConfigs(Settings::GetSingleton()->GetPresetsPath());
+			cachedPresets = Utils::GetDirectoryFiles(Settings::GetSingleton()->GetStylesPath());
 			static bool logged = false;
 			if (!logged) {
 				logger::info("Found [{}] style presets.", cachedPresets.size());
@@ -175,12 +184,6 @@ namespace ImGui
 			}
 		}
 		return cachedPresets;
-	}
-
-	void Styles::SetCurrentFont(const std::string& a_fontName)
-	{
-		currentFont = a_fontName;
-		MANAGER(IconFont)->SetFontName(currentFont);
 	}
 
 	// ==========================================
@@ -197,15 +200,13 @@ namespace ImGui
 			});
 		}
 
-		SetCurrentFont("Default");
 		RefreshStyle();
-		MANAGER(IconFont)->ReloadFonts();
 	}
 
 	void Styles::LoadStyles()
 	{
 		std::string lastPreset = "";
-		Settings::GetSingleton()->Load(FileType::kStyle, [&](auto& ini) {
+		Settings::Core.Load([&](auto& ini) {
 			lastPreset = ini.GetValue("Style", "sLastPreset", "");
 		});
 
@@ -217,19 +218,12 @@ namespace ImGui
 			LoadPreset(lastPreset, false);
 		}
 
-		if (currentFont.empty()) {
-			SetCurrentFont("Default");
-		}
-
 		RefreshStyle();
-		if (!lastPreset.empty()) {
-			MANAGER(IconFont)->ReloadFonts();
-		}
 	}
 
 	void Styles::SavePreset(const std::string& a_name)
 	{
-		std::filesystem::path p(Settings::GetSingleton()->GetPresetsPath());
+		std::filesystem::path p(Settings::GetSingleton()->GetStylesPath());
 		if (!std::filesystem::exists(p))
 			std::filesystem::create_directories(p);
 		std::string filename = a_name;
@@ -239,10 +233,10 @@ namespace ImGui
 		CSimpleIniA ini;
 		ini.SetUnicode();
 		SaveStylesToIni(ini);
-		ini.SetValue("Font", "sFontName", currentFont.c_str());
+
 		if (ini.SaveFile(p.string().c_str()) >= 0) {
 			currentPresetName = filename;
-			Settings::GetSingleton()->Save(FileType::kStyle, [this](auto& sIni) {
+			Settings::Core.Save([this](auto& sIni) {
 				sIni.SetValue("Style", "sLastPreset", currentPresetName.c_str());
 			});
 			cachedPresets.clear();
@@ -251,7 +245,7 @@ namespace ImGui
 
 	void Styles::LoadPreset(const std::string& a_name, bool a_saveToIni)
 	{
-		std::filesystem::path p(Settings::GetSingleton()->GetPresetsPath());
+		std::filesystem::path p(Settings::GetSingleton()->GetStylesPath());
 		p /= a_name;
 		CSimpleIniA ini;
 		ini.SetUnicode();
@@ -262,21 +256,17 @@ namespace ImGui
 
 		user = def;
 		LoadStylesFromIni(ini);
-		const char* fontName = ini.GetValue("Font", "sFontName");
-		if (fontName && *fontName)
-			SetCurrentFont(fontName);
 
 		if (currentPresetName != a_name) {
 			currentPresetName = a_name;
 			if (a_saveToIni) {
-				Settings::GetSingleton()->Save(FileType::kStyle, [this](auto& sIni) {
+				Settings::Core.Save([this](auto& sIni) {
 					sIni.SetValue("Style", "sLastPreset", currentPresetName.c_str());
 				});
 			}
 		}
 
 		RefreshStyle();
-		MANAGER(IconFont)->ReloadFonts();
 	}
 
 	void Styles::DeletePreset(const std::string& a_name)
@@ -284,7 +274,7 @@ namespace ImGui
 		if (a_name.empty())
 			return;
 
-		std::filesystem::path p(Settings::GetSingleton()->GetPresetsPath());
+		std::filesystem::path p(Settings::GetSingleton()->GetStylesPath());
 		std::string filename = a_name;
 
 		if (filename.length() < 4 || filename.substr(filename.length() - 4) != ".ini")
@@ -308,7 +298,7 @@ namespace ImGui
 
 		if (currentPresetName == filename || currentPresetName == a_name) {
 			currentPresetName = "";
-			Settings::GetSingleton()->Save(FileType::kStyle, [](auto& sIni) {
+			Settings::Core.Save([](auto& sIni) {
 				sIni.SetValue("Style", "sLastPreset", "");
 			});
 		}

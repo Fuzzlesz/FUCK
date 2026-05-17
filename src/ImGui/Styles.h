@@ -148,8 +148,6 @@ namespace ImGui
 
 		// Font Management
 		std::vector<std::string> GetAvailableFonts() const;
-		std::string              GetCurrentFont() const { return currentFont; }
-		void                     SetCurrentFont(const std::string& a_fontName);
 
 		const std::vector<std::string>& GetPresets();
 

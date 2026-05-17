@@ -16,7 +16,11 @@ const char* SettingsTool::Name() const
 bool SettingsTool::OnAsyncInput(const void* a_event)
 {
 	auto& hotkey = MANAGER(Hotkeys)->GetToggleHotkey();
-	return FUCK::UpdateManagedHotkey(a_event, hotkey);
+	if (FUCK::UpdateManagedHotkey(a_event, hotkey)) {
+		FUCKMan::GetSingleton()->SaveKeybinds();
+		return true;
+	}
+	return false;
 }
 
 void SettingsTool::OnClose()
@@ -44,23 +48,26 @@ void SettingsTool::Draw()
 			FUCK::DrawManagedHotkey("$FUCK_Settings_Hotkey"_T, hotkey);
 			FUCK::Spacing(2);
 
-			FUCK::Checkbox("$FUCK_Settings_InjectSystemMenu"_T, &manager->_injectSystemMenu, true, true);
+			if (FUCK::Checkbox("$FUCK_Settings_InjectSystemMenu"_T, &manager->_cfg.injectSystemMenu, true, true))
+				manager->Save();
 			FUCK::SetTooltip("$FUCK_Settings_InjectSystemMenuTT"_T);
 
-			FUCK::BeginDisabled(!manager->_injectSystemMenu);
-			FUCK::Checkbox("$FUCK_Settings_ReplaceHelpMenu"_T, &manager->_replaceHelpMenu, true, true);
+			FUCK::BeginDisabled(!manager->_cfg.injectSystemMenu);
+			if (FUCK::Checkbox("$FUCK_Settings_ReplaceHelpMenu"_T, &manager->_cfg.replaceHelpMenu, true, true))
+				manager->Save();
 			FUCK::SetTooltip("$FUCK_Settings_ReplaceHelpMenuTT"_T);
 			FUCK::EndDisabled();
 
 			FUCK::Spacing(2);
 
 			const char* pauseTypes[] = { "$FUCK_Settings_PauseNone"_T, "$FUCK_Settings_PauseSoft"_T, "$FUCK_Settings_PauseHard"_T };
-			int currentPauseIdx = static_cast<int>(manager->_globalPauseType);
+			int currentPauseIdx = static_cast<int>(manager->_cfg.globalPauseType);
 			FUCK::SetNextItemWidth(-1);
 			std::string pauseLabel = std::format("{}##GlobalPauseType", "$FUCK_Settings_GlobalPause"_T);
 
 			if (FUCK::Combo(pauseLabel.c_str(), &currentPauseIdx, pauseTypes, IM_ARRAYSIZE(pauseTypes))) {
-				manager->_globalPauseType = static_cast<FUCKMan::PauseType>(currentPauseIdx);
+				manager->_cfg.globalPauseType = static_cast<FUCKMan::PauseType>(currentPauseIdx);
+				manager->Save();
 			}
 			FUCK::Spacing();
 			FUCK::TextColoredWrapped(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "$FUCK_Settings_PauseDesc"_T);
@@ -69,11 +76,42 @@ void SettingsTool::Draw()
 			FUCK::Header("$FUCK_Settings_Appearance"_T);
 			FUCK::Spacing(2);
 
-			if (FUCK::SliderFloat("$FUCK_Settings_UIScale"_T, &manager->_userScale, 0.5f, 2.0f, "%.2f")) {
-				style->RefreshStyle();
+			static std::vector<std::string> fonts = style->GetAvailableFonts();
+			std::vector<std::string> displayFonts;
+			std::vector<const char*> fontPtrs;
+			displayFonts.reserve(fonts.size());
+			fontPtrs.reserve(fonts.size());
+
+			int currentFontIdx = -1;
+
+			for (size_t i = 0; i < fonts.size(); ++i) {
+				std::string disp = (fonts[i] == "Default") ? std::string("$FUCK_Styles_FontDefault"_T) : fonts[i];
+				displayFonts.push_back(disp);
+				fontPtrs.push_back(displayFonts.back().c_str());
+
+				if (fonts[i] == manager->_cfg.currentFont) {
+					currentFontIdx = static_cast<int>(i);
+				}
 			}
 
-			FUCK::Checkbox("$FUCK_Settings_SidebarOnRight"_T, &manager->_sidebarOnRight, true, true);
+			FUCK::SetNextItemWidth(-1);
+			if (FUCK::Combo("$FUCK_Styles_Typeface"_T, &currentFontIdx, fontPtrs.data(), (int)fontPtrs.size())) {
+				if (currentFontIdx >= 0 && currentFontIdx < fonts.size()) {
+					manager->_cfg.currentFont = fonts[currentFontIdx];
+					IconFont::Manager::GetSingleton()->SetFontName(manager->_cfg.currentFont);
+					manager->Save();
+				}
+			}
+			FUCK::Spacing(2);
+
+			if (FUCK::SliderFloat("$FUCK_Settings_UIScale"_T, &manager->_cfg.userScale, 0.5f, 2.0f, "%.2f")) {
+				style->RefreshStyle();
+			}
+			if (FUCK::IsItemDeactivatedAfterEdit())
+				manager->Save();
+
+			if (FUCK::Checkbox("$FUCK_Settings_SidebarOnRight"_T, &manager->_cfg.sidebarOnRight, true, true))
+				manager->Save();
 			FUCK::Spacing(2);
 
 			if (FUCK::Button("$FUCK_Settings_Reset"_T)) {
@@ -132,7 +170,7 @@ void SettingsTool::Draw()
 			FUCK::SeparatorThick();
 			FUCK::Spacing(2);
 
-			if (FUCK::Button("$FUCK_Styles_ResetDefaults"_T)) {
+			if (FUCK::Button("$FUCK_Settings_Reset"_T)) {
 				style->ResetToDefaults();
 			}
 
@@ -224,7 +262,7 @@ void SettingsTool::Draw()
 
 					// Calculate how many columns we can fit inside this specific panel
 					float availWidth = FUCK::GetContentRegionAvail().x;
-					float minColWidth = 280.0f * FUCK::GetResolutionScale() * manager->_userScale;
+					float minColWidth = 280.0f * FUCK::GetResolutionScale() * manager->_cfg.userScale;
 					int numCols = std::max(1, static_cast<int>(availWidth / minColWidth));
 
 					// Let the panel stretch to the bottom of the window

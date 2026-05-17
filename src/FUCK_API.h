@@ -269,9 +269,13 @@ struct FUCK_Interface
 	void (*LoadTranslation)(const char*);
 	const char* (*GetTranslation)(const char*);
 	void (*SanitizePath)(char*, const char*, size_t);
+	void (*GetPluginConfigPath)(const char*, char*, size_t);
 	void (*LoadPluginINI)(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*));
 	void (*SavePluginINI)(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*));
 	void (*LoadPluginINIDefaults)(const char*, void*, void (*)(CSimpleIniA&, void*));
+	void (*LoadPluginKeybinds)(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*));
+	void (*SavePluginKeybinds)(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*));
+	void (*LoadPluginKeybindsDefaults)(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*));
 	void (*PushItemFlag)(FUCK::ItemFlags, bool);
 	void (*PopItemFlag)();
 	void (*HelpMarker)(const char*);
@@ -1226,6 +1230,11 @@ namespace FUCK
 		if (auto i = GetInterface())
 			i->SanitizePath(dest, source, size);
 	}
+	inline void GetPluginConfigPath(const char* pluginName, char* dest, size_t size)
+	{
+		if (auto i = GetInterface())
+			i->GetPluginConfigPath(pluginName, dest, size);
+	}
 
 	inline void AddMenuListener(void* userdata, void (*callback)(const char* menuName, bool opening, void* userdata))
 	{
@@ -1336,6 +1345,39 @@ namespace FUCK
 				return;
 			if (auto* i = GetInterface())
 				i->LoadPluginINIDefaults(_pluginName, &a_func, [](CSimpleIniA& ini, void* ud) { (*static_cast<INIFunc*>(ud))(ini); });
+		}
+
+		void LoadKeybinds(INIFunc a_func) const
+		{
+			if (!a_func)
+				return;
+			if (auto* i = GetInterface())
+				i->LoadPluginKeybinds(_pluginName, &a_func, [](CSimpleIniA& ini, void* ud) { (*static_cast<INIFunc*>(ud))(ini); });
+		}
+
+		void SaveKeybinds(INIFunc a_func) const
+		{
+			if (!a_func)
+				return;
+			if (auto* i = GetInterface())
+				i->SavePluginKeybinds(_pluginName, &a_func, [](CSimpleIniA& ini, void* ud) { (*static_cast<INIFunc*>(ud))(ini); });
+		}
+
+		void LoadKeybindsDefaults(INIFunc a_func) const
+		{
+			if (!a_func)
+				return;
+			if (auto* i = GetInterface())
+				i->LoadPluginKeybindsDefaults(_pluginName, &a_func, [](CSimpleIniA& ini, void* ud) { (*static_cast<INIFunc*>(ud))(ini); });
+		}
+
+		/// @brief Returns the absolute path string pointing to this plugin's dedicated config folder.
+		std::string GetConfigDirectory() const
+		{
+			char buf[512] = { 0 };
+			if (auto* i = GetInterface())
+				i->GetPluginConfigPath(_pluginName, buf, sizeof(buf));
+			return std::string(buf);
 		}
 
 	private:

@@ -276,12 +276,20 @@ namespace FUCK::Host
 	static const char* GetTranslation_Impl(const char* k) { return Translation::Manager::GetSingleton()->GetTranslation(k); }
 	static void SanitizePath_Impl(char* dest, const char* source, size_t size) { Utils::SanitizePath(dest, source, size); }
 
+	static void GetPluginConfigPath_Impl(const char* pluginName, char* dest, size_t size)
+	{
+		if (!pluginName || !dest || size == 0)
+			return;
+		std::string path = std::format(R"(Data\FUCKs\{}\)", pluginName);
+		strncpy_s(dest, size, path.c_str(), _TRUNCATE);
+	}
+
 	static void LoadPluginINI_Impl(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*))
 	{
 		if (!callback || !pluginName)
 			return;
-		std::string defaultPath = std::format(R"(Data\SKSE\Plugins\FUCK\settings\{}.ini)", pluginName);
-		std::string userPath = std::format(R"(Data\SKSE\Plugins\FUCK\settings-user\{}_user.ini)", pluginName);
+		std::string defaultPath = std::format(R"(Data\FUCKs\{}\settings.ini)", pluginName);
+		std::string userPath = std::format(R"(Data\FUCKs\{}\settings_user.ini)", pluginName);
 
 		Settings::GetSingleton()->LoadINI(defaultPath.c_str(), userPath.c_str(), [userdata, callback](CSimpleIniA& ini) {
 			callback(ini, userdata);
@@ -292,7 +300,7 @@ namespace FUCK::Host
 	{
 		if (!callback || !pluginName)
 			return;
-		std::string userPath = std::format(R"(Data\SKSE\Plugins\FUCK\settings-user\{}_user.ini)", pluginName);
+		std::string userPath = std::format(R"(Data\FUCKs\{}\settings_user.ini)", pluginName);
 
 		Settings::GetSingleton()->LoadINI(userPath.c_str(), [userdata, callback](CSimpleIniA& ini) { callback(ini, userdata); }, true);
 	}
@@ -301,7 +309,39 @@ namespace FUCK::Host
 	{
 		if (!callback || !pluginName)
 			return;
-		std::string defaultPath = std::format(R"(Data\SKSE\Plugins\FUCK\settings\{}.ini)", pluginName);
+		std::string defaultPath = std::format(R"(Data\FUCKs\{}\settings.ini)", pluginName);
+
+		Settings::GetSingleton()->LoadINI(defaultPath.c_str(), [userdata, callback](CSimpleIniA& ini) {
+			callback(ini, userdata);
+		});
+	}
+
+	static void LoadPluginKeybinds_Impl(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*))
+	{
+		if (!callback || !pluginName)
+			return;
+		std::string defaultPath = std::format(R"(Data\FUCKs\{}\keybinds.ini)", pluginName);
+		std::string userPath = std::format(R"(Data\FUCKs\{}\keybinds_user.ini)", pluginName);
+
+		Settings::GetSingleton()->LoadINI(defaultPath.c_str(), userPath.c_str(), [userdata, callback](CSimpleIniA& ini) {
+			callback(ini, userdata);
+		});
+	}
+
+	static void SavePluginKeybinds_Impl(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*))
+	{
+		if (!callback || !pluginName)
+			return;
+		std::string userPath = std::format(R"(Data\FUCKs\{}\keybinds_user.ini)", pluginName);
+
+		Settings::GetSingleton()->LoadINI(userPath.c_str(), [userdata, callback](CSimpleIniA& ini) { callback(ini, userdata); }, true);
+	}
+
+	static void LoadPluginKeybindsDefaults_Impl(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*))
+	{
+		if (!callback || !pluginName)
+			return;
+		std::string defaultPath = std::format(R"(Data\FUCKs\{}\keybinds.ini)", pluginName);
 
 		Settings::GetSingleton()->LoadINI(defaultPath.c_str(), [userdata, callback](CSimpleIniA& ini) {
 			callback(ini, userdata);
@@ -792,9 +832,13 @@ namespace FUCK::Host
 			.LoadTranslation = LoadTranslation_Impl,
 			.GetTranslation = GetTranslation_Impl,
 			.SanitizePath = SanitizePath_Impl,
+			.GetPluginConfigPath = GetPluginConfigPath_Impl,
 			.LoadPluginINI = LoadPluginINI_Impl,
 			.SavePluginINI = SavePluginINI_Impl,
 			.LoadPluginINIDefaults = LoadPluginINIDefaults_Impl,
+			.LoadPluginKeybinds = LoadPluginKeybinds_Impl,
+			.SavePluginKeybinds = SavePluginKeybinds_Impl,
+			.LoadPluginKeybindsDefaults = LoadPluginKeybindsDefaults_Impl,
 			.PushItemFlag = PushItemFlag_Impl,
 			.PopItemFlag = PopItemFlag_Impl,
 			.HelpMarker = HelpMarker_Impl,

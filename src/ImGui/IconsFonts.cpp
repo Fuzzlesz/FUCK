@@ -1,13 +1,15 @@
 #include "IconsFonts.h"
 
 #include "FUCKMan.h"
-#include "System/Input.h"
-#include "System/Settings.h"
 #include "IconsFontAwesome6.h"
-#include "Backend/imgui_default.h"
 #include "Renderer.h"
 #include "Styles.h"
+#include "System/Input.h"
+#include "System/Settings.h"
+#include "System/Utils.h"
 #include "Util.h"
+
+#include "ImGui/Backend/imgui_default.h"
 
 namespace IconFont
 {
@@ -28,17 +30,17 @@ namespace IconFont
 
 	std::string Manager::ResolveFontPath(const std::string& a_filename) const
 	{
-		// Check User Fonts (Data/Interface/FUCK/Fonts)
-		std::filesystem::path userPath(Settings::GetSingleton()->GetUserFontsPath());
-		userPath /= a_filename;
-		if (std::filesystem::exists(userPath))
-			return userPath.string();
+		auto settings = Settings::GetSingleton();
 
+		// Check User Fonts (Data/FUCKs/FUCK/fonts)
+		if (auto p = Utils::FindFileRecursive(settings->GetUserFontsPath(), a_filename))
+			return *p;
 		// Check Legacy Fonts (Data/Interface/ImGuiIcons/Fonts)
-		std::filesystem::path legacyPath(Settings::GetSingleton()->GetLegacyFontsPath());
-		legacyPath /= a_filename;
-		if (std::filesystem::exists(legacyPath))
-			return legacyPath.string();
+		if (auto p = Utils::FindFileRecursive(settings->GetLegacyFontsPath(), a_filename))
+			return *p;
+		// Check Community Shaders Fonts (Data/Interface/CommunityShaders/Fonts)
+		if (auto p = Utils::FindFileRecursive(settings->GetCSFontsPath(), a_filename))
+			return *p;
 
 		// Fallback
 		return a_filename;

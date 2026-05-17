@@ -21,6 +21,15 @@ public:
 		return { 1050.0f * s, 450.0f * s };
 	}
 
+	bool GetRequestedPos(ImVec2& outPos) override
+	{
+		if (_lastPos.x != -1.0f && _lastPos.y != -1.0f) {
+			outPos = _lastPos;
+			return true;
+		}
+		return false;
+	}
+
 	void UpdateState(const ImVec2& currentPos, const ImVec2& currentSize) override
 	{
 		_lastPos = currentPos;
@@ -28,6 +37,6 @@ public:
 	}
 
 	bool _isOpen = false;
-	ImVec2 _lastPos{ 1050.0f, 450.0f };
-	ImVec2 _lastSize{ 450.0f, 600.0f };
+	ImVec2 _lastPos{ -1.0f, -1.0f };
+	ImVec2 _lastSize{ -1.0f, -1.0f };
 };

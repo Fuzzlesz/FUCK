@@ -194,95 +194,102 @@ bool FUCKMan::ProcessAsyncInput(const RE::InputEvent* const* a_event)
 
 void FUCKMan::ResetSettings()
 {
-	auto scale = FUCK::GetResolutionScale();
-	if (scale < 0.1f)
-		scale = 1.0f;
+	_cfg = _def;
 
-	_windowPos = { 100.0f * scale, 100.0f * scale };
-	_windowSize = { 1280.0f * scale, 800.0f * scale };
-	_globalPauseType = PauseType::kNone;
+	MANAGER(IconFont)->SetFontName(_cfg.currentFont);
 
-	_userScale = 1.0f;
-	_sidebarOnRight = false;
-	_injectSystemMenu = true;
-	_replaceHelpMenu = false;
-
-	auto& hotkey = MANAGER(Hotkeys)->GetToggleHotkey();
-	hotkey.kKey = 65;  // F7
-	hotkey.kMod1 = -1;
-	hotkey.kMod2 = -1;
-	hotkey.gKey = 0;
-	hotkey.gMod1 = -1;
-	hotkey.gMod2 = -1;
-	hotkey.isBinding = false;
-	hotkey.wasTriggered = false;
+	auto hotkeys = MANAGER(Hotkeys);
+	hotkeys->GetToggleHotkey().kKey = hotkeys->_defToggle.kKey;
+	hotkeys->GetToggleHotkey().kMod1 = hotkeys->_defToggle.kMod1;
+	hotkeys->GetToggleHotkey().kMod2 = hotkeys->_defToggle.kMod2;
+	hotkeys->GetToggleHotkey().gKey = hotkeys->_defToggle.gKey;
+	hotkeys->GetToggleHotkey().gMod1 = hotkeys->_defToggle.gMod1;
+	hotkeys->GetToggleHotkey().gMod2 = hotkeys->_defToggle.gMod2;
 
 	if (_isOpen) {
-		ClampWindowToScreen(_windowPos, _windowSize);
+		ClampWindowToScreen(_cfg.windowPos, _cfg.windowSize);
 		_pendingWindowRestore = true;
 		ImGui::Styles::GetSingleton()->RefreshStyle();
 		MANAGER(IconFont)->ReloadFonts();
 	}
+
+	Save();
+	SaveKeybinds();
 }
 
 void FUCKMan::LoadSettings(const CSimpleIniA& a_ini)
 {
-	double x = a_ini.GetDoubleValue("Window", "X", -1.0);
-	double y = a_ini.GetDoubleValue("Window", "Y", -1.0);
-	double w = a_ini.GetDoubleValue("Window", "Width", -1.0);
-	double h = a_ini.GetDoubleValue("Window", "Height", -1.0);
+	float scale = FUCK::GetResolutionScale();
+	if (scale < 0.1f) scale = 1.0f;
 
-	if (x == -1.0 || y == -1.0 || w == -1.0 || h == -1.0) {
-		ResetSettings();
-	} else {
-		_windowPos = { static_cast<float>(x), static_cast<float>(y) };
-		_windowSize = { static_cast<float>(w), static_cast<float>(h) };
+	// Apply resolution scale to Window size/pos defaults gracefully
+	ImVec2 scaledDefPos = { _def.windowPos.x * scale, _def.windowPos.y * scale };
+	ImVec2 scaledDefSize = { _def.windowSize.x * scale, _def.windowSize.y * scale };
+
+	_cfg.windowPos.x = static_cast<float>(a_ini.GetDoubleValue("Window", "X", scaledDefPos.x));
+	_cfg.windowPos.y = static_cast<float>(a_ini.GetDoubleValue("Window", "Y", scaledDefPos.y));
+	_cfg.windowSize.x = static_cast<float>(a_ini.GetDoubleValue("Window", "Width", scaledDefSize.x));
+	_cfg.windowSize.y = static_cast<float>(a_ini.GetDoubleValue("Window", "Height", scaledDefSize.y));
+
+	_cfg.globalPauseType = static_cast<PauseType>(a_ini.GetLongValue("Settings", "iGlobalPauseType", static_cast<long>(_def.globalPauseType)));
+
+	float loadedScale = static_cast<float>(a_ini.GetDoubleValue("Settings", "fUserScale", _def.userScale));
+	_cfg.userScale = std::clamp(loadedScale, 0.5f, 2.0f);
+
+	_cfg.sidebarOnRight = a_ini.GetBoolValue("Settings", "bSidebarOnRight", _def.sidebarOnRight);
+	_cfg.injectSystemMenu = a_ini.GetBoolValue("Settings", "bInjectSystemMenu", _def.injectSystemMenu);
+	_cfg.replaceHelpMenu = a_ini.GetBoolValue("Settings", "bReplaceHelpMenu", _def.replaceHelpMenu);
+
+	_cfg.currentFont = a_ini.GetValue("Appearance", "sFont", _def.currentFont.c_str());
+	if (!_cfg.currentFont.empty()) {
+		MANAGER(IconFont)->SetFontName(_cfg.currentFont);
 	}
 
-	_globalPauseType = static_cast<PauseType>(a_ini.GetLongValue("Settings", "iGlobalPauseType", static_cast<int>(_globalPauseType)));
-	_sidebarOnRight = a_ini.GetBoolValue("Settings", "bSidebarOnRight", _sidebarOnRight);
-	_injectSystemMenu = a_ini.GetBoolValue("Settings", "bInjectSystemMenu", _injectSystemMenu);
-	_replaceHelpMenu = a_ini.GetBoolValue("Settings", "bReplaceHelpMenu", _replaceHelpMenu);
+	_cfg.themeEditorPos.x = static_cast<float>(a_ini.GetDoubleValue("ThemeEditor", "X", _def.themeEditorPos.x));
+	_cfg.themeEditorPos.y = static_cast<float>(a_ini.GetDoubleValue("ThemeEditor", "Y", _def.themeEditorPos.y));
+	_cfg.themeEditorSize.x = static_cast<float>(a_ini.GetDoubleValue("ThemeEditor", "Width", _def.themeEditorSize.x));
+	_cfg.themeEditorSize.y = static_cast<float>(a_ini.GetDoubleValue("ThemeEditor", "Height", _def.themeEditorSize.y));
 
-	// Theme Editor State
-	_themeEditorWindow._lastPos.x = { static_cast<float>(a_ini.GetDoubleValue("ThemeEditor", "X", _themeEditorWindow._lastPos.x)) };
-	_themeEditorWindow._lastPos.y = { static_cast<float>(a_ini.GetDoubleValue("ThemeEditor", "Y", _themeEditorWindow._lastPos.y)) };
-	_themeEditorWindow._lastSize.x = { static_cast<float>(a_ini.GetDoubleValue("ThemeEditor", "Width", _themeEditorWindow._lastSize.x)) };
-	_themeEditorWindow._lastSize.y = { static_cast<float>(a_ini.GetDoubleValue("ThemeEditor", "Height", _themeEditorWindow._lastSize.y)) };
+	_themeEditorWindow._lastPos = _cfg.themeEditorPos;
+	_themeEditorWindow._lastSize = _cfg.themeEditorSize;
 
-	// Check for first-run sentinel
-	const float loadedScale = static_cast<float>(a_ini.GetDoubleValue("Settings", "fUserScale", -1.0));
-	if (loadedScale < 0.0f) {
-		_userScale = 1.0f;
-	} else {
-		_userScale = std::clamp(loadedScale, 0.5f, 2.0f);
-	}
-
-	_lastSavedPos = _windowPos;
-	_lastSavedSize = _windowSize;
+	_lastSavedPos = _cfg.windowPos;
+	_lastSavedSize = _cfg.windowSize;
 	_pendingWindowRestore = true;
 }
 
 void FUCKMan::SaveSettings(CSimpleIniA& a_ini)
 {
-	a_ini.SetValue("Window", "X", std::format("{:.2f}", _windowPos.x).c_str());
-	a_ini.SetValue("Window", "Y", std::format("{:.2f}", _windowPos.y).c_str());
-	a_ini.SetValue("Window", "Width", std::format("{:.2f}", _windowSize.x).c_str());
-	a_ini.SetValue("Window", "Height", std::format("{:.2f}", _windowSize.y).c_str());
+	a_ini.SetValue("Window", "X", std::format("{:.2f}", _cfg.windowPos.x).c_str());
+	a_ini.SetValue("Window", "Y", std::format("{:.2f}", _cfg.windowPos.y).c_str());
+	a_ini.SetValue("Window", "Width", std::format("{:.2f}", _cfg.windowSize.x).c_str());
+	a_ini.SetValue("Window", "Height", std::format("{:.2f}", _cfg.windowSize.y).c_str());
 
-	a_ini.SetLongValue("Settings", "iGlobalPauseType", static_cast<long>(_globalPauseType));
-	a_ini.SetValue("Settings", "fUserScale", std::format("{:.2f}", _userScale).c_str());
-	a_ini.SetBoolValue("Settings", "bSidebarOnRight", _sidebarOnRight);
-	a_ini.SetBoolValue("Settings", "bInjectSystemMenu", _injectSystemMenu);
-	a_ini.SetBoolValue("Settings", "bReplaceHelpMenu", _replaceHelpMenu);
+	a_ini.SetLongValue("Settings", "iGlobalPauseType", static_cast<long>(_cfg.globalPauseType));
+	a_ini.SetValue    ("Settings", "fUserScale", std::format("{:.2f}", _cfg.userScale).c_str());
+	a_ini.SetBoolValue("Settings", "bSidebarOnRight", _cfg.sidebarOnRight);
+	a_ini.SetBoolValue("Settings", "bInjectSystemMenu", _cfg.injectSystemMenu);
+	a_ini.SetBoolValue("Settings", "bReplaceHelpMenu", _cfg.replaceHelpMenu);
 
-	// Theme Editor State
-	a_ini.SetValue("ThemeEditor", "X", std::format("{:.2f}", _themeEditorWindow._lastPos.x).c_str());
-	a_ini.SetValue("ThemeEditor", "Y", std::format("{:.2f}", _themeEditorWindow._lastPos.y).c_str());
-	a_ini.SetValue("ThemeEditor", "Width", std::format("{:.2f}", _themeEditorWindow._lastSize.x).c_str());
-	a_ini.SetValue("ThemeEditor", "Height", std::format("{:.2f}", _themeEditorWindow._lastSize.y).c_str());
+	a_ini.SetValue("Appearance", "sFont", _cfg.currentFont.c_str());
 
-	MANAGER(Hotkeys)->SaveHotKeys(a_ini);
+	// Theme Editor State (Only save if initialized)
+	if (_themeEditorWindow._lastPos.x != -1.0f) {
+		a_ini.SetValue("ThemeEditor", "X", std::format("{:.2f}", _themeEditorWindow._lastPos.x).c_str());
+		a_ini.SetValue("ThemeEditor", "Y", std::format("{:.2f}", _themeEditorWindow._lastPos.y).c_str());
+		a_ini.SetValue("ThemeEditor", "Width", std::format("{:.2f}", _themeEditorWindow._lastSize.x).c_str());
+		a_ini.SetValue("ThemeEditor", "Height", std::format("{:.2f}", _themeEditorWindow._lastSize.y).c_str());
+	}
+}
+
+void FUCKMan::Save()
+{
+	Settings::Core.Save([this](CSimpleIniA& ini) { SaveSettings(ini); });
+}
+
+void FUCKMan::SaveKeybinds()
+{
+	Settings::Core.SaveKeybinds([](CSimpleIniA& ini) { MANAGER(Hotkeys)->SaveHotKeys(ini); });
 }
 
 void FUCKMan::SetVanityBlocked(bool blocked) { _isVanityBlocked = blocked; }
@@ -305,9 +312,9 @@ void FUCKMan::UpdateGameState()
 	if (_isOpen) {
 		targetVanity = true;
 		targetHideHUD = true;
-		if (_globalPauseType == PauseType::kSoft)
+		if (_cfg.globalPauseType == PauseType::kSoft)
 			targetSoft = true;
-		if (_globalPauseType == PauseType::kHard)
+		if (_cfg.globalPauseType == PauseType::kHard)
 			targetHard = true;
 	}
 
@@ -491,10 +498,6 @@ void FUCKMan::Close()
 
 	UpdateGameState();
 
-	Settings::GetSingleton()->Save(FileType::kSettings, [](CSimpleIniA& ini) {
-		FUCKMan::GetSingleton()->SaveSettings(ini);
-	});
-
 	ImGui::ClearNavState();
 	RE::PlaySound("UIMenuCancel");
 }
@@ -567,6 +570,29 @@ RE::BSEventNotifyControl FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_e
 
 void FUCKMan::Draw()
 {
+	if (auto ui = RE::UI::GetSingleton(); ui && ui->closingAllMenus) {
+		bool closedSomething = false;
+
+		if (_isOpen) {
+			Close();
+			closedSomething = true;
+		}
+
+		for (auto* win : _windows) {
+			if (win->IsOpen()) {
+				win->SetOpen(false);
+				closedSomething = true;
+			}
+		}
+
+		if (closedSomething) {
+			ImGui::ClearNavState();
+		}
+
+		_suspendedWindows.clear();
+		return;
+	}
+
 	// --- Auto-Suspend on forced camera states ---
 	if (auto camera = RE::PlayerCamera::GetSingleton(); camera && camera->currentState) {
 		auto* activeState = camera->currentState.get();
@@ -679,7 +705,7 @@ void FUCKMan::Draw()
 	// Content scale helper — respects kIgnoreUserScale flag
 	auto pushContentScale = [&](bool ignoreUserScale = false) {
 		_isIgnoringUserScale = ignoreUserScale;
-		_activeScale = ignoreUserScale ? 1.0f : _userScale;
+		_activeScale = ignoreUserScale ? 1.0f : _cfg.userScale;
 
 		float targetFontSize = ImGui::GetStyle().FontSizeBase * _activeScale;
 		ImGui::PushFont(nullptr, targetFontSize);
@@ -703,7 +729,7 @@ void FUCKMan::Draw()
 	auto popContentScale = [&]() {
 		ImGui::PopFont();
 		ImGui::PopStyleVar(6);
-		_activeScale = _userScale;
+		_activeScale = _cfg.userScale;
 		_isIgnoringUserScale = false;
 	};
 
@@ -993,6 +1019,20 @@ void FUCKMan::Draw()
 					MANAGER(Input)->ClearState();
 				}
 			}
+
+			// Specific save hook for ThemeEditor bounds tracking upon move/resize edits completing
+			if (win == &_themeEditorWindow) {
+				static ImVec2 s_lastThemePos = _themeEditorWindow._lastPos;
+				static ImVec2 s_lastThemeSize = _themeEditorWindow._lastSize;
+				if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+					if (s_lastThemePos.x != _themeEditorWindow._lastPos.x || s_lastThemePos.y != _themeEditorWindow._lastPos.y ||
+						s_lastThemeSize.x != _themeEditorWindow._lastSize.x || s_lastThemeSize.y != _themeEditorWindow._lastSize.y) {
+						s_lastThemePos = _themeEditorWindow._lastPos;
+						s_lastThemeSize = _themeEditorWindow._lastSize;
+						Save();
+					}
+				}
+			}
 		}
 	}
 
@@ -1005,17 +1045,17 @@ void FUCKMan::Draw()
 	ImGui::GetIO().MouseDrawCursor = false;
 
 	if (_pendingWindowRestore) {
-		ClampWindowToScreen(_windowPos, _windowSize);
-		FUCK::SetNextWindowPos(_windowPos, ImGuiCond_Always);
+		ClampWindowToScreen(_cfg.windowPos, _cfg.windowSize);
+		FUCK::SetNextWindowPos(_cfg.windowPos, ImGuiCond_Always);
 		if (!_isCollapsed) {
-			FUCK::SetNextWindowSize(_windowSize, ImGuiCond_Always);
+			FUCK::SetNextWindowSize(_cfg.windowSize, ImGuiCond_Always);
 		}
 		_pendingWindowRestore = false;
 	} else {
 		if (_isCollapsed) {
-			FUCK::SetNextWindowSize(ImVec2(_windowSize.x, m.titleH));
+			FUCK::SetNextWindowSize(ImVec2(_cfg.windowSize.x, m.titleH));
 		} else if (_wasCollapsed && !_isCollapsed) {
-			FUCK::SetNextWindowSize(_windowSize);
+			FUCK::SetNextWindowSize(_cfg.windowSize);
 		} else {
 			FUCK::SetNextWindowSize(ImVec2(1000.0f * m.uiScale, 600.0f * m.uiScale), ImGuiCond_FirstUseEver);
 		}
@@ -1036,18 +1076,16 @@ void FUCKMan::Draw()
 		FUCK::ExtendWindowPastBorder();
 
 		if (!_isCollapsed) {
-			_windowPos = FUCK::GetWindowPos();
-			_windowSize = FUCK::GetWindowSize();
+			_cfg.windowPos = FUCK::GetWindowPos();
+			_cfg.windowSize = FUCK::GetWindowSize();
 
 			// Auto-save settings on move/resize end
 			if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-				if (_windowPos.x != _lastSavedPos.x || _windowPos.y != _lastSavedPos.y ||
-					_windowSize.x != _lastSavedSize.x || _windowSize.y != _lastSavedSize.y) {
-					_lastSavedPos = _windowPos;
-					_lastSavedSize = _windowSize;
-					Settings::GetSingleton()->Save(FileType::kSettings, [](CSimpleIniA& ini) {
-						FUCKMan::GetSingleton()->SaveSettings(ini);
-					});
+				if (_cfg.windowPos.x != _lastSavedPos.x || _cfg.windowPos.y != _lastSavedPos.y ||
+					_cfg.windowSize.x != _lastSavedSize.x || _cfg.windowSize.y != _lastSavedSize.y) {
+					_lastSavedPos = _cfg.windowPos;
+					_lastSavedSize = _cfg.windowSize;
+					Save();
 				}
 			}
 		}
@@ -1369,7 +1407,7 @@ void FUCKMan::Draw()
 				FUCK::PopStyleVar();
 			};
 
-			if (_sidebarOnRight) {
+			if (_cfg.sidebarOnRight) {
 				float contentWidth = FUCK::GetContentRegionAvail().x - m.sidebarWidth - FUCK::GetStyleVarVec(ImGuiStyleVar_ItemSpacing).x;
 				renderContent(contentWidth);
 				FUCK::SameLine();

@@ -28,16 +28,14 @@ namespace ImGui::Renderer
 			return;
 		}
 
+		ImGui::Styles::GetSingleton()->OnStyleRefresh();
+		IconFont::Manager::GetSingleton()->ProcessPendingReload();
+
 		const auto manager = FUCKMan::GetSingleton();
 
 		if (!manager->ShouldRender()) {
 			return;
 		}
-
-		// Apply any deferred UI color/metric style changes
-		ImGui::Styles::GetSingleton()->OnStyleRefresh();
-
-		IconFont::Manager::GetSingleton()->ProcessPendingReload();
 
 		ImGui_ImplDX11_NewFrame();
 		SKSE::ImGui_ImplWin32_NewFrame();

@@ -15,33 +15,6 @@ void ThemeEditorWindow::Draw()
 	if (FUCK::CollapsingHeader("$FUCK_Styles_Presets"_T, ImGuiTreeNodeFlags_DefaultOpen)) {
 		FUCK::Spacing();
 
-		static std::vector<std::string> fonts = style->GetAvailableFonts();
-		std::string currentFont = style->GetCurrentFont();
-
-		std::vector<std::string> displayFonts;
-		std::vector<const char*> fontPtrs;
-		displayFonts.reserve(fonts.size());
-		fontPtrs.reserve(fonts.size());
-
-		int currentFontIdx = -1;
-
-		for (size_t i = 0; i < fonts.size(); ++i) {
-			std::string disp = (fonts[i] == "Default") ? std::string("$FUCK_Styles_FontDefault"_T) : fonts[i];
-			displayFonts.push_back(disp);
-			fontPtrs.push_back(displayFonts.back().c_str());
-
-			if (fonts[i] == currentFont) {
-				currentFontIdx = static_cast<int>(i);
-			}
-		}
-
-		if (FUCK::Combo("$FUCK_Styles_Typeface"_T, &currentFontIdx, fontPtrs.data(), (int)fontPtrs.size())) {
-			if (currentFontIdx >= 0 && currentFontIdx < fonts.size()) {
-				style->SetCurrentFont(fonts[currentFontIdx]);
-			}
-		}
-		FUCK::Spacing();
-
 		static char presetNameBuf[64] = "";
 		static std::string lastSeenPreset = "\xFF";
 
