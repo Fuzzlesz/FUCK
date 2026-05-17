@@ -159,24 +159,13 @@ namespace ImGui::Renderer
 		static inline std::size_t idx{ 0x6 };
 	};
 
-	// IMenu::PostDisplay (MainMenu)
-	struct MainMenu_PostDisplay
+	// IMenu::PostDisplay (CursorMenu)
+	struct CursorMenu_PostDisplay
 	{
 		static void thunk(RE::IMenu* a_menu)
 		{
 			Draw();
 			return func(a_menu);
-		}
-		static inline REL::Relocation<decltype(thunk)> func;
-		static inline std::size_t idx{ 0x6 };
-	};
-
-	struct StatsMenu_PostDisplay
-	{
-		static void thunk(RE::IMenu* a_menu)
-		{
-			func(a_menu);
-			Draw();
 		}
 		static inline REL::Relocation<decltype(thunk)> func;
 		static inline std::size_t idx{ 0x6 };
@@ -188,7 +177,6 @@ namespace ImGui::Renderer
 		stl::write_thunk_call<CreateD3DAndSwapChain>(target.address());
 
 		stl::write_vfunc<RE::HUDMenu, HUDMenu_PostDisplay>();
-		stl::write_vfunc<RE::MainMenu, MainMenu_PostDisplay>();
-		stl::write_vfunc<RE::StatsMenu, StatsMenu_PostDisplay>(); 
+		stl::write_vfunc<RE::CursorMenu, CursorMenu_PostDisplay>();
 	}
 }
