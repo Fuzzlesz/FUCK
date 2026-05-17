@@ -8,24 +8,22 @@ namespace Hotkeys
 {
 	void Manager::LoadHotKeys(const CSimpleIniA& a_ini)
 	{
-		_toggleHotkey.kKey =  static_cast<std::uint32_t>(a_ini.GetLongValue("Controls", "iToggleEditorKey", 65));
-		_toggleHotkey.kMod1 = static_cast<std::int32_t>(a_ini.GetLongValue("Controls", "iToggleEditorKeyMod1", -1));
-		_toggleHotkey.kMod2 = static_cast<std::int32_t>(a_ini.GetLongValue("Controls", "iToggleEditorKeyMod2", -1));
-
-		_toggleHotkey.gKey =  static_cast<std::uint32_t>(a_ini.GetLongValue("Controls", "iToggleEditorGamePad", 0));
-		_toggleHotkey.gMod1 = static_cast<std::int32_t>(a_ini.GetLongValue("Controls", "iToggleEditorGamePadMod1", -1));
-		_toggleHotkey.gMod2 = static_cast<std::int32_t>(a_ini.GetLongValue("Controls", "iToggleEditorGamePadMod2", -1));
+		_toggleHotkey.kKey = static_cast<std::uint32_t>(a_ini.GetLongValue("Hotkeys", "iToggleFUCK_Key", _defToggle.kKey));
+		_toggleHotkey.kMod1 = static_cast<std::int32_t>(a_ini.GetLongValue("Hotkeys", "iToggleFUCK_Mod1", _defToggle.kMod1));
+		_toggleHotkey.kMod2 = static_cast<std::int32_t>(a_ini.GetLongValue("Hotkeys", "iToggleFUCK_Mod2", _defToggle.kMod2));
+		_toggleHotkey.gKey = static_cast<std::uint32_t>(a_ini.GetLongValue("Hotkeys", "iToggleFUCK_GPKey", _defToggle.gKey));
+		_toggleHotkey.gMod1 = static_cast<std::int32_t>(a_ini.GetLongValue("Hotkeys", "iToggleFUCK_GPMod1", _defToggle.gMod1));
+		_toggleHotkey.gMod2 = static_cast<std::int32_t>(a_ini.GetLongValue("Hotkeys", "iToggleFUCK_GPMod2", _defToggle.gMod2));
 	}
 
 	void Manager::SaveHotKeys(CSimpleIniA& a_ini)
 	{
-		a_ini.SetLongValue("Controls", "iToggleEditorKey",     static_cast<long>(_toggleHotkey.kKey));
-		a_ini.SetLongValue("Controls", "iToggleEditorKeyMod1", static_cast<long>(_toggleHotkey.kMod1));
-		a_ini.SetLongValue("Controls", "iToggleEditorKeyMod2", static_cast<long>(_toggleHotkey.kMod2));
-
-		a_ini.SetLongValue("Controls", "iToggleEditorGamePad",     static_cast<long>(_toggleHotkey.gKey));
-		a_ini.SetLongValue("Controls", "iToggleEditorGamePadMod1", static_cast<long>(_toggleHotkey.gMod1));
-		a_ini.SetLongValue("Controls", "iToggleEditorGamePadMod2", static_cast<long>(_toggleHotkey.gMod2));
+		a_ini.SetLongValue("Hotkeys", "iToggleFUCK_Key", _toggleHotkey.kKey);
+		a_ini.SetLongValue("Hotkeys", "iToggleFUCK_Mod1", _toggleHotkey.kMod1);
+		a_ini.SetLongValue("Hotkeys", "iToggleFUCK_Mod2", _toggleHotkey.kMod2);
+		a_ini.SetLongValue("Hotkeys", "iToggleFUCK_GPKey", _toggleHotkey.gKey);
+		a_ini.SetLongValue("Hotkeys", "iToggleFUCK_GPMod1", _toggleHotkey.gMod1);
+		a_ini.SetLongValue("Hotkeys", "iToggleFUCK_GPMod2", _toggleHotkey.gMod2);
 	}
 
 	bool Manager::ProcessInput(const RE::InputEvent* const* a_event)
