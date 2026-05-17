@@ -26,7 +26,7 @@ namespace Input
 	{
 		bool active{ false };
 		bool disallowModifiers{ false };
-		float timer{ 0.0f };
+		double startTime{ 0.0 };
 		std::uint32_t originalKey{ 0 };
 		std::int32_t originalMod1{ -1 };
 		std::int32_t originalMod2{ -1 };
@@ -37,7 +37,7 @@ namespace Input
 		{
 			active = false;
 			disallowModifiers = false;
-			timer = 0.0f;
+			startTime = 0.0;
 			originalKey = 0;
 			originalMod1 = -1;
 			originalMod2 = -1;

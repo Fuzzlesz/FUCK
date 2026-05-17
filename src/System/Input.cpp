@@ -103,11 +103,11 @@ namespace Input
 	}
 
 	// --- Rebinding API ---
-	void Manager::StartBinding(std::uint32_t k, std::int32_t m1, std::int32_t m2, bool disallowModifiers) 
+	void Manager::StartBinding(std::uint32_t k, std::int32_t m1, std::int32_t m2, bool disallowModifiers)
 	{
 		_rebindCtx.active = true;
 		_rebindCtx.disallowModifiers = disallowModifiers;
-		_rebindCtx.timer = 0.0f;
+		_rebindCtx.startTime = ImGui::GetTime();
 		_rebindCtx.originalKey = k;
 		_rebindCtx.originalMod1 = m1;
 		_rebindCtx.originalMod2 = m2;
@@ -127,22 +127,19 @@ namespace Input
 		if (!_rebindCtx.active)
 			return FUCK::BindResult::kNone;
 
-		// 1. Update debounce timer (using ImGui's DeltaTime is easiest here)
-		_rebindCtx.timer += ImGui::GetIO().DeltaTime;
-
-		// 2. Poll the raw input
+		// 1. Poll the raw input
 		std::uint32_t newKey = 0;
 		std::int32_t newM1 = -1;
 		std::int32_t newM2 = -1;
 
 		auto result = GetInputBind(a_event, &newKey, &newM1, &newM2);
 
-		// 3. Prevent accidental "double-click" capture
-		if (result == FUCK::BindResult::kBound && _rebindCtx.timer < 0.2f) {
+		// 2. Prevent accidental "double-click" capture
+		if (result == FUCK::BindResult::kBound && (ImGui::GetTime() - _rebindCtx.startTime) < 0.2) {
 			return FUCK::BindResult::kNone;
 		}
 
-		// 4. Handle Results
+		// 3. Handle Results
 		if (result == FUCK::BindResult::kCancelled) {
 			// AUTOMATIC RESTORE
 			if (outKey)
