@@ -540,6 +540,7 @@ namespace FUCK::Host
 	static bool IsWindowFocused_Impl(int flags) { return ImGui::IsWindowFocused(flags); }
 	static bool IsWindowHovered_Impl(int flags) { return ImGui::IsWindowHovered(flags); }
 	static bool IsMouseDown_Impl(int button) { return ImGui::IsMouseDown(button); }
+	static bool IsMouseClicked_Impl(int button, bool repeat) { return ImGui::IsMouseClicked(button, repeat); }
 	static bool IsMouseReleased_Impl(int button) { return ImGui::IsMouseReleased(button); }
 	static bool IsKeyDown_Impl(ImGuiKey key) { return ImGui::IsKeyDown(key); }
 	static bool IsKeyPressed_Impl(ImGuiKey key, bool repeat) { return ImGui::IsKeyPressed(key, repeat); }
@@ -891,6 +892,7 @@ namespace FUCK::Host
 			.IsWindowFocused = IsWindowFocused_Impl,
 			.IsWindowHovered = IsWindowHovered_Impl,
 			.IsMouseDown = IsMouseDown_Impl,
+			.IsMouseClicked = IsMouseClicked_Impl,
 			.IsMouseReleased = IsMouseReleased_Impl,
 			.IsKeyDown = IsKeyDown_Impl,
 			.IsKeyPressed = IsKeyPressed_Impl,
