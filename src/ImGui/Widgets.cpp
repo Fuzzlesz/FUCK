@@ -1272,9 +1272,12 @@ namespace ImGui
 
 		bool is_open = window->DC.StateStorage->GetInt(id, (flags & ImGuiTreeNodeFlags_DefaultOpen) != 0);
 
-		// Calculate total layout size
+		// Calculate total layout size using same padY as combo boxes
+		float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
+		float padY = 7.0f * scale;
+		float frameHeight = CalcTextSize(label).y + padY * 2.0f;
+
 		ImVec2 pos = window->DC.CursorPos;
-		float frameHeight = CalcTextSize(label).y + GImGui->Style.FramePadding.y * 2.0f;
 		ImRect bb(pos, pos + ImVec2(GetContentRegionAvail().x, frameHeight));
 
 		ItemSize(bb);
@@ -1289,8 +1292,19 @@ namespace ImGui
 		}
 
 		// Draw Background
-		if (h || is_open)
-			RenderFrame(bb.Min, bb.Max, GetColorU32(is_open ? ImGuiCol_HeaderActive : ImGuiCol_HeaderHovered), true, GImGui->Style.FrameRounding);
+		if (h || is_open) {
+			ImU32 bgColor;
+			if (is_open) {
+				bgColor = GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox);
+			} else {
+				bgColor = GetColorU32(ImGuiCol_HeaderHovered);
+			}
+			window->DrawList->AddRectFilled(bb.Min, bb.Max, bgColor, GImGui->Style.FrameRounding);
+			
+			if (is_open) {
+				DrawWidgetBorder(window->DrawList, bb, h || IsWidgetFocused(id), GImGui->Style.FrameRounding);
+			}
+		}
 
 		float padding = GImGui->Style.ItemInnerSpacing.x;
 		float fontSize = GImGui->FontSize;
@@ -1319,8 +1333,12 @@ namespace ImGui
 
 		bool is_open = window->DC.StateStorage->GetInt(id, (flags & ImGuiTreeNodeFlags_DefaultOpen) != 0);
 
+		// Calculate total layout size using same padY as combo boxes
+		float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
+		float padY = 7.0f * scale;
+		float frameHeight = CalcTextSize(label).y + padY * 2.0f;
+
 		ImVec2 pos = window->DC.CursorPos;
-		float frameHeight = CalcTextSize(label).y + GImGui->Style.FramePadding.y * 2.0f;
 		ImRect bb(pos, pos + ImVec2(GetContentRegionAvail().x, frameHeight));
 
 		ItemSize(bb);
@@ -1341,8 +1359,9 @@ namespace ImGui
 			window->DC.StateStorage->SetInt(id, is_open);
 			RE::PlaySound(is_open ? "UIMenuFocus" : "UIMenuCancel");
 		}
-		if (h)
-			RenderFrame(bb.Min, bb.Max, GetColorU32(ImGuiCol_HeaderHovered), false, GImGui->Style.FrameRounding);
+		if (h) {
+			window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_HeaderHovered), GImGui->Style.FrameRounding);
+		}
 
 		// Draw Arrow Icon using helper
 		DrawTreeIcon(window->DrawList, { pos.x + padding, pos.y }, frameHeight, is_open, h);
@@ -1452,9 +1471,9 @@ namespace ImGui
 
 		LeftAlignedTextImpl(label, id);
 
-		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorU32(USER_STYLE::kFrameBG_Widget));
-		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
-		PushStyleColor(ImGuiCol_FrameBgActive, GetUserStyleColorU32(USER_STYLE::kFrameBG_WidgetActive));
+		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox));
+		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox));
+		PushStyleColor(ImGuiCol_FrameBgActive, GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox));
 		PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
 
 		bool result = drawWidget(id.c_str());
@@ -1480,7 +1499,9 @@ namespace ImGui
 		bool res = OutsetFramedWidget(label, [&](const char* id) {
 			return ImGui::ColorEdit3(id, col, flags | ImGuiColorEditFlags_NoLabel);
 		});
-		if (IsItemActivated())
+		if (res)
+			RE::PlaySound("UIMenuPrevNext");
+		else if (IsItemActivated())
 			RE::PlaySound("UIMenuFocus");
 		return res;
 	}
@@ -1490,7 +1511,9 @@ namespace ImGui
 		bool res = OutsetFramedWidget(label, [&](const char* id) {
 			return ImGui::ColorEdit4(id, col, flags | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_AlphaBar);
 		});
-		if (IsItemActivated())
+		if (res)
+			RE::PlaySound("UIMenuPrevNext");
+		else if (IsItemActivated())
 			RE::PlaySound("UIMenuFocus");
 		return res;
 	}
