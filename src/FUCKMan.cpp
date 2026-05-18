@@ -260,25 +260,25 @@ void FUCKMan::LoadSettings(const CSimpleIniA& a_ini)
 
 void FUCKMan::SaveSettings(CSimpleIniA& a_ini)
 {
-	a_ini.SetValue("Window", "X", std::format("{:.2f}", _cfg.windowPos.x).c_str());
-	a_ini.SetValue("Window", "Y", std::format("{:.2f}", _cfg.windowPos.y).c_str());
-	a_ini.SetValue("Window", "Width", std::format("{:.2f}", _cfg.windowSize.x).c_str());
-	a_ini.SetValue("Window", "Height", std::format("{:.2f}", _cfg.windowSize.y).c_str());
+	FUCK::INI::SaveDouble(a_ini, "Window", "X", _cfg.windowPos.x, _def.windowPos.x);
+	FUCK::INI::SaveDouble(a_ini, "Window", "Y", _cfg.windowPos.y, _def.windowPos.y);
+	FUCK::INI::SaveDouble(a_ini, "Window", "Width", _cfg.windowSize.x, _def.windowSize.x);
+	FUCK::INI::SaveDouble(a_ini, "Window", "Height", _cfg.windowSize.y, _def.windowSize.y);
 
-	a_ini.SetLongValue("Settings", "iGlobalPauseType", static_cast<long>(_cfg.globalPauseType));
-	a_ini.SetValue    ("Settings", "fUserScale", std::format("{:.2f}", _cfg.userScale).c_str());
-	a_ini.SetBoolValue("Settings", "bSidebarOnRight", _cfg.sidebarOnRight);
-	a_ini.SetBoolValue("Settings", "bInjectSystemMenu", _cfg.injectSystemMenu);
-	a_ini.SetBoolValue("Settings", "bReplaceHelpMenu", _cfg.replaceHelpMenu);
+	FUCK::INI::SaveInt   (a_ini, "Settings", "iGlobalPauseType", static_cast<int>(_cfg.globalPauseType), static_cast<int>(_def.globalPauseType));
+	FUCK::INI::SaveDouble(a_ini, "Settings", "fUserScale", _cfg.userScale, _def.userScale);
+	FUCK::INI::SaveBool  (a_ini, "Settings", "bSidebarOnRight", _cfg.sidebarOnRight, _def.sidebarOnRight);
+	FUCK::INI::SaveBool  (a_ini, "Settings", "bInjectSystemMenu", _cfg.injectSystemMenu, _def.injectSystemMenu);
+	FUCK::INI::SaveBool  (a_ini, "Settings", "bReplaceHelpMenu", _cfg.replaceHelpMenu, _def.replaceHelpMenu);
 
-	a_ini.SetValue("Appearance", "sFont", _cfg.currentFont.c_str());
+	FUCK::INI::SaveString(a_ini, "Appearance", "sFont", _cfg.currentFont.c_str(), _def.currentFont.c_str());
 
-	// Theme Editor State (Only save if initialized)
+	// Theme Editor State (Only save if initialized/changed from -1)
 	if (_themeEditorWindow._lastPos.x != -1.0f) {
-		a_ini.SetValue("ThemeEditor", "X", std::format("{:.2f}", _themeEditorWindow._lastPos.x).c_str());
-		a_ini.SetValue("ThemeEditor", "Y", std::format("{:.2f}", _themeEditorWindow._lastPos.y).c_str());
-		a_ini.SetValue("ThemeEditor", "Width", std::format("{:.2f}", _themeEditorWindow._lastSize.x).c_str());
-		a_ini.SetValue("ThemeEditor", "Height", std::format("{:.2f}", _themeEditorWindow._lastSize.y).c_str());
+		FUCK::INI::SaveDouble(a_ini, "ThemeEditor", "X", _themeEditorWindow._lastPos.x, _def.themeEditorPos.x);
+		FUCK::INI::SaveDouble(a_ini, "ThemeEditor", "Y", _themeEditorWindow._lastPos.y, _def.themeEditorPos.y);
+		FUCK::INI::SaveDouble(a_ini, "ThemeEditor", "Width", _themeEditorWindow._lastSize.x, _def.themeEditorSize.x);
+		FUCK::INI::SaveDouble(a_ini, "ThemeEditor", "Height", _themeEditorWindow._lastSize.y, _def.themeEditorSize.y);
 	}
 }
 

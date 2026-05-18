@@ -310,7 +310,15 @@ namespace ImGui
 
 	void Styles::SaveStylesToIni(CSimpleIniA& a_ini)
 	{
-#define SET_VALUE(a_value, a_section, a_key) a_ini.SetValue(a_section, a_key, ToString(user.a_value, true).c_str())
+#define SET_VALUE(a_value, a_section, a_key)                \
+	do {                                                    \
+		std::string uStr = ToString(user.a_value, true);    \
+		if (uStr == ToString(def.a_value, true)) {          \
+			a_ini.Delete(a_section, a_key, true);           \
+		} else {                                            \
+			a_ini.SetValue(a_section, a_key, uStr.c_str()); \
+		}                                                   \
+	} while (0)
 
 		SET_VALUE(iconScale, "Icon", "fScale");
 		SET_VALUE(iconDisabled, "Icon", "rDisabledColor");
@@ -378,9 +386,12 @@ namespace ImGui
 
 	void Styles::LoadStylesFromIni(CSimpleIniA& a_ini)
 	{
-#define GET_VALUE(a_value, a_section, a_key) \
-	bool a_value##_hex = false;              \
-	std::tie(user.a_value, a_value##_hex) = ToStyle<decltype(user.a_value)>(a_ini.GetValue(a_section, a_key, ToString(def.a_value, true).c_str()));
+#define GET_VALUE(a_value, a_section, a_key)                                   \
+	do {                                                                       \
+		std::string defStr = ToString(def.a_value, true);                      \
+		const char* valStr = a_ini.GetValue(a_section, a_key, defStr.c_str()); \
+		user.a_value = ToStyle<decltype(user.a_value)>(valStr).first;          \
+	} while (0)
 
 		GET_VALUE(iconScale, "Icon", "fScale");
 		GET_VALUE(iconDisabled, "Icon", "rDisabledColor");
