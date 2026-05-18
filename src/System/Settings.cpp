@@ -9,14 +9,8 @@ void Settings::LoadINI(const char* a_path, const INIFunc a_func, bool a_generate
 	ini.SetUnicode();
 
 	std::filesystem::path p(a_path);
-
 	p.make_preferred();
 	auto pathStr = p.string();
-
-	{
-		std::lock_guard<std::mutex> lock(GetSingleton()->trackingMutex);
-		GetSingleton()->trackedINIs.insert(pathStr);
-	}
 
 	if (a_generate) {
 		std::filesystem::create_directories(p.parent_path());
@@ -24,11 +18,16 @@ void Settings::LoadINI(const char* a_path, const INIFunc a_func, bool a_generate
 
 	SI_Error rc = ini.LoadFile(pathStr.c_str());
 
-	if (rc >= SI_OK && !a_generate) {
-		logger::info("Loaded INI from {}", pathStr);
-	}
-
 	if (rc >= SI_OK || a_generate) {
+		{
+			std::lock_guard<std::mutex> lock(GetSingleton()->trackingMutex);
+			GetSingleton()->trackedINIs.insert(pathStr);
+		}
+
+		if (rc >= SI_OK && !a_generate) {
+			logger::info("Loaded INI from {}", pathStr);
+		}
+
 		a_func(ini);
 
 		if (a_generate) {

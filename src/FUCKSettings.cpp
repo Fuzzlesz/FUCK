@@ -180,7 +180,20 @@ void SettingsTool::Draw()
 		// --------------------------------------------------------
 		// TAB 3: INFO
 		// --------------------------------------------------------
-		if (FUCK::BeginTabItem("$FUCK_Settings_TabInfo"_T)) {
+		static bool s_wasInfoTabOpen = false;
+		static bool s_infoCached = false;
+		static std::vector<std::string> pluginsList;
+		static std::vector<std::string> iniList;
+		static std::vector<std::string> transList;
+
+		bool isInfoTabOpen = FUCK::BeginTabItem("$FUCK_Settings_TabInfo"_T);
+
+		if (isInfoTabOpen) {
+			if (!s_wasInfoTabOpen) {
+				s_infoCached = false;
+			}
+			s_wasInfoTabOpen = true;
+
 			FUCK::Spacing(2);
 
 			FUCK::Header("$FUCK_Settings_Info"_T);
@@ -193,13 +206,12 @@ void SettingsTool::Draw()
 			FUCK::TextDisabled("FUCK API Version: %d", FUCK_API_VERSION);
 			FUCK::Spacing(4);
 
-			// --- ONE-TIME SCAN CACHING ---
-			static std::vector<std::string> pluginsList;
-			static std::vector<std::string> iniList;
-			static std::vector<std::string> transList;
-			static bool s_infoCached = false;
-
+			// --- ON-DEMAND SCAN CACHING ---
 			if (!s_infoCached) {
+				pluginsList.clear();
+				iniList.clear();
+				transList.clear();
+
 				// 1. Gather DLLs via the VTable Poly Pointer Trick
 				std::set<std::string> consumerDLLs;
 				auto extractDLL = [&](void* polyPtr) {
@@ -228,15 +240,20 @@ void SettingsTool::Draw()
 				}
 				pluginsList.assign(consumerDLLs.begin(), consumerDLLs.end());
 
-				// 2. Gather INIs Dynamically
+				// 2. Gather INIs — single list, labelled as "PluginName/filename"
 				{
 					std::lock_guard<std::mutex> iniLock(Settings::GetSingleton()->trackingMutex);
 					for (const auto& iniPath : Settings::GetSingleton()->trackedINIs) {
-						std::string filename = std::filesystem::path(iniPath).filename().string();
-						// Exclude SSEDisplayTweaks inis we use in backend.
-						if (!Utils::IContains(filename, "SSEDisplayTweaks")) {
-							iniList.push_back(filename);
-						}
+						namespace fs = std::filesystem;
+						fs::path p(iniPath);
+						std::string filename = p.filename().string();
+						std::string parentDir = p.parent_path().filename().string();
+
+						if (Utils::IContains(filename, "SSEDisplayTweaks"))
+							continue;
+
+						std::string label = parentDir.empty() ? filename : parentDir + "/" + filename;
+						iniList.push_back(label);
 					}
 				}
 
@@ -309,6 +326,8 @@ void SettingsTool::Draw()
 			}
 
 			FUCK::EndTabItem();
+		} else {
+			s_wasInfoTabOpen = false;
 		}
 
 		FUCK::EndTabBar();
