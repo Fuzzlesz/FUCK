@@ -210,7 +210,6 @@ void SettingsTool::Draw()
 			if (!s_infoCached) {
 				pluginsList.clear();
 				iniList.clear();
-				transList.clear();
 
 				// 1. Gather DLLs via the VTable Poly Pointer Trick
 				std::set<std::string> consumerDLLs;
@@ -256,14 +255,6 @@ void SettingsTool::Draw()
 						iniList.push_back(label);
 					}
 				}
-
-				// 3. Gather Translations Dynamically
-				{
-					std::lock_guard<std::mutex> transLock(Translation::Manager::GetSingleton()->trackingMutex);
-					for (const auto& transName : Translation::Manager::GetSingleton()->trackedTranslations) {
-						transList.push_back(transName);
-					}
-				}
 				s_infoCached = true;
 			}
 
@@ -302,8 +293,8 @@ void SettingsTool::Draw()
 				}
 			};
 
-			// --- 3-COLUMN SIDE-BY-SIDE LAYOUT ---
-			if (FUCK::BeginTable("InfoLayoutTable", 3, FUCK::TableFlags::kNone)) {
+			// --- 2-COLUMN SIDE-BY-SIDE LAYOUT ---
+			if (FUCK::BeginTable("InfoLayoutTable", 2, FUCK::TableFlags::kNone)) {
 				// Column 1: Plugins
 				FUCK::TableNextColumn();
 				FUCK::Header("$FUCK_Info_RegisteredMods"_T);
@@ -315,12 +306,6 @@ void SettingsTool::Draw()
 				FUCK::Header("$FUCK_Info_SettingsFiles"_T);
 				FUCK::Spacing(2);
 				PrintListInPanel(iniList, "InisPanel");
-
-				// Column 3: Translations
-				FUCK::TableNextColumn();
-				FUCK::Header("$FUCK_Info_Translations"_T);
-				FUCK::Spacing(2);
-				PrintListInPanel(transList, "TransPanel");
 
 				FUCK::EndTable();
 			}
