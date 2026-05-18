@@ -88,6 +88,7 @@ namespace FUCK::Host
 		if (y)
 			*y = p.y;
 	}
+	static float GetMouseWheel_Impl() { return ImGui::GetIO().MouseWheel; }
 
 	// ==========================================
 	// Styling
@@ -795,6 +796,7 @@ namespace FUCK::Host
 			.GetDeltaTime = GetDeltaTime_Impl,
 			.GetMouseDelta = GetMouseDelta_Impl,
 			.GetMousePos = GetMousePos_Impl,
+			.GetMouseWheel = GetMouseWheel_Impl,
 			// Styling
 			.PushStyleColor = PushStyleColor_Impl,
 			.PopStyleColor = PopStyleColor_Impl,

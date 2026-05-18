@@ -227,6 +227,7 @@ struct FUCK_Interface
 	float (*GetDeltaTime)();
 	void (*GetMouseDelta)(float*, float*);
 	void (*GetMousePos)(float*, float*);
+	float (*GetMouseWheel)();
 
 	// Styling
 	void (*PushStyleColor)(ImGuiCol, const ImVec4&);
@@ -795,6 +796,7 @@ namespace FUCK
 			i->GetMousePos(&p.x, &p.y);
 		return p;
 	}
+	inline float GetMouseWheel() { return GetInterface() ? GetInterface()->GetMouseWheel() : 0.0f; }
 	inline void SetGameTimeFrozen(bool frozen)
 	{
 		if (auto i = GetInterface())
