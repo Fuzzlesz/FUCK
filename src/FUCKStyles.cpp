@@ -143,6 +143,21 @@ void ThemeEditorWindow::Draw()
 			style->RefreshStyle();
 
 		FUCK::Spacing();
+		FUCK::Header("Widget Alignment");
+
+		static float tempSplit = style->user.widgetSplit;
+		FUCK::DragFloat("Split Ratio", &tempSplit, 0.005f, 0.1f, 0.9f, "%.2f");
+		if (FUCK::IsItemDeactivatedAfterEdit()) {
+			style->user.widgetSplit = tempSplit;
+			style->RefreshStyle();
+		} else if (!FUCK::IsItemActive() && tempSplit != style->user.widgetSplit) {
+			tempSplit = style->user.widgetSplit;
+		}
+
+		if (FUCK::DragFloat2("Label Align (X/Y)", &style->user.labelAlign.x, 0.01f, 0.0f, 1.0f, "%.2f"))
+			style->RefreshStyle();
+
+		FUCK::Spacing();
 		FUCK::Header("$FUCK_Styles_Borders"_T);
 		if (FUCK::SliderFloat("$FUCK_Styles_WindowBorderSize"_T, &style->user.borderSize, 0.0f, 5.0f))
 			style->RefreshStyle();

@@ -362,6 +362,8 @@ namespace ImGui
 		SET_VALUE(gridLines, "Widget", "rGridColor");
 		SET_VALUE(gridThickness, "Widget", "fGridThickness");
 		SET_VALUE(indentSpacing, "Widget", "fIndentSpacing");
+		SET_VALUE(widgetSplit, "Widget", "fWidgetSplit");
+		SET_VALUE(labelAlign, "Widget", "vLabelAlign");
 		SET_VALUE(separator, "Widget", "rSeparatorColor");
 
 		SET_VALUE(tab, "Widget", "rTabColor");
@@ -435,6 +437,8 @@ namespace ImGui
 		GET_VALUE(gridLines, "Widget", "rGridColor");
 		GET_VALUE(gridThickness, "Widget", "fGridThickness");
 		GET_VALUE(indentSpacing, "Widget", "fIndentSpacing");
+		GET_VALUE(widgetSplit, "Widget", "fWidgetSplit");
+		GET_VALUE(labelAlign, "Widget", "vLabelAlign");
 		GET_VALUE(separator, "Widget", "rSeparatorColor");
 
 		GET_VALUE(tab, "Widget", "rTabColor");

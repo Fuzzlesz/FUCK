@@ -94,21 +94,13 @@ namespace ImGui
 
 	void LeftAlignedTextImpl(const char* label, const std::string& newLabel)
 	{
-		ImGui::AlignTextToFramePadding();
-
 		float fullAvailX = ImGui::GetContentRegionAvail().x;
 		float startX = ImGui::GetCursorPosX();
+		float startY = ImGui::GetCursorPosY();
 
 		const bool hovered = IsWidgetFocused(newLabel.empty() ? label : newLabel.c_str());
-
-		// Dim logic: Only dim if using gamepad and not currently focusing the widget
 		const bool dim = MANAGER(Input)->IsInputGamepad() && !hovered;
 
-		if (dim) {
-			PushStyleColor(ImGuiCol_Text, GetColorU32(ImGuiCol_TextDisabled));
-		}
-
-		// Parse display string to hide ID part
 		std::string_view labelView(label);
 		auto hashPos = labelView.find("##");
 		if (hashPos != std::string_view::npos) {
@@ -116,32 +108,34 @@ namespace ImGui
 		}
 
 		bool hasLabel = !labelView.empty();
-
-		// Only draw the label if it actually exists
-		if (hasLabel) {
-			TextUnformatted(labelView.data(), labelView.data() + labelView.size());
-		}
-
-		if (dim) {
-			PopStyleColor();
-		}
-
-		if (hasLabel) {
-			SameLine();
-		}
-
-		// Keep the 50/50 split anchored only if there is a label
 		float rightPaneStart = startX;
-		if (hasLabel) {
-			rightPaneStart = startX + (fullAvailX * 0.5f) + GetStyle().ItemInnerSpacing.x;
-		}
-		SetCursorPosX(rightPaneStart);
+		auto& style = ImGui::Styles::GetSingleton()->user;
 
-		// If the user didn't explicitly request a width via SetNextItemWidth,
-		// force the widget to fill our right pane.
+		if (hasLabel) {
+			rightPaneStart = startX + (fullAvailX * style.widgetSplit) + ImGui::GetStyle().ItemInnerSpacing.x;
+
+			float targetHeight = ImGui::GetFrameHeight();
+			float textH = ImGui::GetTextLineHeight();
+
+			// 0.5f uses ImGui's native FramePadding identically to AlignTextToFramePadding()
+			float offY = style.labelAlign.y == 0.5f ? ImGui::GetStyle().FramePadding.y : (targetHeight - textH) * style.labelAlign.y;
+
+			ImU32 textColor = dim ? ImGui::GetColorU32(ImGuiCol_TextDisabled) : ImGui::GetColorU32(ImGuiCol_Text);
+
+			// Calculate exact screen position
+			ImVec2 screenPos = ImGui::GetCursorScreenPos();
+			screenPos.y += std::max(0.0f, offY);
+
+			// Draw text directly to bypass layout engine interference and protect multi-widgets
+			ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), ImGui::GetFontSize(), screenPos, textColor, labelView.data(), labelView.data() + labelView.size());
+		}
+
+		// Advance cursor to the start of the right pane safely
+		ImGui::SetCursorPos(ImVec2(rightPaneStart, startY));
+
 		if (!(GImGui->NextItemData.HasFlags & ImGuiNextItemDataFlags_HasWidth)) {
 			float rightPaneAvail = (startX + fullAvailX) - rightPaneStart;
-			SetNextItemWidth(std::max(1.0f, rightPaneAvail));
+			ImGui::SetNextItemWidth(std::max(1.0f, rightPaneAvail));
 		}
 	}
 

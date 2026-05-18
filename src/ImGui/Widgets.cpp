@@ -130,8 +130,9 @@ namespace
 		float startY = ImGui::GetCursorPosY();
 
 		float fullAvailX = ImGui::GetContentRegionAvail().x;
+		auto& style = ImGui::Styles::GetSingleton()->user;
 
-		float rightPaneStart = startX + (fullAvailX * 0.5f) + g.Style.ItemInnerSpacing.x;
+		float rightPaneStart = startX + (fullAvailX * style.widgetSplit) + g.Style.ItemInnerSpacing.x;
 		float rightPaneEnd = startX + fullAvailX;
 
 		// If you used SetNextItemWidth(-x), shrink the right pane bounds
@@ -144,9 +145,6 @@ namespace
 			g.NextItemData.HasFlags &= ~ImGuiNextItemDataFlags_HasWidth;
 		}
 
-		float rightPaneCenter = rightPaneStart + (rightPaneEnd - rightPaneStart) * 0.5f;
-		float splitPoint = rightPaneCenter - (contentWidth * 0.5f);
-
 		std::string_view labelView(label);
 		auto doubleHash = labelView.find("##");
 		if (doubleHash != std::string_view::npos)
@@ -155,15 +153,14 @@ namespace
 		float labelWidth = ImGui::CalcTextSize(labelView.data(), labelView.data() + labelView.size()).x;
 
 		auto DrawLabel = [&]() {
-			if (targetHeight > 0.0f) {
-				// If a custom height was provided (like Checkboxes), center it mathematically
-				float textH = ImGui::GetTextLineHeight();
-				float offY = (targetHeight - textH) * 0.5f;
-				ImGui::SetCursorPosY(startY + std::max(0.0f, offY));
-			} else {
-				// For native-height widgets (like ToggleButton), let ImGui handle the baseline
+			if (targetHeight <= 0.0f && style.labelAlign.y == 0.5f) {
 				ImGui::SetCursorPosY(startY);
 				ImGui::AlignTextToFramePadding();
+			} else {
+				float actualTargetH = targetHeight > 0.0f ? targetHeight : ImGui::GetFrameHeight();
+				float textH = ImGui::GetTextLineHeight();
+				float offY = (actualTargetH - textH) * style.labelAlign.y;
+				ImGui::SetCursorPosY(startY + std::max(0.0f, offY));
 			}
 			ImGui::TextUnformatted(labelView.data(), labelView.data() + labelView.size());
 		};
@@ -177,6 +174,9 @@ namespace
 		float nearSpacing = std::max(1.0f, std::floor(g.Style.ItemInnerSpacing.x * 0.25f));
 
 		if (alignFar) {
+			float rightPaneCenter = rightPaneStart + (rightPaneEnd - rightPaneStart) * 0.5f;
+			float splitPoint = rightPaneCenter - (contentWidth * 0.5f);
+
 			if (labelLeft) {
 				ImGui::SetCursorPosX(startX);
 				DrawLabel();
@@ -194,15 +194,27 @@ namespace
 				DrawLabel();
 			}
 		} else {
+			// Near (Tightly Coupled) - Uses LabelAlign.X as a rigid spacer pushing the label away
+			float scale = FUCKMan::GetSingleton()->GetActiveScale() * ImGui::Renderer::GetResolutionScale();
+			float labelSpacer = style.labelAlign.x * 50.0f * scale;  // Adds 0 to 50px of adjustable spacing
+
 			if (labelLeft) {
-				ImGui::SetCursorPosX(startX);
+				float labelX = startX;
+				float widgetX = labelX + labelWidth + nearSpacing + labelSpacer;
+
+				ImGui::SetCursorPosX(labelX);
 				DrawLabel();
-				ImGui::SameLine(0, nearSpacing);
+				ImGui::SameLine(0, 0);
+				ImGui::SetCursorPosX(widgetX);
 				DrawWidget();
 			} else {
-				ImGui::SetCursorPosX(startX);
+				float widgetX = startX;
+				float labelX = widgetX + contentWidth + nearSpacing + labelSpacer;
+
+				ImGui::SetCursorPosX(widgetX);
 				DrawWidget();
-				ImGui::SameLine(0, nearSpacing);
+				ImGui::SameLine(0, 0);
+				ImGui::SetCursorPosX(labelX);
 				DrawLabel();
 			}
 		}
@@ -403,7 +415,7 @@ namespace ImGui
 			}
 		};
 
-		AlignedWidgetLayout(label, alignFar, labelLeft, width, DrawContent);
+		AlignedWidgetLayout(label, alignFar, labelLeft, width, DrawContent, frameH);
 		if (pressed)
 			RE::PlaySound("UIMenuFocus");
 		return pressed;
@@ -831,7 +843,10 @@ namespace ImGui
 		const auto* m1Icon = (m1 != -1) ? iconFont->GetIcon(static_cast<uint32_t>(m1)) : nullptr;
 		const auto* m2Icon = (m2 != -1) ? iconFont->GetIcon(static_cast<uint32_t>(m2)) : nullptr;
 
-		// Internal struct to unify the rendering loop for both text and icons
+		float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
+		float resScale = ImGui::Renderer::GetResolutionScale();
+		const float baseFrameH = 30.0f * activeScale * resScale;
+
 		struct RenderItem
 		{
 			enum Type
@@ -852,7 +867,7 @@ namespace ImGui
 		auto AddIcon = [&](const IconFont::IconTexture* icon, const char* suffix) {
 			if (icon) {
 				float userIconScale = FUCKMan::GetSingleton()->IsIgnoringUserScale() ? 1.0f : ImGui::Styles::GetSingleton()->user.iconScale;
-				float iconTargetH = std::round(frameH * userIconScale);
+				float iconTargetH = std::round(baseFrameH * userIconScale);
 
 				float targetH = std::round(iconTargetH * iconScale);
 				float targetW = std::round(targetH * (icon->imageSize.y > 0.0f ? (icon->imageSize.x / icon->imageSize.y) : 1.0f));
@@ -928,11 +943,8 @@ namespace ImGui
 					currentX -= (item.size.x + spacing);
 				}
 
-				// Vertically center the item within the frame
-				float offY = (actualFrameH - item.size.y) * 0.5f;
-
-				// Nudge text down slightly (1-2px) to visually align the baseline with physical button icons
-				float visualNudgeY = (item.type == RenderItem::kText) ? std::floor(1.5f * ImGui::Renderer::GetResolutionScale()) : 0.0f;
+				float offY = (actualFrameH - item.size.y) * ImGui::Styles::GetSingleton()->user.labelAlign.y;
+				float visualNudgeY = (item.type == RenderItem::kText) ? std::floor(1.5f * resScale) : 0.0f;
 
 				ImGui::SetCursorPosX(currentX);
 				ImGui::SetCursorPosY(lineTop + offY + visualNudgeY);
