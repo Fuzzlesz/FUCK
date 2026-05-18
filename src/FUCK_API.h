@@ -1384,6 +1384,49 @@ namespace FUCK
 		const char* _pluginName;
 	};
 
+	/// @brief Helper functions for delta saving/loading INI values with automatic default value handling.
+	namespace INI
+	{
+		inline void SaveBool(CSimpleIniA& ini, const char* sec, const char* key, bool val, bool defVal)
+		{
+			if (val == defVal)
+				ini.Delete(sec, key, true);
+			else
+				ini.SetBoolValue(sec, key, val);
+		}
+
+		/// Automatically handles mixed ints
+		template <typename T, typename U>
+		inline void SaveInt(CSimpleIniA& ini, const char* sec, const char* key, T val, U defVal)
+		{
+			static_assert(std::is_integral_v<T> && std::is_integral_v<U>, "FUCK::INI::SaveInt requires integral types.");
+			if (val == static_cast<T>(defVal)) {
+				ini.Delete(sec, key, true);
+			} else {
+				ini.SetLongValue(sec, key, static_cast<long>(val));
+			}
+		}
+
+		inline void SaveDouble(CSimpleIniA& ini, const char* sec, const char* key, double val, double defVal, const char* fmt = "%.2f")
+		{
+			if (std::abs(val - defVal) < 0.00001) {
+				ini.Delete(sec, key, true);
+			} else {
+				char buf[64];
+				snprintf(buf, sizeof(buf), fmt, val);
+				ini.SetValue(sec, key, buf);
+			}
+		}
+
+		inline void SaveString(CSimpleIniA& ini, const char* sec, const char* key, const char* val, const char* defVal)
+		{
+			if (strcmp(val, defVal) == 0)
+				ini.Delete(sec, key, true);
+			else
+				ini.SetValue(sec, key, val);
+		}
+	}
+
 	/// @brief RAII Wrapper for listening to Skyrim UI Menu events.
 	class MenuEventListener
 	{
