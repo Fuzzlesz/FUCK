@@ -206,12 +206,11 @@ namespace ImGui
 	void Styles::LoadStyles()
 	{
 		std::string lastPreset = "";
-		Settings::Core.Load([&](auto& ini) {
+		Settings::GetSingleton()->Load(FileType::kStyle, [&](auto& ini) {
 			lastPreset = ini.GetValue("Style", "sLastPreset", "");
 		});
 
 		ResetToDefaults(false);
-
 		GetPresets();
 
 		if (!lastPreset.empty()) {
@@ -236,7 +235,7 @@ namespace ImGui
 
 		if (ini.SaveFile(p.string().c_str()) >= 0) {
 			currentPresetName = filename;
-			Settings::Core.Save([this](auto& sIni) {
+			Settings::GetSingleton()->Save(FileType::kStyle, [this](auto& sIni) {
 				sIni.SetValue("Style", "sLastPreset", currentPresetName.c_str());
 			});
 			cachedPresets.clear();
@@ -260,7 +259,7 @@ namespace ImGui
 		if (currentPresetName != a_name) {
 			currentPresetName = a_name;
 			if (a_saveToIni) {
-				Settings::Core.Save([this](auto& sIni) {
+				Settings::GetSingleton()->Save(FileType::kStyle, [this](auto& sIni) {
 					sIni.SetValue("Style", "sLastPreset", currentPresetName.c_str());
 				});
 			}
