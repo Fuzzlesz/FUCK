@@ -2,6 +2,25 @@
 #include "FUCKMan.h"
 #include "ImGui/Styles.h"
 
+void ThemeEditorWindow::SetOpen(bool a_open)
+{
+	if (_isOpen == a_open)
+		return;
+
+	_isOpen = a_open;
+
+	// Revert to saved style on close if we didn't save
+	if (!_isOpen) {
+		auto style = ImGui::Styles::GetSingleton();
+		if (!style->GetCurrentPresetName().empty()) {
+			// Passing false prevents it from re-saving the "Last Preset" string to the main config
+			style->LoadPreset(style->GetCurrentPresetName(), false);
+		} else {
+			style->ResetToDefaults(false);
+		}
+	}
+}
+
 void ThemeEditorWindow::Draw()
 {
 	auto style = ImGui::Styles::GetSingleton();

@@ -6,7 +6,7 @@ public:
 	const char* Title() const override { return "$FUCK_ThemeEditor_Title"_T; }
 	void Draw() override;
 	bool IsOpen() const override { return _isOpen; }
-	void SetOpen(bool a_open) override { _isOpen = a_open; }
+	void SetOpen(bool a_open) override;
 
 	FUCK::WindowFlags GetFlags() const override { return FUCK::WindowFlags::kExtendBorder | FUCK::WindowFlags::kCloseOnEsc; }
 
