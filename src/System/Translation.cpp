@@ -1,5 +1,3 @@
-#include "Translation.h"
-
 namespace Translation
 {
 	std::string Manager::GetGameLanguage()

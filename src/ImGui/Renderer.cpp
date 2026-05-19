@@ -2,7 +2,7 @@
 #include "IconsFonts.h"
 #include "Renderer.h"
 #include "Styles.h"
-#include "..\System\Input.h"
+#include "System\Input.h"
 
 namespace ImGui::Renderer
 {
