@@ -31,10 +31,19 @@ void Settings::LoadINI(const char* a_path, const INIFunc a_func, bool a_generate
 		a_func(ini);
 
 		if (a_generate) {
-			(void)ini.SaveFile(pathStr.c_str());
+			if (ini.IsEmpty()) {
+				if (std::filesystem::exists(p)) {
+					std::filesystem::remove(p);
+				}
+				std::lock_guard<std::mutex> lock(GetSingleton()->trackingMutex);
+				GetSingleton()->trackedINIs.erase(pathStr);
+			} else {
+				(void)ini.SaveFile(pathStr.c_str());
+			}
 		}
 	}
 }
+
 
 void Settings::LoadINI(const char* a_defaultPath, const char* a_userPath, INIFunc a_func)
 {
