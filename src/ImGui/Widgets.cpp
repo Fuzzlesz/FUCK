@@ -145,6 +145,7 @@ namespace
 			g.NextItemData.HasFlags &= ~ImGuiNextItemDataFlags_HasWidth;
 		}
 
+		// Strip hidden ## IDs from the label before measuring text
 		std::string_view labelView(label);
 		auto doubleHash = labelView.find("##");
 		if (doubleHash != std::string_view::npos)
@@ -152,72 +153,68 @@ namespace
 
 		float labelWidth = ImGui::CalcTextSize(labelView.data(), labelView.data() + labelView.size()).x;
 
-		auto DrawLabel = [&]() {
-			if (targetHeight <= 0.0f && style.labelAlign.y == 0.5f) {
-				ImGui::SetCursorPosY(startY);
-				ImGui::AlignTextToFramePadding();
-			} else {
-				float actualTargetH = targetHeight > 0.0f ? targetHeight : ImGui::GetFrameHeight();
-				float textH = ImGui::GetTextLineHeight();
-				float offY = (actualTargetH - textH) * style.labelAlign.y;
-				ImGui::SetCursorPosY(startY + std::max(0.0f, offY));
-			}
-			ImGui::TextUnformatted(labelView.data(), labelView.data() + labelView.size());
-		};
+		// Calculate true dynamic centering, supporting widgets (like Icons) that are taller than a standard frame
+		float actualTargetH = targetHeight > 0.0f ? targetHeight : ImGui::GetFrameHeight();
+		float textH = ImGui::GetTextLineHeight();
+		float offY = std::floor((actualTargetH - textH) * style.labelAlign.y);
 
-		auto DrawWidget = [&]() {
-			ImGui::SetCursorPosY(startY);
-			drawContent();
+		bool isFocused = ImGui::IsWidgetFocused(ImGui::GetID(label));
+		bool dim = MANAGER(Input)->IsInputGamepad() && !isFocused;
+		ImU32 textColor = dim ? ImGui::GetColorU32(ImGuiCol_TextDisabled) : ImGui::GetColorU32(ImGuiCol_Text);
+
+		// Natively draw the label to the screen without disrupting ImGui's internal cursor bounds.
+		// This prevents SameLine() and ItemSize() desyncs.
+		auto DrawLabel = [&](float xPos) {
+			ImVec2 screenPos = ImGui::GetCursorScreenPos();
+			screenPos.x = std::floor(screenPos.x + (xPos - startX));
+			screenPos.y = std::floor(screenPos.y + std::max(0.0f, offY));
+			ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), ImGui::GetFontSize(), screenPos, textColor, labelView.data(), labelView.data() + labelView.size());
 		};
 
 		// Tighter gap globally for near-aligned widgets to closely mimic vanilla grouping
 		float nearSpacing = std::max(1.0f, std::floor(g.Style.ItemInnerSpacing.x * 0.25f));
+		// Near (Tightly Coupled) - Uses LabelAlign.X as a rigid spacer pushing the label away (Adds 0 to 50px of adjustable spacing)
+		float labelSpacer = style.labelAlign.x * 50.0f * FUCKMan::GetSingleton()->GetActiveScale() * ImGui::Renderer::GetResolutionScale();
+
+		float widgetX = startX;
+		float maxX = startX;
 
 		if (alignFar) {
+			// Center the widget inside the right-hand pane
 			float rightPaneCenter = rightPaneStart + (rightPaneEnd - rightPaneStart) * 0.5f;
 			float splitPoint = rightPaneCenter - (contentWidth * 0.5f);
 
 			if (labelLeft) {
-				ImGui::SetCursorPosX(startX);
-				DrawLabel();
-				ImGui::SameLine();
-				ImGui::SetCursorPosX(splitPoint);
-				DrawWidget();
+				DrawLabel(startX);
+				widgetX = splitPoint;
 			} else {
-				ImGui::SetCursorPosX(startX);
-				DrawWidget();
-
-				ImGui::SameLine();
-
-				float rightAnchorX = (splitPoint + contentWidth) - labelWidth;
-				ImGui::SetCursorPosX(rightAnchorX);
-				DrawLabel();
+				widgetX = startX;
+				DrawLabel((splitPoint + contentWidth) - labelWidth);
 			}
+			maxX = rightPaneEnd;
 		} else {
-			// Near (Tightly Coupled) - Uses LabelAlign.X as a rigid spacer pushing the label away
-			float scale = FUCKMan::GetSingleton()->GetActiveScale() * ImGui::Renderer::GetResolutionScale();
-			float labelSpacer = style.labelAlign.x * 50.0f * scale;  // Adds 0 to 50px of adjustable spacing
-
+			// Pack the widget tightly against the label
 			if (labelLeft) {
-				float labelX = startX;
-				float widgetX = labelX + labelWidth + nearSpacing + labelSpacer;
-
-				ImGui::SetCursorPosX(labelX);
-				DrawLabel();
-				ImGui::SameLine(0, 0);
-				ImGui::SetCursorPosX(widgetX);
-				DrawWidget();
+				DrawLabel(startX);
+				widgetX = startX + labelWidth + nearSpacing + labelSpacer;
+				maxX = widgetX + contentWidth;
 			} else {
-				float widgetX = startX;
-				float labelX = widgetX + contentWidth + nearSpacing + labelSpacer;
-
-				ImGui::SetCursorPosX(widgetX);
-				DrawWidget();
-				ImGui::SameLine(0, 0);
-				ImGui::SetCursorPosX(labelX);
-				DrawLabel();
+				widgetX = startX;
+				float labelX = startX + contentWidth + nearSpacing + labelSpacer;
+				DrawLabel(labelX);
+				maxX = labelX + labelWidth;
 			}
 		}
+
+		ImGui::SetCursorPosX(widgetX);
+		ImGui::SetCursorPosY(startY);
+
+		drawContent();
+
+		// Explicitly register the furthest X bound so AutoResize windows don't clip
+		ImGui::SetCursorPosX(maxX);
+		ImGui::SetCursorPosY(startY);
+		ImGui::ItemSize(ImVec2(0.0f, actualTargetH));
 
 		ImGui::PopID();
 		ImGui::EndGroup();
@@ -305,20 +302,47 @@ namespace ImGui
 		auto iconFilled = MANAGER(IconFont)->GetCheckboxFilled();
 		std::string idStr = std::format("##{}", label);
 
-		float targetH = ImGui::GetFrameHeight() * 1.15f;
-		float targetW = targetH * (icon->imageSize.y > 0.0f ? (icon->imageSize.x / icon->imageSize.y) : 1.0f);
-		ImVec2 scaledSize(targetW, targetH);
+		float scale = ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
+		float userIconScale = FUCKMan::GetSingleton()->IsIgnoringUserScale() ? 1.0f : ImGui::Styles::GetSingleton()->user.iconScale;
+
+		// Apply the iconScale setting to match Hotkey sizing
+		float visualH = std::round(36.0f * scale * userIconScale);
+		float iconH = visualH;
+		float iconW = iconH * (icon->imageSize.y > 0.0f ? (icon->imageSize.x / icon->imageSize.y) : 1.0f);
+
+		float layoutH = ImGui::GetFrameHeight();
+		float actualLayoutH = std::max(layoutH, iconH);
+		float offY = std::floor((actualLayoutH - iconH) * 0.5f);
 
 		auto DrawContent = [&]() {
-			ImVec2 p = ImGui::GetCursorScreenPos();
-			bool h = ImGui::IsMouseHoveringRect(p, p + scaledSize) || IsWidgetFocused(ImGui::GetID(idStr.c_str()));
-			void* tex = *a_toggle ? iconFilled->srView.Get() : icon->srView.Get();
-			if (DrawTransparentButton(idStr.c_str(), tex, scaledSize, GetHighlightTint(*a_toggle, h, false))) {
+			ImGuiWindow* window = GetCurrentWindow();
+			if (window->SkipItems)
+				return;
+			ImGuiID id = window->GetID(idStr.c_str());
+			ImVec2 p = window->DC.CursorPos;
+
+			// Register the full layout height as the hitbox
+			ImRect bb(p, p + ImVec2(iconW, actualLayoutH));
+			ItemSize(bb);
+			if (!ItemAdd(bb, id))
+				return;
+
+			bool hovered, held;
+			bool pressed = ButtonBehavior(bb, id, &hovered, &held);
+			if (pressed) {
 				*a_toggle = !*a_toggle;
 				selected = true;
 			}
+
+			ImVec4 tint = GetHighlightTint(*a_toggle, hovered || IsWidgetFocused(id), false);
+			void* tex = *a_toggle ? iconFilled->srView.Get() : icon->srView.Get();
+
+			ImVec2 drawPos(std::floor(p.x), std::floor(p.y + offY));
+			window->DrawList->AddImage((ImTextureID)tex, drawPos, drawPos + ImVec2(iconW, iconH), ImVec2(0, 0), ImVec2(1, 1), ImGui::ColorConvertFloat4ToU32(tint));
 		};
-		AlignedWidgetLayout(label, alignFar, labelLeft, scaledSize.x, DrawContent, scaledSize.y);
+
+		AlignedWidgetLayout(label, alignFar, labelLeft, iconW, DrawContent, actualLayoutH);
+
 		if (selected)
 			RE::PlaySound("UIMenuFocus");
 		return selected;
@@ -329,21 +353,27 @@ namespace ImGui
 		bool pressed = false;
 		std::string idStr = std::format("##{}", label);
 
-		float frameH = ImGui::GetFrameHeight();
-		float width = frameH * 1.35f;
+		float scale = ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
+		float userIconScale = FUCKMan::GetSingleton()->IsIgnoringUserScale() ? 1.0f : ImGui::Styles::GetSingleton()->user.iconScale;
+
+		// Apply the iconScale setting to match Hotkey sizing
+		float visualH = std::round(36.0f * scale * userIconScale);
+		float visualW = visualH * 1.35f;
+
+		float layoutH = ImGui::GetFrameHeight();
+		float actualLayoutH = std::max(layoutH, visualH);
+		float offY = std::floor((actualLayoutH - visualH) * 0.5f);
 
 		auto DrawContent = [&]() {
 			ImGuiWindow* window = GetCurrentWindow();
 			if (window->SkipItems)
 				return;
-
 			ImGuiContext& g = *GImGui;
 			const ImGuiID id = window->GetID(idStr.c_str());
-			float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
+			ImVec2 p = window->DC.CursorPos;
 
-			ImVec2 p = ImGui::GetCursorScreenPos();
-			ImRect bb(p, p + ImVec2(width, frameH));
-
+			// Hitbox matches actualLayoutH to play nice with other widgets
+			ImRect bb(p, p + ImVec2(visualW, actualLayoutH));
 			ItemSize(bb);
 			if (!ItemAdd(bb, id))
 				return;
@@ -355,6 +385,7 @@ namespace ImGui
 				MarkItemEdited(id);
 			}
 
+			// Handle smooth animation state
 			float* t_anim = window->DC.StateStorage->GetFloatRef(id, *v ? 1.0f : 0.0f);
 			float target = *v ? 1.0f : 0.0f;
 			float anim_speed = 12.0f;
@@ -371,34 +402,29 @@ namespace ImGui
 			float t = *t_anim;
 
 			ImDrawList* draw_list = window->DrawList;
-			bool isInputGamepad = MANAGER(Input)->IsInputGamepad();
 			bool isFocused = IsWidgetFocused(id);
-			bool showFrame = isFocused && isInputGamepad;
+			bool showFrame = isFocused && MANAGER(Input)->IsInputGamepad();
 
 			ImU32 col_rail_fill = GetUserStyleColorU32(USER_STYLE::kToggleRailFilled);
 			ImU32 col_knob_fill = GetUserStyleColorU32(USER_STYLE::kToggleKnob);
+			ImU32 col_knob_ring = *v ? GetColorU32(ImGuiCol_Text) : (showFrame ? GetUserStyleColorU32(USER_STYLE::kWidgetToggleActive) : GetUserStyleColorU32(USER_STYLE::kSliderBorder));
 
-			ImU32 col_knob_ring;
-			if (*v) {
-				col_knob_ring = GetColorU32(ImGuiCol_Text);
-			} else {
-				col_knob_ring = showFrame ? GetUserStyleColorU32(USER_STYLE::kWidgetToggleActive) : GetUserStyleColorU32(USER_STYLE::kSliderBorder);
-			}
+			// Visual bounds for the toggle graphic, pushed down by offY
+			ImRect visBB(p.x, p.y + offY, p.x + visualW, p.y + offY + visualH);
 
 			if (showFrame) {
-				ImU32 col_frame = GetColorU32(ImGuiCol_NavHighlight);
-				draw_list->AddRect(bb.Min, bb.Max, col_frame, ImGui::GetStyle().FrameRounding, 0, 2.0f * scale);
+				draw_list->AddRect(visBB.Min, visBB.Max, GetColorU32(ImGuiCol_NavHighlight), ImGui::GetStyle().FrameRounding, 0, 2.0f * scale);
 			}
 
-			float knobRadius = frameH * 0.28f;
-			float knobMinX = p.x + knobRadius + (2.0f * scale);
-			float knobMaxX = p.x + width - knobRadius - (2.0f * scale);
+			float knobRadius = visualH * 0.28f;
+			float knobMinX = visBB.Min.x + knobRadius + (2.0f * scale);
+			float knobMaxX = visBB.Max.x - knobRadius - (2.0f * scale);
 			float knobX = knobMinX + (t * (knobMaxX - knobMinX));
-			ImVec2 knobCenter = { knobX, p.y + (frameH * 0.5f) };
+			ImVec2 knobCenter = { knobX, visBB.Min.y + (visualH * 0.5f) };
 
-			float railH = frameH * 0.35f;
-			ImVec2 railMin = { knobMinX, p.y + (frameH - railH) * 0.5f };
-			ImVec2 railMax = { knobMaxX, p.y + (frameH + railH) * 0.5f };
+			float railH = visualH * 0.35f;
+			ImVec2 railMin = { knobMinX, visBB.Min.y + (visualH - railH) * 0.5f };
+			ImVec2 railMax = { knobMaxX, visBB.Min.y + (visualH + railH) * 0.5f };
 			ImRect railBB(railMin, railMax);
 
 			draw_list->AddRectFilled(railMin, railMax, col_rail_fill, ImGui::GetStyle().FrameRounding);
@@ -407,15 +433,14 @@ namespace ImGui
 			draw_list->AddCircleFilled(knobCenter, knobRadius, col_knob_fill);
 
 			float ringThick = 3.0f * scale;
-			float ringPadding = 4.0f * scale;
-			float ringRadius = knobRadius - ringPadding;
-
+			float ringRadius = knobRadius - (4.0f * scale);
 			if (ringRadius > 0.5f) {
 				draw_list->AddCircle(knobCenter, ringRadius, col_knob_ring, 0, ringThick);
 			}
 		};
 
-		AlignedWidgetLayout(label, alignFar, labelLeft, width, DrawContent, frameH);
+		AlignedWidgetLayout(label, alignFar, labelLeft, visualW, DrawContent, actualLayoutH);
+
 		if (pressed)
 			RE::PlaySound("UIMenuFocus");
 		return pressed;
@@ -814,16 +839,37 @@ namespace ImGui
 	{
 		bool clicked = false;
 		std::string idStr = std::format("##BTN_{}", label);
+
+		// Calculate actual layout height, supporting oversized icons
+		float layoutH = ImGui::GetFrameHeight();
+		float actualLayoutH = std::max(layoutH, size.y);
+		float offY = std::floor((actualLayoutH - size.y) * 0.5f);
+
 		auto DrawContent = [&]() {
-			ImVec2 p = ImGui::GetCursorScreenPos();
-			bool h = ImGui::IsMouseHoveringRect(p, p + size) || IsWidgetFocused(GetID(idStr.c_str()));
+			ImGuiWindow* window = GetCurrentWindow();
+			if (window->SkipItems)
+				return;
+			ImGuiID id = window->GetID(idStr.c_str());
+			ImVec2 p = window->DC.CursorPos;
 
-			ImVec4 tint = GetHighlightTint(true, h, false);
+			ImRect bb(p, p + ImVec2(size.x, actualLayoutH));
+			ItemSize(bb);
+			if (!ItemAdd(bb, id))
+				return;
 
-			if (DrawTransparentButton(idStr.c_str(), tex, size, tint))
+			bool hovered, held;
+			bool pressed = ButtonBehavior(bb, id, &hovered, &held);
+			if (pressed)
 				clicked = true;
+
+			ImVec4 tint = GetHighlightTint(true, hovered || IsWidgetFocused(id), false);
+
+			ImVec2 drawPos(std::floor(p.x), std::floor(p.y + offY));
+			window->DrawList->AddImage((ImTextureID)tex, drawPos, drawPos + size, ImVec2(0, 0), ImVec2(1, 1), ImGui::ColorConvertFloat4ToU32(tint));
 		};
-		AlignedWidgetLayout(label, alignFar, labelLeft, size.x, DrawContent, size.y);
+
+		AlignedWidgetLayout(label, alignFar, labelLeft, size.x, DrawContent, actualLayoutH);
+
 		if (clicked)
 			RE::PlaySound("UIMenuOK");
 		return clicked;
@@ -835,17 +881,18 @@ namespace ImGui
 		std::string baseId = std::format("##HOTKEY_{}", label);
 		auto* iconFont = MANAGER(IconFont);
 
+		float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
+		float resScale = ImGui::Renderer::GetResolutionScale();
+
 		ImGuiContext& g = *GImGui;
-		const float frameH = ImGui::GetFrameHeight();
+		const float layoutH = ImGui::GetFrameHeight();
 		const float spacing = std::max(1.0f, std::floor(g.Style.ItemInnerSpacing.x * 0.5f));
+
+		const float baseFrameH = 38.0f * resScale * activeScale;
 
 		const auto* kIcon = iconFont->GetIcon(key);
 		const auto* m1Icon = (m1 != -1) ? iconFont->GetIcon(static_cast<uint32_t>(m1)) : nullptr;
 		const auto* m2Icon = (m2 != -1) ? iconFont->GetIcon(static_cast<uint32_t>(m2)) : nullptr;
-
-		float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
-		float resScale = ImGui::Renderer::GetResolutionScale();
-		const float baseFrameH = 38.0f * activeScale * resScale;
 
 		struct RenderItem
 		{
@@ -856,7 +903,6 @@ namespace ImGui
 			} type;
 			const IconFont::IconTexture* icon = nullptr;
 			const char* text = nullptr;
-			const char* idSuffix = nullptr;
 			ImVec2 size;
 		};
 
@@ -864,26 +910,23 @@ namespace ImGui
 		std::vector<RenderItem> items;
 		items.reserve(5);
 
-		auto AddIcon = [&](const IconFont::IconTexture* icon, const char* suffix) {
+		auto AddIcon = [&](const IconFont::IconTexture* icon) {
 			if (icon) {
 				float userIconScale = FUCKMan::GetSingleton()->IsIgnoringUserScale() ? 1.0f : ImGui::Styles::GetSingleton()->user.iconScale;
 				float iconTargetH = std::round(baseFrameH * userIconScale);
-
 				float targetH = std::round(iconTargetH * iconScale);
 				float targetW = std::round(targetH * (icon->imageSize.y > 0.0f ? (icon->imageSize.x / icon->imageSize.y) : 1.0f));
-				ImVec2 scaledSize(targetW, targetH);
-
-				items.push_back({ RenderItem::kIcon, icon, nullptr, suffix, scaledSize });
+				items.push_back({ RenderItem::kIcon, icon, nullptr, ImVec2(targetW, targetH) });
 			}
 		};
 
 		auto AddText = [&](const char* text) {
-			items.push_back({ RenderItem::kText, nullptr, text, nullptr, ImGui::CalcTextSize(text) });
+			items.push_back({ RenderItem::kText, nullptr, text, ImGui::CalcTextSize(text) });
 		};
 
 		// 1. Primary Key ( The Anchor )
 		if (kIcon) {
-			AddIcon(kIcon, "key");
+			AddIcon(kIcon);
 		} else {
 			AddText("None");
 		}
@@ -891,13 +934,13 @@ namespace ImGui
 		// 2. Mod 2 ( Grows Left )
 		if (m2Icon) {
 			AddText("+");
-			AddIcon(m2Icon, "m2");
+			AddIcon(m2Icon);
 		}
 
 		// 3. Mod 1 ( Grows Left )
 		if (m1Icon) {
 			AddText("+");
-			AddIcon(m1Icon, "m1");
+			AddIcon(m1Icon);
 		}
 
 		// Compute total dimensions
@@ -907,13 +950,11 @@ namespace ImGui
 
 		for (const auto& item : items) {
 			totalWidth += item.size.x + spacing;
-			if (item.size.y > maxItemH) {
+			if (item.size.y > maxItemH)
 				maxItemH = item.size.y;
-			}
 		}
-		if (!items.empty()) {
+		if (!items.empty())
 			totalWidth -= spacing;
-		}
 
 		// Determine the reported width for the layout engine:
 		// - Right-aligned: Report only the anchor width (modifiers spill to the left).
@@ -921,19 +962,34 @@ namespace ImGui
 		float contentWidth = alignFar ? anchorWidth : totalWidth;
 
 		// Scale frame height to accommodate the largest rendered item
-		float actualFrameH = ImMax(frameH, maxItemH);
+		float actualLayoutH = std::max(layoutH, maxItemH);
 
 		auto DrawContent = [&]() {
-			ImGuiID id = ImGui::GetID(baseId.c_str());
-			const float lineTop = ImGui::GetCursorPosY();
-			const float startX = ImGui::GetCursorPosX();
+			ImGuiWindow* window = GetCurrentWindow();
+			if (window->SkipItems)
+				return;
+			ImGuiID id = window->GetID(baseId.c_str());
+			ImVec2 p = window->DC.CursorPos;
+
+			// If alignFar is true, the hitbox stretches backwards to encompass the modifiers properly
+			float leftEdge = alignFar ? p.x - (totalWidth - anchorWidth) : p.x;
+			ImRect bb(ImVec2(leftEdge, p.y), ImVec2(leftEdge + totalWidth, p.y + actualLayoutH));
+
+			ItemSize(bb);
+			if (!ItemAdd(bb, id))
+				return;
+
+			bool hovered, held;
+			bool pressed = ButtonBehavior(bb, id, &hovered, &held);
+			if (pressed)
+				clicked = true;
+
+			bool isFocused = IsWidgetFocused(id);
 
 			// Determine the starting X coordinate:
-			// For right-aligned layouts, the anchor key starts at startX.
-			// For left-aligned layouts, the entire block begins at startX.
-			float currentX = alignFar ? startX : startX + (totalWidth - anchorWidth);
-
-			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+			// For right-aligned layouts, the anchor key starts at p.x.
+			// For left-aligned layouts, the entire block begins at p.x.
+			float currentX = alignFar ? p.x : p.x + (totalWidth - anchorWidth);
 
 			for (size_t i = 0; i < items.size(); ++i) {
 				const auto& item = items[i];
@@ -943,42 +999,28 @@ namespace ImGui
 					currentX -= (item.size.x + spacing);
 				}
 
-				float offY = (actualFrameH - item.size.y) * ImGui::Styles::GetSingleton()->user.labelAlign.y;
+				float offY = std::floor((actualLayoutH - item.size.y) * ImGui::Styles::GetSingleton()->user.labelAlign.y);
 				float visualNudgeY = (item.type == RenderItem::kText) ? std::floor(1.5f * resScale) : 0.0f;
 
-				ImGui::SetCursorPosX(currentX);
-				ImGui::SetCursorPosY(lineTop + offY + visualNudgeY);
+				ImVec2 drawPos(std::floor(currentX), std::floor(p.y + offY + visualNudgeY));
 
 				if (item.type == RenderItem::kIcon) {
-					ImVec2 p = ImGui::GetCursorScreenPos();
-					bool isHovered = ImGui::IsMouseHoveringRect(p, { p.x + item.size.x, p.y + item.size.y }) || IsWidgetFocused(id);
+					ImVec4 tint = flashing ? ImVec4(1.0f, 0.8f, 0.2f, 0.4f + (0.6f * (float)fabs(sin(ImGui::GetTime() * 5.0f)))) : GetHighlightTint(true, hovered || isFocused || alwaysHighlight, false);
 
-					ImVec4 tint;
-					if (flashing) {
-						float alpha = 0.4f + (0.6f * (float)fabs(sin(ImGui::GetTime() * 5.0f)));
-						tint = ImVec4(1.0f, 0.8f, 0.2f, alpha);
-					} else {
-						tint = GetHighlightTint(true, isHovered || alwaysHighlight, false);
-					}
-
-					if (DrawTransparentButton(std::format("##{}", item.idSuffix).c_str(), item.icon->srView.Get(), item.size, tint)) {
-						clicked = true;
-					}
+					// Draw graphic natively
+					window->DrawList->AddImage((ImTextureID)item.icon->srView.Get(), drawPos, drawPos + item.size, ImVec2(0, 0), ImVec2(1, 1), ImGui::ColorConvertFloat4ToU32(tint));
 				} else {
 					// Draw text manually to prevent ImGui from advancing the cursor and breaking the inline layout
-					ImVec2 screenPos = ImGui::GetCursorScreenPos();
-					ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), ImGui::GetFontSize(), screenPos, ImGui::GetColorU32(ImGuiCol_TextDisabled), item.text);
+					window->DrawList->AddText(ImGui::GetFont(), ImGui::GetFontSize(), drawPos, ImGui::GetColorU32(ImGuiCol_TextDisabled), item.text);
 				}
 			}
 
-			ImGui::PopStyleVar();
-
-			ImGui::SetCursorPosX(startX);
-			ImGui::SetCursorPosY(lineTop);
-			ImGui::Dummy(ImVec2(contentWidth, actualFrameH));
+			// Restore the cursor position to sit exactly at the edge of the required content width
+			ImGui::SetCursorPosX(p.x + contentWidth);
+			ImGui::SetCursorPosY(p.y);
 		};
 
-		AlignedWidgetLayout(label, alignFar, labelLeft, contentWidth, DrawContent, actualFrameH);
+		AlignedWidgetLayout(label, alignFar, labelLeft, contentWidth, DrawContent, actualLayoutH);
 
 		if (clicked)
 			RE::PlaySound("UIMenuFocus");

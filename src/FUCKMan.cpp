@@ -714,13 +714,15 @@ void FUCKMan::Draw()
 		float targetFontSize = ImGui::GetStyle().FontSizeBase * _activeScale;
 		ImGui::PushFont(nullptr, targetFontSize);
 
-		float borderSize = ImGui::GetStyle().FrameBorderSize;
-		float spaceX = (8.0f * m.uiScale * _activeScale) + borderSize;
-		float spaceY = (4.0f * m.uiScale * _activeScale) + borderSize;
-		float innerSpaceX = (4.0f * m.uiScale * _activeScale) + borderSize;
-		float innerSpaceY = (4.0f * m.uiScale * _activeScale) + borderSize;
+		auto styleUser = ImGui::Styles::GetSingleton()->user;
 
-		float indentSpacing = ImGui::Styles::GetSingleton()->user.indentSpacing;
+		float spaceX = styleUser.itemSpacing.x * m.uiScale * _activeScale;
+		float spaceY = styleUser.itemSpacing.y * m.uiScale * _activeScale;
+
+		float innerSpaceX = 4.0f * m.uiScale * _activeScale;
+		float innerSpaceY = 4.0f * m.uiScale * _activeScale;
+
+		float indentSpacing = styleUser.indentSpacing;
 
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f * m.uiScale * _activeScale, 3.0f * m.uiScale * _activeScale));
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spaceX, spaceY));

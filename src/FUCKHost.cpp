@@ -431,7 +431,13 @@ namespace FUCK::Host
 		auto icon = IconFont::Manager::GetSingleton()->GetIcon(k);
 		if (icon) {
 			float userIconScale = FUCKMan::GetSingleton()->IsIgnoringUserScale() ? 1.0f : ImGui::Styles::GetSingleton()->user.iconScale;
-			float targetH = std::round(ImGui::GetFrameHeight() * userIconScale);
+			float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
+			float resScale = ImGui::Renderer::GetResolutionScale();
+
+			// Lock base size to 38.0f to match the Hotkey widget internal math
+			float baseFrameH = 38.0f * resScale * activeScale;
+			float targetH = std::round(baseFrameH * userIconScale);
+
 			float targetW = std::round(targetH * (icon->imageSize.y > 0.0f ? (icon->imageSize.x / icon->imageSize.y) : 1.0f));
 
 			if (w)
