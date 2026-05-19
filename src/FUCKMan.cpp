@@ -921,7 +921,7 @@ void FUCKMan::Draw()
 
 					// 3. Close Button
 					const float btnSize = m.titleH;
-					const float btnX = winWidth - btnSize - (4.0f * m.uiScale);
+					const float btnX = winWidth - btnSize - headerPadding;
 
 					FUCK::SetCursorPos({ btnX, 0 });
 					if (ImGui::InvisibleButton("##WinClose", ImVec2(btnSize, btnSize))) {
@@ -929,26 +929,24 @@ void FUCKMan::Draw()
 					}
 
 					{
-						bool btnHovered = ImGui::IsItemHovered();
 						const char* xIcon = ICON_FA_XMARK;
+						float uiFontSize = ImGui::GetStyle().FontSizeBase;
 
-						float uiFontSize2 = ImGui::GetStyle().FontSizeBase;
-
-						ImGui::PushFont(nullptr, uiFontSize2);
+						ImGui::PushFont(nullptr, uiFontSize);
 						ImVec2 textSize = ImGui::CalcTextSize(xIcon);
 						ImGui::PopFont();
 
 						ImVec2 btnScreenPos = ImGui::GetItemRectMin();
 						ImVec2 textPos = {
 							btnScreenPos.x + (btnSize - textSize.x) * 0.5f,
-							btnScreenPos.y + (btnSize - textSize.y) * 0.5f
+							btnScreenPos.y + (btnSize - textSize.y) * 0.65f
 						};
 
-						ImU32 xColor = btnHovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
+						ImU32 xColor = ImGui::IsItemHovered() ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
 
 						ImGui::GetWindowDrawList()->AddText(
 							baseFont,
-							uiFontSize2,
+							uiFontSize,
 							textPos,
 							xColor,
 							xIcon);
@@ -1140,7 +1138,7 @@ void FUCKMan::Draw()
 
 				ImVec2 textPos = {
 					btnCursor.x + (btnSize - textSize.x) * 0.5f,
-					btnCursor.y + (btnSize - textSize.y) * 0.5f
+					btnCursor.y + (btnSize - textSize.y) * 0.65f
 				};
 
 				ImU32 xColor = ImGui::IsItemHovered() ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
