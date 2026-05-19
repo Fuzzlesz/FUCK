@@ -233,10 +233,14 @@ namespace ImGui
 		float moveX = 0.0f;
 		float moveY = 0.0f;
 
-		if (ImGui::IsKeyPressed(ImGuiKey_A, true)) moveX -= 1.0f;
-		if (ImGui::IsKeyPressed(ImGuiKey_D, true)) moveX += 1.0f;
-		if (ImGui::IsKeyPressed(ImGuiKey_W, true)) moveY += 1.0f;
-		if (ImGui::IsKeyPressed(ImGuiKey_S, true)) moveY -= 1.0f;
+		if (ImGui::IsKeyPressed(ImGuiKey_A, true))
+			moveX -= 1.0f;
+		if (ImGui::IsKeyPressed(ImGuiKey_D, true))
+			moveX += 1.0f;
+		if (ImGui::IsKeyPressed(ImGuiKey_W, true))
+			moveY += 1.0f;
+		if (ImGui::IsKeyPressed(ImGuiKey_S, true))
+			moveY -= 1.0f;
 
 		if (moveX == 0.0f && moveY == 0.0f)
 			return false;
@@ -1027,7 +1031,7 @@ namespace ImGui
 		return clicked;
 	}
 
-	bool DrawManagedHotkey(const char* label, FUCK::ManagedHotkey& h, int flags, float iconScale, float labelScale)
+	bool DrawManagedHotkey(const char* label, FUCK::ManagedHotkey& h, FUCK::HotkeyFlags flags, float iconScale, float labelScale)
 	{
 		auto* regularFont = IconFont::Manager::GetSingleton()->GetRegularFont();
 		bool popFont = false;
@@ -1039,11 +1043,11 @@ namespace ImGui
 			popFont = true;
 		}
 
-		bool alignFar = (flags & static_cast<int>(FUCK::HotkeyFlags::kAlignNear)) == 0;
-		bool labelLeft = (flags & static_cast<int>(FUCK::HotkeyFlags::kLabelRight)) == 0;
-		bool ctrlToRebind = (flags & static_cast<int>(FUCK::HotkeyFlags::kCtrlToRebind)) != 0;
-		bool alwaysHighlight = (flags & static_cast<int>(FUCK::HotkeyFlags::kAlwaysHighlight)) != 0;
-		bool noModifiers = (flags & static_cast<int>(FUCK::HotkeyFlags::kNoModifiers)) != 0;
+		bool alignFar       = !(flags & FUCK::HotkeyFlags::kAlignNear);
+		bool labelLeft      = !(flags & FUCK::HotkeyFlags::kLabelRight);
+		bool ctrlToRebind    = (flags & FUCK::HotkeyFlags::kCtrlToRebind);
+		bool alwaysHighlight = (flags & FUCK::HotkeyFlags::kAlwaysHighlight);
+		bool noModifiers     = (flags & FUCK::HotkeyFlags::kNoModifiers);
 
 		h.disallowModifiers = noModifiers;
 
@@ -1248,7 +1252,7 @@ namespace ImGui
 		bool active = (g.ActiveId == id);
 
 		ImRect track = bb;
-		// Shrink Y-axis significantly so the track is barrow
+		// Shrink Y-axis significantly so the track is narrow
 		float trackH = std::max(4.0f, 6.0f * ImGui::Renderer::GetResolutionScale());
 		float s = (track.GetHeight() - trackH) * 0.8f;
 		track.Min.y += s;
@@ -1280,6 +1284,7 @@ namespace ImGui
 
 	bool ComboForm(const char* label, RE::FormID* currentFormID, RE::FormType formType)
 	{
+		// Caches forms based on requested type to prevent continuous expensive lookups
 		ImGuiID id = ImGui::GetID(label);
 		ImGuiID cacheKey = ImHashData(&formType, sizeof(formType), id);
 
@@ -1342,7 +1347,7 @@ namespace ImGui
 				bgColor = GetColorU32(ImGuiCol_HeaderHovered);
 			}
 			window->DrawList->AddRectFilled(bb.Min, bb.Max, bgColor, GImGui->Style.FrameRounding);
-			
+
 			if (is_open) {
 				DrawWidgetBorder(window->DrawList, bb, h || IsWidgetFocused(id), GImGui->Style.FrameRounding);
 			}
@@ -1446,6 +1451,7 @@ namespace ImGui
 		bool clickedLeft = false, clickedRight = false;
 
 		// If mouse is actively over the widget, just check the X coordinate to split the hitboxes
+		// This lets a single ImGui item act as a complex 3-part interactable area (Left | Center | Right)
 		if (isHovered && MANAGER(Input)->CanNavigateWithMouse()) {
 			float mouseX = GetIO().MousePos.x;
 
@@ -1502,6 +1508,7 @@ namespace ImGui
 	{
 		std::string id = "##"s + label;
 
+		// Creates a visual "framed" background box to encapsulate an inner widget visually
 		float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
 		float borderSize = ImGui::GetUserStyleVar(USER_STYLE::kButtonBorderSize);
 		float rounding = ImGui::GetStyle().FrameRounding;

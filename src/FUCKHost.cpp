@@ -517,7 +517,7 @@ namespace FUCK::Host
 	static bool DrawManagedHotkey_Impl(const char* label, FUCK::ManagedHotkey* h, int flags, float iconScale, float labelScale)
 	{
 		if (h)
-			return ImGui::DrawManagedHotkey(label, *h, flags, iconScale, labelScale);
+			return ImGui::DrawManagedHotkey(label, *h, static_cast<FUCK::HotkeyFlags>(flags), iconScale, labelScale);
 		return false;
 	}
 	static bool UpdateManagedHotkey_Impl(const void* evt, FUCK::ManagedHotkey* h)
