@@ -894,7 +894,13 @@ void FUCKMan::Draw()
 					float iconW = 0.0f;
 
 					if (iconArrow) {
-						if (ImGui::InvisibleButton("##CollapseToggle", ImVec2(m.titleH + 20.0f, m.titleH))) {
+						// Calculate exact physical dimensions of the arrow first
+						bool pointsDown = !isCollapsed;
+						auto ap = chromeArrow(pointsDown, m.titleH);
+						float btnWidth = (m.titleIconPadX * 2.0f) + ap.drawSize.x;
+
+						// Tightly wrap the invisible button around the graphic
+						if (ImGui::InvisibleButton("##CollapseToggle", ImVec2(btnWidth, m.titleH))) {
 							winState.isCollapsed = !isCollapsed;
 							if (!isCollapsed) {
 								winState.preCollapseSize = FUCK::GetWindowSize();
@@ -903,9 +909,6 @@ void FUCKMan::Draw()
 						bool isHovered = ImGui::IsItemHovered();
 						ImU32 iconColor = isHovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
 
-						bool pointsDown = !isCollapsed;
-						auto ap = chromeArrow(pointsDown, m.titleH);
-
 						ImVec2 drawPos = cursorScreen;
 						drawPos.x += m.titleIconPadX;
 						drawPos.y += ap.offsetY + m.titleIconNudgeY;
@@ -913,7 +916,8 @@ void FUCKMan::Draw()
 						ImGui::DrawArrowIcon(ImGui::GetWindowDrawList(), drawPos, ap.drawSize, iconColor,
 							pointsDown ? ImGui::IconDirection::kDown : ImGui::IconDirection::kRight);
 
-						iconW = m.titleH + 20.0f;
+						// Give the title text slightly more breathing room past the exact button width
+						iconW = btnWidth + m.titleIconPadX;
 					}
 
 					// 2. Title Text
@@ -1102,16 +1106,19 @@ void FUCKMan::Draw()
 
 			// 1. Collapse Icon (Left)
 			if (iconArrow) {
+				// Calculate exact physical dimensions of the arrow first
+				bool pointsDown = !_isCollapsed;
+				auto ap = chromeArrow(pointsDown, m.titleH);
+				float btnWidth = (m.titleIconPadX * 2.0f) + ap.drawSize.x;
+
 				FUCK::SetCursorPos({ 0, 0 });
-				if (ImGui::InvisibleButton("##CollapseToggle", ImVec2(m.titleH + 20.0f, m.titleH))) {
+				// Tightly wrap the invisible button around the graphic
+				if (ImGui::InvisibleButton("##CollapseToggle", ImVec2(btnWidth, m.titleH))) {
 					_isCollapsed = !_isCollapsed;
 				}
 
 				bool isHovered = ImGui::IsItemHovered();
 				ImU32 iconColor = isHovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
-
-				bool pointsDown = !_isCollapsed;
-				auto ap = chromeArrow(pointsDown, m.titleH);
 
 				ImVec2 drawPos = cursorScreen;
 				drawPos.x += m.titleIconPadX;
