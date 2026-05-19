@@ -70,10 +70,10 @@ namespace IconFont
 
 		std::string fontName{ "Jost-Regular.ttf" };
 
-		float baseFontSize{ 24.0f };
-		float baseIconSize{ 20.0f };
-		float baseLargeFontSize{ 26.0f };
-		float baseLargeIconSize{ 24.0f };
+		float baseFontSize{ 30.0f };       // was 24.0f
+		float baseIconSize{ 26.0f };       // was 20.0f
+		float baseLargeFontSize{ 34.0f };  // was 26.0f
+		float baseLargeIconSize{ 31.0f };  // was 24.0f
 
 		ImFont* largeFont{ nullptr };
 		ImFont* regularFont{ nullptr };

@@ -62,7 +62,7 @@ namespace
 		float userScale = (FUCKMan::GetSingleton()->GetActiveScale());
 		float aspect = iconArrow->imageSize.y > 0.0f ? (iconArrow->imageSize.x / iconArrow->imageSize.y) : 1.0f;
 
-		auto ap = ImGui::CalcArrowIconParams(aspect, isOpen, frameHeight, 24.0f * uiScale, userScale);
+		auto ap = ImGui::CalcArrowIconParams(aspect, isOpen, frameHeight, 30.0f * uiScale, userScale);
 
 		ImVec2 drawPos = { pos.x, pos.y + ap.offsetY };
 		ImGui::DrawArrowIcon(drawList, drawPos, ap.drawSize, col,
@@ -80,7 +80,7 @@ namespace
 		float userScale = (FUCKMan::GetSingleton()->GetActiveScale());
 		float aspect = iconArrow->imageSize.y > 0.0f ? (iconArrow->imageSize.x / iconArrow->imageSize.y) : 1.0f;
 
-		auto ap = ImGui::CalcArrowIconParams(aspect, isOpen, bSize.y, 24.0f * uiScale, userScale);
+		auto ap = ImGui::CalcArrowIconParams(aspect, isOpen, bSize.y, 30.0f * uiScale, userScale);
 
 		ImVec2 iconPos = {
 			bPos.x + (bSize.x - ap.drawSize.x) * 0.5f,
@@ -845,7 +845,7 @@ namespace ImGui
 
 		float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
 		float resScale = ImGui::Renderer::GetResolutionScale();
-		const float baseFrameH = 30.0f * activeScale * resScale;
+		const float baseFrameH = 38.0f * activeScale * resScale;
 
 		struct RenderItem
 		{
@@ -1391,7 +1391,7 @@ namespace ImGui
 		float userScale = FUCKMan::GetSingleton()->GetActiveScale();
 
 		// Extract ratio (steppers always point left/right, so height is height)
-		float targetH = 24.0f * uiScale * userScale;
+		float targetH = 30.0f * uiScale * userScale;
 		float aspect = (arrowIcon && arrowIcon->imageSize.y > 0.0f) ? (arrowIcon->imageSize.x / arrowIcon->imageSize.y) : 1.0f;
 		float targetW = targetH * aspect;
 

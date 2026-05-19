@@ -680,12 +680,12 @@ void FUCKMan::Draw()
 	m.padBase  = 15.0f * m.uiScale;
 
 	m.iconAspect = (iconArrow && iconArrow->imageSize.y > 0.0f) ? (iconArrow->imageSize.x / iconArrow->imageSize.y) : 1.0f;
-	
-	m.chromeIconBaseH = 16.0f * m.uiScale;
 
-	float headerPadding = 3.0f * m.uiScale;
+	m.chromeIconBaseH = 20.0f * m.uiScale;
 
-	const float kChromeFontSize = 22.0f * 0.9f;
+	float headerPadding = 4.0f * m.uiScale;
+
+	const float kChromeFontSize = 30.0f * 0.9f * m.uiScale;
 
 	m.titleH           = m.textH + (headerPadding * 2.0f);
 	m.titleFontSize    = kChromeFontSize;
@@ -695,7 +695,7 @@ void FUCKMan::Draw()
 
 	m.sidebarWidth    = 250.0f * m.uiScale;
 	m.sidebarItemH    = 30.0f * m.uiScale;
-	m.sidebarFontSize = kChromeFontSize;
+	m.sidebarFontSize = 24.0f * 0.9f * m.uiScale;
 	m.sidebarIndent   = 15.0f * m.uiScale;
 
 	auto chromeArrow = [&](bool pointsDown, float rowH) {
