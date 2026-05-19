@@ -106,8 +106,6 @@ namespace IconFont
 		if (fontName == "Default") {
 			ImFontConfig default_cfg;
 			default_cfg.FontDataOwnedByAtlas = false;
-			default_cfg.OversampleH = default_cfg.OversampleV = 1;
-			default_cfg.PixelSnapH = true;
 			font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(
 				GetDefaultFontData(), a_fontSize, &default_cfg, io.Fonts->GetGlyphRangesDefault());
 		} else {
