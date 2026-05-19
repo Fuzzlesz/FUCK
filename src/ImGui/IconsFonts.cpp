@@ -91,6 +91,10 @@ namespace IconFont
 
 		io.FontDefault = regularFont;
 		ImGui::GetStyle().FontSizeBase = regularFont->LegacySize;
+
+		io.Fonts->SetFontLoader(ImGuiFreeType::GetFontLoader());
+		io.Fonts->FontLoaderFlags = ImGuiFreeTypeLoaderFlags_NoHinting;
+
 		io.Fonts->Build();
 
 		ImGui_ImplDX11_InvalidateDeviceObjects();
