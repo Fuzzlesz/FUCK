@@ -196,15 +196,28 @@ void FUCKMan::ResetSettings()
 {
 	_cfg = _def;
 
+	float scale = FUCK::GetResolutionScale();
+	if (scale < 0.1f) scale = 1.0f;
+
+	ImVec2 scaledDefPos = { _def.windowPos.x * scale, _def.windowPos.y * scale };
+	ImVec2 scaledDefSize = { _def.windowSize.x * scale, _def.windowSize.y * scale };
+
+	_cfg.windowPos = scaledDefPos;
+	_cfg.windowSize = scaledDefSize;
+
 	MANAGER(IconFont)->SetFontName(_cfg.currentFont);
 
 	auto hotkeys = MANAGER(Hotkeys);
+	hotkeys->GetToggleHotkey().Clear();
 	hotkeys->GetToggleHotkey().kKey = hotkeys->_defToggle.kKey;
 	hotkeys->GetToggleHotkey().kMod1 = hotkeys->_defToggle.kMod1;
 	hotkeys->GetToggleHotkey().kMod2 = hotkeys->_defToggle.kMod2;
 	hotkeys->GetToggleHotkey().gKey = hotkeys->_defToggle.gKey;
 	hotkeys->GetToggleHotkey().gMod1 = hotkeys->_defToggle.gMod1;
 	hotkeys->GetToggleHotkey().gMod2 = hotkeys->_defToggle.gMod2;
+
+	_themeEditorWindow._lastPos = { -1.0f, -1.0f };
+	_themeEditorWindow._lastSize = { -1.0f, -1.0f };
 
 	if (_isOpen) {
 		ClampWindowToScreen(_cfg.windowPos, _cfg.windowSize);
@@ -213,42 +226,34 @@ void FUCKMan::ResetSettings()
 		MANAGER(IconFont)->ReloadFonts();
 	}
 
+	_lastSavedPos = _cfg.windowPos;
+	_lastSavedSize = _cfg.windowSize;
+
 	Save();
 	SaveKeybinds();
 }
 
 void FUCKMan::LoadSettings(const CSimpleIniA& a_ini)
 {
-	float scale = FUCK::GetResolutionScale();
-	if (scale < 0.1f) scale = 1.0f;
+	_cfg.windowPos  = FUCK::INI::LoadScaledPos(a_ini, "Window", _def.windowPos);
+	_cfg.windowSize = FUCK::INI::LoadScaledSize(a_ini, "Window", _def.windowSize);
 
-	// Apply resolution scale to Window size/pos defaults gracefully
-	ImVec2 scaledDefPos = { _def.windowPos.x * scale, _def.windowPos.y * scale };
-	ImVec2 scaledDefSize = { _def.windowSize.x * scale, _def.windowSize.y * scale };
+	_cfg.globalPauseType = FUCK::INI::LoadInt(a_ini, "Settings", "iGlobalPauseType", _def.globalPauseType);
 
-	_cfg.windowPos.x = static_cast<float>(a_ini.GetDoubleValue("Window", "X", scaledDefPos.x));
-	_cfg.windowPos.y = static_cast<float>(a_ini.GetDoubleValue("Window", "Y", scaledDefPos.y));
-	_cfg.windowSize.x = static_cast<float>(a_ini.GetDoubleValue("Window", "Width", scaledDefSize.x));
-	_cfg.windowSize.y = static_cast<float>(a_ini.GetDoubleValue("Window", "Height", scaledDefSize.y));
+	float loadedScale = FUCK::INI::LoadFloat(a_ini, "Settings", "fUserScale", _def.userScale);
+	_cfg.userScale    = std::clamp(loadedScale, 0.5f, 2.0f);
 
-	_cfg.globalPauseType = static_cast<PauseType>(a_ini.GetLongValue("Settings", "iGlobalPauseType", static_cast<long>(_def.globalPauseType)));
-
-	float loadedScale = static_cast<float>(a_ini.GetDoubleValue("Settings", "fUserScale", _def.userScale));
-	_cfg.userScale = std::clamp(loadedScale, 0.5f, 2.0f);
-
-	_cfg.sidebarOnRight = a_ini.GetBoolValue("Settings", "bSidebarOnRight", _def.sidebarOnRight);
-	_cfg.injectSystemMenu = a_ini.GetBoolValue("Settings", "bInjectSystemMenu", _def.injectSystemMenu);
-	_cfg.replaceHelpMenu = a_ini.GetBoolValue("Settings", "bReplaceHelpMenu", _def.replaceHelpMenu);
+	_cfg.sidebarOnRight   = FUCK::INI::LoadBool(a_ini, "Settings", "bSidebarOnRight", _def.sidebarOnRight);
+	_cfg.injectSystemMenu = FUCK::INI::LoadBool(a_ini, "Settings", "bInjectSystemMenu", _def.injectSystemMenu);
+	_cfg.replaceHelpMenu  = FUCK::INI::LoadBool(a_ini, "Settings", "bReplaceHelpMenu", _def.replaceHelpMenu);
 
 	_cfg.currentFont = a_ini.GetValue("Appearance", "sFont", _def.currentFont.c_str());
 	if (!_cfg.currentFont.empty()) {
 		MANAGER(IconFont)->SetFontName(_cfg.currentFont);
 	}
 
-	_cfg.themeEditorPos.x = static_cast<float>(a_ini.GetDoubleValue("ThemeEditor", "X", _def.themeEditorPos.x));
-	_cfg.themeEditorPos.y = static_cast<float>(a_ini.GetDoubleValue("ThemeEditor", "Y", _def.themeEditorPos.y));
-	_cfg.themeEditorSize.x = static_cast<float>(a_ini.GetDoubleValue("ThemeEditor", "Width", _def.themeEditorSize.x));
-	_cfg.themeEditorSize.y = static_cast<float>(a_ini.GetDoubleValue("ThemeEditor", "Height", _def.themeEditorSize.y));
+	_cfg.themeEditorPos  = FUCK::INI::LoadScaledPos (a_ini, "ThemeEditor", _def.themeEditorPos);
+	_cfg.themeEditorSize = FUCK::INI::LoadScaledSize(a_ini, "ThemeEditor", _def.themeEditorSize);
 
 	_themeEditorWindow._lastPos = _cfg.themeEditorPos;
 	_themeEditorWindow._lastSize = _cfg.themeEditorSize;
@@ -258,12 +263,11 @@ void FUCKMan::LoadSettings(const CSimpleIniA& a_ini)
 	_pendingWindowRestore = true;
 }
 
+
 void FUCKMan::SaveSettings(CSimpleIniA& a_ini)
 {
-	FUCK::INI::SaveDouble(a_ini, "Window", "X", _cfg.windowPos.x, _def.windowPos.x);
-	FUCK::INI::SaveDouble(a_ini, "Window", "Y", _cfg.windowPos.y, _def.windowPos.y);
-	FUCK::INI::SaveDouble(a_ini, "Window", "Width", _cfg.windowSize.x, _def.windowSize.x);
-	FUCK::INI::SaveDouble(a_ini, "Window", "Height", _cfg.windowSize.y, _def.windowSize.y);
+	FUCK::INI::SaveScaledPos (a_ini, "Window", _cfg.windowPos, _def.windowPos);
+	FUCK::INI::SaveScaledSize(a_ini, "Window", _cfg.windowSize, _def.windowSize);
 
 	FUCK::INI::SaveInt   (a_ini, "Settings", "iGlobalPauseType", static_cast<int>(_cfg.globalPauseType), static_cast<int>(_def.globalPauseType));
 	FUCK::INI::SaveDouble(a_ini, "Settings", "fUserScale", _cfg.userScale, _def.userScale);
@@ -275,10 +279,10 @@ void FUCKMan::SaveSettings(CSimpleIniA& a_ini)
 
 	// Theme Editor State (Only save if initialized/changed from -1)
 	if (_themeEditorWindow._lastPos.x != -1.0f) {
-		FUCK::INI::SaveDouble(a_ini, "ThemeEditor", "X", _themeEditorWindow._lastPos.x, _def.themeEditorPos.x);
-		FUCK::INI::SaveDouble(a_ini, "ThemeEditor", "Y", _themeEditorWindow._lastPos.y, _def.themeEditorPos.y);
-		FUCK::INI::SaveDouble(a_ini, "ThemeEditor", "Width", _themeEditorWindow._lastSize.x, _def.themeEditorSize.x);
-		FUCK::INI::SaveDouble(a_ini, "ThemeEditor", "Height", _themeEditorWindow._lastSize.y, _def.themeEditorSize.y);
+		FUCK::INI::SaveScaledPos (a_ini, "ThemeEditor", _themeEditorWindow._lastPos, _def.themeEditorPos);
+		FUCK::INI::SaveScaledSize(a_ini, "ThemeEditor", _themeEditorWindow._lastSize, _def.themeEditorSize);
+	} else {
+		a_ini.Delete("ThemeEditor", NULL, true);
 	}
 }
 
