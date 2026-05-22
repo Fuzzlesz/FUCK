@@ -150,7 +150,11 @@ namespace ImGui::Renderer
 	{
 		static void thunk(RE::IMenu* a_menu)
 		{
-			Draw();
+			auto ui = RE::UI::GetSingleton();
+			// Only draw ImGui on the HUDMenu if the CursorMenu isn't going to do it for us
+			if (!ui || !ui->IsMenuOpen(RE::CursorMenu::MENU_NAME)) {
+				Draw();
+			}
 			return func(a_menu);
 		}
 		static inline REL::Relocation<decltype(thunk)> func;
