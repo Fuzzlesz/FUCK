@@ -130,7 +130,7 @@ namespace ImGui
 			ImVec4 scrollbarGrabActive{ 0.51f, 0.51f, 0.51f, 1.0f };
 
 			// Custom Icons
-			float  iconScale{ 1.32f };
+			float  iconScale{ 1.2f };  // we set this to match OutlineButton and BeginTabItem's larger size in main FUCK menu.
 			ImVec4 iconDisabled{ 1.0f, 1.0f, 1.0f, disabledAlpha };
 			ImVec4 widgetToggleActive{ 1.0f, 1.0f, 1.0f, 0.65f };
 			ImVec4 widgetFlash{ 1.0f, 0.8f, 0.2f, 1.0f };
