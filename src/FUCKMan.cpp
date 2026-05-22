@@ -382,11 +382,12 @@ void FUCKMan::UpdateGameState()
 			for (auto& [name, entry] : ui->menuMap) {
 				// pause menus that are actively on the screen
 				if (entry.menu && entry.menu->OnStack() && entry.menu->uiMovie) {
-					if (name == RE::CursorMenu::MENU_NAME ||
-						name == RE::Console::MENU_NAME ||
+					// but not deez
+					if (name == RE::CursorMenu ::MENU_NAME ||
+						name == RE::Console    ::MENU_NAME ||
 						name == RE::LoadingMenu::MENU_NAME ||
-						name == RE::HUDMenu::MENU_NAME ||
-						name == RE::FaderMenu::MENU_NAME) {
+						name == RE::HUDMenu    ::MENU_NAME ||
+						name == RE::FaderMenu  ::MENU_NAME) {
 						continue;
 					}
 					if (_pausedMenus.find(name.c_str()) == _pausedMenus.end()) {
