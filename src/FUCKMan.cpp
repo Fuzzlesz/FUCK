@@ -684,19 +684,20 @@ void FUCKMan::Draw()
 
 	m.chromeIconBaseH = 20.0f * m.uiScale;
 
-	float headerPadding = 4.0f * m.uiScale;
+	float headerPadding = 3.0f * m.uiScale;
 
-	const float kChromeFontSize = 30.0f * 0.9f * m.uiScale;
-
+	const float kChromeFontSize = 22.0f * 0.9f * m.uiScale;
+	
 	m.titleH           = m.textH + (headerPadding * 2.0f);
 	m.titleFontSize    = kChromeFontSize;
+	m.titleH           = m.titleFontSize + (headerPadding * 4.0f);
 	m.titleIconPadX    = 8.0f * m.uiScale;
 	m.titleIconNudgeY  = 1.0f * m.uiScale;  // positive = down, negative = up
-	m.titleTextOffsetY = (m.titleH - m.titleFontSize) * 0.5f + (2.0f * m.uiScale);
+	m.titleTextOffsetY = (m.titleH - m.titleFontSize) * 0.5f + (1.0f * m.uiScale);
 
 	m.sidebarWidth    = 250.0f * m.uiScale;
 	m.sidebarItemH    = 30.0f * m.uiScale;
-	m.sidebarFontSize = 24.0f * 0.9f * m.uiScale;
+	m.sidebarFontSize = kChromeFontSize;
 	m.sidebarIndent   = 15.0f * m.uiScale;
 
 	auto chromeArrow = [&](bool pointsDown, float rowH) {
@@ -896,7 +897,10 @@ void FUCKMan::Draw()
 						// Calculate exact physical dimensions of the arrow first
 						bool pointsDown = !isCollapsed;
 						auto ap = chromeArrow(pointsDown, m.titleH);
-						float btnWidth = (m.titleIconPadX * 2.0f) + ap.drawSize.x;
+
+						// Lock horizontal container width to its maximum dimension to prevent shifting on rotation
+						float maxIconDim = std::max(ap.drawSize.x, ap.drawSize.y);
+						float btnWidth = (m.titleIconPadX * 2.0f) + maxIconDim;
 
 						// Tightly wrap the invisible button around the graphic
 						if (ImGui::InvisibleButton("##CollapseToggle", ImVec2(btnWidth, m.titleH))) {
@@ -908,8 +912,10 @@ void FUCKMan::Draw()
 						bool isHovered = ImGui::IsItemHovered();
 						ImU32 iconColor = isHovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
 
+						float iconOffsetX = (maxIconDim - ap.drawSize.x) * 0.5f;
+
 						ImVec2 drawPos = cursorScreen;
-						drawPos.x += m.titleIconPadX;
+						drawPos.x += m.titleIconPadX + iconOffsetX;
 						drawPos.y += ap.offsetY + m.titleIconNudgeY;
 
 						ImGui::DrawArrowIcon(ImGui::GetWindowDrawList(), drawPos, ap.drawSize, iconColor,
@@ -986,8 +992,7 @@ void FUCKMan::Draw()
 
 					// 5. Content Child (scaled)
 					if (!winState.isCollapsed && !isCollapsed) {
-						float childY = m.titleH + (1.0f * m.uiScale);
-						FUCK::SetCursorPos({ 0, childY });
+						FUCK::SetCursorPosX(0.0f);
 
 						FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase, m.padBase));
 
@@ -1108,7 +1113,9 @@ void FUCKMan::Draw()
 				// Calculate exact physical dimensions of the arrow first
 				bool pointsDown = !_isCollapsed;
 				auto ap = chromeArrow(pointsDown, m.titleH);
-				float btnWidth = (m.titleIconPadX * 2.0f) + ap.drawSize.x;
+				
+				float maxIconDim = std::max(ap.drawSize.x, ap.drawSize.y);
+				float btnWidth = (m.titleIconPadX * 2.0f) + maxIconDim;
 
 				FUCK::SetCursorPos({ 0, 0 });
 				// Tightly wrap the invisible button around the graphic
@@ -1119,8 +1126,10 @@ void FUCKMan::Draw()
 				bool isHovered = ImGui::IsItemHovered();
 				ImU32 iconColor = isHovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
 
+				float iconOffsetX = (maxIconDim - ap.drawSize.x) * 0.5f;
+
 				ImVec2 drawPos = cursorScreen;
-				drawPos.x += m.titleIconPadX;
+				drawPos.x += m.titleIconPadX + iconOffsetX;
 				drawPos.y += ap.offsetY + m.titleIconNudgeY;
 
 				ImGui::DrawArrowIcon(ImGui::GetWindowDrawList(), drawPos, ap.drawSize, iconColor,
