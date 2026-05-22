@@ -985,7 +985,7 @@ void FUCKMan::Draw()
 					}
 
 					// 5. Content Child (scaled)
-					if (!isCollapsed) {
+					if (!winState.isCollapsed && !isCollapsed) {
 						float childY = m.titleH + (1.0f * m.uiScale);
 						FUCK::SetCursorPos({ 0, childY });
 
@@ -1175,7 +1175,7 @@ void FUCKMan::Draw()
 		}
 
 		// -- Content --
-		if (!_isCollapsed) {
+		if (!_isCollapsed && !_wasCollapsed) {
 			float contentY = m.titleH;
 			FUCK::SetCursorPos({ 0, contentY });
 
