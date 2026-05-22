@@ -74,6 +74,13 @@ namespace ImGui
 		float baseSize = 30.0f, float userScale = 1.0f)
 	{
 		float scaledH = baseSize * userScale;
+
+		// Prevent the icon from vertically overflowing the row it's placed in
+		float maxH = std::max(1.0f, rowH - 4.0f);
+		if (scaledH > maxH) {
+			scaledH = maxH;
+		}
+
 		float scaledW = scaledH * iconAspect;
 
 		ArrowIconParams p;

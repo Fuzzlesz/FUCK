@@ -51,7 +51,7 @@ namespace
 	// INTERNAL HELPERS
 	// =========================================================================================
 
-	void DrawTreeIcon(ImDrawList* drawList, const ImVec2& pos, float frameHeight, bool isOpen, bool isHovered)
+	void DrawTreeIcon(ImDrawList* drawList, const ImVec2& pos, float frameHeight, bool isOpen, bool isHovered, float baseIconSize = 30.0f)
 	{
 		static auto iconArrow = MANAGER(IconFont)->GetStepperRight();
 		if (!iconArrow)
@@ -62,9 +62,13 @@ namespace
 		float userScale = (FUCKMan::GetSingleton()->GetActiveScale());
 		float aspect = iconArrow->imageSize.y > 0.0f ? (iconArrow->imageSize.x / iconArrow->imageSize.y) : 1.0f;
 
-		auto ap = ImGui::CalcArrowIconParams(aspect, isOpen, frameHeight, 30.0f * uiScale, userScale);
+		auto ap = ImGui::CalcArrowIconParams(aspect, isOpen, frameHeight, baseIconSize * uiScale, userScale);
 
-		ImVec2 drawPos = { pos.x, pos.y + ap.offsetY };
+		// Center horizontally within its own max dimension to prevent shifting on open/close
+		float maxIconDim = std::max(ap.drawSize.x, ap.drawSize.y);
+		float iconOffsetX = (maxIconDim - ap.drawSize.x) * 0.5f;
+
+		ImVec2 drawPos = { pos.x + iconOffsetX, pos.y + ap.offsetY };
 		ImGui::DrawArrowIcon(drawList, drawPos, ap.drawSize, col,
 			isOpen ? ImGui::IconDirection::kDown : ImGui::IconDirection::kRight);
 	}
@@ -803,8 +807,9 @@ namespace ImGui
 		float visualH = textSize.y + (padY * 2.0f);
 		float width = textSize.x + (padX * 2.0f);
 
-		// Keep structural layout anchored to FrameHeight
-		ImVec2 logical_sz = ImVec2(width, GetFrameHeight());
+		// Force the layout slot to encompass the true visual height
+		float actualLayoutH = std::max(GetFrameHeight(), visualH);
+		ImVec2 logical_sz = ImVec2(width, actualLayoutH);
 
 		ImVec2 pos = window->DC.CursorPos;
 		ImRect bb(pos, pos + logical_sz);
@@ -820,6 +825,7 @@ namespace ImGui
 		bool h, held;
 		bool p = ButtonBehavior(bb, window->GetID(label), &h, &held);
 
+		// Background stays solid; hover feedback is handled by the Border
 		window->DrawList->AddRectFilled(bbVisual.Min, bbVisual.Max, GetColorU32(ImGuiCol_Button), rounding);
 		DrawWidgetBorder(window->DrawList, bbVisual, h || held, rounding);
 
@@ -1353,12 +1359,17 @@ namespace ImGui
 			}
 		}
 
-		float padding = GImGui->Style.ItemInnerSpacing.x;
-		float fontSize = GImGui->FontSize;
-		float textOff = fontSize + padding * 3.0f;
+		// Push the icon inwards to give it breathing room from the edge
+		float padX = std::max(GImGui->Style.FramePadding.x, 10.0f * scale);
+		
+		float baseArrowSize = 30.0f;
 
-		// Draw Arrow Icon using helper
-		DrawTreeIcon(window->DrawList, { bb.Min.x + padding, bb.Min.y }, frameHeight, is_open, h);
+		// Scale icon for the layout footprint
+		float maxIconDim = baseArrowSize * scale;
+		float textOff = padX + maxIconDim + GImGui->Style.ItemInnerSpacing.x;
+
+		// Pass the unscaled base icon
+		DrawTreeIcon(window->DrawList, { bb.Min.x + padX, bb.Min.y }, frameHeight, is_open, h, baseArrowSize);
 
 		// Vertically centre text
 		ImVec2 textSize = CalcTextSize(label);
@@ -1380,9 +1391,8 @@ namespace ImGui
 
 		bool is_open = window->DC.StateStorage->GetInt(id, (flags & ImGuiTreeNodeFlags_DefaultOpen) != 0);
 
-		// Calculate total layout size using same padY as combo boxes
 		float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
-		float padY = 7.0f * scale;
+		float padY = 3.0f * scale;
 		float frameHeight = CalcTextSize(label).y + padY * 2.0f;
 
 		ImVec2 pos = window->DC.CursorPos;
@@ -1390,9 +1400,13 @@ namespace ImGui
 
 		ItemSize(bb);
 
-		float padding = GImGui->Style.ItemInnerSpacing.x;
-		float fontSize = GImGui->FontSize;
-		float textOff = fontSize + padding * 3.0f;  // Indent text past icon
+		float padX = std::max(GImGui->Style.FramePadding.x, 10.0f * scale);
+
+		float baseArrowSize = 20.0f;
+
+		// Scale icon for the layout footprint
+		float maxIconDim = baseArrowSize * scale;
+		float textOff = padX + maxIconDim + GImGui->Style.ItemInnerSpacing.x;
 
 		if (!ItemAdd(bb, id)) {
 			if (is_open)
@@ -1410,8 +1424,8 @@ namespace ImGui
 			window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_HeaderHovered), GImGui->Style.FrameRounding);
 		}
 
-		// Draw Arrow Icon using helper
-		DrawTreeIcon(window->DrawList, { pos.x + padding, pos.y }, frameHeight, is_open, h);
+		// Pass the unscaled base icon
+		DrawTreeIcon(window->DrawList, { pos.x + padX, pos.y }, frameHeight, is_open, h, baseArrowSize);
 
 		// Align text
 		float textY = bb.Min.y + (frameHeight - CalcTextSize(label).y) * 0.5f;
@@ -1525,7 +1539,9 @@ namespace ImGui
 		PushStyleColor(ImGuiCol_FrameBgActive, GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox));
 		PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
 
+		ImGui::BeginGroup();
 		bool result = drawWidget(id.c_str());
+		ImGui::EndGroup();
 
 		PopStyleVar(2);
 		PopStyleColor(3);
