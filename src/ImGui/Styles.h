@@ -82,8 +82,8 @@ namespace ImGui
 			// Text
 			ImVec4 text{ 0.733f, 0.741f, 0.749f, 1.0f };
 			ImVec4 textDisabled{ 0.733f, 0.741f, 0.749f, disabledAlpha };
-			ImVec4 textButton{ 0.984f, 0.984f, 0.984f, 1.0f };
-			ImVec4 textHeader{ 1.0f, 1.0f, 1.0f, 1.0f };
+			ImVec4 textButton{ 0.85f, 0.85f, 0.85f, 1.0f };
+			ImVec4 textHeader{ 0.90f, 0.90f, 0.90f, 0.90f };
 			ImVec4 textHovered{ 1.0f, 1.0f, 1.0f, 1.0f };
 
 			// Combos
