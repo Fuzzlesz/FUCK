@@ -196,25 +196,22 @@ void FUCKMan::ResetSettings()
 {
 	_cfg = _def;
 
-	float scale = FUCK::GetResolutionScale();
-	if (scale < 0.1f) scale = 1.0f;
-
-	ImVec2 scaledDefPos = { _def.windowPos.x * scale, _def.windowPos.y * scale };
-	ImVec2 scaledDefSize = { _def.windowSize.x * scale, _def.windowSize.y * scale };
-
-	_cfg.windowPos = scaledDefPos;
-	_cfg.windowSize = scaledDefSize;
-
-	MANAGER(IconFont)->SetFontName(_cfg.currentFont);
+	Settings::Core.LoadDefaults([this](CSimpleIniA& ini) {
+		this->LoadSettings(ini);
+	});
 
 	auto hotkeys = MANAGER(Hotkeys);
 	hotkeys->GetToggleHotkey().Clear();
-	hotkeys->GetToggleHotkey().kKey = hotkeys->_defToggle.kKey;
-	hotkeys->GetToggleHotkey().kMod1 = hotkeys->_defToggle.kMod1;
-	hotkeys->GetToggleHotkey().kMod2 = hotkeys->_defToggle.kMod2;
-	hotkeys->GetToggleHotkey().gKey = hotkeys->_defToggle.gKey;
-	hotkeys->GetToggleHotkey().gMod1 = hotkeys->_defToggle.gMod1;
-	hotkeys->GetToggleHotkey().gMod2 = hotkeys->_defToggle.gMod2;
+
+	Settings::Core.LoadKeybindsDefaults([](CSimpleIniA& ini) {
+		MANAGER(Hotkeys)->LoadHotKeys(ini);
+	});
+
+	float scale = FUCK::GetResolutionScale();
+	if (scale < 0.1f)
+		scale = 1.0f;
+
+	MANAGER(IconFont)->SetFontName(_cfg.currentFont);
 
 	_themeEditorWindow._lastPos = { -1.0f, -1.0f };
 	_themeEditorWindow._lastSize = { -1.0f, -1.0f };
