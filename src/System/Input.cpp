@@ -553,6 +553,8 @@ namespace Input
 		std::unique_lock lock(_dataLock);
 
 		for (auto event = *a_events; event; event = event->next) {
+			UpdateInputDevice(event->GetDevice());
+
 			if (auto button = event->AsButtonEvent()) {
 				if (button->HasIDCode()) {
 					auto key = button->GetIDCode();
@@ -619,10 +621,6 @@ namespace Input
 	void Manager::ProcessInputEvents(RE::InputEvent* const* a_events)
 	{
 		CacheInputState(a_events);
-
-		for (auto event = *a_events; event; event = event->next) {
-			UpdateInputDevice(event->GetDevice());
-		}
 
 		// -- Cursor Visibility Logic --
 		const auto fuck = FUCKMan::GetSingleton();
