@@ -1388,6 +1388,23 @@ namespace FUCK
 		const char* _pluginName;
 	};
 
+	/// @brief Safe string copy utility preventing buffer overruns.
+	template <size_t N>
+	inline void StringCopy(char (&dest)[N], const char* source)
+	{
+		if (!source) {
+			dest[0] = '\0';
+			return;
+		}
+		strncpy_s(dest, N, source, _TRUNCATE);
+	}
+
+	template <size_t N>
+	inline void StringCopy(char (&dest)[N], const std::string& source)
+	{
+		strncpy_s(dest, N, source.c_str(), _TRUNCATE);
+	}
+
 	/// @brief Helper functions for delta saving/loading INI values with automatic default value handling.
 	namespace INI
 	{
@@ -1446,6 +1463,13 @@ namespace FUCK
 				ini.Delete(sec, key, true);
 			else
 				ini.SetValue(sec, key, val);
+		}
+		
+		template <size_t N>
+		inline void LoadString(const CSimpleIniA& ini, const char* sec, const char* key, char (&dest)[N], const char* defVal)
+		{
+			const char* val = ini.GetValue(sec, key, defVal);
+			strncpy_s(dest, N, val, _TRUNCATE);
 		}
 
 		// --- Window Geometry Helpers ---
