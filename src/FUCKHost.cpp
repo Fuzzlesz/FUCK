@@ -662,10 +662,11 @@ namespace FUCK::Host
 		for (int i = 0; i < items_count; ++i) vecItems.emplace_back(items[i]);
 		return ImGui::ComboWithFilter(label, current_item, vecItems, popup_max_height);
 	}
-	static bool                 ComboForm_Impl(const char* label, std::uint32_t* id, std::uint8_t t) { return ImGui::ComboForm(label, reinterpret_cast<RE::FormID*>(id), static_cast<RE::FormType>(t)); }
+	static bool ComboForm_Impl(const char* label, std::uint32_t* id, std::uint8_t t) { return ImGui::ComboForm(label, reinterpret_cast<RE::FormID*>(id), static_cast<RE::FormType>(t)); }
+	static bool Selectable_Impl(const char* label, bool selected, int flags, const ImVec2& size) { return ImGui::SelectableStyled(label, selected, flags, size); }
+
 	static ImGuiTableSortSpecs* GetTableSortSpecs_Impl() { return ImGui::TableGetSortSpecs(); }
 
-	static bool Selectable_Impl(const char* label, bool selected, int flags, const ImVec2& size) { return ImGui::SelectableStyled(label, selected, flags, size); }
 	static void Header_Impl(const char* label) { ImGui::Header(label); }
 	static void LeftLabel_Impl(const char* label) { ImGui::LeftAlignedTextImpl(label); }
 

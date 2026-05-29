@@ -415,8 +415,8 @@ struct FUCK_Interface
 	bool (*Combo)(const char*, int*, const char* const*, int);
 	bool (*ComboWithFilter)(const char*, int*, const char* const*, int, int);
 	bool (*ComboForm)(const char*, std::uint32_t*, std::uint8_t);
-	ImGuiTableSortSpecs* (*GetTableSortSpecs)();
 	bool (*Selectable)(const char*, bool, int, const ImVec2&);
+	ImGuiTableSortSpecs* (*GetTableSortSpecs)();
 	void (*Header)(const char*);
 	void (*LeftLabel)(const char*);
 
