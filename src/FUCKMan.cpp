@@ -207,10 +207,6 @@ void FUCKMan::ResetSettings()
 		MANAGER(Hotkeys)->LoadHotKeys(ini);
 	});
 
-	float scale = FUCK::GetResolutionScale();
-	if (scale < 0.1f)
-		scale = 1.0f;
-
 	MANAGER(IconFont)->SetFontName(_cfg.currentFont);
 
 	_themeEditorWindow._lastPos = { -1.0f, -1.0f };

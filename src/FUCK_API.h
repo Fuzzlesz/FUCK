@@ -497,7 +497,18 @@ namespace FUCK
 	// Display, Styles, Metrics
 	// ------------------------------------------------------------------------
 
+	/// @brief Gets the current screen resolution scale multiplier.
 	inline float GetResolutionScale() { return GetInterface() ? GetInterface()->GetResolutionScale() : 1.0f; }
+	
+	/// @brief Automatically scales a scalar value by the current resolution scale.
+	inline float Scale(float value) { return value * GetResolutionScale(); }
+	
+	/// @brief Automatically scales an X and Y coordinate by the current resolution scale.
+	inline ImVec2 Scale(float x, float y) { return ImVec2(x * GetResolutionScale(), y * GetResolutionScale()); }
+	
+	/// @brief Automatically scales an ImVec2 by the current resolution scale.
+	inline ImVec2 Scale(const ImVec2& value) { return ImVec2(value.x * GetResolutionScale(), value.y * GetResolutionScale()); }
+
 	inline ImVec2 GetDisplaySize()
 	{
 		if (auto i = GetInterface()) {

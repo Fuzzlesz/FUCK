@@ -12,13 +12,11 @@ public:
 
 	ImVec2 GetDefaultSize() const override
 	{
-		float s = FUCK::GetResolutionScale();
-		return { 450.0f * s, 600.0f * s };
+		return FUCK::Scale(450.0f, 600.0f);
 	}
 	ImVec2 GetDefaultPos() const override
 	{
-		float s = FUCK::GetResolutionScale();
-		return { 1050.0f * s, 450.0f * s };
+		return FUCK::Scale(1050.0f, 450.0f);
 	}
 
 	bool GetRequestedPos(ImVec2& outPos) override
