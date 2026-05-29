@@ -34,13 +34,13 @@ void ThemeEditorWindow::Draw()
 	if (FUCK::CollapsingHeader("$FUCK_Styles_Presets"_T, ImGuiTreeNodeFlags_DefaultOpen)) {
 		FUCK::Spacing();
 
-		static char presetNameBuf[64] = "";
-		static std::string lastSeenPreset = "\xFF";
+		static char        presetNameBuf[64] = "";
+		static std::string lastSeenPreset    = "\xFF";
 
 		// Auto-fill the text box if the user selected a new preset from the Settings tab
 		std::string activePreset = style->GetCurrentPresetName();
 		if (activePreset != lastSeenPreset) {
-			lastSeenPreset = activePreset;
+			lastSeenPreset      = activePreset;
 			std::string display = activePreset;
 			if (display.empty()) {
 				display = "MyNewPreset";
@@ -70,7 +70,7 @@ void ThemeEditorWindow::Draw()
 			} else {
 				style->ResetToDefaults();
 				presetNameBuf[0] = '\0';
-				lastSeenPreset = "";
+				lastSeenPreset   = "";
 			}
 		}
 
@@ -84,8 +84,8 @@ void ThemeEditorWindow::Draw()
 		FUCK::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.1f, 0.1f, 1.0f));
 		FUCK::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.8f, 1.0f));
 
-		ImFont* defaultFont = FUCK::GetFont(FUCK::Font::kRegular);
-		float baseFontSize = defaultFont ? defaultFont->LegacySize : ImGui::GetStyle().FontSizeBase;
+		ImFont* defaultFont  = FUCK::GetFont(FUCK::Font::kRegular);
+		float   baseFontSize = defaultFont ? defaultFont->LegacySize : ImGui::GetStyle().FontSizeBase;
 
 		FUCK::PushFont(defaultFont, baseFontSize * 0.85f);
 
@@ -94,7 +94,7 @@ void ThemeEditorWindow::Draw()
 				style->DeletePreset(presetNameBuf);
 				style->ResetToDefaults();
 				presetNameBuf[0] = '\0';
-				lastSeenPreset = "";
+				lastSeenPreset   = "";
 			}
 		}
 		FUCK::SetTooltip("$FUCK_Styles_Delete_TT"_T);

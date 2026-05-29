@@ -133,9 +133,9 @@ namespace SKSE
 	static void ImGui_ImplWin32_UpdateKeyboardCodePage()
 	{
 		// Retrieve keyboard code page, required for handling of non-Unicode Windows.
-		ImGui_ImplWin32_Data* bd = ImGui_ImplWin32_GetBackendData();
+		ImGui_ImplWin32_Data* bd              = ImGui_ImplWin32_GetBackendData();
 		HKL                   keyboard_layout = ::GetKeyboardLayout(0);
-		LCID                  keyboard_lcid = MAKELCID(HIWORD(keyboard_layout), SORT_DEFAULT);
+		LCID                  keyboard_lcid   = MAKELCID(HIWORD(keyboard_layout), SORT_DEFAULT);
 		if (::GetLocaleInfoA(keyboard_lcid, (LOCALE_RETURN_NUMBER | LOCALE_IDEFAULTANSICODEPAGE), (LPSTR)&bd->KeyboardCodePage, sizeof(bd->KeyboardCodePage)) == 0)
 			bd->KeyboardCodePage = CP_ACP;  // Fallback to default ANSI code page when fails.
 	}
@@ -152,15 +152,15 @@ namespace SKSE
 			return false;
 
 		// Setup backend capabilities flags
-		ImGui_ImplWin32_Data* bd = IM_NEW(ImGui_ImplWin32_Data)();
+		ImGui_ImplWin32_Data* bd   = IM_NEW(ImGui_ImplWin32_Data)();
 		io.BackendPlatformUserData = (void*)bd;
-		io.BackendPlatformName = "imgui_impl_win32";
+		io.BackendPlatformName     = "imgui_impl_win32";
 		io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;  // We can honor GetMouseCursor() values (optional)
 		io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;   // We can honor io.WantSetMousePos requests (optional, rarely used)
 
-		bd->hWnd = (HWND)hwnd;
-		bd->TicksPerSecond = perf_frequency;
-		bd->Time = perf_counter;
+		bd->hWnd            = (HWND)hwnd;
+		bd->TicksPerSecond  = perf_frequency;
+		bd->Time            = perf_counter;
 		bd->LastMouseCursor = ImGuiMouseCursor_COUNT;
 		ImGui_ImplWin32_UpdateKeyboardCodePage();
 
@@ -170,7 +170,7 @@ namespace SKSE
 
 		// Dynamically load XInput library
 #	ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
-		bd->WantUpdateHasGamepad = true;
+		bd->WantUpdateHasGamepad       = true;
 		const char* xinput_dll_names[] = {
 			"xinput1_4.dll",    // Windows 8+
 			"xinput1_3.dll",    // DirectX SDK
@@ -180,9 +180,9 @@ namespace SKSE
 		};
 		for (int n = 0; n < IM_ARRAYSIZE(xinput_dll_names); n++)
 			if (HMODULE dll = ::LoadLibraryA(xinput_dll_names[n])) {
-				bd->XInputDLL = dll;
+				bd->XInputDLL             = dll;
 				bd->XInputGetCapabilities = (PFN_XInputGetCapabilities)::GetProcAddress(dll, "XInputGetCapabilities");
-				bd->XInputGetState = (PFN_XInputGetState)::GetProcAddress(dll, "XInputGetState");
+				bd->XInputGetState        = (PFN_XInputGetState)::GetProcAddress(dll, "XInputGetState");
 				break;
 			}
 #	endif  // IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
@@ -213,7 +213,7 @@ namespace SKSE
 			::FreeLibrary(bd->XInputDLL);
 #	endif  // IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
 
-		io.BackendPlatformName = nullptr;
+		io.BackendPlatformName     = nullptr;
 		io.BackendPlatformUserData = nullptr;
 		io.BackendFlags &= ~(ImGuiBackendFlags_HasMouseCursors | ImGuiBackendFlags_HasSetMousePos | ImGuiBackendFlags_HasGamepad);
 		IM_DELETE(bd);
@@ -341,7 +341,7 @@ namespace SKSE
 		// Instead we refresh gamepad availability by calling XInputGetCapabilities() _only_ after receiving WM_DEVICECHANGE.
 		if (bd->WantUpdateHasGamepad || (io.ConfigFlags & ImGuiConfigFlags_IsTouchScreen) != 0) {
 			XINPUT_CAPABILITIES caps = {};
-			bd->HasGamepad = bd->XInputGetCapabilities ? (bd->XInputGetCapabilities(0, XINPUT_FLAG_GAMEPAD, &caps) == ERROR_SUCCESS) : false;
+			bd->HasGamepad           = bd->XInputGetCapabilities ? (bd->XInputGetCapabilities(0, XINPUT_FLAG_GAMEPAD, &caps) == ERROR_SUCCESS) : false;
 			bd->WantUpdateHasGamepad = false;
 			io.ConfigFlags &= ~ImGuiConfigFlags_IsTouchScreen;
 		}
@@ -408,7 +408,7 @@ namespace SKSE
 		INT64 current_time = 0;
 		::QueryPerformanceCounter((LARGE_INTEGER*)&current_time);
 		io.DeltaTime = (float)(current_time - bd->Time) / bd->TicksPerSecond;
-		bd->Time = current_time;
+		bd->Time     = current_time;
 
 		// Update OS mouse position
 		ImGui_ImplWin32_UpdateMouseData();
@@ -722,11 +722,11 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 			{
 				// We need to call TrackMouseEvent in order to receive WM_MOUSELEAVE events
 				ImGuiMouseSource mouse_source = GetMouseSourceFromMessageExtraInfo();
-				const int        area = (msg == WM_MOUSEMOVE) ? 1 : 2;
-				bd->MouseHwnd = hwnd;
+				const int        area         = (msg == WM_MOUSEMOVE) ? 1 : 2;
+				bd->MouseHwnd                 = hwnd;
 				if (bd->MouseTrackedArea != area) {
 					TRACKMOUSEEVENT tme_cancel = { sizeof(tme_cancel), TME_CANCEL, hwnd, 0 };
-					TRACKMOUSEEVENT tme_track = { sizeof(tme_track), (DWORD)((area == 2) ? (TME_LEAVE | TME_NONCLIENT) : TME_LEAVE), hwnd, 0 };
+					TRACKMOUSEEVENT tme_track  = { sizeof(tme_track), (DWORD)((area == 2) ? (TME_LEAVE | TME_NONCLIENT) : TME_LEAVE), hwnd, 0 };
 					if (bd->MouseTrackedArea != 0)
 						::TrackMouseEvent(&tme_cancel);
 					::TrackMouseEvent(&tme_track);
@@ -761,7 +761,7 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 		case WM_XBUTTONDBLCLK:
 			{
 				ImGuiMouseSource mouse_source = GetMouseSourceFromMessageExtraInfo();
-				int              button = 0;
+				int              button       = 0;
 				if (msg == WM_LBUTTONDOWN || msg == WM_LBUTTONDBLCLK) {
 					button = 0;
 				}
@@ -787,7 +787,7 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 		case WM_XBUTTONUP:
 			{
 				ImGuiMouseSource mouse_source = GetMouseSourceFromMessageExtraInfo();
-				int              button = 0;
+				int              button       = 0;
 				if (msg == WM_LBUTTONUP) {
 					button = 0;
 				}
@@ -828,7 +828,7 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 					int vk = (int)wParam;
 					if ((wParam == VK_RETURN) && (HIWORD(lParam) & KF_EXTENDED))
 						vk = IM_VK_KEYPAD_ENTER;
-					const ImGuiKey key = ImGui_ImplWin32_VirtualKeyToImGuiKey(vk);
+					const ImGuiKey key      = ImGui_ImplWin32_VirtualKeyToImGuiKey(vk);
 					const int      scancode = (int)LOBYTE(HIWORD(lParam));
 
 					// Special behavior for VK_SNAPSHOT / ImGuiKey_PrintScreen as Windows doesn't emit the key down event.
@@ -925,34 +925,34 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 		if (RtlVerifyVersionInfoFn == nullptr)
 			return FALSE;
 
-		RTL_OSVERSIONINFOEXW versionInfo = {};
+		RTL_OSVERSIONINFOEXW versionInfo   = {};
 		ULONGLONG            conditionMask = 0;
-		versionInfo.dwOSVersionInfoSize = sizeof(RTL_OSVERSIONINFOEXW);
-		versionInfo.dwMajorVersion = major;
-		versionInfo.dwMinorVersion = minor;
+		versionInfo.dwOSVersionInfoSize    = sizeof(RTL_OSVERSIONINFOEXW);
+		versionInfo.dwMajorVersion         = major;
+		versionInfo.dwMinorVersion         = minor;
 		VER_SET_CONDITION(conditionMask, VER_MAJORVERSION, VER_GREATER_EQUAL);
 		VER_SET_CONDITION(conditionMask, VER_MINORVERSION, VER_GREATER_EQUAL);
 		return (RtlVerifyVersionInfoFn(&versionInfo, VER_MAJORVERSION | VER_MINORVERSION, conditionMask) == 0) ? TRUE : FALSE;
 	}
 
-#	define _IsWindowsVistaOrGreater() _IsWindowsVersionOrGreater(HIBYTE(0x0600), LOBYTE(0x0600), 0)    // _WIN32_WINNT_VISTA
-#	define _IsWindows8OrGreater() _IsWindowsVersionOrGreater(HIBYTE(0x0602), LOBYTE(0x0602), 0)        // _WIN32_WINNT_WIN8
+#	define _IsWindowsVistaOrGreater()   _IsWindowsVersionOrGreater(HIBYTE(0x0600), LOBYTE(0x0600), 0)  // _WIN32_WINNT_VISTA
+#	define _IsWindows8OrGreater()       _IsWindowsVersionOrGreater(HIBYTE(0x0602), LOBYTE(0x0602), 0)  // _WIN32_WINNT_WIN8
 #	define _IsWindows8Point1OrGreater() _IsWindowsVersionOrGreater(HIBYTE(0x0603), LOBYTE(0x0603), 0)  // _WIN32_WINNT_WINBLUE
-#	define _IsWindows10OrGreater() _IsWindowsVersionOrGreater(HIBYTE(0x0A00), LOBYTE(0x0A00), 0)       // _WIN32_WINNT_WINTHRESHOLD / _WIN32_WINNT_WIN10
+#	define _IsWindows10OrGreater()      _IsWindowsVersionOrGreater(HIBYTE(0x0A00), LOBYTE(0x0A00), 0)  // _WIN32_WINNT_WINTHRESHOLD / _WIN32_WINNT_WIN10
 
 #	ifndef DPI_ENUMS_DECLARED
 	typedef enum
 	{
-		PROCESS_DPI_UNAWARE = 0,
-		PROCESS_SYSTEM_DPI_AWARE = 1,
+		PROCESS_DPI_UNAWARE           = 0,
+		PROCESS_SYSTEM_DPI_AWARE      = 1,
 		PROCESS_PER_MONITOR_DPI_AWARE = 2
 	} PROCESS_DPI_AWARENESS;
 	typedef enum
 	{
 		MDT_EFFECTIVE_DPI = 0,
-		MDT_ANGULAR_DPI = 1,
-		MDT_RAW_DPI = 2,
-		MDT_DEFAULT = MDT_EFFECTIVE_DPI
+		MDT_ANGULAR_DPI   = 1,
+		MDT_RAW_DPI       = 2,
+		MDT_DEFAULT       = MDT_EFFECTIVE_DPI
 	} MONITOR_DPI_TYPE;
 #	endif
 #	ifndef _DPI_AWARENESS_CONTEXTS_
@@ -996,7 +996,7 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 	{
 		UINT xdpi = 96, ydpi = 96;
 		if (_IsWindows8Point1OrGreater()) {
-			static HINSTANCE            shcore_dll = ::LoadLibraryA("shcore.dll");  // Reference counted per-process
+			static HINSTANCE            shcore_dll         = ::LoadLibraryA("shcore.dll");  // Reference counted per-process
 			static PFN_GetDpiForMonitor GetDpiForMonitorFn = nullptr;
 			if (GetDpiForMonitorFn == nullptr && shcore_dll != nullptr)
 				GetDpiForMonitorFn = (PFN_GetDpiForMonitor)::GetProcAddress(shcore_dll, "GetDpiForMonitor");
@@ -1008,8 +1008,8 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 		}
 #	ifndef NOGDI
 		const HDC dc = ::GetDC(nullptr);
-		xdpi = ::GetDeviceCaps(dc, LOGPIXELSX);
-		ydpi = ::GetDeviceCaps(dc, LOGPIXELSY);
+		xdpi         = ::GetDeviceCaps(dc, LOGPIXELSX);
+		ydpi         = ::GetDeviceCaps(dc, LOGPIXELSY);
 		IM_ASSERT(xdpi == ydpi);  // Please contact me if you hit this assert!
 		::ReleaseDC(nullptr, dc);
 #	endif
@@ -1046,15 +1046,15 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 		DWORD color;
 		if (_IsWindows8OrGreater() || (SUCCEEDED(::DwmGetColorizationColor(&color, &opaque)) && !opaque)) {
 			HRGN           region = ::CreateRectRgn(0, 0, -1, -1);
-			DWM_BLURBEHIND bb = {};
-			bb.dwFlags = DWM_BB_ENABLE | DWM_BB_BLURREGION;
-			bb.hRgnBlur = region;
-			bb.fEnable = TRUE;
+			DWM_BLURBEHIND bb     = {};
+			bb.dwFlags            = DWM_BB_ENABLE | DWM_BB_BLURREGION;
+			bb.hRgnBlur           = region;
+			bb.fEnable            = TRUE;
 			::DwmEnableBlurBehindWindow((HWND)hwnd, &bb);
 			::DeleteObject(region);
 		} else {
 			DWM_BLURBEHIND bb = {};
-			bb.dwFlags = DWM_BB_ENABLE;
+			bb.dwFlags        = DWM_BB_ENABLE;
 			::DwmEnableBlurBehindWindow((HWND)hwnd, &bb);
 		}
 	}

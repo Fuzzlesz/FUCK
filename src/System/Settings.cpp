@@ -44,7 +44,6 @@ void Settings::LoadINI(const char* a_path, const INIFunc a_func, bool a_generate
 	}
 }
 
-
 void Settings::LoadINI(const char* a_defaultPath, const char* a_userPath, INIFunc a_func)
 {
 	LoadINI(a_defaultPath, a_func);

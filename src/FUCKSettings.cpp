@@ -31,9 +31,9 @@ void SettingsTool::OnClose()
 
 void SettingsTool::Draw()
 {
-	auto manager = FUCKMan::GetSingleton();
-	auto style = ImGui::Styles::GetSingleton();
-	auto& hotkey = MANAGER(Hotkeys)->GetToggleHotkey();
+	auto  manager = FUCKMan::GetSingleton();
+	auto  style   = ImGui::Styles::GetSingleton();
+	auto& hotkey  = MANAGER(Hotkeys)->GetToggleHotkey();
 
 	if (FUCK::BeginTabBar("SettingsTabs")) {
 		// --------------------------------------------------------
@@ -60,8 +60,8 @@ void SettingsTool::Draw()
 
 			FUCK::Spacing(2);
 
-			const char* pauseTypes[] = { "$FUCK_Settings_PauseNone"_T, "$FUCK_Settings_PauseSoft"_T, "$FUCK_Settings_PauseHard"_T };
-			int currentPauseIdx = static_cast<int>(manager->_cfg.globalPauseType);
+			const char* pauseTypes[]    = { "$FUCK_Settings_PauseNone"_T, "$FUCK_Settings_PauseSoft"_T, "$FUCK_Settings_PauseHard"_T };
+			int         currentPauseIdx = static_cast<int>(manager->_cfg.globalPauseType);
 			FUCK::SetNextItemWidth(-1);
 			std::string pauseLabel = std::format("{}##GlobalPauseType", "$FUCK_Settings_GlobalPause"_T);
 
@@ -77,8 +77,8 @@ void SettingsTool::Draw()
 			FUCK::Spacing(2);
 
 			static std::vector<std::string> fonts = style->GetAvailableFonts();
-			std::vector<std::string> displayFonts;
-			std::vector<const char*> fontPtrs;
+			std::vector<std::string>        displayFonts;
+			std::vector<const char*>        fontPtrs;
 			displayFonts.reserve(fonts.size());
 			fontPtrs.reserve(fonts.size());
 
@@ -131,7 +131,7 @@ void SettingsTool::Draw()
 			FUCK::Header("$FUCK_Styles_Presets"_T);
 			FUCK::Spacing();
 
-			const auto& presets = style->GetPresets();
+			const auto& presets           = style->GetPresets();
 			std::string currentPresetName = style->GetCurrentPresetName();
 
 			// Build Combo Items with "----" at the top
@@ -180,8 +180,8 @@ void SettingsTool::Draw()
 		// --------------------------------------------------------
 		// TAB 3: INFO
 		// --------------------------------------------------------
-		static bool s_wasInfoTabOpen = false;
-		static bool s_infoCached = false;
+		static bool                     s_wasInfoTabOpen = false;
+		static bool                     s_infoCached     = false;
 		static std::vector<std::string> pluginsList;
 		static std::vector<std::string> iniList;
 		static std::vector<std::string> transList;
@@ -213,22 +213,22 @@ void SettingsTool::Draw()
 
 				// 1. Gather DLLs via the VTable Poly Pointer Trick
 				std::set<std::string> consumerDLLs;
-				auto extractDLL = [&](void* polyPtr) {
-					if (!polyPtr)
-						return;
-					void* vtableAddr = *reinterpret_cast<void**>(polyPtr);
-					HMODULE hModule = nullptr;
+				auto                  extractDLL = [&](void* polyPtr) {
+                    if (!polyPtr)
+                        return;
+                    void*   vtableAddr = *reinterpret_cast<void**>(polyPtr);
+                    HMODULE hModule    = nullptr;
 
-					if (::GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-							static_cast<LPCSTR>(vtableAddr), &hModule)) {
-						char path[MAX_PATH];
-						if (::GetModuleFileNameA(hModule, path, MAX_PATH)) {
-							std::string filename = std::filesystem::path(path).filename().string();
-							if (!Utils::IContains(filename, "FUCK.dll")) {
-								consumerDLLs.insert(filename);
-							}
-						}
-					}
+                    if (::GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+											 static_cast<LPCSTR>(vtableAddr), &hModule)) {
+                        char path[MAX_PATH];
+                        if (::GetModuleFileNameA(hModule, path, MAX_PATH)) {
+                            std::string filename = std::filesystem::path(path).filename().string();
+                            if (!Utils::IContains(filename, "FUCK.dll")) {
+                                consumerDLLs.insert(filename);
+                            }
+                        }
+                    }
 				};
 
 				for (auto* tool : manager->_tools) {
@@ -244,8 +244,8 @@ void SettingsTool::Draw()
 					std::lock_guard<std::mutex> iniLock(Settings::GetSingleton()->trackingMutex);
 					for (const auto& iniPath : Settings::GetSingleton()->trackedINIs) {
 						namespace fs = std::filesystem;
-						fs::path p(iniPath);
-						std::string filename = p.filename().string();
+						fs::path    p(iniPath);
+						std::string filename  = p.filename().string();
 						std::string parentDir = p.parent_path().filename().string();
 
 						if (Utils::IContains(filename, "SSEDisplayTweaks"))
@@ -269,9 +269,9 @@ void SettingsTool::Draw()
 					});
 
 					// Calculate how many columns we can fit inside this specific panel
-					float availWidth = FUCK::GetContentRegionAvail().x;
+					float availWidth  = FUCK::GetContentRegionAvail().x;
 					float minColWidth = 280.0f * FUCK::GetResolutionScale() * manager->_cfg.userScale;
-					int numCols = std::max(1, static_cast<int>(availWidth / minColWidth));
+					int   numCols     = std::max(1, static_cast<int>(availWidth / minColWidth));
 
 					// Let the panel stretch to the bottom of the window
 					float childHeight = FUCK::GetContentRegionAvail().y;

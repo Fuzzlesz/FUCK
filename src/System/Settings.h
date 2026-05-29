@@ -12,7 +12,7 @@ public:
 	using INIFunc = std::function<void(CSimpleIniA&)>;
 
 	std::set<std::string> trackedINIs;
-	std::mutex trackingMutex;
+	std::mutex            trackingMutex;
 
 	static Settings* GetSingleton()
 	{

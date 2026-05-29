@@ -5,9 +5,8 @@ namespace Translation
 	class Manager final : public REX::Singleton<Manager>
 	{
 	public:
-
 		std::set<std::string> trackedTranslations;
-		std::mutex trackingMutex;
+		std::mutex            trackingMutex;
 
 		static std::string GetGameLanguage();
 
@@ -36,5 +35,5 @@ namespace Translation
 	};
 }
 
-#define TRANSLATE(STR) Translation::Manager::GetSingleton()->GetTranslation(STR)
+#define TRANSLATE(STR)   Translation::Manager::GetSingleton()->GetTranslation(STR)
 #define TRANSLATE_S(STR) std::string(Translation::Manager::GetSingleton()->GetTranslation(STR))

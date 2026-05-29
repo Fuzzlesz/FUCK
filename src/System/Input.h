@@ -18,29 +18,30 @@ namespace Input
 	struct Context
 	{
 		std::string name;
-		int priority{ 0 };
-		bool blocksLower{ true };
+		int         priority{ 0 };
+		bool        blocksLower{ true };
 	};
 
 	struct RebindContext
 	{
-		bool active{ false };
-		bool disallowModifiers{ false };
+		bool   active{ false };
+		bool   disallowModifiers{ false };
 		double startTime{ 0.0 };
+
 		std::uint32_t originalKey{ 0 };
-		std::int32_t originalMod1{ -1 };
-		std::int32_t originalMod2{ -1 };
+		std::int32_t  originalMod1{ -1 };
+		std::int32_t  originalMod2{ -1 };
 
 		std::set<std::uint32_t> ignoredKeys;
 
 		void Reset()
 		{
-			active = false;
+			active            = false;
 			disallowModifiers = false;
-			startTime = 0.0;
-			originalKey = 0;
-			originalMod1 = -1;
-			originalMod2 = -1;
+			startTime         = 0.0;
+			originalKey       = 0;
+			originalMod1      = -1;
+			originalMod2      = -1;
 			ignoredKeys.clear();
 		}
 	};
@@ -50,12 +51,12 @@ namespace Input
 	public:
 		static void Register();
 
-		void ClearState(); 
+		void ClearState();
 
-		DEVICE  GetInputDevice() const;
-		bool    IsInputKBM() const;
-		bool    IsInputGamepad() const;
-		bool    CanNavigateWithMouse() const;
+		DEVICE GetInputDevice() const;
+		bool   IsInputKBM() const;
+		bool   IsInputGamepad() const;
+		bool   CanNavigateWithMouse() const;
 
 		static void ToggleCursor(bool a_enable);
 		void        ResetCursorState();

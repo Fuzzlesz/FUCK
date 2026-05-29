@@ -13,10 +13,10 @@ namespace ImGui
 		virtual bool Load(bool a_resizeToScreenRes = false);
 
 		// Getters
-		[[nodiscard]] const std::wstring& GetPath() const { return path; }
+		[[nodiscard]] const std::wstring&       GetPath() const { return path; }
 		[[nodiscard]] ID3D11ShaderResourceView* GetSRView() const { return srView.Get(); }
-		[[nodiscard]] const ImVec2& GetSize() const { return size; }
-		[[nodiscard]] bool IsLoaded() const { return srView != nullptr; }
+		[[nodiscard]] const ImVec2&             GetSize() const { return size; }
+		[[nodiscard]] bool                      IsLoaded() const { return srView != nullptr; }
 
 		// members
 		std::wstring                           path{};

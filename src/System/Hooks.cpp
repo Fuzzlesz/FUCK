@@ -4,8 +4,8 @@
 
 namespace Hooks
 {
-	static bool s_fuckButtonInjected = false;
-	static double s_fuckButtonIndex = -1.0;
+	static bool   s_fuckButtonInjected = false;
+	static double s_fuckButtonIndex    = -1.0;
 
 	constexpr const char* kSystemPagePath = "_root.QuestJournalFader.Menu_mc.SystemFader.Page_mc";
 
@@ -52,7 +52,7 @@ namespace Hooks
 		entryList.PushBack(newEntry);
 		listObj.Invoke("InvalidateData", nullptr, nullptr, 0);
 
-		s_fuckButtonIndex = static_cast<double>(arraySize);
+		s_fuckButtonIndex    = static_cast<double>(arraySize);
 		s_fuckButtonInjected = true;
 	}
 
@@ -76,14 +76,13 @@ namespace Hooks
 
 		auto* input = MANAGER(Input);
 
-		constexpr std::uint32_t kKeyEnter =  Input::Keymap::AsKey(KEY::kEnter);
+		constexpr std::uint32_t kKeyEnter  = Input::Keymap::AsKey(KEY::kEnter);
 		constexpr std::uint32_t kMouseLeft = Input::Keymap::kMBBase;
-		constexpr std::uint32_t kGamepadA =  Input::Keymap::kGPBase + SKSE::InputMap::kGamepadButtonOffset_A;
+		constexpr std::uint32_t kGamepadA  = Input::Keymap::kGPBase + SKSE::InputMap::kGamepadButtonOffset_A;
 
 		if (input->IsInputPressed(a_events, kKeyEnter) ||
 			input->IsInputPressed(a_events, kMouseLeft) ||
 			input->IsInputPressed(a_events, kGamepadA)) {
-
 			if (auto queue = RE::UIMessageQueue::GetSingleton()) {
 				queue->AddMessage(RE::JournalMenu::MENU_NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
 			}
@@ -102,7 +101,7 @@ namespace Hooks
 	static RE::InputEvent* FilterInputEvents(RE::InputEvent* const* a_events)
 	{
 		auto* userEvents = RE::UserEvents::GetSingleton();
-		auto* manager = FUCKMan::GetSingleton();
+		auto* manager    = FUCKMan::GetSingleton();
 
 		const bool allowGameMenus = !manager->IsOpen() &&
 		                            manager->HasWindowWithFlag(FUCK::WindowFlags::kCloseOnGameMenu) &&
@@ -129,8 +128,8 @@ namespace Hooks
 				}
 				// Pass menu inputs to the game so MenuOpenCloseEvent can trigger
 				else if (button->HasIDCode()) {
-					const auto rawKey = button->GetIDCode();
-					const auto device = button->GetDevice();
+					const auto rawKey     = button->GetIDCode();
+					const auto device     = button->GetDevice();
 					const auto unifiedKey = Input::Keymap::GetUnifiedKey(device, rawKey);
 
 					if (Input::Manager::IsUnifiedModifier(unifiedKey)) {
@@ -158,7 +157,7 @@ namespace Hooks
 					head = iter;
 				else
 					tail->next = iter;
-				tail = iter;
+				tail       = iter;
 				tail->next = nullptr;
 			}
 			iter = next;
@@ -188,7 +187,7 @@ namespace Hooks
 			MANAGER(Input)->ProcessInputEvents(a_events);
 
 			const bool wasBlocked = FUCKMan::GetSingleton()->IsInputBlocked();
-			const bool consumed = FUCKMan::GetSingleton()->ProcessAsyncInput(a_events);
+			const bool consumed   = FUCKMan::GetSingleton()->ProcessAsyncInput(a_events);
 
 			if (CheckForJournalAccept(a_events)) {
 				constexpr RE::InputEvent* const empty_events[] = { nullptr };
@@ -200,12 +199,12 @@ namespace Hooks
 				// Get the new filtered list head
 				RE::InputEvent* filteredHead = FilterInputEvents(a_events);
 
-				auto ui = RE::UI::GetSingleton();
+				auto          ui          = RE::UI::GetSingleton();
 				std::uint32_t savedPauses = 0;
 
 				// Temporarily lift the hard pause
 				if (ui && ui->numPausesGame > 0) {
-					savedPauses = ui->numPausesGame;
+					savedPauses       = ui->numPausesGame;
 					ui->numPausesGame = 0;
 				}
 
@@ -237,7 +236,7 @@ namespace Hooks
 		{
 			if (a_message.type == RE::UI_MESSAGE_TYPE::kHide) {
 				s_fuckButtonInjected = false;
-				s_fuckButtonIndex = -1.0;
+				s_fuckButtonIndex    = -1.0;
 				return func(a_this, a_message);
 			}
 

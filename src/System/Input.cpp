@@ -8,8 +8,8 @@ namespace Input
 	using namespace Input::Keymap;
 
 	// Custom offsets for Stick Axis caching
-	constexpr uint32_t CUSTOM_LEFT_STICK_X = 32;
-	constexpr uint32_t CUSTOM_LEFT_STICK_Y = 33;
+	constexpr uint32_t CUSTOM_LEFT_STICK_X  = 32;
+	constexpr uint32_t CUSTOM_LEFT_STICK_Y  = 33;
 	constexpr uint32_t CUSTOM_RIGHT_STICK_X = 34;
 	constexpr uint32_t CUSTOM_RIGHT_STICK_Y = 35;
 
@@ -86,7 +86,7 @@ namespace Input
 			if (!button || !button->HasIDCode() || !button->IsPressed())
 				continue;
 
-			auto key = button->GetIDCode();
+			auto     key        = button->GetIDCode();
 			uint32_t unifiedKey = Keymap::GetUnifiedKey(button->GetDevice(), key);
 
 			if (unifiedKey == a_unifiedKey)
@@ -98,19 +98,19 @@ namespace Input
 	bool Manager::IsInputDown(std::uint32_t a_unifiedKey) const
 	{
 		std::shared_lock lock(_dataLock);
-		auto it = keyStateCache.find(a_unifiedKey);
+		auto             it = keyStateCache.find(a_unifiedKey);
 		return it != keyStateCache.end() && it->second > 0.0f;
 	}
 
 	// --- Rebinding API ---
 	void Manager::StartBinding(std::uint32_t k, std::int32_t m1, std::int32_t m2, bool disallowModifiers)
 	{
-		_rebindCtx.active = true;
+		_rebindCtx.active            = true;
 		_rebindCtx.disallowModifiers = disallowModifiers;
-		_rebindCtx.startTime = ImGui::GetTime();
-		_rebindCtx.originalKey = k;
-		_rebindCtx.originalMod1 = m1;
-		_rebindCtx.originalMod2 = m2;
+		_rebindCtx.startTime         = ImGui::GetTime();
+		_rebindCtx.originalKey       = k;
+		_rebindCtx.originalMod1      = m1;
+		_rebindCtx.originalMod2      = m2;
 		_rebindCtx.ignoredKeys.clear();
 
 		// Snapshot any keys currently held down so they don't instantly register as the new keybind
@@ -129,8 +129,8 @@ namespace Input
 
 		// 1. Poll the raw input
 		std::uint32_t newKey = 0;
-		std::int32_t newM1 = -1;
-		std::int32_t newM2 = -1;
+		std::int32_t  newM1  = -1;
+		std::int32_t  newM2  = -1;
 
 		auto result = GetInputBind(a_event, &newKey, &newM1, &newM2);
 
@@ -176,8 +176,8 @@ namespace Input
 			if (!button || !button->HasIDCode())
 				continue;
 
-			auto key = button->GetIDCode();
-			auto device = button->GetDevice();
+			auto     key        = button->GetIDCode();
+			auto     device     = button->GetDevice();
 			uint32_t unifiedKey = Keymap::GetUnifiedKey(device, key);
 
 			// If a key is released, it is no longer ignored and can be used in future bindings
@@ -268,23 +268,23 @@ namespace Input
 			return false;
 		}
 
-		std::uint32_t k;
-		std::int32_t m1, m2;
+		std::uint32_t    k;
+		std::int32_t     m1, m2;
 		FUCK::BindResult res = UpdateBinding(a_event, &k, &m1, &m2);
 
 		if (res == FUCK::BindResult::kBound) {
 			if (k >= Keymap::kGPBase) {
-				h.gKey = k;
+				h.gKey  = k;
 				h.gMod1 = m1;
 				h.gMod2 = m2;
 			} else {
-				h.kKey = k;
+				h.kKey  = k;
 				h.kMod1 = m1;
 				h.kMod2 = m2;
 			}
-			h.isBinding = false;
-			h.wasTriggered = false;   // Do not trigger immediately upon binding
-			h.waitForRelease = true;  // Flag for debounce
+			h.isBinding      = false;
+			h.wasTriggered   = false;  // Do not trigger immediately upon binding
+			h.waitForRelease = true;   // Flag for debounce
 			return true;
 		} else if (res == FUCK::BindResult::kCancelled) {
 			h.isBinding = false;
@@ -390,7 +390,7 @@ namespace Input
 	float Manager::GetAnalogInput(std::uint32_t a_unifiedKey) const
 	{
 		std::shared_lock lock(_dataLock);
-		auto it = keyStateCache.find(a_unifiedKey);
+		auto             it = keyStateCache.find(a_unifiedKey);
 		return it != keyStateCache.end() ? it->second : 0.0f;
 	}
 
@@ -557,7 +557,7 @@ namespace Input
 
 			if (auto button = event->AsButtonEvent()) {
 				if (button->HasIDCode()) {
-					auto key = button->GetIDCode();
+					auto     key        = button->GetIDCode();
 					uint32_t unifiedKey = Keymap::GetUnifiedKey(button->GetDevice(), key);
 
 					if (button->Value() > 0.0f) {
@@ -567,7 +567,7 @@ namespace Input
 					}
 				}
 			} else if (auto stick = event->AsThumbstickEvent()) {
-				uint32_t id = stick->GetIDCode();
+				uint32_t id         = stick->GetIDCode();
 				uint32_t baseOffset = SKSE::InputMap::kMacro_GamepadOffset;
 
 				if (id == 0x0B) {  // Left Stick
@@ -623,10 +623,10 @@ namespace Input
 		CacheInputState(a_events);
 
 		// -- Cursor Visibility Logic --
-		const auto fuck = FUCKMan::GetSingleton();
-		const bool blockInput = fuck->IsInputBlocked();
+		const auto fuck        = FUCKMan::GetSingleton();
+		const bool blockInput  = fuck->IsInputBlocked();
 		const bool forceCursor = fuck->IsCursorForced();
-		const bool menuOpen = fuck->IsOpen();
+		const bool menuOpen    = fuck->IsOpen();
 
 		bool shouldShowCursor = forceCursor || menuOpen;
 		if (!shouldShowCursor && blockInput) {
@@ -641,13 +641,13 @@ namespace Input
 		}
 
 		static double lastCursorToggleTime = 0.0;
-		double currentTime = ImGui::GetTime();
+		double        currentTime          = ImGui::GetTime();
 
 		if (shouldShowCursor) {
 			if (!cursorInit.has_value() || (*cursorInit == false && !cursorCurrentlyOpen)) {
 				if (!cursorCurrentlyOpen) {
 					ToggleCursor(true);
-					cursorInit = true;
+					cursorInit           = true;
 					lastCursorToggleTime = currentTime;
 				} else {
 					cursorInit = false;
@@ -669,13 +669,13 @@ namespace Input
 		}
 
 		// -- Event Forwarding --
-		auto& io = ImGui::GetIO();
+		auto&      io             = ImGui::GetIO();
 		const bool cursorMenuOpen = RE::UI::GetSingleton()->IsMenuOpen(RE::CursorMenu::MENU_NAME);
 
 		// Determine exactly what input ImGui is allowed to see right now
-		const bool shouldRender = fuck->ShouldRender();
+		const bool shouldRender           = fuck->ShouldRender();
 		const bool passKeyboardAndGamepad = shouldRender && blockInput;
-		const bool passMouse = shouldRender && (blockInput || forceCursor);
+		const bool passMouse              = shouldRender && (blockInput || forceCursor);
 
 		for (auto event = *a_events; event; event = event->next) {
 			if (const auto charEvent = event->AsCharEvent()) {
@@ -683,9 +683,9 @@ namespace Input
 					io.AddInputCharacter(charEvent->keyCode);
 				}
 			} else if (const auto buttonEvent = event->AsButtonEvent()) {
-				const auto key = buttonEvent->GetIDCode();
-				const float value = buttonEvent->Value();
-				const bool isDown = value > 0.0f;
+				const auto  key    = buttonEvent->GetIDCode();
+				const float value  = buttonEvent->Value();
+				const bool  isDown = value > 0.0f;
 
 				switch (event->GetDevice()) {
 				case RE::INPUT_DEVICE::kKeyboard:

@@ -1,10 +1,10 @@
 #include "Util.h"
 
-#include "System/Input.h"
 #include "FUCKMan.h"
 #include "IconsFonts.h"
 #include "Renderer.h"
 #include "Styles.h"
+#include "System/Input.h"
 
 namespace ImGui
 {
@@ -32,7 +32,7 @@ namespace ImGui
 	void AlignForWidth(float width, float alignment)
 	{
 		float avail = GetContentRegionAvail().x;
-		float off = (avail - width) * alignment;
+		float off   = (avail - width) * alignment;
 
 		if (off > 0.0f) {
 			SetCursorPosX(GetCursorPosX() + off);
@@ -41,14 +41,14 @@ namespace ImGui
 
 	void ExtendWindowPastBorder()
 	{
-		const ImGuiWindow* window = GetCurrentWindowRead();
-		const float borderSize = window->WindowBorderSize;
+		const ImGuiWindow* window     = GetCurrentWindowRead();
+		const float        borderSize = window->WindowBorderSize;
 
 		if (borderSize <= 0.0f) {
 			return;
 		}
 
-		auto* drawList = GetBackgroundDrawList();
+		auto*      drawList     = GetBackgroundDrawList();
 		const auto newWindowPos = ImVec2{ window->Pos.x - borderSize, window->Pos.y - borderSize };
 
 		float extendedRounding = window->WindowRounding > 0.0f ? window->WindowRounding + borderSize : 0.0f;
@@ -63,8 +63,8 @@ namespace ImGui
 
 	void AlignedButtonLabel(const char* label, const ImVec2& size, float alignment)
 	{
-		const auto textSize = CalcTextSize(label);
-		const float offY = (size.y - textSize.y) * alignment;
+		const auto  textSize = CalcTextSize(label);
+		const float offY     = (size.y - textSize.y) * alignment;
 
 		if (offY > 0.0f) {
 			SetCursorPosY(GetCursorPosY() + offY);
@@ -78,11 +78,11 @@ namespace ImGui
 		if (window->SkipItems)
 			return;
 
-		float scale = Renderer::GetResolutionScale() * window->FontWindowScale;
+		float       scale     = Renderer::GetResolutionScale() * window->FontWindowScale;
 		const float thickness = std::max(1.0f, std::round(3.0f * scale));
 
 		const ImVec2 pos = window->DC.CursorPos;
-		const float w = GetContentRegionAvail().x;
+		const float  w   = GetContentRegionAvail().x;
 		const ImRect bb(pos, ImVec2(pos.x + w, pos.y + thickness));
 
 		ItemSize(ImVec2(0.0f, thickness));
@@ -95,27 +95,27 @@ namespace ImGui
 	void LeftAlignedTextImpl(const char* label, const std::string& newLabel)
 	{
 		float fullAvailX = ImGui::GetContentRegionAvail().x;
-		float startX = ImGui::GetCursorPosX();
-		float startY = ImGui::GetCursorPosY();
+		float startX     = ImGui::GetCursorPosX();
+		float startY     = ImGui::GetCursorPosY();
 
 		const bool hovered = IsWidgetFocused(newLabel.empty() ? label : newLabel.c_str());
-		const bool dim = MANAGER(Input)->IsInputGamepad() && !hovered;
+		const bool dim     = MANAGER(Input)->IsInputGamepad() && !hovered;
 
 		std::string_view labelView(label);
-		auto hashPos = labelView.find("##");
+		auto             hashPos = labelView.find("##");
 		if (hashPos != std::string_view::npos) {
 			labelView = labelView.substr(0, hashPos);
 		}
 
-		bool hasLabel = !labelView.empty();
+		bool  hasLabel       = !labelView.empty();
 		float rightPaneStart = startX;
-		auto& style = ImGui::Styles::GetSingleton()->user;
+		auto& style          = ImGui::Styles::GetSingleton()->user;
 
 		if (hasLabel) {
 			rightPaneStart = startX + (fullAvailX * style.widgetSplit) + ImGui::GetStyle().ItemInnerSpacing.x;
 
 			float targetHeight = ImGui::GetFrameHeight();
-			float textH = ImGui::GetTextLineHeight();
+			float textH        = ImGui::GetTextLineHeight();
 
 			// 0.5f uses ImGui's native FramePadding identically to AlignTextToFramePadding()
 			float offY = style.labelAlign.y == 0.5f ? ImGui::GetStyle().FramePadding.y : (targetHeight - textH) * style.labelAlign.y;
@@ -149,7 +149,7 @@ namespace ImGui
 	void CenteredText(const char* label, bool vertical)
 	{
 		const auto textSize = CalcTextSize(label);
-		const auto avail = GetContentRegionAvail();
+		const auto avail    = GetContentRegionAvail();
 
 		if (vertical) {
 			float offY = (avail.y - textSize.y) * 0.5f;
@@ -179,9 +179,9 @@ namespace ImGui
 
 	void Header(const char* label)
 	{
-		auto largeFont = MANAGER(IconFont)->GetLargeFont();
-		float scale = FUCKMan::GetSingleton()->GetActiveScale();
-		float size = (largeFont ? largeFont->LegacySize : ImGui::GetStyle().FontSizeBase) * scale;
+		auto  largeFont = MANAGER(IconFont)->GetLargeFont();
+		float scale     = FUCKMan::GetSingleton()->GetActiveScale();
+		float size      = (largeFont ? largeFont->LegacySize : ImGui::GetStyle().FontSizeBase) * scale;
 
 		ImGui::PushFont(largeFont, size);
 		PushStyleColor(ImGuiCol_Text, GetUserStyleColorU32(USER_STYLE::kHeaderText));
@@ -297,7 +297,7 @@ namespace ImGui
 		if (MANAGER(Input)->IsInputGamepad()) {
 			ImGuiContext& g = *GImGui;
 			if (IsKeyDown(ImGuiKey_NavGamepadCancel)) {
-				g.NavId = 0;
+				g.NavId            = 0;
 				g.NavCursorVisible = false;
 				SetWindowFocus(nullptr);
 			}
@@ -308,19 +308,19 @@ namespace ImGui
 	{
 		ImGuiContext& g = *GImGui;
 
-		g.ActiveId = 0;
-		g.NavId = 0;
+		g.ActiveId        = 0;
+		g.NavId           = 0;
 		g.NavFocusScopeId = 0;
-		g.NavWindow = nullptr;
-		g.NavInitRequest = false;
+		g.NavWindow       = nullptr;
+		g.NavInitRequest  = false;
 
-		g.NavCursorVisible = false;
+		g.NavCursorVisible         = false;
 		g.NavHighlightItemUnderNav = false;
 
 		g.NavInputSource = ImGuiInputSource_Mouse;
 
 		for (int i = 0; i < g.Windows.Size; i++) {
-			ImGuiWindow* window = g.Windows[i];
+			ImGuiWindow* window   = g.Windows[i];
 			window->NavLastIds[0] = 0;
 			window->NavLastIds[1] = 0;
 		}

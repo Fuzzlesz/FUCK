@@ -67,7 +67,7 @@ namespace ImGui
 	struct ArrowIconParams
 	{
 		ImVec2 drawSize;  // final draw dimensions, orientation-swapped
-		float offsetY;    // vertical centering offset within rowH
+		float  offsetY;   // vertical centering offset within rowH
 	};
 
 	inline ArrowIconParams CalcArrowIconParams(float iconAspect, bool pointsDown, float rowH,
@@ -87,7 +87,7 @@ namespace ImGui
 		// When pointing down/up the texture is rotated 90°, so physical W and H
 		// are swapped to keep the icon from stretching.
 		p.drawSize = pointsDown ? ImVec2(scaledH, scaledW) : ImVec2(scaledW, scaledH);
-		p.offsetY = (rowH - p.drawSize.y) * 0.5f;
+		p.offsetY  = (rowH - p.drawSize.y) * 0.5f;
 		return p;
 	}
 
@@ -125,19 +125,19 @@ namespace ImGui
 
 	// Helpers
 	std::tuple<bool, bool, bool> CenteredTextWithArrows(const char* label, std::string_view centerText);
-	void DrawWidgetBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered, float rounding = 0.0f);
-	void DrawTabBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered);
-	inline void LeftLabel(const char* label) { LeftAlignedTextImpl(label); }
+	void                         DrawWidgetBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered, float rounding = 0.0f);
+	void                         DrawTabBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered);
+	inline void                  LeftLabel(const char* label) { LeftAlignedTextImpl(label); }
 
 	bool DragScalarEx(const char* label, ImGuiDataType data_type, void* p_data, float v_speed, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags);
 
 	template <class T>
 	bool DragOnHover(const char* label, T* v, float v_speed = 1.0f, T v_min = 0, T v_max = 100, const char* format = nullptr, ImGuiSliderFlags flags = ImGuiSliderFlags_AlwaysClamp)
 	{
-		float scale = Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
+		float scale      = Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
 		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize);
-		float padX = std::max(GetStyle().FramePadding.x, borderSize + (8.0f * scale));
-		float padY = 7.0f * scale;
+		float padX       = std::max(GetStyle().FramePadding.x, borderSize + (8.0f * scale));
+		float padY       = 7.0f * scale;
 
 		PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(padX, padY));
 
@@ -164,10 +164,10 @@ namespace ImGui
 	template <class T>
 	bool Slider(const char* label, T* v, T v_min, T v_max, const char* format = nullptr, ImGuiSliderFlags flags = ImGuiSliderFlags_AlwaysClamp)
 	{
-		float scale = Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
+		float scale      = Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
 		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize);
-		float padX = std::max(GetStyle().FramePadding.x, borderSize + (8.0f * scale));
-		float padY = 7.0f * scale;
+		float padX       = std::max(GetStyle().FramePadding.x, borderSize + (8.0f * scale));
+		float padY       = 7.0f * scale;
 
 		PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(padX, padY));
 

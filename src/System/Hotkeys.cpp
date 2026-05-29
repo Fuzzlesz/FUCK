@@ -62,8 +62,8 @@ namespace Hotkeys
 
 	const IconFont::IconTexture* Manager::ToggleIcon() const
 	{
-		bool isGP = (FUCK::GetInputDevice() == FUCK::InputDevice::kGamepad);
-		std::uint32_t key = isGP ? _toggleHotkey.gKey : _toggleHotkey.kKey;
+		bool          isGP = (FUCK::GetInputDevice() == FUCK::InputDevice::kGamepad);
+		std::uint32_t key  = isGP ? _toggleHotkey.gKey : _toggleHotkey.kKey;
 		return (key != 0) ? MANAGER(IconFont)->GetIcon(key) : nullptr;
 	}
 

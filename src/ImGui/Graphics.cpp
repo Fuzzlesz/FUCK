@@ -25,7 +25,7 @@ namespace ImGui
 	{
 		bool result = false;
 
-		image = std::make_shared<DirectX::ScratchImage>();
+		image      = std::make_shared<DirectX::ScratchImage>();
 		HRESULT hr = DirectX::LoadFromWICFile(path.c_str(), DirectX::WIC_FLAGS_IGNORE_SRGB, nullptr, *image);
 
 		if (SUCCEEDED(hr)) {
@@ -46,12 +46,12 @@ namespace ImGui
 
 				if (SUCCEEDED(hr)) {
 					D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
-					srvDesc.Format = image->GetMetadata().format;
-					srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-					srvDesc.Texture2D.MipLevels = 1;
+					srvDesc.Format                    = image->GetMetadata().format;
+					srvDesc.ViewDimension             = D3D11_SRV_DIMENSION_TEXTURE2D;
+					srvDesc.Texture2D.MipLevels       = 1;
 					srvDesc.Texture2D.MostDetailedMip = 0;
 
-					hr = reinterpret_cast<ID3D11Device*>(renderer->data.forwarder)->CreateShaderResourceView(pTexture.Get(), &srvDesc, &srView);
+					hr     = reinterpret_cast<ID3D11Device*>(renderer->data.forwarder)->CreateShaderResourceView(pTexture.Get(), &srvDesc, &srView);
 					result = SUCCEEDED(hr);
 				}
 

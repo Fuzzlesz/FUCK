@@ -24,7 +24,7 @@ namespace FUCK::Host
 	// Display
 	// ==========================================
 	static float GetResolutionScale_Impl() { return ImGui::Renderer::GetResolutionScale(); }
-	static void GetDisplaySize_Impl(float* x, float* y)
+	static void  GetDisplaySize_Impl(float* x, float* y)
 	{
 		auto size = ImGui::GetIO().DisplaySize;
 		if (x)
@@ -34,12 +34,12 @@ namespace FUCK::Host
 	}
 	static void TranslateScaleformToScreen_Impl(float stageX, float stageY, float* screenX, float* screenY)
 	{
-		auto screenSize = RE::BSGraphics::Renderer::GetScreenSize();
-		float screenW = static_cast<float>(screenSize.width);
-		float screenH = static_cast<float>(screenSize.height);
+		auto  screenSize = RE::BSGraphics::Renderer::GetScreenSize();
+		float screenW    = static_cast<float>(screenSize.width);
+		float screenH    = static_cast<float>(screenSize.height);
 
-		float scaleY = screenH / 720.0f;
-		float scaleX = scaleY;
+		float scaleY  = screenH / 720.0f;
+		float scaleX  = scaleY;
 		float offsetX = (screenW - (1280.0f * scaleX)) / 2.0f;
 		float offsetY = (screenH - (720.0f * scaleY)) / 2.0f;
 
@@ -72,7 +72,7 @@ namespace FUCK::Host
 	// IO
 	// ==========================================
 	static float GetDeltaTime_Impl() { return ImGui::GetIO().DeltaTime; }
-	static void GetMouseDelta_Impl(float* x, float* y)
+	static void  GetMouseDelta_Impl(float* x, float* y)
 	{
 		auto d = ImGui::GetIO().MouseDelta;
 		if (x)
@@ -93,11 +93,11 @@ namespace FUCK::Host
 	// ==========================================
 	// Styling
 	// ==========================================
-	static void PushStyleColor_Impl(ImGuiCol idx, const ImVec4& col) { ImGui::PushStyleColor(idx, col); }
-	static void PopStyleColor_Impl(int count) { ImGui::PopStyleColor(count); }
-	static void PushStyleVar_Impl(ImGuiStyleVar idx, float val) { ImGui::PushStyleVar(idx, val); }
-	static void PushStyleVarVec_Impl(ImGuiStyleVar idx, const ImVec2& val) { ImGui::PushStyleVar(idx, val); }
-	static void PopStyleVar_Impl(int count) { ImGui::PopStyleVar(count); }
+	static void  PushStyleColor_Impl(ImGuiCol idx, const ImVec4& col) { ImGui::PushStyleColor(idx, col); }
+	static void  PopStyleColor_Impl(int count) { ImGui::PopStyleColor(count); }
+	static void  PushStyleVar_Impl(ImGuiStyleVar idx, float val) { ImGui::PushStyleVar(idx, val); }
+	static void  PushStyleVarVec_Impl(ImGuiStyleVar idx, const ImVec2& val) { ImGui::PushStyleVar(idx, val); }
+	static void  PopStyleVar_Impl(int count) { ImGui::PopStyleVar(count); }
 	static float GetStyleVar_Impl(ImGuiStyleVar idx)
 	{
 		auto& style = ImGui::GetStyle();
@@ -140,7 +140,7 @@ namespace FUCK::Host
 	}
 	static void GetStyleVarVec_Impl(ImGuiStyleVar idx, float* x, float* y)
 	{
-		auto& style = ImGui::GetStyle();
+		auto&  style = ImGui::GetStyle();
 		ImVec2 val(0, 0);
 		switch (idx) {
 		case ImGuiStyleVar_WindowPadding:
@@ -230,7 +230,7 @@ namespace FUCK::Host
 			*y = p.y;
 	}
 	static float CalcItemWidth_Impl() { return ImGui::CalcItemWidth(); }
-	static void CalcTextSize_Impl(const char* text, const char* text_end, bool hide_text_after_double_hash, float wrap_width, float* x, float* y)
+	static void  CalcTextSize_Impl(const char* text, const char* text_end, bool hide_text_after_double_hash, float wrap_width, float* x, float* y)
 	{
 		ImVec2 s = ImGui::CalcTextSize(text, text_end, hide_text_after_double_hash, wrap_width);
 		if (x)
@@ -273,9 +273,9 @@ namespace FUCK::Host
 	// ==========================================
 	// Utils
 	// ==========================================
-	static void LoadTranslation_Impl(const char* n) { Translation::Manager::GetSingleton()->LoadCustomTranslation(n); }
+	static void        LoadTranslation_Impl(const char* n) { Translation::Manager::GetSingleton()->LoadCustomTranslation(n); }
 	static const char* GetTranslation_Impl(const char* k) { return Translation::Manager::GetSingleton()->GetTranslation(k); }
-	static void SanitizePath_Impl(char* dest, const char* source, size_t size) { Utils::SanitizePath(dest, source, size); }
+	static void        SanitizePath_Impl(char* dest, const char* source, size_t size) { Utils::SanitizePath(dest, source, size); }
 
 	static void GetPluginConfigPath_Impl(const char* pluginName, char* dest, size_t size)
 	{
@@ -290,7 +290,7 @@ namespace FUCK::Host
 		if (!callback || !pluginName)
 			return;
 		std::string defaultPath = std::format(R"(Data\FUCKs\{}\settings.ini)", pluginName);
-		std::string userPath = std::format(R"(Data\FUCKs\{}\settings_user.ini)", pluginName);
+		std::string userPath    = std::format(R"(Data\FUCKs\{}\settings_user.ini)", pluginName);
 
 		Settings::GetSingleton()->LoadINI(defaultPath.c_str(), userPath.c_str(), [userdata, callback](CSimpleIniA& ini) {
 			callback(ini, userdata);
@@ -322,7 +322,7 @@ namespace FUCK::Host
 		if (!callback || !pluginName)
 			return;
 		std::string defaultPath = std::format(R"(Data\FUCKs\{}\keybinds.ini)", pluginName);
-		std::string userPath = std::format(R"(Data\FUCKs\{}\keybinds_user.ini)", pluginName);
+		std::string userPath    = std::format(R"(Data\FUCKs\{}\keybinds_user.ini)", pluginName);
 
 		Settings::GetSingleton()->LoadINI(defaultPath.c_str(), userPath.c_str(), [userdata, callback](CSimpleIniA& ini) {
 			callback(ini, userdata);
@@ -360,7 +360,7 @@ namespace FUCK::Host
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * scale, 12.0f * scale));
 
 			ImVec2 origMousePos = ImGui::GetIO().MousePos;
-			float offset = 20.0f * scale;
+			float  offset       = 20.0f * scale;
 			ImGui::GetIO().MousePos.x += offset;
 			ImGui::GetIO().MousePos.y += offset;
 
@@ -431,12 +431,12 @@ namespace FUCK::Host
 		auto icon = IconFont::Manager::GetSingleton()->GetIcon(k);
 		if (icon) {
 			float userIconScale = FUCKMan::GetSingleton()->IsIgnoringUserScale() ? 1.0f : ImGui::Styles::GetSingleton()->user.iconScale;
-			float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
-			float resScale = ImGui::Renderer::GetResolutionScale();
+			float activeScale   = FUCKMan::GetSingleton()->GetActiveScale();
+			float resScale      = ImGui::Renderer::GetResolutionScale();
 
 			// Lock base size to 38.0f to match the Hotkey widget internal math
 			float baseFrameH = 38.0f * resScale * activeScale;
-			float targetH = std::round(baseFrameH * userIconScale);
+			float targetH    = std::round(baseFrameH * userIconScale);
 
 			float targetW = std::round(targetH * (icon->imageSize.y > 0.0f ? (icon->imageSize.x / icon->imageSize.y) : 1.0f));
 
@@ -456,20 +456,20 @@ namespace FUCK::Host
 		ImGuiWindow* window = ImGui::GetCurrentWindow();
 		if (window->SkipItems)
 			return;
-		ImGuiContext& g = *GImGui;
-		const ImGuiID id = window->GetID(label);
-		const ImVec2 pos = window->DC.CursorPos;
-		const ImVec2 size((radius) * 2, (radius + g.Style.FramePadding.y) * 2);
-		const ImRect bb(pos, ImVec2(pos.x + size.x, pos.y + size.y));
+		ImGuiContext& g   = *GImGui;
+		const ImGuiID id  = window->GetID(label);
+		const ImVec2  pos = window->DC.CursorPos;
+		const ImVec2  size((radius) * 2, (radius + g.Style.FramePadding.y) * 2);
+		const ImRect  bb(pos, ImVec2(pos.x + size.x, pos.y + size.y));
 		ImGui::ItemSize(bb, g.Style.FramePadding.y);
 		if (!ImGui::ItemAdd(bb, id))
 			return;
 		window->DrawList->PathClear();
-		int num_segments = 30;
-		int start = static_cast<int>(ImAbs(ImSin(static_cast<float>(g.Time) * 1.8f) * (num_segments - 5)));
-		const float a_min = IM_PI * 2.0f * ((float)start) / (float)num_segments;
-		const float a_max = IM_PI * 2.0f * ((float)num_segments - 3) / (float)num_segments;
-		const ImVec2 centre = ImVec2(pos.x + radius, pos.y + radius + g.Style.FramePadding.y);
+		int          num_segments = 30;
+		int          start        = static_cast<int>(ImAbs(ImSin(static_cast<float>(g.Time) * 1.8f) * (num_segments - 5)));
+		const float  a_min        = IM_PI * 2.0f * ((float)start) / (float)num_segments;
+		const float  a_max        = IM_PI * 2.0f * ((float)num_segments - 3) / (float)num_segments;
+		const ImVec2 centre       = ImVec2(pos.x + radius, pos.y + radius + g.Style.FramePadding.y);
 		for (int i = 0; i < num_segments; i++) {
 			const float a = a_min + ((float)i / (float)num_segments) * (a_max - a_min);
 			window->DrawList->PathLineTo(ImVec2(centre.x + ImCos(a + static_cast<float>(g.Time) * 8.0f) * radius,
@@ -495,22 +495,22 @@ namespace FUCK::Host
 	// ==========================================
 	// Input
 	// ==========================================
-	static bool IsInputPressed_Impl(const void* evt, std::uint32_t key) { return Input::Manager::GetSingleton()->IsInputPressed(static_cast<const RE::InputEvent* const*>(evt), key); }
-	static bool IsInputDown_Impl(std::uint32_t key) { return Input::Manager::GetSingleton()->IsInputDown(key); }
+	static bool  IsInputPressed_Impl(const void* evt, std::uint32_t key) { return Input::Manager::GetSingleton()->IsInputPressed(static_cast<const RE::InputEvent* const*>(evt), key); }
+	static bool  IsInputDown_Impl(std::uint32_t key) { return Input::Manager::GetSingleton()->IsInputDown(key); }
 	static float GetAnalogInput_Impl(std::uint32_t key) { return Input::Manager::GetSingleton()->GetAnalogInput(key); }
-	static bool IsModifierPressed_Impl(FUCK::Modifier m) { return Input::Manager::GetSingleton()->IsModifierPressed(m); }
-	static int GetInputDevice_Impl()
+	static bool  IsModifierPressed_Impl(FUCK::Modifier m) { return Input::Manager::GetSingleton()->IsModifierPressed(m); }
+	static int   GetInputDevice_Impl()
 	{
 		auto device = Input::Manager::GetSingleton()->GetInputDevice();
 		if (device == Input::DEVICE::kGamepadDirectX || device == Input::DEVICE::kGamepadOrbis)
 			return static_cast<int>(FUCK::InputDevice::kGamepad);
 		return static_cast<int>(FUCK::InputDevice::kMouseKeyboard);
 	}
-	static const char* GetKeyName_Impl(std::uint32_t key) { return Input::Manager::GetSingleton()->GetKeyName(key); }
-	static bool IsGamepadKey_Impl(std::uint32_t k) { return k >= Input::Keymap::kGPBase; }
-	static bool IsBinding_Impl() { return Input::Manager::GetSingleton()->IsBinding(); }
-	static void AbortBinding_Impl() { Input::Manager::GetSingleton()->AbortBinding(); }
-	static void StartBinding_Impl(std::uint32_t k, std::int32_t m1, std::int32_t m2, bool disallowModifiers) { Input::Manager::GetSingleton()->StartBinding(k, m1, m2, disallowModifiers); }
+	static const char*      GetKeyName_Impl(std::uint32_t key) { return Input::Manager::GetSingleton()->GetKeyName(key); }
+	static bool             IsGamepadKey_Impl(std::uint32_t k) { return k >= Input::Keymap::kGPBase; }
+	static bool             IsBinding_Impl() { return Input::Manager::GetSingleton()->IsBinding(); }
+	static void             AbortBinding_Impl() { Input::Manager::GetSingleton()->AbortBinding(); }
+	static void             StartBinding_Impl(std::uint32_t k, std::int32_t m1, std::int32_t m2, bool disallowModifiers) { Input::Manager::GetSingleton()->StartBinding(k, m1, m2, disallowModifiers); }
 	static FUCK::BindResult UpdateBinding_Impl(const void* evt, std::uint32_t* k, std::int32_t* m1, std::int32_t* m2) { return Input::Manager::GetSingleton()->UpdateBinding(static_cast<const RE::InputEvent* const*>(evt), k, m1, m2); }
 	static FUCK::BindResult GetInputBind_Impl(const void* evt, std::uint32_t* k, std::int32_t* m1, std::int32_t* m2) { return Input::Manager::GetSingleton()->GetInputBind(static_cast<const RE::InputEvent* const*>(evt), k, m1, m2); }
 
@@ -662,7 +662,7 @@ namespace FUCK::Host
 		for (int i = 0; i < items_count; ++i) vecItems.emplace_back(items[i]);
 		return ImGui::ComboWithFilter(label, current_item, vecItems, popup_max_height);
 	}
-	static bool ComboForm_Impl(const char* label, std::uint32_t* id, std::uint8_t t) { return ImGui::ComboForm(label, reinterpret_cast<RE::FormID*>(id), static_cast<RE::FormType>(t)); }
+	static bool                 ComboForm_Impl(const char* label, std::uint32_t* id, std::uint8_t t) { return ImGui::ComboForm(label, reinterpret_cast<RE::FormID*>(id), static_cast<RE::FormType>(t)); }
 	static ImGuiTableSortSpecs* GetTableSortSpecs_Impl() { return ImGui::TableGetSortSpecs(); }
 
 	static bool Selectable_Impl(const char* label, bool selected, int flags, const ImVec2& size) { return ImGui::SelectableStyled(label, selected, flags, size); }
@@ -743,7 +743,7 @@ namespace FUCK::Host
 			// Temporarily spoof the mouse position so ImGui spawns the tooltip offset,
 			// while still utilising its native screen-edge clamping
 			ImVec2 origMousePos = ImGui::GetIO().MousePos;
-			float offset = 20.0f * scale;
+			float  offset       = 20.0f * scale;
 			ImGui::GetIO().MousePos.x += offset;
 			ImGui::GetIO().MousePos.y += offset;
 
@@ -785,212 +785,212 @@ namespace FUCK::Host
 		static FUCK_Interface api = {
 			.version = FUCK_API_VERSION,
 			// Registration
-			.RegisterTool = RegisterTool_Impl,
-			.RegisterWindow = RegisterWindow_Impl,
+			.RegisterTool     = RegisterTool_Impl,
+			.RegisterWindow   = RegisterWindow_Impl,
 			.UnregisterWindow = UnregisterWindow_Impl,
 			// Display
-			.GetResolutionScale = GetResolutionScale_Impl,
-			.GetDisplaySize = GetDisplaySize_Impl,
+			.GetResolutionScale         = GetResolutionScale_Impl,
+			.GetDisplaySize             = GetDisplaySize_Impl,
 			.TranslateScaleformToScreen = TranslateScaleformToScreen_Impl,
-			.GetFont = GetFont_Impl,
-			.PushFont = PushFont_Impl,
-			.PopFont = PopFont_Impl,
-			.SuspendRendering = SuspendRendering_Impl,
-			.SetMenuOpen = SetMenuOpen_Impl,
-			.IsMenuOpen = IsMenuOpen_Impl,
+			.GetFont                    = GetFont_Impl,
+			.PushFont                   = PushFont_Impl,
+			.PopFont                    = PopFont_Impl,
+			.SuspendRendering           = SuspendRendering_Impl,
+			.SetMenuOpen                = SetMenuOpen_Impl,
+			.IsMenuOpen                 = IsMenuOpen_Impl,
 			// IO
-			.GetDeltaTime = GetDeltaTime_Impl,
+			.GetDeltaTime  = GetDeltaTime_Impl,
 			.GetMouseDelta = GetMouseDelta_Impl,
-			.GetMousePos = GetMousePos_Impl,
+			.GetMousePos   = GetMousePos_Impl,
 			.GetMouseWheel = GetMouseWheel_Impl,
 			// Styling
-			.PushStyleColor = PushStyleColor_Impl,
-			.PopStyleColor = PopStyleColor_Impl,
-			.PushStyleVar = PushStyleVar_Impl,
-			.PushStyleVarVec = PushStyleVarVec_Impl,
-			.PopStyleVar = PopStyleVar_Impl,
-			.GetStyleVar = GetStyleVar_Impl,
-			.GetStyleVarVec = GetStyleVarVec_Impl,
+			.PushStyleColor    = PushStyleColor_Impl,
+			.PopStyleColor     = PopStyleColor_Impl,
+			.PushStyleVar      = PushStyleVar_Impl,
+			.PushStyleVarVec   = PushStyleVarVec_Impl,
+			.PopStyleVar       = PopStyleVar_Impl,
+			.GetStyleVar       = GetStyleVar_Impl,
+			.GetStyleVarVec    = GetStyleVarVec_Impl,
 			.GetStyleColorVec4 = GetStyleColorVec4_Impl,
 			// Layout
-			.SetCursorPosX = SetCursorPosX_Impl,
-			.SetCursorPosY = SetCursorPosY_Impl,
-			.GetCursorPos = GetCursorPos_Impl,
-			.SetCursorPos = SetCursorPos_Impl,
-			.GetCursorScreenPos = GetCursorScreenPos_Impl,
-			.SetCursorScreenPos = SetCursorScreenPos_Impl,
+			.SetCursorPosX           = SetCursorPosX_Impl,
+			.SetCursorPosY           = SetCursorPosY_Impl,
+			.GetCursorPos            = GetCursorPos_Impl,
+			.SetCursorPos            = SetCursorPos_Impl,
+			.GetCursorScreenPos      = GetCursorScreenPos_Impl,
+			.SetCursorScreenPos      = SetCursorScreenPos_Impl,
 			.AlignTextToFramePadding = AlignTextToFramePadding_Impl,
-			.GetContentRegionAvail = GetContentRegionAvail_Impl,
-			.CalcItemWidth = CalcItemWidth_Impl,
-			.CalcTextSize = CalcTextSize_Impl,
-			.GetItemRectMin = GetItemRectMin_Impl,
-			.GetItemRectMax = GetItemRectMax_Impl,
-			.SetNextItemWidth = SetNextItemWidth_Impl,
-			.SetNextItemOpen = SetNextItemOpen_Impl,
-			.Dummy = Dummy_Impl,
-			.Spacing = Spacing_Impl,
-			.Separator = Separator_Impl,
-			.SeparatorThick = SeparatorThick_Impl,
-			.SeparatorText = SeparatorText_Impl,
+			.GetContentRegionAvail   = GetContentRegionAvail_Impl,
+			.CalcItemWidth           = CalcItemWidth_Impl,
+			.CalcTextSize            = CalcTextSize_Impl,
+			.GetItemRectMin          = GetItemRectMin_Impl,
+			.GetItemRectMax          = GetItemRectMax_Impl,
+			.SetNextItemWidth        = SetNextItemWidth_Impl,
+			.SetNextItemOpen         = SetNextItemOpen_Impl,
+			.Dummy                   = Dummy_Impl,
+			.Spacing                 = Spacing_Impl,
+			.Separator               = Separator_Impl,
+			.SeparatorThick          = SeparatorThick_Impl,
+			.SeparatorText           = SeparatorText_Impl,
 			// Metrics
-			.GetTextLineHeight = GetTextLineHeight_Impl,
+			.GetTextLineHeight            = GetTextLineHeight_Impl,
 			.GetTextLineHeightWithSpacing = GetTextLineHeightWithSpacing_Impl,
-			.GetFrameHeight = GetFrameHeight_Impl,
-			.GetFrameHeightWithSpacing = GetFrameHeightWithSpacing_Impl,
+			.GetFrameHeight               = GetFrameHeight_Impl,
+			.GetFrameHeightWithSpacing    = GetFrameHeightWithSpacing_Impl,
 			// Utils
-			.LoadTranslation = LoadTranslation_Impl,
-			.GetTranslation = GetTranslation_Impl,
-			.SanitizePath = SanitizePath_Impl,
-			.GetPluginConfigPath = GetPluginConfigPath_Impl,
-			.LoadPluginINI = LoadPluginINI_Impl,
-			.SavePluginINI = SavePluginINI_Impl,
-			.LoadPluginINIDefaults = LoadPluginINIDefaults_Impl,
-			.LoadPluginKeybinds = LoadPluginKeybinds_Impl,
-			.SavePluginKeybinds = SavePluginKeybinds_Impl,
+			.LoadTranslation            = LoadTranslation_Impl,
+			.GetTranslation             = GetTranslation_Impl,
+			.SanitizePath               = SanitizePath_Impl,
+			.GetPluginConfigPath        = GetPluginConfigPath_Impl,
+			.LoadPluginINI              = LoadPluginINI_Impl,
+			.SavePluginINI              = SavePluginINI_Impl,
+			.LoadPluginINIDefaults      = LoadPluginINIDefaults_Impl,
+			.LoadPluginKeybinds         = LoadPluginKeybinds_Impl,
+			.SavePluginKeybinds         = SavePluginKeybinds_Impl,
 			.LoadPluginKeybindsDefaults = LoadPluginKeybindsDefaults_Impl,
-			.PushItemFlag = PushItemFlag_Impl,
-			.PopItemFlag = PopItemFlag_Impl,
-			.HelpMarker = HelpMarker_Impl,
-			.PushID_Str = PushID_Str_Impl,
-			.PushID_Int = PushID_Int_Impl,
-			.PopID = PopID_Impl,
+			.PushItemFlag               = PushItemFlag_Impl,
+			.PopItemFlag                = PopItemFlag_Impl,
+			.HelpMarker                 = HelpMarker_Impl,
+			.PushID_Str                 = PushID_Str_Impl,
+			.PushID_Int                 = PushID_Int_Impl,
+			.PopID                      = PopID_Impl,
 			// Menu Events
-			.AddMenuListener = AddMenuListener_Impl,
+			.AddMenuListener    = AddMenuListener_Impl,
 			.RemoveMenuListener = RemoveMenuListener_Impl,
 			// Assets
-			.LoadImage = LoadImage_Impl,
-			.ReleaseImage = ReleaseImage_Impl,
-			.GetImageInfo = GetImageInfo_Impl,
-			.GetIconForKey = GetIconForKey_Impl,
+			.LoadImage         = LoadImage_Impl,
+			.ReleaseImage      = ReleaseImage_Impl,
+			.GetImageInfo      = GetImageInfo_Impl,
+			.GetIconForKey     = GetIconForKey_Impl,
 			.GetIconSizeForKey = GetIconSizeForKey_Impl,
-			.Spinner = Spinner_Impl,
-			.DrawOverlay = DrawOverlay_Impl,
+			.Spinner           = Spinner_Impl,
+			.DrawOverlay       = DrawOverlay_Impl,
 			// Game Control
-			.SetGameTimeFrozen = SetGameTimeFrozen_Impl,
+			.SetGameTimeFrozen    = SetGameTimeFrozen_Impl,
 			.SetAutoVanityBlocked = SetAutoVanityBlocked_Impl,
-			.SetHardPause = SetHardPause_Impl,
-			.SetSoftPause = SetSoftPause_Impl,
-			.ForceCursor = ForceCursor_Impl,
+			.SetHardPause         = SetHardPause_Impl,
+			.SetSoftPause         = SetSoftPause_Impl,
+			.ForceCursor          = ForceCursor_Impl,
 			// Input
-			.IsInputPressed = IsInputPressed_Impl,
-			.IsInputDown = IsInputDown_Impl,
-			.GetAnalogInput = GetAnalogInput_Impl,
-			.IsModifierPressed = IsModifierPressed_Impl,
-			.GetInputDevice = GetInputDevice_Impl,
-			.GetKeyName = GetKeyName_Impl,
-			.IsGamepadKey = IsGamepadKey_Impl,
-			.IsBinding = IsBinding_Impl,
-			.AbortBinding = AbortBinding_Impl,
-			.StartBinding = StartBinding_Impl,
-			.UpdateBinding = UpdateBinding_Impl,
-			.GetInputBind = GetInputBind_Impl,
-			.DrawManagedHotkey = DrawManagedHotkey_Impl,
-			.UpdateManagedHotkey = UpdateManagedHotkey_Impl,
+			.IsInputPressed       = IsInputPressed_Impl,
+			.IsInputDown          = IsInputDown_Impl,
+			.GetAnalogInput       = GetAnalogInput_Impl,
+			.IsModifierPressed    = IsModifierPressed_Impl,
+			.GetInputDevice       = GetInputDevice_Impl,
+			.GetKeyName           = GetKeyName_Impl,
+			.IsGamepadKey         = IsGamepadKey_Impl,
+			.IsBinding            = IsBinding_Impl,
+			.AbortBinding         = AbortBinding_Impl,
+			.StartBinding         = StartBinding_Impl,
+			.UpdateBinding        = UpdateBinding_Impl,
+			.GetInputBind         = GetInputBind_Impl,
+			.DrawManagedHotkey    = DrawManagedHotkey_Impl,
+			.UpdateManagedHotkey  = UpdateManagedHotkey_Impl,
 			.ProcessManagedHotkey = ProcessManagedHotkey_Impl,
-			.IsManagedHotkeyDown = IsManagedHotkeyDown_Impl,
+			.IsManagedHotkeyDown  = IsManagedHotkeyDown_Impl,
 			// Interaction
-			.IsItemHovered = IsItemHovered_Impl,
-			.IsItemClicked = IsItemClicked_Impl,
-			.IsItemActive = IsItemActive_Impl,
-			.IsItemFocused = IsItemFocused_Impl,
-			.IsItemDeactivated = IsItemDeactivated_Impl,
+			.IsItemHovered              = IsItemHovered_Impl,
+			.IsItemClicked              = IsItemClicked_Impl,
+			.IsItemActive               = IsItemActive_Impl,
+			.IsItemFocused              = IsItemFocused_Impl,
+			.IsItemDeactivated          = IsItemDeactivated_Impl,
 			.IsItemDeactivatedAfterEdit = IsItemDeactivatedAfterEdit_Impl,
-			.IsAnyItemActive = IsAnyItemActive_Impl,
-			.IsAnyItemHovered = IsAnyItemHovered_Impl,
-			.IsWindowFocused = IsWindowFocused_Impl,
-			.IsWindowHovered = IsWindowHovered_Impl,
-			.IsMouseDown = IsMouseDown_Impl,
-			.IsMouseClicked = IsMouseClicked_Impl,
-			.IsMouseReleased = IsMouseReleased_Impl,
-			.IsKeyDown = IsKeyDown_Impl,
-			.IsKeyPressed = IsKeyPressed_Impl,
-			.SetKeyboardFocusHere = SetKeyboardFocusHere_Impl,
-			.SetItemDefaultFocus = SetItemDefaultFocus_Impl,
+			.IsAnyItemActive            = IsAnyItemActive_Impl,
+			.IsAnyItemHovered           = IsAnyItemHovered_Impl,
+			.IsWindowFocused            = IsWindowFocused_Impl,
+			.IsWindowHovered            = IsWindowHovered_Impl,
+			.IsMouseDown                = IsMouseDown_Impl,
+			.IsMouseClicked             = IsMouseClicked_Impl,
+			.IsMouseReleased            = IsMouseReleased_Impl,
+			.IsKeyDown                  = IsKeyDown_Impl,
+			.IsKeyPressed               = IsKeyPressed_Impl,
+			.SetKeyboardFocusHere       = SetKeyboardFocusHere_Impl,
+			.SetItemDefaultFocus        = SetItemDefaultFocus_Impl,
 			// Drawing Primitives
-			.DrawRect = DrawRect_Impl,
-			.DrawRectFilled = DrawRectFilled_Impl,
-			.DrawLine = DrawLine_Impl,
-			.DrawImage = DrawImage_Impl,
-			.DrawImageQuad = DrawImageQuad_Impl,
-			.AddImage = AddImage_Impl,
+			.DrawRect            = DrawRect_Impl,
+			.DrawRectFilled      = DrawRectFilled_Impl,
+			.DrawLine            = DrawLine_Impl,
+			.DrawImage           = DrawImage_Impl,
+			.DrawImageQuad       = DrawImageQuad_Impl,
+			.AddImage            = AddImage_Impl,
 			.DrawBackgroundImage = DrawBackgroundImage_Impl,
-			.DrawBackgroundLine = DrawBackgroundLine_Impl,
-			.DrawBackgroundRect = DrawBackgroundRect_Impl,
+			.DrawBackgroundLine  = DrawBackgroundLine_Impl,
+			.DrawBackgroundRect  = DrawBackgroundRect_Impl,
 			// Screen primitives
-			.DrawScreenRect = DrawScreenRect_Impl,
+			.DrawScreenRect       = DrawScreenRect_Impl,
 			.DrawScreenRectFilled = DrawScreenRectFilled_Impl,
-			.DrawScreenLine = DrawScreenLine_Impl,
+			.DrawScreenLine       = DrawScreenLine_Impl,
 			// Windows
-			.SetNextWindowPos = SetNextWindowPos_Impl,
-			.SetNextWindowSize = SetNextWindowSize_Impl,
-			.GetWindowPos = GetWindowPos_Impl,
-			.GetWindowSize = GetWindowSize_Impl,
-			.SetWindowPos = SetWindowPos_Impl,
-			.SetWindowSize = SetWindowSize_Impl,
-			.BeginWindow = BeginWindow_Impl,
-			.EndWindow = EndWindow_Impl,
+			.SetNextWindowPos       = SetNextWindowPos_Impl,
+			.SetNextWindowSize      = SetNextWindowSize_Impl,
+			.GetWindowPos           = GetWindowPos_Impl,
+			.GetWindowSize          = GetWindowSize_Impl,
+			.SetWindowPos           = SetWindowPos_Impl,
+			.SetWindowSize          = SetWindowSize_Impl,
+			.BeginWindow            = BeginWindow_Impl,
+			.EndWindow              = EndWindow_Impl,
 			.ExtendWindowPastBorder = ExtendWindowPastBorder_Impl,
-			.BeginChild = BeginChild_Impl,
-			.EndChild = EndChild_Impl,
-			.TreeNode = TreeNode_Impl,
-			.TreePop = TreePop_Impl,
-			.BeginPopupContextItem = BeginPopupContextItem_Impl,
-			.EndPopup = EndPopup_Impl,
+			.BeginChild             = BeginChild_Impl,
+			.EndChild               = EndChild_Impl,
+			.TreeNode               = TreeNode_Impl,
+			.TreePop                = TreePop_Impl,
+			.BeginPopupContextItem  = BeginPopupContextItem_Impl,
+			.EndPopup               = EndPopup_Impl,
 			// Widgets
-			.Button = Button_Impl,
-			.Checkbox = Checkbox_Impl,
-			.Hotkey = Hotkey_Impl,
-			.ToggleButton = ToggleButton_Impl,
-			.InputText = InputText_Impl,
-			.ColorEdit3 = ColorEdit3_Impl,
-			.ColorEdit4 = ColorEdit4_Impl,
-			.SliderFloat = SliderFloat_Impl,
-			.SliderInt = SliderInt_Impl,
-			.DragInt = DragInt_Impl,
-			.DragFloat = DragFloat_Impl,
-			.DragFloat2 = DragFloat2_Impl,
-			.DragFloat3 = DragFloat3_Impl,
-			.DragFloat4 = DragFloat4_Impl,
-			.Combo = Combo_Impl,
-			.ComboWithFilter = ComboWithFilter_Impl,
-			.ComboForm = ComboForm_Impl,
-			.GetTableSortSpecs = GetTableSortSpecs_Impl,
-			.Selectable = Selectable_Impl,
-			.Header = Header_Impl,
-			.LeftLabel = LeftLabel_Impl,
-			.TextColored = TextColored_Impl,
-			.TextColoredWrapped = TextColoredWrapped_Impl,
-			.TextDisabled = TextDisabled_Impl,
-			.CenteredText = CenteredText_Impl,
+			.Button                 = Button_Impl,
+			.Checkbox               = Checkbox_Impl,
+			.Hotkey                 = Hotkey_Impl,
+			.ToggleButton           = ToggleButton_Impl,
+			.InputText              = InputText_Impl,
+			.ColorEdit3             = ColorEdit3_Impl,
+			.ColorEdit4             = ColorEdit4_Impl,
+			.SliderFloat            = SliderFloat_Impl,
+			.SliderInt              = SliderInt_Impl,
+			.DragInt                = DragInt_Impl,
+			.DragFloat              = DragFloat_Impl,
+			.DragFloat2             = DragFloat2_Impl,
+			.DragFloat3             = DragFloat3_Impl,
+			.DragFloat4             = DragFloat4_Impl,
+			.Combo                  = Combo_Impl,
+			.ComboWithFilter        = ComboWithFilter_Impl,
+			.ComboForm              = ComboForm_Impl,
+			.Selectable             = Selectable_Impl,
+			.GetTableSortSpecs      = GetTableSortSpecs_Impl,
+			.Header                 = Header_Impl,
+			.LeftLabel              = LeftLabel_Impl,
+			.TextColored            = TextColored_Impl,
+			.TextColoredWrapped     = TextColoredWrapped_Impl,
+			.TextDisabled           = TextDisabled_Impl,
+			.CenteredText           = CenteredText_Impl,
 			.CenteredTextWithArrows = CenteredTextWithArrows_Impl,
-			.ButtonIconWithLabel = ButtonIconWithLabel_Impl,
-			.ImageButton = ImageButton_Impl,
-			.Stepper = Stepper_Impl,
-			.BeginTabBar = BeginTabBar_Impl,
-			.EndTabBar = EndTabBar_Impl,
-			.BeginTabItem = BeginTabItem_Impl,
-			.EndTabItem = EndTabItem_Impl,
-			.BeginTable = BeginTable_Impl,
-			.EndTable = EndTable_Impl,
-			.TableSetupColumn = TableSetupColumn_Impl,
-			.TableNextRow = TableNextRow_Impl,
-			.TableNextColumn = TableNextColumn_Impl,
-			.TableHeadersRow = TableHeadersRow_Impl,
-			.Columns = Columns_Impl,
-			.NextColumn = NextColumn_Impl,
-			.SameLine = SameLine_Impl,
-			.CollapsingHeader = CollapsingHeader_Impl,
-			.BeginGroup = BeginGroup_Impl,
-			.EndGroup = EndGroup_Impl,
-			.BeginDisabled = BeginDisabled_Impl,
-			.EndDisabled = EndDisabled_Impl,
-			.IsWidgetFocused = IsWidgetFocused_Impl,
-			.SetTooltip = SetTooltip_Impl,
-			.Indent = Indent_Impl,
-			.Unindent = Unindent_Impl,
-			.Text = Text_Impl,
-			.TextWrapped = TextWrapped_Impl,
-			.TextUnformatted = TextUnformatted_Impl
+			.ButtonIconWithLabel    = ButtonIconWithLabel_Impl,
+			.ImageButton            = ImageButton_Impl,
+			.Stepper                = Stepper_Impl,
+			.BeginTabBar            = BeginTabBar_Impl,
+			.EndTabBar              = EndTabBar_Impl,
+			.BeginTabItem           = BeginTabItem_Impl,
+			.EndTabItem             = EndTabItem_Impl,
+			.BeginTable             = BeginTable_Impl,
+			.EndTable               = EndTable_Impl,
+			.TableSetupColumn       = TableSetupColumn_Impl,
+			.TableNextRow           = TableNextRow_Impl,
+			.TableNextColumn        = TableNextColumn_Impl,
+			.TableHeadersRow        = TableHeadersRow_Impl,
+			.Columns                = Columns_Impl,
+			.NextColumn             = NextColumn_Impl,
+			.SameLine               = SameLine_Impl,
+			.CollapsingHeader       = CollapsingHeader_Impl,
+			.BeginGroup             = BeginGroup_Impl,
+			.EndGroup               = EndGroup_Impl,
+			.BeginDisabled          = BeginDisabled_Impl,
+			.EndDisabled            = EndDisabled_Impl,
+			.IsWidgetFocused        = IsWidgetFocused_Impl,
+			.SetTooltip             = SetTooltip_Impl,
+			.Indent                 = Indent_Impl,
+			.Unindent               = Unindent_Impl,
+			.Text                   = Text_Impl,
+			.TextWrapped            = TextWrapped_Impl,
+			.TextUnformatted        = TextUnformatted_Impl
 		};
 		return &api;
 	}

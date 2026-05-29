@@ -11,22 +11,22 @@ namespace ImGui
 {
 	void Styles::ConvertVec4StylesToU32()
 	{
-		frameBG_WidgetU32 = ColorConvertFloat4ToU32(user.frameBG_Widget);
+		frameBG_WidgetU32       = ColorConvertFloat4ToU32(user.frameBG_Widget);
 		frameBG_WidgetActiveU32 = ColorConvertFloat4ToU32(user.frameBG_WidgetActive);
-		gridLinesU32 = ColorConvertFloat4ToU32(user.gridLines);
-		sliderBorderU32 = ColorConvertFloat4ToU32(user.sliderBorder);
-		sliderBorderActiveU32 = ColorConvertFloat4ToU32(user.sliderBorderActive);
-		iconDisabledU32 = ColorConvertFloat4ToU32(user.iconDisabled);
-		textHeaderU32 = ColorConvertFloat4ToU32(user.textHeader);
-		widgetToggleActiveU32 = ColorConvertFloat4ToU32(user.widgetToggleActive);
-		widgetFlashU32 = ColorConvertFloat4ToU32(user.widgetFlash);
+		gridLinesU32            = ColorConvertFloat4ToU32(user.gridLines);
+		sliderBorderU32         = ColorConvertFloat4ToU32(user.sliderBorder);
+		sliderBorderActiveU32   = ColorConvertFloat4ToU32(user.sliderBorderActive);
+		iconDisabledU32         = ColorConvertFloat4ToU32(user.iconDisabled);
+		textHeaderU32           = ColorConvertFloat4ToU32(user.textHeader);
+		widgetToggleActiveU32   = ColorConvertFloat4ToU32(user.widgetToggleActive);
+		widgetFlashU32          = ColorConvertFloat4ToU32(user.widgetFlash);
 
-		tabBorderU32 = ColorConvertFloat4ToU32(user.tabBorder);
-		tabBorderActiveU32 = ColorConvertFloat4ToU32(user.tabBorderActive);
+		tabBorderU32        = ColorConvertFloat4ToU32(user.tabBorder);
+		tabBorderActiveU32  = ColorConvertFloat4ToU32(user.tabBorderActive);
 		toggleRailFilledU32 = ColorConvertFloat4ToU32(user.toggleRailFilled);
-		toggleKnobU32 = ColorConvertFloat4ToU32(user.toggleKnob);
+		toggleKnobU32       = ColorConvertFloat4ToU32(user.toggleKnob);
 
-		scrollbarBGU32 = ColorConvertFloat4ToU32(user.scrollbarBG);
+		scrollbarBGU32  = ColorConvertFloat4ToU32(user.scrollbarBG);
 		navHighlightU32 = ColorConvertFloat4ToU32(user.navHighlight);
 	}
 
@@ -153,11 +153,11 @@ namespace ImGui
 		// Passing 'true' enables recursion
 		auto userFonts = Utils::GetDirectoryFiles(settings->GetUserFontsPath(), ".ttf", true);
 		auto gameFonts = Utils::GetDirectoryFiles(settings->GetLegacyFontsPath(), ".ttf", true);
-		auto csFonts = Utils::GetDirectoryFiles(settings->GetCSFontsPath(), ".ttf", true);
+		auto csFonts   = Utils::GetDirectoryFiles(settings->GetCSFontsPath(), ".ttf", true);
 
 		auto userOtf = Utils::GetDirectoryFiles(settings->GetUserFontsPath(), ".otf", true);
 		auto gameOtf = Utils::GetDirectoryFiles(settings->GetLegacyFontsPath(), ".otf", true);
-		auto csOtf = Utils::GetDirectoryFiles(settings->GetCSFontsPath(), ".otf", true);
+		auto csOtf   = Utils::GetDirectoryFiles(settings->GetCSFontsPath(), ".otf", true);
 
 		userFonts.insert(userFonts.end(), gameFonts.begin(), gameFonts.end());
 		userFonts.insert(userFonts.end(), csFonts.begin(), csFonts.end());
@@ -176,7 +176,7 @@ namespace ImGui
 	const std::vector<std::string>& Styles::GetPresets()
 	{
 		if (cachedPresets.empty()) {
-			cachedPresets = Utils::GetDirectoryFiles(Settings::GetSingleton()->GetStylesPath());
+			cachedPresets      = Utils::GetDirectoryFiles(Settings::GetSingleton()->GetStylesPath());
 			static bool logged = false;
 			if (!logged) {
 				logger::info("Found [{}] style presets.", cachedPresets.size());
@@ -274,7 +274,7 @@ namespace ImGui
 			return;
 
 		std::filesystem::path p(Settings::GetSingleton()->GetStylesPath());
-		std::string filename = a_name;
+		std::string           filename = a_name;
 
 		if (filename.length() < 4 || filename.substr(filename.length() - 4) != ".ini")
 			filename += ".ini";
@@ -286,9 +286,9 @@ namespace ImGui
 			widePath.push_back(L'\0');
 
 			SHFILEOPSTRUCTW fileOp = { 0 };
-			fileOp.wFunc = FO_DELETE;
-			fileOp.pFrom = widePath.c_str();
-			fileOp.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_SILENT;
+			fileOp.wFunc           = FO_DELETE;
+			fileOp.pFrom           = widePath.c_str();
+			fileOp.fFlags          = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_SILENT;
 
 			SHFileOperationW(&fileOp);
 
@@ -391,7 +391,7 @@ namespace ImGui
 	do {                                                                       \
 		std::string defStr = ToString(def.a_value, true);                      \
 		const char* valStr = a_ini.GetValue(a_section, a_key, defStr.c_str()); \
-		user.a_value = ToStyle<decltype(user.a_value)>(valStr).first;          \
+		user.a_value       = ToStyle<decltype(user.a_value)>(valStr).first;    \
 	} while (0)
 
 		GET_VALUE(iconScale, "Icon", "fScale");
@@ -473,74 +473,74 @@ namespace ImGui
 
 		ConvertVec4StylesToU32();
 
-		ImGuiStyle& style = ImGui::GetStyle();
-		auto& colors = style.Colors;
+		ImGuiStyle& style  = ImGui::GetStyle();
+		auto&       colors = style.Colors;
 
 		// Base scale is resolution only — userScale is applied per-content-region in FUCKMan
 		float scale = Renderer::GetResolutionScale();
 
-		style.WindowPadding = ImVec2(user.windowPadding.x * scale, user.windowPadding.y * scale);
-		style.FramePadding = ImVec2(6.0f * scale, 3.0f * scale);
-		style.ItemSpacing = ImVec2(user.itemSpacing.x * scale, user.itemSpacing.y * scale);
-		style.ItemInnerSpacing = ImVec2(4.0f * scale, 4.0f * scale);
+		style.WindowPadding     = ImVec2(user.windowPadding.x * scale, user.windowPadding.y * scale);
+		style.FramePadding      = ImVec2(6.0f * scale, 3.0f * scale);
+		style.ItemSpacing       = ImVec2(user.itemSpacing.x * scale, user.itemSpacing.y * scale);
+		style.ItemInnerSpacing  = ImVec2(4.0f * scale, 4.0f * scale);
 		style.TouchExtraPadding = ImVec2(0.0f, 0.0f);
-		style.IndentSpacing = user.indentSpacing * scale;
+		style.IndentSpacing     = user.indentSpacing * scale;
 		style.ColumnsMinSpacing = 6.0f * scale;
-		style.ScrollbarSize = 12.0f * scale;
-		style.GrabMinSize = 10.0f * scale;
+		style.ScrollbarSize     = 12.0f * scale;
+		style.GrabMinSize       = 10.0f * scale;
 
 		style.WindowBorderSize = user.borderSize * scale;
-		style.ChildBorderSize = user.borderSize * scale;
-		style.FrameBorderSize = user.borderSize * scale;
-		style.PopupBorderSize = user.borderSize * scale;
-		style.TabBorderSize = 0.0f;
+		style.ChildBorderSize  = user.borderSize * scale;
+		style.FrameBorderSize  = user.borderSize * scale;
+		style.PopupBorderSize  = user.borderSize * scale;
+		style.TabBorderSize    = 0.0f;
 
-		style.WindowRounding = user.windowRounding * scale;
-		style.ChildRounding = user.windowRounding * scale;
-		style.FrameRounding = user.frameRounding * scale;
-		style.PopupRounding = user.popupRounding * scale;
+		style.WindowRounding    = user.windowRounding * scale;
+		style.ChildRounding     = user.windowRounding * scale;
+		style.FrameRounding     = user.frameRounding * scale;
+		style.PopupRounding     = user.popupRounding * scale;
 		style.ScrollbarRounding = user.scrollbarRounding * scale;
-		style.GrabRounding = user.grabRounding * scale;
-		style.TabRounding = user.tabRounding * scale;
+		style.GrabRounding      = user.grabRounding * scale;
+		style.TabRounding       = user.tabRounding * scale;
 
 		colors[ImGuiCol_WindowBg] = user.background;
-		colors[ImGuiCol_ChildBg] = user.background;
-		colors[ImGuiCol_PopupBg] = user.background;
+		colors[ImGuiCol_ChildBg]  = user.background;
+		colors[ImGuiCol_PopupBg]  = user.background;
 
-		colors[ImGuiCol_Text] = user.text;
+		colors[ImGuiCol_Text]         = user.text;
 		colors[ImGuiCol_TextDisabled] = user.textDisabled;
 
-		colors[ImGuiCol_Header] = user.header;
+		colors[ImGuiCol_Header]        = user.header;
 		colors[ImGuiCol_HeaderHovered] = user.headerHovered;
-		colors[ImGuiCol_HeaderActive] = user.headerHovered;
+		colors[ImGuiCol_HeaderActive]  = user.headerHovered;
 
-		colors[ImGuiCol_FrameBg] = user.frameBG_Widget;
+		colors[ImGuiCol_FrameBg]        = user.frameBG_Widget;
 		colors[ImGuiCol_FrameBgHovered] = user.frameBG_WidgetActive;
-		colors[ImGuiCol_FrameBgActive] = user.frameBG_WidgetActive;
+		colors[ImGuiCol_FrameBgActive]  = user.frameBG_WidgetActive;
 
-		colors[ImGuiCol_Button] = user.button;
+		colors[ImGuiCol_Button]        = user.button;
 		colors[ImGuiCol_ButtonHovered] = user.frameBG_WidgetActive;
-		colors[ImGuiCol_ButtonActive] = user.sliderBorderActive;
+		colors[ImGuiCol_ButtonActive]  = user.sliderBorderActive;
 
-		colors[ImGuiCol_Tab] = user.tab;
-		colors[ImGuiCol_TabHovered] = user.tabHovered;
-		colors[ImGuiCol_TabActive] = user.tab;
-		colors[ImGuiCol_TabUnfocused] = user.tab;
+		colors[ImGuiCol_Tab]                = user.tab;
+		colors[ImGuiCol_TabHovered]         = user.tabHovered;
+		colors[ImGuiCol_TabActive]          = user.tab;
+		colors[ImGuiCol_TabUnfocused]       = user.tab;
 		colors[ImGuiCol_TabUnfocusedActive] = user.tab;
 
-		colors[ImGuiCol_ResizeGrip] = user.sliderBorderActive;
+		colors[ImGuiCol_ResizeGrip]        = user.sliderBorderActive;
 		colors[ImGuiCol_ResizeGripHovered] = user.sliderBorderActive;
-		colors[ImGuiCol_ResizeGripActive] = user.sliderBorderActive;
+		colors[ImGuiCol_ResizeGripActive]  = user.sliderBorderActive;
 
-		colors[ImGuiCol_Border] = user.border;
-		colors[ImGuiCol_Separator] = user.separator;
+		colors[ImGuiCol_Border]           = user.border;
+		colors[ImGuiCol_Separator]        = user.separator;
 		colors[ImGuiCol_SeparatorHovered] = user.sliderBorderActive;
-		colors[ImGuiCol_SeparatorActive] = user.sliderBorderActive;
+		colors[ImGuiCol_SeparatorActive]  = user.sliderBorderActive;
 
-		colors[ImGuiCol_SliderGrab] = user.sliderGrab;
+		colors[ImGuiCol_SliderGrab]       = user.sliderGrab;
 		colors[ImGuiCol_SliderGrabActive] = user.sliderGrabActive;
 
-		colors[ImGuiCol_ScrollbarBg] = user.scrollbarBG;
+		colors[ImGuiCol_ScrollbarBg]  = user.scrollbarBG;
 		colors[ImGuiCol_NavHighlight] = user.navHighlight;
 
 		refreshStyle = false;
@@ -551,7 +551,7 @@ namespace ImGui
 		refreshStyle = true;
 	}
 
-	ImU32 GetUserStyleColorU32(USER_STYLE a_style) { return Styles::GetSingleton()->GetColorU32(a_style); }
+	ImU32  GetUserStyleColorU32(USER_STYLE a_style) { return Styles::GetSingleton()->GetColorU32(a_style); }
 	ImVec4 GetUserStyleColorVec4(USER_STYLE a_style) { return Styles::GetSingleton()->GetColorVec4(a_style); }
-	float GetUserStyleVar(USER_STYLE a_style) { return Styles::GetSingleton()->GetVar(a_style); }
+	float  GetUserStyleVar(USER_STYLE a_style) { return Styles::GetSingleton()->GetVar(a_style); }
 }

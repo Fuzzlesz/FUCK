@@ -9,12 +9,12 @@ namespace Hotkeys
 {
 	struct HotkeyState
 	{
-		std::uint32_t kKey = 65;  // F7
-		std::int32_t kMod1 = -1;
-		std::int32_t kMod2 = -1;
-		std::uint32_t gKey = 0;
-		std::int32_t gMod1 = -1;
-		std::int32_t gMod2 = -1;
+		std::uint32_t kKey  = 65;  // F7
+		std::int32_t  kMod1 = -1;
+		std::int32_t  kMod2 = -1;
+		std::uint32_t gKey  = 0;
+		std::int32_t  gMod1 = -1;
+		std::int32_t  gMod2 = -1;
 	};
 
 	class Manager : public REX::Singleton<Manager>
@@ -35,7 +35,7 @@ namespace Hotkeys
 		const HotkeyState _defToggle;
 
 	private:
-		bool enabled = false;
+		bool                enabled = false;
 		FUCK::ManagedHotkey _toggleHotkey;
 	};
 }

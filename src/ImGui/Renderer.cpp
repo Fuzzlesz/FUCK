@@ -1,6 +1,6 @@
+#include "Renderer.h"
 #include "FUCKMan.h"
 #include "IconsFonts.h"
-#include "Renderer.h"
 #include "Styles.h"
 #include "System\Input.h"
 
@@ -14,7 +14,7 @@ namespace ImGui::Renderer
 
 	void LoadSettings(const CSimpleIniA& a_ini)
 	{
-		DisplayTweaks::resolutionScale = static_cast<float>(a_ini.GetDoubleValue("Render", "ResolutionScale", static_cast<double>(DisplayTweaks::resolutionScale)));
+		DisplayTweaks::resolutionScale   = static_cast<float>(a_ini.GetDoubleValue("Render", "ResolutionScale", static_cast<double>(DisplayTweaks::resolutionScale)));
 		DisplayTweaks::borderlessUpscale = a_ini.GetBoolValue("Render", "BorderlessUpscale", DisplayTweaks::borderlessUpscale);
 	}
 
@@ -43,7 +43,7 @@ namespace ImGui::Renderer
 			// trick imgui into rendering at game's real resolution (ie. if upscaled with Display Tweaks)
 			static const auto screenSize = RE::BSGraphics::Renderer::GetScreenSize();
 
-			auto& io = ImGui::GetIO();
+			auto& io         = ImGui::GetIO();
 			io.DisplaySize.x = static_cast<float>(screenSize.width);
 			io.DisplaySize.y = static_cast<float>(screenSize.height);
 		}
@@ -103,14 +103,14 @@ namespace ImGui::Renderer
 					return;
 				}
 
-				const auto device = reinterpret_cast<ID3D11Device*>(renderer->data.forwarder);
+				const auto device  = reinterpret_cast<ID3D11Device*>(renderer->data.forwarder);
 				const auto context = reinterpret_cast<ID3D11DeviceContext*>(renderer->data.context);
 
 				logger::info("Initializing ImGui..."sv);
 
 				ImGui::CreateContext();
 
-				auto& io = ImGui::GetIO();
+				auto& io       = ImGui::GetIO();
 				io.ConfigFlags = ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad | ImGuiConfigFlags_NoMouseCursorChange;
 				io.IniFilename = nullptr;
 
@@ -158,7 +158,7 @@ namespace ImGui::Renderer
 			return func(a_menu);
 		}
 		static inline REL::Relocation<decltype(thunk)> func;
-		static inline std::size_t idx{ 0x6 };
+		static inline std::size_t                      idx{ 0x6 };
 	};
 
 	// IMenu::PostDisplay (CursorMenu)
@@ -170,7 +170,7 @@ namespace ImGui::Renderer
 			return func(a_menu);
 		}
 		static inline REL::Relocation<decltype(thunk)> func;
-		static inline std::size_t idx{ 0x6 };
+		static inline std::size_t                      idx{ 0x6 };
 	};
 
 	void Install()

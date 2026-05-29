@@ -225,7 +225,7 @@ namespace ImGui
 			return { T(), false };
 		} else if constexpr (std::is_same_v<ImVec2, T>) {
 			static srell::regex vec2_pattern("([0-9\\.]+),([0-9\\.]+)");
-			srell::smatch matches;
+			srell::smatch       matches;
 			if (srell::regex_match(a_str, matches, vec2_pattern)) {
 				auto x = std::stof(matches[1]);
 				auto y = std::stof(matches[2]);

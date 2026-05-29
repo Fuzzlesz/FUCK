@@ -1839,7 +1839,7 @@ inline const char* GetDefaultFontData()
 		for (int i = 0; i < 29215; ++i)
 			s_decoded[i] = static_cast<char>(static_cast<unsigned char>(kDefaultFont[i]) ^ kDefaultFontXOR);
 		s_decoded[29215] = '\0';
-		s_ready = true;
+		s_ready          = true;
 	}
 	return s_decoded;
 }

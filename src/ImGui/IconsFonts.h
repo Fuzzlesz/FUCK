@@ -33,7 +33,7 @@ namespace IconFont
 		// Actually performs the heavy lifting, called at start of frame
 		bool ProcessPendingReload();
 
-		void SetFontName(const std::string& a_fontName);
+		void        SetFontName(const std::string& a_fontName);
 		std::string GetFontName() const { return fontName; }
 
 		ImFont* GetLargeFont() const;
@@ -43,7 +43,7 @@ namespace IconFont
 		const IconTexture* GetCheckbox() const;
 		const IconTexture* GetCheckboxFilled() const;
 
-		const IconTexture* GetIcon(std::uint32_t key);
+		const IconTexture*           GetIcon(std::uint32_t key);
 		std::set<const IconTexture*> GetIcons(const std::set<std::uint32_t>& keys);
 
 		const IconTexture* GetGamePadIcon(const GamepadIcon& a_icons) const;
@@ -89,7 +89,7 @@ namespace IconFont
 		IconTexture upKey{ L"Up"sv };
 		IconTexture downKey{ L"Down"sv };
 
-		Map<KEY, IconTexture> keyboard;
+		Map<KEY, IconTexture>           keyboard;
 		Map<std::uint32_t, GamepadIcon> gamePad;
 		Map<std::uint32_t, IconTexture> mouse;
 	};

@@ -1,6 +1,6 @@
 #include "Compat.h"
 
-	namespace Compat
+namespace Compat
 {
 	namespace ImmersiveHUD
 	{

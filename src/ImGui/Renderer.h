@@ -7,7 +7,7 @@ namespace ImGui::Renderer
 	namespace DisplayTweaks
 	{
 		inline float resolutionScale{ 1.0f };
-		inline bool borderlessUpscale{ false };
+		inline bool  borderlessUpscale{ false };
 	}
 
 	float GetResolutionScale();

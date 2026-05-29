@@ -72,10 +72,10 @@ namespace IconFont
 	void Manager::RebuildFontAtlas()
 	{
 		loadedFonts = true;
-		auto& io = ImGui::GetIO();
+		auto& io    = ImGui::GetIO();
 		io.Fonts->Clear();
 
-		ImVector<ImWchar> ranges;
+		ImVector<ImWchar>        ranges;
 		ImFontGlyphRangesBuilder builder;
 		if (auto scaleform = RE::BSScaleformManager::GetSingleton()) {
 			builder.AddText(scaleform->validNameChars.c_str());
@@ -87,9 +87,9 @@ namespace IconFont
 		builder.BuildRanges(&ranges);
 
 		regularFont = LoadFontIconSet(baseFontSize, baseIconSize, ranges);
-		largeFont = LoadFontIconSet(baseLargeFontSize, baseLargeIconSize, ranges);
+		largeFont   = LoadFontIconSet(baseLargeFontSize, baseLargeIconSize, ranges);
 
-		io.FontDefault = regularFont;
+		io.FontDefault                 = regularFont;
 		ImGui::GetStyle().FontSizeBase = regularFont->LegacySize;
 
 		io.Fonts->SetFontLoader(ImGuiFreeType::GetFontLoader());
@@ -110,19 +110,19 @@ namespace IconFont
 		if (fontName == "Default") {
 			ImFontConfig default_cfg;
 			default_cfg.FontDataOwnedByAtlas = false;
-			font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(
-				GetDefaultFontData(), a_fontSize, &default_cfg, io.Fonts->GetGlyphRangesDefault());
+			font                             = io.Fonts->AddFontFromMemoryCompressedBase85TTF(
+                GetDefaultFontData(), a_fontSize, &default_cfg, io.Fonts->GetGlyphRangesDefault());
 		} else {
 			std::string fullPath = ResolveFontPath(fontName);
-			font = io.Fonts->AddFontFromFileTTF(fullPath.c_str(), a_fontSize, nullptr, a_ranges.Data);
+			font                 = io.Fonts->AddFontFromFileTTF(fullPath.c_str(), a_fontSize, nullptr, a_ranges.Data);
 		}
 
 		if (!font)
 			font = io.Fonts->AddFontDefault();
 
 		ImFontConfig icon_config;
-		icon_config.MergeMode = true;
-		icon_config.PixelSnapH = true;
+		icon_config.MergeMode   = true;
+		icon_config.PixelSnapH  = true;
 		icon_config.OversampleH = icon_config.OversampleV = 1;
 
 		std::string faPath = ResolveFontPath(FONT_ICON_FILE_NAME_FAS);
@@ -280,8 +280,8 @@ namespace IconFont
 		std::for_each(mouse.begin(), mouse.end(), [](auto& Icon) { Icon.second.Load(); });
 	}
 
-	ImFont* Manager::GetLargeFont() const { return largeFont; }
-	ImFont* Manager::GetRegularFont() const { return regularFont; }
+	ImFont*            Manager::GetLargeFont() const { return largeFont; }
+	ImFont*            Manager::GetRegularFont() const { return regularFont; }
 	const IconTexture* Manager::GetStepperRight() const { return &stepperRight; }
 	const IconTexture* Manager::GetCheckbox() const { return &checkbox; }
 	const IconTexture* Manager::GetCheckboxFilled() const { return &checkboxFilled; }

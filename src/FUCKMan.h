@@ -64,8 +64,8 @@ public:
 
 	float GetActiveScale() const { return _activeScale; }
 	float GetUserScale() const { return _cfg.userScale; }
-	bool GetInjectSystemMenu() const { return _cfg.injectSystemMenu; }
-	bool GetReplaceHelpMenu() const { return _cfg.replaceHelpMenu; }
+	bool  GetInjectSystemMenu() const { return _cfg.injectSystemMenu; }
+	bool  GetReplaceHelpMenu() const { return _cfg.replaceHelpMenu; }
 
 	// --- API Overrides ---
 	void SetVanityBlocked(bool blocked);
@@ -109,42 +109,42 @@ private:
 	};
 
 	std::vector<MenuListenerEntry> _menuListeners;
-	std::vector<FUCK::ITool*> _tools;
-	std::vector<FUCK::IWindow*> _windows;
-	std::vector<FUCK::IWindow*> _suspendedWindows;
-	std::set<std::string> _pausedMenus;
+	std::vector<FUCK::ITool*>      _tools;
+	std::vector<FUCK::IWindow*>    _windows;
+	std::vector<FUCK::IWindow*>    _suspendedWindows;
+	std::set<std::string>          _pausedMenus;
 
 	FUCK::ITool* _activeTool = nullptr;
-	bool _isOpen = false;
+	bool         _isOpen     = false;
 
 	// Game State
 	bool _isGameHardPaused = false;
 	bool _isGameSoftPaused = false;
-	bool _isGameBlurred = false;
-	bool _isHudHidden = false;
-	bool _isVanityBlocked = false;
+	bool _isGameBlurred    = false;
+	bool _isHudHidden      = false;
+	bool _isVanityBlocked  = false;
 
 	// API Driven Overrides
-	bool _apiHardPause = false;
-	bool _apiSoftPause = false;
-	bool _forceCursor = false;
+	bool _apiHardPause     = false;
+	bool _apiSoftPause     = false;
+	bool _forceCursor      = false;
 	bool _suspendRendering = false;
 
 	// Config / Settings State
-	FUCKConfig _cfg;
+	FUCKConfig       _cfg;
 	const FUCKConfig _def;  // defaults
 
-	float _activeScale = 1.0f;
-	bool _isIgnoringUserScale = false;
+	float _activeScale         = 1.0f;
+	bool  _isIgnoringUserScale = false;
 
 	// Window Metrics
-	bool _pendingWindowRestore = false;
+	bool   _pendingWindowRestore = false;
 	ImVec2 _lastSavedPos{ 100.0f, 100.0f };
 	ImVec2 _lastSavedSize{ 1020.0f, 800.0f };
-	bool _isCollapsed = false;
-	bool _wasCollapsed = false;
+	bool   _isCollapsed  = false;
+	bool   _wasCollapsed = false;
 
 	// Built-in Tools
-	SettingsTool _settingsTool;
+	SettingsTool      _settingsTool;
 	ThemeEditorWindow _themeEditorWindow;
 };

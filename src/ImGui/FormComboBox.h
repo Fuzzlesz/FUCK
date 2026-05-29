@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Widgets.h"
 #include "System/Hooks.h"
+#include "Widgets.h"
 
 namespace ImGui
 {
@@ -150,7 +150,7 @@ namespace ImGui
 		void Reset()
 		{
 			curMod = allMods;
-			index = 0;
+			index  = 0;
 			for (auto& [modName, formData] : modNameForms) {
 				formData.ResetIndex();
 				formData.SetValid(false);
@@ -170,7 +170,7 @@ namespace ImGui
 			for (size_t i = 0; i < modNames.size(); ++i) {
 				const auto& mod = modNames[i];
 				if (modNameForms[mod].Sync(a_formID)) {
-					index = static_cast<std::int32_t>(i);
+					index  = static_cast<std::int32_t>(i);
 					curMod = mod;
 					return;
 				}
@@ -181,7 +181,7 @@ namespace ImGui
 		{
 			T* formResult = nullptr;
 			if (!translated) {
-				name = TRANSLATE_S(name.c_str());
+				name       = TRANSLATE_S(name.c_str());
 				translated = true;
 			}
 
