@@ -1137,6 +1137,22 @@ namespace FUCK
 		if (auto i = GetInterface())
 			i->EndTable();
 	}
+	
+	/// @brief Utility to capture a Table Column's width ratio upon releasing the mouse. 
+	/// Returns true when the weight has meaningfully changed so you can selectively trigger a config save.
+	inline bool UpdateProportionalWeight(float& inOutWeight, float totalWidth)
+	{
+		if (IsMouseReleased(0) && totalWidth > 100.0f) {
+			float childWidth = GetWindowSize().x;
+			float newWeight = childWidth / totalWidth;
+			if (std::abs(inOutWeight - newWeight) > 0.01f) {
+				inOutWeight = newWeight;
+				return true;
+			}
+		}
+		return false;
+	}
+
 	inline void TableSetupColumn(const char* label, TableColumnFlags flags = TableColumnFlags::kNone, float init_width_or_weight = 0.0f, std::uint32_t user_id = 0)
 	{
 		if (auto i = GetInterface())
