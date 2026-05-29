@@ -1100,6 +1100,29 @@ namespace FUCK
 		if (auto i = GetInterface())
 			i->EndChild();
 	}
+
+	/// @brief Begins an inset child panel using an inside-out group margin. 
+	/// This prevents native ImGui window padding from shrinking the clipping rect and breaking scrollbars.
+	inline void BeginPanelFrame(const char* str_id, float padding = 8.0f)
+	{
+		float p = Scale(padding);
+		PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(p, p));
+		BeginChild(str_id, ImVec2(0, 0), false, 0);
+		Dummy(ImVec2(0.0f, Scale(4.0f)));
+		Indent(p);
+		BeginGroup();
+	}
+
+	/// @brief Closes the panel opened by BeginPanelFrame.
+	inline void EndPanelFrame(float padding = 8.0f)
+	{
+		EndGroup();
+		Unindent(Scale(padding));
+		Dummy(ImVec2(0.0f, Scale(4.0f)));
+		EndChild();
+		PopStyleVar(1);
+	}
+
 	inline bool TreeNode(const char* label) { return GetInterface() ? GetInterface()->TreeNode(label) : false; }
 	inline void TreePop()
 	{
