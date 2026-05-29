@@ -17,16 +17,14 @@ public:
 
 	struct FUCKConfig
 	{
-		ImVec2 windowPos{ 132.0f, 74.0f };
-		ImVec2 windowSize{ 1020.0f, 800.0f };
-		PauseType globalPauseType{ PauseType::kNone };
-		float userScale{ 1.0f };
-		bool sidebarOnRight{ false };
-		bool injectSystemMenu{ true };
-		bool replaceHelpMenu{ false };
+		ImVec2      windowPos{ 132.0f, 74.0f };
+		ImVec2      windowSize{ 1020.0f, 800.0f };
+		PauseType   globalPauseType{ PauseType::kNone };
+		float       userScale{ 1.0f };
+		bool        sidebarOnRight{ false };
+		bool        injectSystemMenu{ true };
+		bool        replaceHelpMenu{ false };
 		std::string currentFont{ "Default" };
-		ImVec2 themeEditorPos{ -1.0f, -1.0f };
-		ImVec2 themeEditorSize{ -1.0f, -1.0f };
 	};
 
 	friend class SettingsTool;

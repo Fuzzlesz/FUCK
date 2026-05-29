@@ -12,13 +12,16 @@
 #include "System/Input.h"
 #include "System/Settings.h"
 
-struct WindowCollapseState
+struct WindowState
 {
-	bool isCollapsed = false;
-	bool wasCollapsed = false;
+	bool   isCollapsed = false;
+	bool   wasCollapsed = false;
 	ImVec2 preCollapseSize{};
+	ImVec2 pos{ -1.0f, -1.0f };
+	ImVec2 size{ -1.0f, -1.0f };
+	bool   hasLoadedPos = false;
 };
-static StringMap<WindowCollapseState> s_windowStates;
+static StringMap<WindowState> s_windowStates;  // Maps using "PluginName|WindowId"
 
 // Auto-Close list for Game Menus
 static const std::vector<std::string> s_closeOnOpen = {
@@ -81,21 +84,41 @@ void FUCKMan::RegisterWindow(FUCK::IWindow* a_window)
 	if (!a_window)
 		return;
 
-	// 1. Pointer Check
-	if (std::find(_windows.begin(), _windows.end(), a_window) != _windows.end()) {
+	if (std::find(_windows.begin(), _windows.end(), a_window) != _windows.end())
 		return;
-	}
 
-	// 2. Title Collision Check
+	// Check for collisions based on PluginName + Id to ensure uniqueness
 	auto it = std::find_if(_windows.begin(), _windows.end(), [&](FUCK::IWindow* existing) {
-		return existing && (strcmp(existing->Title(), a_window->Title()) == 0);
+		return existing && (strcmp(existing->Id(), a_window->Id()) == 0) && (strcmp(existing->PluginName(), a_window->PluginName()) == 0);
 	});
 
-	if (it != _windows.end()) {
+	if (it != _windows.end())
 		return;
-	}
 
 	_windows.push_back(a_window);
+
+	// --- Implicitly load the Window's last known geometry ---
+	std::string key = std::format("{}|{}", a_window->PluginName(), a_window->Id());
+	auto& state = s_windowStates[key];
+
+	std::string path = std::format(R"(Data\FUCKs\{}\windowwtates.ini)", a_window->PluginName());
+	CSimpleIniA ini;
+	ini.SetUnicode();
+	if (ini.LoadFile(path.c_str()) >= 0) {
+		float scale = ImGui::Renderer::GetResolutionScale();
+		float x = static_cast<float>(ini.GetDoubleValue(a_window->Id(), "X", -1.0));
+		float y = static_cast<float>(ini.GetDoubleValue(a_window->Id(), "Y", -1.0));
+		float w = static_cast<float>(ini.GetDoubleValue(a_window->Id(), "Width", -1.0));
+		float h = static_cast<float>(ini.GetDoubleValue(a_window->Id(), "Height", -1.0));
+
+		if (x != -1.0f && y != -1.0f) {
+			state.pos = { x * scale, y * scale };
+			state.hasLoadedPos = true;
+		}
+		if (w != -1.0f && h != -1.0f) {
+			state.size = { w * scale, h * scale };
+		}
+	}
 }
 
 void FUCKMan::UnregisterWindow(FUCK::IWindow* a_window)
@@ -209,9 +232,6 @@ void FUCKMan::ResetSettings()
 
 	MANAGER(IconFont)->SetFontName(_cfg.currentFont);
 
-	_themeEditorWindow._lastPos = { -1.0f, -1.0f };
-	_themeEditorWindow._lastSize = { -1.0f, -1.0f };
-
 	if (_isOpen) {
 		ClampWindowToScreen(_cfg.windowPos, _cfg.windowSize);
 		_pendingWindowRestore = true;
@@ -245,12 +265,6 @@ void FUCKMan::LoadSettings(const CSimpleIniA& a_ini)
 		MANAGER(IconFont)->SetFontName(_cfg.currentFont);
 	}
 
-	_cfg.themeEditorPos  = FUCK::INI::LoadScaledPos (a_ini, "ThemeEditor", _def.themeEditorPos);
-	_cfg.themeEditorSize = FUCK::INI::LoadScaledSize(a_ini, "ThemeEditor", _def.themeEditorSize);
-
-	_themeEditorWindow._lastPos = _cfg.themeEditorPos;
-	_themeEditorWindow._lastSize = _cfg.themeEditorSize;
-
 	_lastSavedPos = _cfg.windowPos;
 	_lastSavedSize = _cfg.windowSize;
 	_pendingWindowRestore = true;
@@ -269,14 +283,6 @@ void FUCKMan::SaveSettings(CSimpleIniA& a_ini)
 	FUCK::INI::SaveBool  (a_ini, "Settings", "bReplaceHelpMenu", _cfg.replaceHelpMenu, _def.replaceHelpMenu);
 
 	FUCK::INI::SaveString(a_ini, "Appearance", "sFont", _cfg.currentFont.c_str(), _def.currentFont.c_str());
-
-	// Theme Editor State (Only save if initialized/changed from -1)
-	if (_themeEditorWindow._lastPos.x != -1.0f) {
-		FUCK::INI::SaveScaledPos (a_ini, "ThemeEditor", _themeEditorWindow._lastPos, _def.themeEditorPos);
-		FUCK::INI::SaveScaledSize(a_ini, "ThemeEditor", _themeEditorWindow._lastSize, _def.themeEditorSize);
-	} else {
-		a_ini.Delete("ThemeEditor", NULL, true);
-	}
 }
 
 void FUCKMan::Save()
@@ -783,11 +789,8 @@ void FUCKMan::Draw()
 			bool noResize        = (win->GetFlags() & FUCK::WindowFlags::kNoResize) != 0;
 			bool autoResize      = (win->GetFlags() & FUCK::WindowFlags::kAutoResize) != 0;
 
-			auto it = s_windowStates.find(title);
-			if (it == s_windowStates.end()) {
-				it = s_windowStates.emplace(std::string(title), WindowCollapseState{}).first;
-			}
-			auto& winState = it->second;
+			std::string key = std::format("{}|{}", win->PluginName(), win->Id());
+			auto& winState = s_windowStates[key];
 
 			flags |= ImGuiWindowFlags_NoTitleBar;
 			if (noDecoration) {
@@ -845,6 +848,9 @@ void FUCKMan::Draw()
 			if (win->GetRequestedPos(requestedPos)) {
 				ClampWindowToScreen(requestedPos, targetSize);
 				FUCK::SetNextWindowPos(requestedPos, ImGuiCond_Appearing);
+			} else if (winState.hasLoadedPos) {
+				ClampWindowToScreen(winState.pos, targetSize);
+				FUCK::SetNextWindowPos(winState.pos, ImGuiCond_FirstUseEver);  // Applies at game launch
 			} else {
 				// Default position for new windows
 				ImVec2 defPos = win->GetDefaultPos();
@@ -854,8 +860,9 @@ void FUCKMan::Draw()
 
 			// If AutoResize is active, ImGui shrinks the window dynamically. We bypass hard size forcing.
 			if (!autoResize) {
+				ImVec2 sz = (winState.size.x != -1.0f) ? winState.size : targetSize;
 				ImGuiCond sizeCond = (isCollapsed || wasCollapsed || noResize) ? ImGuiCond_Always : ImGuiCond_FirstUseEver;
-				FUCK::SetNextWindowSize(targetSize, sizeCond);
+				FUCK::SetNextWindowSize(sz, sizeCond);
 			}
 
 			bool open = true;
@@ -873,7 +880,35 @@ void FUCKMan::Draw()
 				if (poppedInvisibleBg) {
 					ImGui::PopStyleColor(2);  // Clear WindowBg and Border
 				}
-				win->UpdateState(FUCK::GetWindowPos(), FUCK::GetWindowSize());
+
+				ImVec2 curPos = FUCK::GetWindowPos();
+				ImVec2 curSize = FUCK::GetWindowSize();
+
+				// --- Implicit Geometry Interception ---
+				if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+					if (winState.pos.x != curPos.x || winState.pos.y != curPos.y ||
+						winState.size.x != curSize.x || winState.size.y != curSize.y) {
+						winState.pos = curPos;
+						winState.size = curSize;
+						winState.hasLoadedPos = true;
+
+						// Save
+						std::string path = std::format(R"(Data\FUCKs\{}\windowstates.ini)", win->PluginName());
+						std::filesystem::create_directories(std::filesystem::path(path).parent_path());
+
+						CSimpleIniA ini;
+						ini.SetUnicode();
+						ini.LoadFile(path.c_str());
+
+						float scale = ImGui::Renderer::GetResolutionScale();
+						ini.SetDoubleValue(win->Id(), "X", curPos.x / scale);
+						ini.SetDoubleValue(win->Id(), "Y", curPos.y / scale);
+						ini.SetDoubleValue(win->Id(), "Width", curSize.x / scale);
+						ini.SetDoubleValue(win->Id(), "Height", curSize.y / scale);
+
+						ini.SaveFile(path.c_str());
+					}
+				}
 
 				if (win->GetFlags() & FUCK::WindowFlags::kExtendBorder)
 					FUCK::ExtendWindowPastBorder();
@@ -1025,21 +1060,7 @@ void FUCKMan::Draw()
 				if (!IsInputBlocked()) {
 					MANAGER(Input)->ClearState();
 				}
-			}
-
-			// Specific save hook for ThemeEditor bounds tracking upon move/resize edits completing
-			if (win == &_themeEditorWindow) {
-				static ImVec2 s_lastThemePos = _themeEditorWindow._lastPos;
-				static ImVec2 s_lastThemeSize = _themeEditorWindow._lastSize;
-				if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-					if (s_lastThemePos.x != _themeEditorWindow._lastPos.x || s_lastThemePos.y != _themeEditorWindow._lastPos.y ||
-						s_lastThemeSize.x != _themeEditorWindow._lastSize.x || s_lastThemeSize.y != _themeEditorWindow._lastSize.y) {
-						s_lastThemePos = _themeEditorWindow._lastPos;
-						s_lastThemeSize = _themeEditorWindow._lastSize;
-						Save();
-					}
-				}
-			}
+			}						
 		}
 	}
 

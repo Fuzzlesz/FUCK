@@ -191,7 +191,11 @@ namespace FUCK
 	class IWindow
 	{
 	public:
-		virtual            ~IWindow() = default;
+		virtual ~IWindow() = default;
+
+		/// @brief Unique identifier for this specific window within your plugin.
+		/// @note Used implicitly by the Host to track and save screen coordinates. (e.g. "MainOverlay")
+		virtual const char* Id() const = 0;
 
 		/// @brief The exact name of your SKSE plugin.
 		/// @note Defaults to the name passed into FUCK::Connect().
@@ -206,8 +210,11 @@ namespace FUCK
 		virtual WindowFlags GetFlags() const { return WindowFlags::kNone; }
 		virtual ImVec2      GetDefaultSize() const { return ImVec2(400.0f, 300.0f); }
 		virtual ImVec2      GetDefaultPos() const { return ImVec2(0.0f, 0.0f); }
+
+		/// @brief Intercept the position resolution to enforce a strictly calculated anchor position.
+		/// @note Only implement this if you are actively overriding standard screen dragging (e.g. anchoring to a HUD element).
 		virtual bool        GetRequestedPos(ImVec2& /*outPos*/) { return false; }
-		virtual void        UpdateState(const ImVec2& /*currentPos*/, const ImVec2& /*currentSize*/) {}
+
 		virtual bool        OnAsyncInput(const void*) { return false; }
 	};
 }
