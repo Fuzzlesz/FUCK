@@ -9,6 +9,8 @@
 
 namespace FUCK
 {
+	inline const char* g_pluginName = "UnknownPlugin";
+
 	// --- Core Enums ---
 	enum class Font
 	{
@@ -169,7 +171,12 @@ namespace FUCK
 	class ITool
 	{
 	public:
-		virtual            ~ITool() = default;
+		virtual ~ITool() = default;
+
+		/// @brief The exact name of your SKSE plugin.
+		/// @note Defaults to the name passed into FUCK::Connect().
+		virtual const char* PluginName() const { return FUCK::g_pluginName; }
+
 		virtual const char* Name() const = 0;
 		virtual const char* Group() const { return nullptr; }
 		virtual void        Draw() = 0;
@@ -185,7 +192,14 @@ namespace FUCK
 	{
 	public:
 		virtual            ~IWindow() = default;
+
+		/// @brief The exact name of your SKSE plugin.
+		/// @note Defaults to the name passed into FUCK::Connect().
+		virtual const char* PluginName() const { return FUCK::g_pluginName; }
+
+		/// @brief Display title shown on the Window chrome. Translates natively if a localized string key is passed.
 		virtual const char* Title() const = 0;
+		
 		virtual void        Draw() = 0;
 		virtual bool        IsOpen() const = 0;
 		virtual void        SetOpen(bool a_open) = 0;
@@ -457,7 +471,9 @@ namespace FUCK
 		return s;
 	}
 
-	inline bool Connect(unsigned int a_minVersion = FUCK_API_VERSION)
+	/// @brief Connects to the FUCK Host Framework.
+	/// @param pluginName The exact name of your SKSE plugin. Used automatically for translations and settings directories.
+	inline bool Connect(const char* pluginName = nullptr, unsigned int a_minVersion = FUCK_API_VERSION)
 	{
 		auto handle = GetModuleHandleW(L"FUCK.dll");
 		if (!handle)
@@ -472,8 +488,14 @@ namespace FUCK
 		}
 
 		GetInterface() = iface;
-		logger::info("Connected to FUCK API version {}", iface->version);
 
+		// --- Cache the plugin name globally for this DLL ---
+		if (pluginName) {
+			g_pluginName = pluginName;
+			GetInterface()->LoadTranslation(pluginName);
+		}
+
+		logger::info("Connected to FUCK API version {}", iface->version);
 		return true;
 	}
 
@@ -1333,8 +1355,10 @@ namespace FUCK
 	class PluginSettings
 	{
 	public:
-		PluginSettings(const char* a_pluginName) :
+		// --- Automatically defaults to the globally registered plugin name ---
+		PluginSettings(const char* a_pluginName = FUCK::g_pluginName) :
 			_pluginName(a_pluginName) {}
+			
 		using INIFunc = std::function<void(CSimpleIniA&)>;
 
 		void Load(INIFunc a_func) const
