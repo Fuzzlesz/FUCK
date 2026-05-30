@@ -1655,7 +1655,7 @@ namespace FUCK
 
 		inline ImVec2 LoadScaledSize(const CSimpleIniA& ini, const char* sec, const ImVec2& defUnscaled)
 		{
-			float scale = GetResolutionScale();
+			float scale = GetGlobalScale();
 			if (scale < 0.1f)
 				scale = 1.0f;
 			float w = static_cast<float>(ini.GetDoubleValue(sec, "Width", defUnscaled.x));
@@ -1676,7 +1676,7 @@ namespace FUCK
 
 		inline void SaveScaledSize(CSimpleIniA& ini, const char* sec, const ImVec2& curScaled, const ImVec2& defUnscaled)
 		{
-			float scale = GetResolutionScale();
+			float scale = GetGlobalScale();
 			if (scale < 0.1f)
 				scale = 1.0f;
 			float unscaledW = (curScaled.x == -1.0f) ? -1.0f : (curScaled.x / scale);

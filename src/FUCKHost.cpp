@@ -58,7 +58,7 @@ namespace FUCK::Host
 	}
 	static void PushFont_Impl(ImFont* f, float size)
 	{
-		float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
+		float activeScale = GetUserScale_Impl();
 		if (size <= 0.0f) {
 			float defaultSize = f ? f->LegacySize : ImGui::GetStyle().FontSizeBase;
 			ImGui::PushFont(f, defaultSize * activeScale);
@@ -364,7 +364,7 @@ namespace FUCK::Host
 	{
 		ImGui::TextDisabled("(?)");
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) {
-			const float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
+			const float scale = GetGlobalScale_Impl();
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * scale, 12.0f * scale));
 
 			ImVec2 origMousePos = ImGui::GetIO().MousePos;
@@ -439,11 +439,9 @@ namespace FUCK::Host
 		auto icon = IconFont::Manager::GetSingleton()->GetIcon(k);
 		if (icon) {
 			float userIconScale = FUCKMan::GetSingleton()->IsIgnoringUserScale() ? 1.0f : ImGui::Styles::GetSingleton()->user.iconScale;
-			float activeScale   = FUCKMan::GetSingleton()->GetActiveScale();
-			float resScale      = ImGui::Renderer::GetResolutionScale();
 
 			// Lock base size to 38.0f to match the Hotkey widget internal math
-			float baseFrameH = 38.0f * resScale * activeScale;
+			float baseFrameH = 38.0f * GetGlobalScale_Impl();
 			float targetH    = std::round(baseFrameH * userIconScale);
 
 			float targetW = std::round(targetH * (icon->imageSize.y > 0.0f ? (icon->imageSize.x / icon->imageSize.y) : 1.0f));
@@ -692,7 +690,7 @@ namespace FUCK::Host
 		// Protect against ImGui Frame 1 Auto-Resize height spike
 		if (ImGui::GetContentRegionAvail().x < 15.0f) {
 			ImGui::PushStyleColor(ImGuiCol_Text, col);
-			ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + (350.0f * ImGui::Renderer::GetResolutionScale()));
+			ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + (350.0f * GetGlobalScale_Impl()));
 			ImGui::TextUnformatted(text);
 			ImGui::PopTextWrapPos();
 			ImGui::PopStyleColor();
@@ -755,7 +753,7 @@ namespace FUCK::Host
 	static void SetTooltip_Impl(const char* fmt)
 	{
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) {
-			const float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
+			const float scale = GetGlobalScale_Impl();
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * scale, 12.0f * scale));
 
 			// Temporarily spoof the mouse position so ImGui spawns the tooltip offset,
@@ -786,7 +784,7 @@ namespace FUCK::Host
 	{
 		// Protect against ImGui Frame 1 Auto-Resize height spike
 		if (ImGui::GetContentRegionAvail().x < 15.0f) {
-			ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + (350.0f * ImGui::Renderer::GetResolutionScale()));
+			ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + (350.0f * GetGlobalScale_Impl()));
 			ImGui::TextUnformatted(text);
 			ImGui::PopTextWrapPos();
 		} else {

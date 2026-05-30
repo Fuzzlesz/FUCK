@@ -270,7 +270,7 @@ void SettingsTool::Draw()
 
 					// Calculate how many columns we can fit inside this specific panel
 					float availWidth  = FUCK::GetContentRegionAvail().x;
-					float minColWidth = 280.0f * FUCK::GetResolutionScale() * manager->_cfg.userScale;
+					float minColWidth = 280.0f * FUCK::GetGlobalScale();
 					int   numCols     = std::max(1, static_cast<int>(availWidth / minColWidth));
 
 					// Let the panel stretch to the bottom of the window
