@@ -480,8 +480,13 @@ namespace FUCK
 
 	/// @brief Connects to the FUCK Host Framework.
 	/// @param pluginName The exact name of your SKSE plugin. Used automatically for translations and settings directories.
-	inline bool Connect(const char* pluginName = nullptr, unsigned int a_minVersion = FUCK_API_VERSION)
+	inline bool Connect(const char* pluginName, unsigned int a_minVersion = FUCK_API_VERSION)
 	{
+		if (!pluginName || pluginName[0] == '\0') {
+			SKSE::log::error("FUCK API Connection failed: You must provide a valid pluginName.");
+			return false;
+		}
+
 		auto handle = GetModuleHandleW(L"FUCK.dll");
 		if (!handle)
 			return false;
@@ -490,19 +495,17 @@ namespace FUCK
 			return false;
 		auto* iface = static_cast<FUCK_Interface*>(fetcher());
 		if (!iface || iface->version < a_minVersion) {
-			logger::error("FUCK API Version Mismatch: Expected {}, found {}", a_minVersion, iface ? iface->version : 0);
+			SKSE::log::error("FUCK API Version Mismatch: Expected {}, found {}", a_minVersion, iface ? iface->version : 0);
 			return false;
 		}
 
 		GetInterface() = iface;
 
 		// --- Cache the plugin name globally for this DLL ---
-		if (pluginName) {
-			g_pluginName = pluginName;
-			GetInterface()->LoadTranslation(pluginName);
-		}
+		g_pluginName = pluginName;
+		GetInterface()->LoadTranslation(pluginName);
 
-		logger::info("Connected to FUCK API version {}", iface->version);
+		SKSE::log::info("Connected to FUCK API version {}", iface->version);
 		return true;
 	}
 
