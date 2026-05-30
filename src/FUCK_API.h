@@ -150,7 +150,8 @@ namespace FUCK
 		kNone         = 0,
 		kNoTabStop    = 1 << 0,
 		kButtonRepeat = 1 << 1,
-		kNoNav        = 1 << 2
+		kDisabled     = 1 << 2,
+		kNoNav        = 1 << 3
 	};
 
 	inline WindowFlags      operator|(WindowFlags a, WindowFlags b) { return static_cast<WindowFlags>(static_cast<int>(a) | static_cast<int>(b)); }
@@ -436,6 +437,7 @@ struct FUCK_Interface
 
 	// Widgets
 	bool (*Button)(const char*);
+	bool (*InvisibleButton)(const char*, const ImVec2&, int);
 	bool (*Checkbox)(const char*, bool*, bool, bool);
 	bool (*Hotkey)(const char*, std::uint32_t, std::int32_t, std::int32_t, bool, bool, bool);
 	bool (*ToggleButton)(const char*, bool*, bool, bool);
@@ -973,6 +975,7 @@ namespace FUCK
 	}
 
 	inline bool Button(const char* label) { return GetInterface() ? GetInterface()->Button(label) : false; }
+	inline bool InvisibleButton(const char* str_id, const ImVec2& size, int flags = 0) { return GetInterface() ? GetInterface()->InvisibleButton(str_id, size, flags) : false; }
 	inline bool Checkbox(const char* label, bool* v, bool alignFar = true, bool labelLeft = true) { return GetInterface() ? GetInterface()->Checkbox(label, v, alignFar, labelLeft) : false; }
 	inline bool Hotkey(const char* label, std::uint32_t key, std::int32_t modifier, std::int32_t modifier2, bool alignFar = true, bool labelLeft = true, bool flashing = false) { return GetInterface() ? GetInterface()->Hotkey(label, key, modifier, modifier2, alignFar, labelLeft, flashing) : false; }
 	inline bool ToggleButton(const char* label, bool* v, bool alignFar = true, bool labelLeft = true) { return GetInterface() ? GetInterface()->ToggleButton(label, v, alignFar, labelLeft) : false; }

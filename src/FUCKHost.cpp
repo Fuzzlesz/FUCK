@@ -638,6 +638,7 @@ namespace FUCK::Host
 	// Widgets
 	// ==========================================
 	static bool Button_Impl(const char* label) { return ImGui::OutlineButton(label); }
+	static bool InvisibleButton_Impl(const char* str_id, const ImVec2& size, int flags) { return ImGui::InvisibleButton(str_id, size, static_cast<ImGuiButtonFlags>(flags)); }
 	static bool Checkbox_Impl(const char* label, bool* v, bool alignFar, bool labelLeft) { return ImGui::CheckBox(label, v, alignFar, labelLeft); }
 	static bool Hotkey_Impl(const char* label, std::uint32_t key, std::int32_t m1, std::int32_t m2, bool alignFar, bool labelLeft, bool flashing) { return ImGui::Hotkey(label, key, m1, m2, alignFar, labelLeft, flashing); }
 	static bool ToggleButton_Impl(const char* label, bool* v, bool alignFar, bool labelLeft) { return ImGui::ToggleButton(label, v, alignFar, labelLeft); }
@@ -955,6 +956,7 @@ namespace FUCK::Host
 			.EndPopup               = EndPopup_Impl,
 			// Widgets
 			.Button                 = Button_Impl,
+			.InvisibleButton        = InvisibleButton_Impl,
 			.Checkbox               = Checkbox_Impl,
 			.Hotkey                 = Hotkey_Impl,
 			.ToggleButton           = ToggleButton_Impl,
