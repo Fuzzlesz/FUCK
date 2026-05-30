@@ -266,6 +266,8 @@ struct FUCK_Interface
 
 	// Display
 	float (*GetResolutionScale)();
+	float (*GetGlobalScale)();
+	float (*GetUserScale)();
 	void (*GetDisplaySize)(float*, float*);
 	void (*TranslateScaleformToScreen)(float, float, float*, float*);
 	ImFont* (*GetFont)(FUCK::Font);
@@ -291,6 +293,7 @@ struct FUCK_Interface
 	float (*GetStyleVar)(ImGuiStyleVar);
 	void (*GetStyleVarVec)(ImGuiStyleVar, float*, float*);
 	void (*GetStyleColorVec4)(ImGuiCol, float*, float*, float*, float*);
+	void (*SetWindowFontScale)(float);
 
 	// Layout
 	void (*SetCursorPosX)(float);
@@ -571,17 +574,24 @@ namespace FUCK
 	// Display, Styles, Metrics
 	// ------------------------------------------------------------------------
 
-	/// @brief Gets the current screen resolution scale multiplier.
+	/// @brief Gets the physical screen resolution scale multiplier (Base 1080p).
 	inline float GetResolutionScale() { return GetInterface() ? GetInterface()->GetResolutionScale() : 1.0f; }
 
-	/// @brief Automatically scales a scalar value by the current resolution scale.
-	inline float Scale(float value) { return value * GetResolutionScale(); }
+	/// @brief Gets the overall screen resolution combined with the user's selected UI Size Slider multiplier.
+	inline float GetGlobalScale() { return GetInterface() ? GetInterface()->GetGlobalScale() : 1.0f; }
 
-	/// @brief Automatically scales an X and Y coordinate by the current resolution scale.
+	/// @brief Gets the user's custom UI Size Slider multiplier.
+	inline float GetUserScale() { return GetInterface() ? GetInterface()->GetUserScale() : 1.0f; }
+
+	/// @brief Scales by the Monitor Resolution.
+	inline float  Scale(float value) { return value * GetResolutionScale(); }
 	inline ImVec2 Scale(float x, float y) { return ImVec2(x * GetResolutionScale(), y * GetResolutionScale()); }
-
-	/// @brief Automatically scales an ImVec2 by the current resolution scale.
 	inline ImVec2 Scale(const ImVec2& value) { return ImVec2(value.x * GetResolutionScale(), value.y * GetResolutionScale()); }
+
+	/// @brief Scales by both Resolution and the User's UI Size slider.
+	inline float  UIScale(float value) { return value * GetGlobalScale(); }
+	inline ImVec2 UIScale(float x, float y) { return ImVec2(x * GetGlobalScale(), y * GetGlobalScale()); }
+	inline ImVec2 UIScale(const ImVec2& value) { return ImVec2(value.x * GetGlobalScale(), value.y * GetGlobalScale()); }
 
 	inline ImVec2 GetDisplaySize()
 	{
@@ -635,6 +645,11 @@ namespace FUCK
 	{
 		if (auto i = GetInterface())
 			i->PopFont();
+	}
+	inline void SetWindowFontScale(float scale)
+	{
+		if (auto i = GetInterface())
+			i->SetWindowFontScale(scale);
 	}
 
 	inline void PushStyleColor(ImGuiCol idx, const ImVec4& col)

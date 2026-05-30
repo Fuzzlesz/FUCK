@@ -24,7 +24,10 @@ namespace FUCK::Host
 	// Display
 	// ==========================================
 	static float GetResolutionScale_Impl() { return ImGui::Renderer::GetResolutionScale(); }
-	static void  GetDisplaySize_Impl(float* x, float* y)
+	static float GetGlobalScale_Impl() { return ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale(); }
+	static float GetUserScale_Impl() { return FUCKMan::GetSingleton()->GetActiveScale(); }
+
+	static void GetDisplaySize_Impl(float* x, float* y)
 	{
 		auto size = ImGui::GetIO().DisplaySize;
 		if (x)
@@ -64,6 +67,8 @@ namespace FUCK::Host
 		}
 	}
 	static void PopFont_Impl() { ImGui::PopFont(); }
+	static void SetWindowFontScale_Impl(float scale) { ImGui::SetWindowFontScale(scale); }
+
 	static void SuspendRendering_Impl(bool suspend) { FUCKMan::GetSingleton()->SuspendRendering(suspend); }
 	static void SetMenuOpen_Impl(bool open) { open ? FUCKMan::GetSingleton()->Open() : FUCKMan::GetSingleton()->Close(); }
 	static bool IsMenuOpen_Impl() { return FUCKMan::GetSingleton()->IsOpen(); }
@@ -803,6 +808,8 @@ namespace FUCK::Host
 			.UnregisterWindow = UnregisterWindow_Impl,
 			// Display
 			.GetResolutionScale         = GetResolutionScale_Impl,
+			.GetGlobalScale             = GetGlobalScale_Impl,
+			.GetUserScale               = GetUserScale_Impl,
 			.GetDisplaySize             = GetDisplaySize_Impl,
 			.TranslateScaleformToScreen = TranslateScaleformToScreen_Impl,
 			.GetFont                    = GetFont_Impl,
@@ -818,14 +825,15 @@ namespace FUCK::Host
 			.GetMousePos   = GetMousePos_Impl,
 			.GetMouseWheel = GetMouseWheel_Impl,
 			// Styling
-			.PushStyleColor    = PushStyleColor_Impl,
-			.PopStyleColor     = PopStyleColor_Impl,
-			.PushStyleVar      = PushStyleVar_Impl,
-			.PushStyleVarVec   = PushStyleVarVec_Impl,
-			.PopStyleVar       = PopStyleVar_Impl,
-			.GetStyleVar       = GetStyleVar_Impl,
-			.GetStyleVarVec    = GetStyleVarVec_Impl,
-			.GetStyleColorVec4 = GetStyleColorVec4_Impl,
+			.PushStyleColor     = PushStyleColor_Impl,
+			.PopStyleColor      = PopStyleColor_Impl,
+			.PushStyleVar       = PushStyleVar_Impl,
+			.PushStyleVarVec    = PushStyleVarVec_Impl,
+			.PopStyleVar        = PopStyleVar_Impl,
+			.GetStyleVar        = GetStyleVar_Impl,
+			.GetStyleVarVec     = GetStyleVarVec_Impl,
+			.GetStyleColorVec4  = GetStyleColorVec4_Impl,
+			.SetWindowFontScale = SetWindowFontScale_Impl,
 			// Layout
 			.SetCursorPosX           = SetCursorPosX_Impl,
 			.SetCursorPosY           = SetCursorPosY_Impl,
