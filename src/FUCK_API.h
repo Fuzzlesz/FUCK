@@ -55,6 +55,14 @@ namespace FUCK
 		kHovered    // Bright Green
 	};
 
+	enum class TableBgTarget
+	{
+		kNone   = 0,
+		kRowBg0 = 1,
+		kRowBg1 = 2,
+		kCellBg = 3
+	};
+
 	// --- Bitflags ---
 	enum class WindowFlags
 	{
@@ -102,20 +110,24 @@ namespace FUCK
 	enum class TableColumnFlags
 	{
 		kNone                 = 0,
-		kDefaultSort          = 1 << 0,
-		kWidthStretch         = 1 << 1,
-		kWidthFixed           = 1 << 2,
-		kNoResize             = 1 << 3,
-		kNoReorder            = 1 << 4,
-		kNoHide               = 1 << 5,
-		kNoClip               = 1 << 6,
-		kNoSort               = 1 << 7,
-		kNoSortAscending      = 1 << 8,
-		kNoSortDescending     = 1 << 9,
-		kPreferSortAscending  = 1 << 10,
-		kPreferSortDescending = 1 << 11,
-		kIndentEnable         = 1 << 12,
-		kIndentDisable        = 1 << 13
+		kDisabled             = 1 << 0,
+		kDefaultHide          = 1 << 1,
+		kDefaultSort          = 1 << 2,
+		kWidthStretch         = 1 << 3,
+		kWidthFixed           = 1 << 4,
+		kNoResize             = 1 << 5,
+		kNoReorder            = 1 << 6,
+		kNoHide               = 1 << 7,
+		kNoClip               = 1 << 8,
+		kNoSort               = 1 << 9,
+		kNoSortAscending      = 1 << 10,
+		kNoSortDescending     = 1 << 11,
+		kNoHeaderLabel        = 1 << 12,
+		kNoHeaderWidth        = 1 << 13,
+		kPreferSortAscending  = 1 << 14,
+		kPreferSortDescending = 1 << 15,
+		kIndentEnable         = 1 << 16,
+		kIndentDisable        = 1 << 17
 	};
 
 	enum class ItemFlags
@@ -280,6 +292,7 @@ struct FUCK_Interface
 	void (*Separator)();
 	void (*SeparatorThick)();
 	void (*SeparatorText)(const char*);
+	float (*GetColumnWidth)(int);
 
 	// Metrics
 	float (*GetTextLineHeight)();
@@ -441,6 +454,7 @@ struct FUCK_Interface
 	void (*TableNextRow)(int, float);
 	bool (*TableNextColumn)();
 	void (*TableHeadersRow)();
+	void (*TableSetBgColor)(int, ImU32, int);
 
 	void (*Columns)(int, const char*, bool);
 	void (*NextColumn)();
@@ -1163,6 +1177,17 @@ namespace FUCK
 	{
 		if (auto i = GetInterface())
 			i->EndTable();
+	}
+
+	inline void TableSetBgColor(TableBgTarget target, ImU32 color, int column_n = -1)
+	{
+		if (auto i = GetInterface())
+			i->TableSetBgColor(static_cast<int>(target), color, column_n);
+	}
+
+	inline float GetColumnWidth(int column_index = -1)
+	{
+		return GetInterface() ? GetInterface()->GetColumnWidth(column_index) : 0.0f;
 	}
 
 	/// @brief Utility to capture a Table Column's width ratio upon releasing the mouse.

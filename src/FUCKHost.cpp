@@ -254,13 +254,14 @@ namespace FUCK::Host
 		if (y)
 			*y = p.y;
 	}
-	static void SetNextItemWidth_Impl(float w) { ImGui::SetNextItemWidth(w); }
-	static void SetNextItemOpen_Impl(bool is_open, int cond) { ImGui::SetNextItemOpen(is_open, cond); }
-	static void Dummy_Impl(float w, float h) { ImGui::Dummy(ImVec2(w, h)); }
-	static void Spacing_Impl() { ImGui::Spacing(); }
-	static void Separator_Impl() { ImGui::Separator(); }
-	static void SeparatorThick_Impl() { ImGui::SeparatorThick(); }
-	static void SeparatorText_Impl(const char* label) { ImGui::SeparatorText(label); }
+	static void  SetNextItemWidth_Impl(float w) { ImGui::SetNextItemWidth(w); }
+	static void  SetNextItemOpen_Impl(bool is_open, int cond) { ImGui::SetNextItemOpen(is_open, cond); }
+	static void  Dummy_Impl(float w, float h) { ImGui::Dummy(ImVec2(w, h)); }
+	static void  Spacing_Impl() { ImGui::Spacing(); }
+	static void  Separator_Impl() { ImGui::Separator(); }
+	static void  SeparatorThick_Impl() { ImGui::SeparatorThick(); }
+	static void  SeparatorText_Impl(const char* label) { ImGui::SeparatorText(label); }
+	static float GetColumnWidth_Impl(int column_index) { return ImGui::GetColumnWidth(column_index); }
 
 	// ==========================================
 	// Metrics
@@ -723,6 +724,7 @@ namespace FUCK::Host
 	static void TableNextRow_Impl(int f, float h) { ImGui::TableNextRow(f, h); }
 	static bool TableNextColumn_Impl() { return ImGui::TableNextColumn(); }
 	static void TableHeadersRow_Impl() { ImGui::TableHeadersRow(); }
+	static void TableSetBgColor_Impl(int t, ImU32 c, int col_n) { ImGui::TableSetBgColor(static_cast<ImGuiTableBgTarget>(t), c, col_n); }
 
 	static void Columns_Impl(int count, const char* id, bool border) { ImGui::Columns(count, id, border); }
 	static void NextColumn_Impl() { ImGui::NextColumn(); }
@@ -833,6 +835,7 @@ namespace FUCK::Host
 			.Separator               = Separator_Impl,
 			.SeparatorThick          = SeparatorThick_Impl,
 			.SeparatorText           = SeparatorText_Impl,
+			.GetColumnWidth          = GetColumnWidth_Impl,
 			// Metrics
 			.GetTextLineHeight            = GetTextLineHeight_Impl,
 			.GetTextLineHeightWithSpacing = GetTextLineHeightWithSpacing_Impl,
@@ -977,6 +980,7 @@ namespace FUCK::Host
 			.TableNextRow           = TableNextRow_Impl,
 			.TableNextColumn        = TableNextColumn_Impl,
 			.TableHeadersRow        = TableHeadersRow_Impl,
+			.TableSetBgColor        = TableSetBgColor_Impl,
 			.Columns                = Columns_Impl,
 			.NextColumn             = NextColumn_Impl,
 			.SameLine               = SameLine_Impl,
