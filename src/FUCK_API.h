@@ -277,6 +277,7 @@ struct FUCK_Interface
 
 	// IO
 	float (*GetDeltaTime)();
+	double (*GetTime)();
 	void (*GetMouseDelta)(float*, float*);
 	void (*GetMousePos)(float*, float*);
 	float (*GetMouseWheel)();
@@ -866,6 +867,7 @@ namespace FUCK
 	// ------------------------------------------------------------------------
 
 	inline float  GetDeltaTime() { return GetInterface() ? GetInterface()->GetDeltaTime() : 0.0f; }
+	inline double GetTime() { return GetInterface() ? GetInterface()->GetTime() : 0.0; }
 	inline ImVec2 GetMouseDelta()
 	{
 		ImVec2 p(0, 0);

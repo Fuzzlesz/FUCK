@@ -71,8 +71,10 @@ namespace FUCK::Host
 	// ==========================================
 	// IO
 	// ==========================================
-	static float GetDeltaTime_Impl() { return ImGui::GetIO().DeltaTime; }
-	static void  GetMouseDelta_Impl(float* x, float* y)
+	static float  GetDeltaTime_Impl() { return ImGui::GetIO().DeltaTime; }
+	static double GetTime_Impl() { return ImGui::GetTime(); }
+
+	static void GetMouseDelta_Impl(float* x, float* y)
 	{
 		auto d = ImGui::GetIO().MouseDelta;
 		if (x)
@@ -811,6 +813,7 @@ namespace FUCK::Host
 			.IsMenuOpen                 = IsMenuOpen_Impl,
 			// IO
 			.GetDeltaTime  = GetDeltaTime_Impl,
+			.GetTime       = GetTime_Impl,
 			.GetMouseDelta = GetMouseDelta_Impl,
 			.GetMousePos   = GetMousePos_Impl,
 			.GetMouseWheel = GetMouseWheel_Impl,
