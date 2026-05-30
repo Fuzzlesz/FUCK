@@ -555,6 +555,13 @@ namespace FUCK::Host
 	static void SetKeyboardFocusHere_Impl(int offset) { ImGui::SetKeyboardFocusHere(offset); }
 	static void SetItemDefaultFocus_Impl() { ImGui::SetItemDefaultFocus(); }
 
+	static bool                BeginDragDropSource_Impl(int flags) { return ImGui::BeginDragDropSource(flags); }
+	static bool                SetDragDropPayload_Impl(const char* type, const void* data, size_t sz, int cond) { return ImGui::SetDragDropPayload(type, data, sz, cond); }
+	static void                EndDragDropSource_Impl() { ImGui::EndDragDropSource(); }
+	static bool                BeginDragDropTarget_Impl() { return ImGui::BeginDragDropTarget(); }
+	static const ImGuiPayload* AcceptDragDropPayload_Impl(const char* type, int flags) { return ImGui::AcceptDragDropPayload(type, flags); }
+	static void                EndDragDropTarget_Impl() { ImGui::EndDragDropTarget(); }
+
 	// ==========================================
 	// Drawing Primitives
 	// ==========================================
@@ -910,6 +917,12 @@ namespace FUCK::Host
 			.IsKeyPressed               = IsKeyPressed_Impl,
 			.SetKeyboardFocusHere       = SetKeyboardFocusHere_Impl,
 			.SetItemDefaultFocus        = SetItemDefaultFocus_Impl,
+			.BeginDragDropSource        = BeginDragDropSource_Impl,
+			.SetDragDropPayload         = SetDragDropPayload_Impl,
+			.EndDragDropSource          = EndDragDropSource_Impl,
+			.BeginDragDropTarget        = BeginDragDropTarget_Impl,
+			.AcceptDragDropPayload      = AcceptDragDropPayload_Impl,
+			.EndDragDropTarget          = EndDragDropTarget_Impl,
 			// Drawing Primitives
 			.DrawRect            = DrawRect_Impl,
 			.DrawRectFilled      = DrawRectFilled_Impl,

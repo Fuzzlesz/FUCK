@@ -130,6 +130,21 @@ namespace FUCK
 		kIndentDisable        = 1 << 17
 	};
 
+	enum class DragDropFlags
+	{
+		kNone                     = 0,
+		kSourceNoPreviewTooltip   = 1 << 0,
+		kSourceNoDisableHover     = 1 << 1,
+		kSourceNoHoldToOpenOthers = 1 << 2,
+		kSourceAllowNullID        = 1 << 3,
+		kSourceExtern             = 1 << 4,
+		kSourceAutoExpirePayload  = 1 << 5,
+		kAcceptBeforeDelivery     = 1 << 10,
+		kAcceptNoDrawDefaultRect  = 1 << 11,
+		kAcceptNoPreviewTooltip   = 1 << 12,
+		kAcceptPeekOnly           = kAcceptBeforeDelivery | kAcceptNoDrawDefaultRect
+	};
+
 	enum class ItemFlags
 	{
 		kNone         = 0,
@@ -142,6 +157,8 @@ namespace FUCK
 	inline bool             operator&(WindowFlags a, WindowFlags b) { return (static_cast<int>(a) & static_cast<int>(b)) != 0; }
 	inline TableFlags       operator|(TableFlags a, TableFlags b) { return static_cast<TableFlags>(static_cast<int>(a) | static_cast<int>(b)); }
 	inline TableColumnFlags operator|(TableColumnFlags a, TableColumnFlags b) { return static_cast<TableColumnFlags>(static_cast<int>(a) | static_cast<int>(b)); }
+	inline DragDropFlags    operator|(DragDropFlags a, DragDropFlags b) { return static_cast<DragDropFlags>(static_cast<int>(a) | static_cast<int>(b)); }
+	inline bool             operator&(DragDropFlags a, DragDropFlags b) { return (static_cast<int>(a) & static_cast<int>(b)) != 0; }
 	inline ItemFlags        operator|(ItemFlags a, ItemFlags b) { return static_cast<ItemFlags>(static_cast<int>(a) | static_cast<int>(b)); }
 	inline bool             operator&(ItemFlags a, ItemFlags b) { return (static_cast<int>(a) & static_cast<int>(b)) != 0; }
 
@@ -376,6 +393,13 @@ struct FUCK_Interface
 	bool (*IsKeyPressed)(ImGuiKey, bool);
 	void (*SetKeyboardFocusHere)(int);
 	void (*SetItemDefaultFocus)();
+
+	bool (*BeginDragDropSource)(int);
+	bool (*SetDragDropPayload)(const char*, const void*, size_t, int);
+	void (*EndDragDropSource)();
+	bool (*BeginDragDropTarget)();
+	const ImGuiPayload* (*AcceptDragDropPayload)(const char*, int);
+	void (*EndDragDropTarget)();
 
 	// Drawing Primitives
 	void (*DrawRect)(const ImVec2&, const ImVec2&, const ImVec4&, float, float);
@@ -932,6 +956,21 @@ namespace FUCK
 			i->SetItemDefaultFocus();
 	}
 	inline bool IsWidgetFocused(const char* label) { return GetInterface() ? GetInterface()->IsWidgetFocused(label) : false; }
+
+	inline bool BeginDragDropSource(DragDropFlags flags = DragDropFlags::kNone) { return GetInterface() ? GetInterface()->BeginDragDropSource(static_cast<int>(flags)) : false; }
+	inline bool SetDragDropPayload(const char* type, const void* data, size_t sz, int cond = 0) { return GetInterface() ? GetInterface()->SetDragDropPayload(type, data, sz, cond) : false; }
+	inline void EndDragDropSource()
+	{
+		if (auto i = GetInterface())
+			i->EndDragDropSource();
+	}
+	inline bool                BeginDragDropTarget() { return GetInterface() ? GetInterface()->BeginDragDropTarget() : false; }
+	inline const ImGuiPayload* AcceptDragDropPayload(const char* type, DragDropFlags flags = DragDropFlags::kNone) { return GetInterface() ? GetInterface()->AcceptDragDropPayload(type, static_cast<int>(flags)) : nullptr; }
+	inline void                EndDragDropTarget()
+	{
+		if (auto i = GetInterface())
+			i->EndDragDropTarget();
+	}
 
 	inline bool Button(const char* label) { return GetInterface() ? GetInterface()->Button(label) : false; }
 	inline bool Checkbox(const char* label, bool* v, bool alignFar = true, bool labelLeft = true) { return GetInterface() ? GetInterface()->Checkbox(label, v, alignFar, labelLeft) : false; }
