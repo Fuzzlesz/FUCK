@@ -339,6 +339,7 @@ struct FUCK_Interface
 	void (*HelpMarker)(const char*);
 	void (*PushID_Str)(const char*);
 	void (*PushID_Int)(int);
+	void (*PushID_Ptr)(const void*);
 	void (*PopID)();
 
 	// Menu Events
@@ -860,6 +861,11 @@ namespace FUCK
 	{
 		if (auto i = GetInterface())
 			i->PushID_Int(int_id);
+	}
+	inline void PushID(const void* ptr_id)
+	{
+		if (auto i = GetInterface())
+			i->PushID_Ptr(ptr_id);
 	}
 	inline void PopID()
 	{

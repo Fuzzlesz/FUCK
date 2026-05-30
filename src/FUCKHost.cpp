@@ -389,6 +389,7 @@ namespace FUCK::Host
 
 	static void PushID_Str_Impl(const char* str_id) { ImGui::PushID(str_id); }
 	static void PushID_Int_Impl(int int_id) { ImGui::PushID(int_id); }
+	static void PushID_Ptr_Impl(const void* ptr_id) { ImGui::PushID(ptr_id); }
 	static void PopID_Impl() { ImGui::PopID(); }
 
 	// ==========================================
@@ -874,6 +875,7 @@ namespace FUCK::Host
 			.HelpMarker                 = HelpMarker_Impl,
 			.PushID_Str                 = PushID_Str_Impl,
 			.PushID_Int                 = PushID_Int_Impl,
+			.PushID_Ptr                 = PushID_Ptr_Impl,
 			.PopID                      = PopID_Impl,
 			// Menu Events
 			.AddMenuListener    = AddMenuListener_Impl,
