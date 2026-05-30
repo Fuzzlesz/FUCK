@@ -762,6 +762,12 @@ void FUCKMan::Draw()
 				if (tool != _activeTool)
 					tool->RenderOverlay();
 			}
+
+			for (auto* win : _windows) {
+				if (win->IsOpen())
+					win->RenderOverlay();
+			}
+
 			popContentScale();
 		}
 		ImGui::End();

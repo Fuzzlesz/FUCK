@@ -234,7 +234,8 @@ namespace FUCK
 		/// @brief Display title shown on the Window chrome. Translates natively if a localized string key is passed.
 		virtual const char* Title() const = 0;
 
-		virtual void        Draw()               = 0;
+		virtual void        Draw() = 0;
+		virtual void        RenderOverlay() {}
 		virtual bool        IsOpen() const       = 0;
 		virtual void        SetOpen(bool a_open) = 0;
 		virtual WindowFlags GetFlags() const { return WindowFlags::kNone; }
