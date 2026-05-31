@@ -3,9 +3,9 @@
 
 namespace ImGui
 {
-	// ------------------------------------------------------------
+	// --------------------------------------------------
 	// Entry point
-	// ------------------------------------------------------------
+	// --------------------------------------------------
 	void Overlays::Draw(FUCK::Overlay type, float thickness, ImU32 color, float paramA, float paramB, float paramC, float paramD)
 	{
 		auto*  drawList    = ImGui::GetBackgroundDrawList();
@@ -45,9 +45,9 @@ namespace ImGui
 		}
 	}
 
-	// ------------------------------------------------------------
+	// --------------------------------------------------
 	// Grid
-	// ------------------------------------------------------------
+	// --------------------------------------------------
 	void Overlays::DrawGrid(ImDrawList* dl, const ImVec2& size, ImU32 col, float thick, float rows, float cols, float rotationDeg)
 	{
 		float r = (rows > 0.0f) ? rows : 3.0f;
@@ -90,9 +90,9 @@ namespace ImGui
 		}
 	}
 
-	// ------------------------------------------------------------
+	// --------------------------------------------------
 	// Crosshair
-	// ------------------------------------------------------------
+	// --------------------------------------------------
 	void Overlays::DrawCrosshair(ImDrawList* dl, const ImVec2& size, ImU32 col, float thick, float rows, float cols)
 	{
 		float countX = std::max(cols, 1.0f);
@@ -113,9 +113,9 @@ namespace ImGui
 		}
 	}
 
-	// ------------------------------------------------------------
+	// --------------------------------------------------
 	// Golden Spiral
-	// ------------------------------------------------------------
+	// --------------------------------------------------
 	void Overlays::DrawGoldenSpiral(ImDrawList* dl, const ImVec2& size, ImU32 col, float thick, float anchor, float turns, float rot, float scale, bool showSquares)
 	{
 		const float phi = 1.61803398875f;
@@ -207,9 +207,9 @@ namespace ImGui
 		}
 	}
 
-	// ------------------------------------------------------------
+	// --------------------------------------------------
 	// Golden Ratio Grid
-	// ------------------------------------------------------------
+	// --------------------------------------------------
 	void Overlays::DrawGoldenRatioGrid(ImDrawList* dl, const ImVec2& size, ImU32 col, float thick, float subdivisions)
 	{
 		const float invPhi  = 1.0f / 1.61803398875f;
@@ -243,9 +243,9 @@ namespace ImGui
 		}
 	}
 
-	// ------------------------------------------------------------
+	// --------------------------------------------------
 	// Triangle Composition
-	// ------------------------------------------------------------
+	// --------------------------------------------------
 	void Overlays::DrawTriangle(ImDrawList* dl, const ImVec2& size, ImU32 col, float thick, bool mirror)
 	{
 		ImVec2 tl = { 0, 0 };

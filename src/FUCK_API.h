@@ -3,9 +3,9 @@
 
 #define FUCK_API_VERSION 1
 
-// ============================================================================
+// ==================================================
 // [ SECTION 1 ] TYPES & INTERFACES
-// ============================================================================
+// ==================================================
 
 namespace FUCK
 {
@@ -250,9 +250,9 @@ namespace FUCK
 	};
 }
 
-// ============================================================================
+// ==================================================
 // [ SECTION 2 ] C-ABI INTERFACE
-// ============================================================================
+// ==================================================
 
 #pragma pack(push, 1)
 struct FUCK_Interface
@@ -508,15 +508,15 @@ struct FUCK_Interface
 };
 #pragma pack(pop)
 
-// ============================================================================
+// ==================================================
 // [ SECTION 3 ] C++ PUBLIC API WRAPPER
-// ============================================================================
+// ==================================================
 
 namespace FUCK
 {
-	// ------------------------------------------------------------------------
+	// --------------------------------------------------
 	// Init & Registration
-	// ------------------------------------------------------------------------
+	// --------------------------------------------------
 
 	inline FUCK_Interface*& GetInterface()
 	{
@@ -571,9 +571,9 @@ namespace FUCK
 			i->UnregisterWindow(window);
 	}
 
-	// ------------------------------------------------------------------------
+	// --------------------------------------------------
 	// Display, Styles, Metrics
-	// ------------------------------------------------------------------------
+	// --------------------------------------------------
 
 	/// @brief Gets the physical screen resolution scale multiplier (Base 1080p).
 	inline float GetResolutionScale() { return GetInterface() ? GetInterface()->GetResolutionScale() : 1.0f; }
@@ -700,9 +700,9 @@ namespace FUCK
 	inline float GetFrameHeight() { return GetInterface() ? GetInterface()->GetFrameHeight() : 0.0f; }
 	inline float GetFrameHeightWithSpacing() { return GetInterface() ? GetInterface()->GetFrameHeightWithSpacing() : 0.0f; }
 
-	// ------------------------------------------------------------------------
+	// --------------------------------------------------
 	// Layout & Cursor
-	// ------------------------------------------------------------------------
+	// --------------------------------------------------
 
 	inline void SetCursorPosX(float x)
 	{
@@ -883,9 +883,9 @@ namespace FUCK
 			i->PopItemFlag();
 	}
 
-	// ------------------------------------------------------------------------
+	// --------------------------------------------------
 	// Game State & Input Control
-	// ------------------------------------------------------------------------
+	// --------------------------------------------------
 
 	inline float  GetDeltaTime() { return GetInterface() ? GetInterface()->GetDeltaTime() : 0.0f; }
 	inline double GetTime() { return GetInterface() ? GetInterface()->GetTime() : 0.0; }
@@ -952,9 +952,9 @@ namespace FUCK
 	inline BindResult UpdateBinding(const void* inputEvent, std::uint32_t* outKey, std::int32_t* outMod1, std::int32_t* outMod2) { return GetInterface() ? GetInterface()->UpdateBinding(inputEvent, outKey, outMod1, outMod2) : BindResult::kNone; }
 	inline BindResult GetInputBind(const void* inputEvent, std::uint32_t* outKey, std::int32_t* outMod1, std::int32_t* outMod2) { return GetInterface() ? GetInterface()->GetInputBind(inputEvent, outKey, outMod1, outMod2) : BindResult::kNone; }
 
-	// ------------------------------------------------------------------------
+	// --------------------------------------------------
 	// Widgets & Interaction
-	// ------------------------------------------------------------------------
+	// --------------------------------------------------
 
 	inline bool IsItemHovered(int flags = 0) { return GetInterface() ? GetInterface()->IsItemHovered(flags) : false; }
 	inline bool IsItemClicked(int mouse_button = 0) { return GetInterface() ? GetInterface()->IsItemClicked(mouse_button) : false; }
@@ -1120,9 +1120,9 @@ namespace FUCK
 			i->Stepper(label, text, outLeft, outRight);
 	}
 
-	// ------------------------------------------------------------------------
+	// --------------------------------------------------
 	// Windows & Containers
-	// ------------------------------------------------------------------------
+	// --------------------------------------------------
 
 	inline bool BeginWindow(const char* name, bool* p_open = nullptr, int flags = 0) { return GetInterface() ? GetInterface()->BeginWindow(name, p_open, flags) : false; }
 	inline void EndWindow()
@@ -1299,9 +1299,9 @@ namespace FUCK
 			i->NextColumn();
 	}
 
-	// ------------------------------------------------------------------------
+	// --------------------------------------------------
 	// Drawing & Assets
-	// ------------------------------------------------------------------------
+	// --------------------------------------------------
 
 	inline ImTextureID GetIconForKey(std::uint32_t key, ImVec2* outSize = nullptr)
 	{
@@ -1393,9 +1393,9 @@ namespace FUCK
 			i->DrawScreenLine(p1.x, p1.y, p2.x, p2.y, col, thickness);
 	}
 
-	// ------------------------------------------------------------------------
+	// --------------------------------------------------
 	// Strings & Utilities
-	// ------------------------------------------------------------------------
+	// --------------------------------------------------
 
 	inline const char* Translate(const char* key) { return GetInterface() ? GetInterface()->GetTranslation(key) : key; }
 	inline void        LoadTranslation(const char* pluginName)
@@ -1425,9 +1425,9 @@ namespace FUCK
 			i->RemoveMenuListener(userdata);
 	}
 
-	// ============================================================================
+	// ==================================================
 	// [ SECTION 4 ] SMART WRAPPERS & UTILITIES
-	// ============================================================================
+	// ==================================================
 
 	/// @brief Safe Resource-Acquisition-Is-Initialization wrapper for custom Images.
 	class Image
@@ -1766,9 +1766,9 @@ namespace FUCK
 		}
 	}
 
-	// ------------------------------------------------------------------------
+	// --------------------------------------------------
 	// Overloads & Templates
-	// ------------------------------------------------------------------------
+	// --------------------------------------------------
 
 	/// @brief Standardized visual for UI widget editing. Handles both Screen-Space and Window-Space rendering.
 	inline void DrawEditorBounds(const ImVec2& min, const ImVec2& max, EditorBoundsState state = EditorBoundsState::kNormal, float thickness = 2.0f, bool screenSpace = false, const ImVec2* customAnchor = nullptr)
@@ -1891,9 +1891,9 @@ namespace FUCK
 	}
 }  // namespace FUCK
 
-// ============================================================================
+// ==================================================
 // [ SECTION 5 ] GLOBAL LITERALS
-// ============================================================================
+// ==================================================
 
 /// @brief String literal to automatically run FUCK::Translate
 inline const char* operator""_T(const char* str, std::size_t)

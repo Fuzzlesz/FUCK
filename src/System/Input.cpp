@@ -416,9 +416,9 @@ namespace Input
 		return std::ranges::contains(KB_MODS, a_unifiedKey) || std::ranges::contains(GP_MODS, a_unifiedKey);
 	}
 
-	// ==========================================
+	// ==================================================
 	// Context Management
-	// ==========================================
+	// ==================================================
 
 	void Manager::PushContext(Context a_ctx)
 	{
@@ -442,9 +442,9 @@ namespace Input
 		return !contexts.empty() && contexts.front().blocksLower;
 	}
 
-	// ==========================================
+	// ==================================================
 	// Key Names
-	// ==========================================
+	// ==================================================
 
 	const char* Manager::GetKeyName(std::uint32_t a_key) const
 	{
@@ -544,9 +544,9 @@ namespace Input
 		return it != kb.end() ? it->second : "?";
 	}
 
-	// ==========================================
+	// ==================================================
 	// Processing
-	// ==========================================
+	// ==================================================
 
 	void Manager::CacheInputState(const RE::InputEvent* const* a_events)
 	{

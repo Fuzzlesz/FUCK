@@ -13,16 +13,16 @@
 
 namespace FUCK::Host
 {
-	// ==========================================
+	// ==================================================
 	// Registration
-	// ==========================================
+	// ==================================================
 	static void RegisterTool_Impl(ITool* t) { FUCKMan::GetSingleton()->RegisterTool(t); }
 	static void RegisterWindow_Impl(IWindow* w) { FUCKMan::GetSingleton()->RegisterWindow(w); }
 	static void UnregisterWindow_Impl(IWindow* w) { FUCKMan::GetSingleton()->UnregisterWindow(w); }
 
-	// ==========================================
+	// ==================================================
 	// Display
-	// ==========================================
+	// ==================================================
 	static float GetResolutionScale_Impl() { return ImGui::Renderer::GetResolutionScale(); }
 	static float GetGlobalScale_Impl() { return ImGui::Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale(); }
 	static float GetUserScale_Impl() { return FUCKMan::GetSingleton()->GetActiveScale(); }
@@ -73,9 +73,9 @@ namespace FUCK::Host
 	static void SetMenuOpen_Impl(bool open) { open ? FUCKMan::GetSingleton()->Open() : FUCKMan::GetSingleton()->Close(); }
 	static bool IsMenuOpen_Impl() { return FUCKMan::GetSingleton()->IsOpen(); }
 
-	// ==========================================
+	// ==================================================
 	// IO
-	// ==========================================
+	// ==================================================
 	static float  GetDeltaTime_Impl() { return ImGui::GetIO().DeltaTime; }
 	static double GetTime_Impl() { return ImGui::GetTime(); }
 
@@ -97,9 +97,9 @@ namespace FUCK::Host
 	}
 	static float GetMouseWheel_Impl() { return ImGui::GetIO().MouseWheel; }
 
-	// ==========================================
+	// ==================================================
 	// Styling
-	// ==========================================
+	// ==================================================
 	static void  PushStyleColor_Impl(ImGuiCol idx, const ImVec4& col) { ImGui::PushStyleColor(idx, col); }
 	static void  PopStyleColor_Impl(int count) { ImGui::PopStyleColor(count); }
 	static void  PushStyleVar_Impl(ImGuiStyleVar idx, float val) { ImGui::PushStyleVar(idx, val); }
@@ -204,9 +204,9 @@ namespace FUCK::Host
 			*a = col.w;
 	}
 
-	// ==========================================
+	// ==================================================
 	// Layout
-	// ==========================================
+	// ==================================================
 	static void SetCursorPosX_Impl(float x) { ImGui::SetCursorPosX(x); }
 	static void SetCursorPosY_Impl(float y) { ImGui::SetCursorPosY(y); }
 	static void GetCursorPos_Impl(float* x, float* y)
@@ -270,17 +270,17 @@ namespace FUCK::Host
 	static void  SeparatorText_Impl(const char* label) { ImGui::SeparatorText(label); }
 	static float GetColumnWidth_Impl(int column_index) { return ImGui::GetColumnWidth(column_index); }
 
-	// ==========================================
+	// ==================================================
 	// Metrics
-	// ==========================================
+	// ==================================================
 	static float GetTextLineHeight_Impl() { return ImGui::GetTextLineHeight(); }
 	static float GetTextLineHeightWithSpacing_Impl() { return ImGui::GetTextLineHeightWithSpacing(); }
 	static float GetFrameHeight_Impl() { return ImGui::GetFrameHeight(); }
 	static float GetFrameHeightWithSpacing_Impl() { return ImGui::GetFrameHeightWithSpacing(); }
 
-	// ==========================================
+	// ==================================================
 	// Utils
-	// ==========================================
+	// ==================================================
 	static void        LoadTranslation_Impl(const char* n) { Translation::Manager::GetSingleton()->LoadCustomTranslation(n); }
 	static const char* GetTranslation_Impl(const char* k) { return Translation::Manager::GetSingleton()->GetTranslation(k); }
 	static void        SanitizePath_Impl(char* dest, const char* source, size_t size) { Utils::SanitizePath(dest, source, size); }
@@ -392,15 +392,15 @@ namespace FUCK::Host
 	static void PushID_Ptr_Impl(const void* ptr_id) { ImGui::PushID(ptr_id); }
 	static void PopID_Impl() { ImGui::PopID(); }
 
-	// ==========================================
+	// ==================================================
 	// Menu Events
-	// ==========================================
+	// ==================================================
 	static void AddMenuListener_Impl(void* userdata, void (*callback)(const char*, bool, void*)) { FUCKMan::GetSingleton()->AddMenuListener(userdata, callback); }
 	static void RemoveMenuListener_Impl(void* userdata) { FUCKMan::GetSingleton()->RemoveMenuListener(userdata); }
 
-	// ==========================================
+	// ==================================================
 	// Assets
-	// ==========================================
+	// ==================================================
 	static ID3D11ShaderResourceView* GetSRV(void* tex)
 	{
 		if (!tex)
@@ -486,9 +486,9 @@ namespace FUCK::Host
 	}
 	static void DrawOverlay_Impl(FUCK::Overlay type, float thickness, ImU32 color, float paramA, float paramB, float paramC, float paramD) { ImGui::Overlays::Draw(type, thickness, color, paramA, paramB, paramC, paramD); }
 
-	// ==========================================
+	// ==================================================
 	// Game Control
-	// ==========================================
+	// ==================================================
 	static void SetGameTimeFrozen_Impl(bool frozen)
 	{
 		if (auto main = RE::Main::GetSingleton())
@@ -499,9 +499,9 @@ namespace FUCK::Host
 	static void SetSoftPause_Impl(bool paused) { FUCKMan::GetSingleton()->SetManualSoftPause(paused); }
 	static void ForceCursor_Impl(bool force) { FUCKMan::GetSingleton()->SetForceCursor(force); }
 
-	// ==========================================
+	// ==================================================
 	// Input
-	// ==========================================
+	// ==================================================
 	static bool  IsInputPressed_Impl(const void* evt, std::uint32_t key) { return Input::Manager::GetSingleton()->IsInputPressed(static_cast<const RE::InputEvent* const*>(evt), key); }
 	static bool  IsInputDown_Impl(std::uint32_t key) { return Input::Manager::GetSingleton()->IsInputDown(key); }
 	static float GetAnalogInput_Impl(std::uint32_t key) { return Input::Manager::GetSingleton()->GetAnalogInput(key); }
@@ -540,9 +540,9 @@ namespace FUCK::Host
 		return h ? Input::Manager::GetSingleton()->IsManagedHotkeyDown(*h) : false;
 	}
 
-	// ==========================================
+	// ==================================================
 	// Interaction
-	// ==========================================
+	// ==================================================
 	static bool IsItemHovered_Impl(int flags) { return ImGui::IsItemHovered(flags); }
 	static bool IsItemClicked_Impl(int btn) { return ImGui::IsItemClicked(btn); }
 	static bool IsItemActive_Impl() { return ImGui::IsItemActive(); }
@@ -568,9 +568,9 @@ namespace FUCK::Host
 	static const ImGuiPayload* AcceptDragDropPayload_Impl(const char* type, int flags) { return ImGui::AcceptDragDropPayload(type, flags); }
 	static void                EndDragDropTarget_Impl() { ImGui::EndDragDropTarget(); }
 
-	// ==========================================
+	// ==================================================
 	// Drawing Primitives
-	// ==========================================
+	// ==================================================
 	static void DrawRect_Impl(const ImVec2& min, const ImVec2& max, const ImVec4& col, float r, float t) { ImGui::GetWindowDrawList()->AddRect(min, max, ImGui::ColorConvertFloat4ToU32(col), r, 0, t); }
 	static void DrawRectFilled_Impl(const ImVec2& min, const ImVec2& max, const ImVec4& col, float r) { ImGui::GetWindowDrawList()->AddRectFilled(min, max, ImGui::ColorConvertFloat4ToU32(col), r); }
 	static void DrawLine_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec4& col, float t)
@@ -600,16 +600,16 @@ namespace FUCK::Host
 	static void DrawBackgroundLine_Impl(float x1, float y1, float x2, float y2, unsigned int col, float t) { ImGui::GetBackgroundDrawList()->AddLine({ x1, y1 }, { x2, y2 }, col, t); }
 	static void DrawBackgroundRect_Impl(const ImVec2& min, const ImVec2& max, ImU32 col, float thickness) { ImGui::GetBackgroundDrawList()->AddRect(min, max, col, 0.0f, 0, thickness); }
 
-	// ==========================================
+	// ==================================================
 	// Screen primitives
-	// ==========================================
+	// ==================================================
 	static void DrawScreenRect_Impl(const ImVec2& min, const ImVec2& max, ImU32 col, float rounding, float thickness) { ImGui::GetBackgroundDrawList()->AddRect(min, max, col, rounding, 0, thickness); }
 	static void DrawScreenRectFilled_Impl(const ImVec2& min, const ImVec2& max, ImU32 col, float rounding) { ImGui::GetBackgroundDrawList()->AddRectFilled(min, max, col, rounding); }
 	static void DrawScreenLine_Impl(float x1, float y1, float x2, float y2, ImU32 col, float thickness) { ImGui::GetBackgroundDrawList()->AddLine({ x1, y1 }, { x2, y2 }, col, thickness); }
 
-	// ==========================================
+	// ==================================================
 	// Windows
-	// ==========================================
+	// ==================================================
 	static void SetNextWindowPos_Impl(float x, float y, int c, float px, float py) { ImGui::SetNextWindowPos({ x, y }, c, { px, py }); }
 	static void SetNextWindowSize_Impl(float x, float y, int c) { ImGui::SetNextWindowSize({ x, y }, c); }
 	static void GetWindowPos_Impl(float* x, float* y)
@@ -640,9 +640,9 @@ namespace FUCK::Host
 	static bool BeginPopupContextItem_Impl(const char* str_id, int mb) { return ImGui::BeginPopupContextItem(str_id, mb); }
 	static void EndPopup_Impl() { ImGui::EndPopup(); }
 
-	// ==========================================
+	// ==================================================
 	// Widgets
-	// ==========================================
+	// ==================================================
 	static bool Button_Impl(const char* label) { return ImGui::OutlineButton(label); }
 	static bool InvisibleButton_Impl(const char* str_id, const ImVec2& size, int flags) { return ImGui::InvisibleButton(str_id, size, static_cast<ImGuiButtonFlags>(flags)); }
 	static bool Checkbox_Impl(const char* label, bool* v, bool alignFar, bool labelLeft) { return ImGui::CheckBox(label, v, alignFar, labelLeft); }
@@ -794,9 +794,9 @@ namespace FUCK::Host
 	}
 	static void TextUnformatted_Impl(const char* text, const char* text_end) { ImGui::TextUnformatted(text, text_end); }
 
-	// ==========================================
+	// ==================================================
 	// CreateInterface
-	// ==========================================
+	// ==================================================
 	FUCK_Interface* CreateInterface()
 	{
 		static FUCK_Interface api = {

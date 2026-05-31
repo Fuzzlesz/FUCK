@@ -7,9 +7,9 @@
 
 namespace ImGui
 {
-	// =========================================================================================
+	// ==================================================
 	// HELPER IMPLEMENTATION
-	// =========================================================================================
+	// ==================================================
 
 	void DrawArrowIcon(ImDrawList* drawList, ImVec2 pos, ImVec2 size, ImU32 color, IconDirection direction)
 	{
@@ -47,9 +47,9 @@ namespace ImGui
 
 namespace
 {
-	// =========================================================================================
+	// ==================================================
 	// INTERNAL HELPERS
-	// =========================================================================================
+	// ==================================================
 
 	void DrawTreeIcon(ImDrawList* drawList, const ImVec2& pos, float frameHeight, bool isOpen, bool isHovered, float baseIconSize = 30.0f)
 	{
@@ -227,9 +227,9 @@ namespace
 
 namespace ImGui
 {
-	// =========================================================================================
+	// ==================================================
 	// CORE DRAWING & WIDGETS
-	// =========================================================================================
+	// ==================================================
 
 	// Helper function for adjusting hovered sliders with WASD
 	static bool ApplyWASDNudge(ImGuiDataType type, void* data, const void* min, const void* max, float speed)

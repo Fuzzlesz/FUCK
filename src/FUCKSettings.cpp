@@ -36,9 +36,9 @@ void SettingsTool::Draw()
 	auto& hotkey  = MANAGER(Hotkeys)->GetToggleHotkey();
 
 	if (FUCK::BeginTabBar("SettingsTabs")) {
-		// --------------------------------------------------------
+		// --------------------------------------------------
 		// TAB 1: GENERAL
-		// --------------------------------------------------------
+		// --------------------------------------------------
 		if (FUCK::BeginTabItem("$FUCK_Settings_Tab"_T)) {
 			FUCK::Spacing(2);
 
@@ -122,9 +122,10 @@ void SettingsTool::Draw()
 			FUCK::EndTabItem();
 		}
 
-		// --------------------------------------------------------
+		// --------------------------------------------------
 		// TAB 2: STYLES
 		// --------------------------------------------------------
+		// --------------------------------------------------
 		if (FUCK::BeginTabItem("$FUCK_Styles_Title"_T)) {
 			FUCK::Spacing(2);
 
@@ -177,9 +178,9 @@ void SettingsTool::Draw()
 			FUCK::EndTabItem();
 		}
 
-		// --------------------------------------------------------
+		// --------------------------------------------------
 		// TAB 3: INFO
-		// --------------------------------------------------------
+		// --------------------------------------------------
 		static bool                     s_wasInfoTabOpen = false;
 		static bool                     s_infoCached     = false;
 		static std::vector<std::string> pluginsList;

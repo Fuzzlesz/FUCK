@@ -53,9 +53,9 @@ FUCKMan::FUCKMan()
 	RegisterWindow(&_themeEditorWindow);
 }
 
-// ==========================================
+// ==================================================
 // Registration & Callbacks
-// ==========================================
+// ==================================================
 
 void FUCKMan::RegisterTool(FUCK::ITool* a_tool)
 {
@@ -139,9 +139,9 @@ void FUCKMan::UnregisterWindow(FUCK::IWindow* a_window)
 	std::erase(_suspendedWindows, a_window);
 }
 
-// ==========================================
+// ==================================================
 // Input Processing
-// ==========================================
+// ==================================================
 
 bool FUCKMan::ProcessAsyncInput(const RE::InputEvent* const* a_event)
 {
@@ -211,9 +211,9 @@ bool FUCKMan::ProcessAsyncInput(const RE::InputEvent* const* a_event)
 	return consumed || IsInputBlocked();
 }
 
-// ==========================================
+// ==================================================
 // Settings & State Management
-// ==========================================
+// ==================================================
 
 void FUCKMan::ResetSettings()
 {
@@ -409,9 +409,9 @@ void FUCKMan::UpdateGameState()
 	}
 }
 
-// ==========================================
+// ==================================================
 // Accessors & Queries
-// ==========================================
+// ==================================================
 
 bool FUCKMan::ShouldRender() const
 {
@@ -453,9 +453,9 @@ bool FUCKMan::HasWindowWithFlag(FUCK::WindowFlags a_flag) const
 	return false;
 }
 
-// ==========================================
+// ==================================================
 // Open / Close Logic
-// ==========================================
+// ==================================================
 
 void FUCKMan::Open()
 {
@@ -522,6 +522,7 @@ RE::BSEventNotifyControl FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_e
 			ImGui::ClearFormCaches();
 		}
 
+		// Close automatically behind dominant fullscreen game menus
 		if (std::ranges::find(s_closeOnOpen, a_event->menuName.data()) != s_closeOnOpen.end()) {
 			bool closedSomething = false;
 
@@ -544,6 +545,7 @@ RE::BSEventNotifyControl FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_e
 			}
 		}
 	} else {
+		// Restore any suspended windows once all blocking game menus have closed
 		if (std::ranges::find(s_closeOnOpen, a_event->menuName.data()) != s_closeOnOpen.end()) {
 			bool anyOpen = false;
 			if (auto ui = RE::UI::GetSingleton()) {
@@ -567,9 +569,9 @@ RE::BSEventNotifyControl FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_e
 	return RE::BSEventNotifyControl::kContinue;
 }
 
-// ==========================================
-// Rendering Loop
-// ==========================================
+// ==================================================
+// CORE RENDER LOOP
+// ==================================================
 
 void FUCKMan::Draw()
 {
@@ -649,9 +651,9 @@ void FUCKMan::Draw()
 
 	UpdateGameState();
 
-	// ==========================================
-	// LAYOUT METRICS (Chrome / Unscaled)
-	// ==========================================
+	// ==================================================
+	// LAYOUT METRICS SETUP (Chrome / Unscaled)
+	// ==================================================
 	auto iconArrow = MANAGER(IconFont)->GetStepperRight();
 
 	struct LayoutMetrics
@@ -741,6 +743,10 @@ void FUCKMan::Draw()
 	// ------------------------------------------------------------------------
 	// Overlay Render Pass
 	// ------------------------------------------------------------------------
+	// ========================================================
+	// ==================================================
+	// OVERLAY RENDER PASS (Fullscreen Transparent Layer)
+	// ==================================================
 	if (_activeTool || ShouldRender()) {
 		ImGui::SetNextWindowPos(ImGui::GetMainViewport()->Pos);
 		ImGui::SetNextWindowSize(ImGui::GetMainViewport()->Size);
@@ -755,6 +761,7 @@ void FUCKMan::Draw()
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 		if (ImGui::Begin("##ToolOverlayLayer", nullptr, flags)) {
 			pushContentScale(false);
+
 			if (_activeTool)
 				_activeTool->RenderOverlay();
 
@@ -774,9 +781,9 @@ void FUCKMan::Draw()
 		ImGui::PopStyleVar();
 	}
 
-	// ------------------------------------------------------------------------
-	// 1. Draw Registered External Windows
-	// ------------------------------------------------------------------------
+	// ==================================================
+	// EXTERNAL WINDOWS RENDER PASS
+	// ==================================================
 	for (auto* win : _windows) {
 		if (win->IsOpen()) {
 			if (win->GetFlags() & FUCK::WindowFlags::kCustomRender) {
@@ -1068,9 +1075,9 @@ void FUCKMan::Draw()
 		}
 	}
 
-	// ------------------------------------------------------------------------
-	// 2. Main FUCK Menu (Sidebar & Settings)
-	// ------------------------------------------------------------------------
+	// ==================================================
+	// MAIN FUCK WORKSPACE MENU RENDER PASS
+	// ==================================================
 	if (!_isOpen)
 		return;
 
