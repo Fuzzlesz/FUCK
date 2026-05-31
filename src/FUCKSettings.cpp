@@ -42,7 +42,7 @@ void SettingsTool::Draw()
 		if (FUCK::BeginTabItem("$FUCK_Settings_Tab"_T)) {
 			FUCK::Spacing(2);
 
-			FUCK::Header("$FUCK_Settings_Behavior"_T);
+			FUCK::Header("$FUCK_Settings_Behaviour"_T);
 			FUCK::Spacing(2);
 
 			FUCK::DrawManagedHotkey("$FUCK_Settings_Hotkey"_T, hotkey);
