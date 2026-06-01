@@ -712,7 +712,7 @@ void FUCKMan::Draw()
 		_isIgnoringUserScale = ignoreUserScale;
 		_activeScale         = ignoreUserScale ? 1.0f : _cfg.userScale;
 
-		float targetFontSize = ImGui::GetStyle().FontSizeBase * _activeScale;
+		float targetFontSize = ImGui::GetStyle().FontSizeBase * _activeScale * m.uiScale;
 		ImGui::PushFont(nullptr, targetFontSize);
 
 		auto styleUser = ImGui::Styles::GetSingleton()->user;
@@ -986,7 +986,7 @@ void FUCKMan::Draw()
 
 					{
 						const char* xIcon      = ICON_FA_XMARK;
-						float       uiFontSize = ImGui::GetStyle().FontSizeBase;
+						float       uiFontSize = ImGui::GetStyle().FontSizeBase * m.uiScale;
 
 						ImGui::PushFont(nullptr, uiFontSize);
 						ImVec2 textSize = ImGui::CalcTextSize(xIcon);
@@ -995,9 +995,9 @@ void FUCKMan::Draw()
 						ImVec2 btnScreenPos = ImGui::GetItemRectMin();
 						ImVec2 textPos      = {
                             btnScreenPos.x + (btnSize - textSize.x) * 0.5f,
-                            btnScreenPos.y + (btnSize - textSize.y) * 0.65f
+                            btnScreenPos.y + (btnSize - textSize.y) * 0.5f + (1.0f * m.uiScale)
 						};
-
+						
 						ImU32 xColor = ImGui::IsItemHovered() ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
 
 						ImGui::GetWindowDrawList()->AddText(
@@ -1178,7 +1178,7 @@ void FUCKMan::Draw()
 
 			{
 				const char* xIcon      = ICON_FA_XMARK;
-				float       uiFontSize = ImGui::GetStyle().FontSizeBase;
+				float       uiFontSize = ImGui::GetStyle().FontSizeBase * m.uiScale;
 
 				ImGui::PushFont(nullptr, uiFontSize);
 				ImVec2 textSize = ImGui::CalcTextSize(xIcon);
@@ -1186,7 +1186,7 @@ void FUCKMan::Draw()
 
 				ImVec2 textPos = {
 					btnCursor.x + (btnSize - textSize.x) * 0.5f,
-					btnCursor.y + (btnSize - textSize.y) * 0.65f
+					btnCursor.y + (btnSize - textSize.y) * 0.5f + (1.0f * m.uiScale)
 				};
 
 				ImU32 xColor = ImGui::IsItemHovered() ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);

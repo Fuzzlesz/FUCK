@@ -1799,7 +1799,7 @@ namespace FUCK
 		}
 
 		ImVec2 anchor      = customAnchor ? *customAnchor : ImVec2(min.x + (max.x - min.x) * 0.5f, min.y + (max.y - min.y) * 0.5f);
-		float  crossSize   = 10.0f;
+		float  crossSize   = Scale(10.0f);
 		ImU32  anchorColor = IM_COL32(255, 0, 0, 204);
 
 		if (screenSpace) {

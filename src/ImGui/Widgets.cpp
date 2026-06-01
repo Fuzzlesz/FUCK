@@ -530,7 +530,8 @@ namespace ImGui
 			return false;
 
 		float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
-		float fontSize    = std::round(ImGui::GetStyle().FontSizeBase * activeScale * 2.0f) / 2.0f;
+		float resScale    = ImGui::Renderer::GetResolutionScale();
+		float fontSize    = std::round(ImGui::GetStyle().FontSizeBase * activeScale * resScale * 2.0f) / 2.0f;
 		ImGui::PushFont(nullptr, fontSize);
 
 		if (IsWindowAppearing())
@@ -648,7 +649,8 @@ namespace ImGui
 		bool changed = false;
 		if (isOpen) {
 			float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
-			float fontSize    = std::round(ImGui::GetStyle().FontSizeBase * activeScale * 2.0f) / 2.0f;
+			float resScale    = ImGui::Renderer::GetResolutionScale();
+			float fontSize    = std::round(ImGui::GetStyle().FontSizeBase * activeScale * resScale * 2.0f) / 2.0f;
 			ImGui::PushFont(nullptr, fontSize);
 
 			for (int i = 0; i < items_count; i++) {
@@ -1043,8 +1045,8 @@ namespace ImGui
 		bool  popFont     = false;
 
 		if (labelScale != 1.0f) {
-			float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
-			float targetSize  = regularFont->LegacySize * labelScale * activeScale;
+			float globalScale = FUCKMan::GetSingleton()->GetActiveScale() * ImGui::Renderer::GetResolutionScale();
+			float targetSize  = regularFont->LegacySize * labelScale * globalScale;
 			ImGui::PushFont(regularFont, targetSize);
 			popFont = true;
 		}
@@ -1487,7 +1489,7 @@ namespace ImGui
 			PushStyleColor(ImGuiCol_Text, GetColorU32(ImGuiCol_TextDisabled));
 
 		auto  largeFont = MANAGER(IconFont)->GetLargeFont();
-		float fontScale = FUCKMan::GetSingleton()->GetActiveScale();
+		float fontScale = FUCKMan::GetSingleton()->GetActiveScale() * ImGui::Renderer::GetResolutionScale();
 		float fontSize  = (largeFont ? largeFont->LegacySize : GetStyle().FontSizeBase) * fontScale;
 
 		PushFont(largeFont, fontSize);

@@ -58,12 +58,16 @@ namespace FUCK::Host
 	}
 	static void PushFont_Impl(ImFont* f, float size)
 	{
-		float activeScale = GetUserScale_Impl();
+		// Use the combined Resolution + User scale
+		float activeScale = GetGlobalScale_Impl();
+
 		if (size <= 0.0f) {
 			float defaultSize = f ? f->LegacySize : ImGui::GetStyle().FontSizeBase;
 			ImGui::PushFont(f, defaultSize * activeScale);
 		} else {
-			ImGui::PushFont(f, size * activeScale);
+			// If the user explicitly defines a size via FUCK::PushFont,
+			// they should use FUCK::UIScale() on their end. Pass it directly.
+			ImGui::PushFont(f, size);
 		}
 	}
 	static void PopFont_Impl() { ImGui::PopFont(); }

@@ -14,7 +14,7 @@ public:
 
 	ImVec2 GetDefaultSize() const override
 	{
-		return FUCK::Scale(450.0f, 600.0f);
+		return FUCK::UIScale(450.0f, 600.0f);
 	}
 	ImVec2 GetDefaultPos() const override
 	{

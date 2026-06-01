@@ -78,8 +78,7 @@ namespace ImGui
 		if (window->SkipItems)
 			return;
 
-		float       scale     = Renderer::GetResolutionScale() * window->FontWindowScale;
-		const float thickness = std::max(1.0f, std::round(3.0f * scale));
+		const float thickness = std::max(1.0f, std::round(ImGui::GetStyle().WindowBorderSize));
 
 		const ImVec2 pos = window->DC.CursorPos;
 		const float  w   = GetContentRegionAvail().x;
@@ -180,7 +179,7 @@ namespace ImGui
 	void Header(const char* label)
 	{
 		auto  largeFont = MANAGER(IconFont)->GetLargeFont();
-		float scale     = FUCKMan::GetSingleton()->GetActiveScale();
+		float scale     = FUCKMan::GetSingleton()->GetActiveScale() * ImGui::Renderer::GetResolutionScale();
 		float size      = (largeFont ? largeFont->LegacySize : ImGui::GetStyle().FontSizeBase) * scale;
 
 		ImGui::PushFont(largeFont, size);

@@ -87,7 +87,7 @@ void ThemeEditorWindow::Draw()
 		ImFont* defaultFont  = FUCK::GetFont(FUCK::Font::kRegular);
 		float   baseFontSize = defaultFont ? defaultFont->LegacySize : ImGui::GetStyle().FontSizeBase;
 
-		FUCK::PushFont(defaultFont, baseFontSize * 0.85f);
+		FUCK::PushFont(defaultFont, FUCK::UIScale(baseFontSize * 0.85f));
 
 		if (FUCK::Button("$FUCK_Styles_Delete"_T)) {
 			if (presetNameBuf[0] != '\0') {
