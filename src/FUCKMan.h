@@ -33,6 +33,7 @@ public:
 	struct ToolOverrideState
 	{
 		bool        isFavourited = false;
+		bool        isHidden     = false;
 		std::string customName   = "";
 		std::string customGroup  = "";
 		int         sortOrder    = 0;

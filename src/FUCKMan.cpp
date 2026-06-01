@@ -63,6 +63,7 @@ struct WindowSaveData
 struct ToolSaveData
 {
 	bool        bFavourited = false;
+	bool        bHidden     = false;
 	std::string sName       = "";
 	std::string sGroup      = "";
 };
@@ -221,6 +222,7 @@ void FUCKMan::LoadWorkspace()
 					for (const auto& [toolName, toolData] : pd.tools) {
 						std::string key                  = std::format("{}|{}", pluginName, toolName);
 						_toolOverrides[key].isFavourited = toolData.bFavourited;
+						_toolOverrides[key].isHidden     = toolData.bHidden;
 						_toolOverrides[key].customName   = toolData.sName;
 						_toolOverrides[key].customGroup  = toolData.sGroup;
 					}
@@ -256,9 +258,10 @@ void FUCKMan::SaveWorkspace()
 			std::string plugin   = key.substr(0, pipe);
 			std::string toolName = key.substr(pipe + 1);
 
-			if (over.isFavourited || !over.customName.empty() || !over.customGroup.empty()) {
+			if (over.isFavourited || over.isHidden || !over.customName.empty() || !over.customGroup.empty()) {
 				ToolSaveData td;
 				td.bFavourited = over.isFavourited;
+				td.bHidden     = over.isHidden;
 				td.sName       = over.customName;
 				td.sGroup      = over.customGroup;
 
@@ -1493,7 +1496,10 @@ void FUCKMan::Draw()
 						if (!tool->ShowInSidebar())
 							continue;
 
-						auto&       over         = GetOverrides(tool);
+						auto& over = GetOverrides(tool);
+						if (over.isHidden)
+							continue;
+
 						std::string resolvedName = over.customName.empty() ? tool->Name() : over.customName;
 
 						if (filtering) {

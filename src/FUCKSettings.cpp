@@ -170,7 +170,7 @@ void SettingsTool::Draw()
 			// Check if layout is modified
 			bool isModified = false;
 			for (const auto& [k, v] : manager->_toolOverrides) {
-				if (!v.customName.empty() || !v.customGroup.empty() || v.sortOrder != 0) {
+				if (!v.customName.empty() || !v.customGroup.empty() || v.sortOrder != 0 || v.isHidden) {
 					isModified = true;
 					break;
 				}
@@ -195,6 +195,7 @@ void SettingsTool::Draw()
 						v.customName  = "";
 						v.customGroup = "";
 						v.sortOrder   = 0;
+						v.isHidden    = false;
 					}
 					for (auto& [k, v] : manager->_groupOverrides) {
 						v.customName = "";
@@ -312,8 +313,9 @@ void SettingsTool::Draw()
 			float       tableRightEdge = FUCK::GetCursorScreenPos().x + FUCK::GetContentRegionAvail().x;
 			std::string tableId        = std::format("WorkspaceToolTable_{}", s_tableResetCounter);
 
-			if (FUCK::BeginTable(tableId.c_str(), 5, FUCK::TableFlags::kBorders | FUCK::TableFlags::kRowBg | FUCK::TableFlags::kResizable | FUCK::TableFlags::kSizingStretchProp | FUCK::TableFlags::kNoSavedSettings)) {
+			if (FUCK::BeginTable(tableId.c_str(), 6, FUCK::TableFlags::kBorders | FUCK::TableFlags::kRowBg | FUCK::TableFlags::kResizable | FUCK::TableFlags::kSizingStretchProp | FUCK::TableFlags::kNoSavedSettings)) {
 				// Base Columns
+				FUCK::TableSetupColumn("##Hide", FUCK::TableColumnFlags::kWidthFixed | FUCK::TableColumnFlags::kNoSort, 35.0f * tableScale);
 				FUCK::TableSetupColumn("$FUCK_Sidebar_TableOrig"_T, FUCK::TableColumnFlags::kWidthStretch | FUCK::TableColumnFlags::kNoSort, 2.0f);
 				FUCK::TableSetupColumn("$FUCK_Sidebar_TablePlugin"_T, FUCK::TableColumnFlags::kWidthStretch | FUCK::TableColumnFlags::kNoSort, 1.5f);
 				FUCK::TableSetupColumn("$FUCK_Sidebar_TableCustom"_T, FUCK::TableColumnFlags::kWidthStretch | FUCK::TableColumnFlags::kNoSort, 2.0f);
@@ -322,6 +324,21 @@ void SettingsTool::Draw()
 
 				// --- Header Row ---
 				FUCK::TableNextRow(ImGuiTableRowFlags_Headers);
+
+				// Header: Eye Icon (Col 0)
+				FUCK::TableNextColumn();
+				FUCK::TableSetBgColor(FUCK::TableBgTarget::kCellBg, ImGui::GetColorU32(ImGuiCol_TableHeaderBg));
+				ImGui::PushFont(ImGui::GetFont(), ImGui::GetFontSize() * 0.8f);
+				float iconEyeW = FUCK::CalcTextSize(ICON_FA_EYE).x;
+				float offEyeX  = (FUCK::GetColumnWidth() - iconEyeW) * 0.5f;
+				FUCK::SetCursorPosX(FUCK::GetCursorPos().x + std::max(0.0f, offEyeX));
+				FUCK::SetCursorPosY(FUCK::GetCursorPos().y + (3.0f * tableScale));
+
+				FUCK::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
+				FUCK::Text(ICON_FA_EYE);
+				FUCK::PopStyleColor();
+				ImGui::PopFont();
+				FUCK::SetTooltip("$FUCK_Sidebar_TableHideTT"_T);
 
 				// Header: Text Columns
 				auto DrawCenterHeader = [](const char* label) {
@@ -337,7 +354,7 @@ void SettingsTool::Draw()
 				DrawCenterHeader("$FUCK_Sidebar_TableCustom"_T);
 				DrawCenterHeader("$FUCK_Sidebar_TableGroup"_T);
 
-				// Header: Hand Icon
+				// Header: Hand Icon (Col 5)
 				FUCK::TableNextColumn();
 				FUCK::TableSetBgColor(FUCK::TableBgTarget::kCellBg, ImGui::GetColorU32(ImGuiCol_TableHeaderBg));
 
@@ -356,6 +373,8 @@ void SettingsTool::Draw()
 				FUCK::PopStyleColor();
 
 				ImGui::PopFont();
+				FUCK::SetTooltip("$FUCK_Sidebar_TableDragTT"_T);
+
 
 				// --- Table Context Generators ---
 				auto RenderToolRow = [&](FUCK::ITool* tool, bool indented, std::vector<FUCK::ITool*>& parentList) {
@@ -365,7 +384,7 @@ void SettingsTool::Draw()
 					FUCK::PushID(key.c_str());
 					FUCK::TableNextRow();
 
-					// Col 0: Original Name / Drag Target Background
+					// Col 0: Row Background Selectable (Spans all columns for Drag & Drop) & Hide Button
 					FUCK::TableNextColumn();
 					ImVec2 startPos = FUCK::GetCursorPos();
 
@@ -441,7 +460,37 @@ void SettingsTool::Draw()
 						ImGui::GetForegroundDrawList()->AddLine(rowMin, ImVec2(rowMax.x, rowMin.y), ImGui::GetColorU32(ImGuiCol_DragDropTarget), 2.0f);
 					}
 
+					// Overlap with actual Hide Button logic
 					FUCK::SetCursorPos(startPos);
+					{
+						float       cellH   = FUCK::GetFrameHeight();
+						float       cellW   = FUCK::GetColumnWidth();
+						const char* icon    = over.isHidden ? ICON_FA_EYE_SLASH : ICON_FA_EYE;
+						ImU32       iconCol = over.isHidden ? ImGui::GetColorU32(ImGuiCol_TextDisabled) : ImGui::GetColorU32(ImGuiCol_Text);
+
+						if (FUCK::InvisibleButton("##HideBtn", ImVec2(cellW, cellH))) {
+							over.isHidden = !over.isHidden;
+							manager->SaveWorkspace();
+							s_needsRebuild = true;
+						}
+						if (FUCK::IsItemHovered()) {
+							iconCol = ImGui::GetColorU32(ImGuiCol_Text);
+						}
+
+						ImVec2 curPos = FUCK::GetItemRectMin();
+
+						float scaledFontSize = ImGui::GetFontSize() * 0.8f;
+						ImGui::PushFont(nullptr, scaledFontSize);
+						ImVec2 textSize = FUCK::CalcTextSize(icon);
+						ImGui::PopFont();
+
+						// Center mathematically based on the newly scaled text size
+						ImVec2 textPos(curPos.x + (cellW - textSize.x) * 0.5f, curPos.y + (cellH - textSize.y) * 0.5f);
+						ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), scaledFontSize, textPos, iconCol, icon);
+					}
+
+					// Col 1: Original Name
+					FUCK::TableNextColumn();
 					FUCK::AlignTextToFramePadding();
 
 					if (indented) {
@@ -457,14 +506,18 @@ void SettingsTool::Draw()
 						FUCK::SetCursorPosX(FUCK::GetCursorPos().x + (25.0f * tableScale));
 					}
 
+					if (over.isHidden)
+						ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetColorU32(ImGuiCol_TextDisabled));
 					FUCK::Text(tool->Name());
+					if (over.isHidden)
+						ImGui::PopStyleColor();
 
-					// Col 1: Plugin Name
+					// Col 2: Plugin Name
 					FUCK::TableNextColumn();
 					FUCK::AlignTextToFramePadding();
 					FUCK::TextDisabled(tool->PluginName());
 
-					// Col 2: Custom Name Override
+					// Col 3: Custom Name Override
 					FUCK::TableNextColumn();
 					FUCK::SetNextItemWidth(-1.0f);
 					char nameBuf[64];
@@ -477,7 +530,7 @@ void SettingsTool::Draw()
 						s_needsRebuild = true;
 					}
 
-					// Col 3: Custom Group Override
+					// Col 4: Custom Group Override
 					FUCK::TableNextColumn();
 					FUCK::SetNextItemWidth(-1.0f);
 					char grpBuf[64];
@@ -494,7 +547,7 @@ void SettingsTool::Draw()
 						s_needsRebuild = true;
 					}
 
-					// Col 4: Drag Handle
+					// Col 5: Drag Handle
 					FUCK::TableNextColumn();
 					ImU32  gripCol = rowHovered ? IM_COL32(50, 205, 50, 255) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
 					float  gripW   = FUCK::CalcTextSize(ICON_FA_GRIP_LINES).x;
@@ -509,7 +562,7 @@ void SettingsTool::Draw()
 					FUCK::PushID(grp.c_str());
 					FUCK::TableNextRow();
 
-					// Col 0: Group Name & Collapse Indicator / Drag Target Background
+					// Col 0: Row Background Selectable (Spans all columns for Drag & Drop)
 					FUCK::TableNextColumn();
 					ImVec2 startPos = FUCK::GetCursorPos();
 
@@ -601,7 +654,8 @@ void SettingsTool::Draw()
 						ImGui::GetForegroundDrawList()->AddRect(rowMin, rowMax, ImGui::GetColorU32(ImGuiCol_DragDropTarget), 0.0f, 0, 2.0f);
 					}
 
-					FUCK::SetCursorPos(startPos);
+					// Col 1: Group Name & Collapse Indicator
+					FUCK::TableNextColumn();
 					FUCK::AlignTextToFramePadding();
 
 					ImVec2 curPos    = FUCK::GetCursorScreenPos();
@@ -619,10 +673,10 @@ void SettingsTool::Draw()
 					FUCK::Text(grp.c_str());
 					FUCK::PopStyleColor();
 
-					// Col 1: Blank (no plugin name for groups)
+					// Col 2: Blank (no plugin name for groups)
 					FUCK::TableNextColumn();
 
-					// Col 2: Custom Name
+					// Col 3: Custom Name
 					FUCK::TableNextColumn();
 					FUCK::SetNextItemWidth(-1.0f);
 					auto& gOver = manager->_groupOverrides[grp];
@@ -636,10 +690,10 @@ void SettingsTool::Draw()
 						s_needsRebuild = true;
 					}
 
-					// Col 3: Blank (groups cannot override their own group)
+					// Col 4: Blank (groups cannot override their own group)
 					FUCK::TableNextColumn();
 
-					// Col 4: Drag Handle
+					// Col 5: Drag Handle
 					FUCK::TableNextColumn();
 					ImU32  gripCol = rowHovered ? IM_COL32(50, 205, 50, 255) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
 					float  gripW   = FUCK::CalcTextSize(ICON_FA_GRIP_LINES).x;
