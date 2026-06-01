@@ -1048,13 +1048,16 @@ void FUCKMan::Draw()
 
 			// Handle collapse override
 			if (isCollapsed) {
-				float targetW = (winState.preCollapseSize.x > 0.0f) ? winState.preCollapseSize.x : targetSize.x;
-				targetSize    = ImVec2(targetW, m.titleH);
-				flags |= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar;
+				float targetW = (winState.size.x > 0.0f) ? winState.size.x : (winState.preCollapseSize.x > 0.0f) ? winState.preCollapseSize.x :
+				                                                                                                   targetSize.x;
+				targetSize.x  = targetW;
+				flags |= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize;
 			} else if (wasCollapsed) {
-				if (winState.preCollapseSize.x > 0.0f) {
+				// Prefer the in-session captured pre-collapse size; fall back to persisted size
+				if (winState.preCollapseSize.x > 0.0f)
 					targetSize = winState.preCollapseSize;
-				}
+				else if (winState.size.x > 0.0f)
+					targetSize = winState.size;
 			}
 
 			// --- Position Logic ---
@@ -1074,9 +1077,13 @@ void FUCKMan::Draw()
 
 			// If AutoResize is active, ImGui shrinks the window dynamically. We bypass hard size forcing.
 			if (!autoResize) {
-				ImVec2    sz       = (winState.size.x != -1.0f) ? winState.size : targetSize;
-				ImGuiCond sizeCond = (isCollapsed || wasCollapsed || noResize) ? ImGuiCond_Always : ImGuiCond_FirstUseEver;
-				FUCK::SetNextWindowSize(sz, sizeCond);
+				if (isCollapsed) {
+					ImGui::SetNextWindowSizeConstraints(ImVec2(targetSize.x, 0.0f), ImVec2(targetSize.x, FLT_MAX));
+				} else {
+					ImVec2    sz       = ((winState.size.x != -1.0f) ? winState.size : targetSize);
+					ImGuiCond sizeCond = (wasCollapsed || noResize) ? ImGuiCond_Always : ImGuiCond_FirstUseEver;
+					FUCK::SetNextWindowSize(sz, sizeCond);
+				}
 			}
 
 			bool open = true;
@@ -1098,29 +1105,18 @@ void FUCKMan::Draw()
 				ImVec2 curPos  = FUCK::GetWindowPos();
 				ImVec2 curSize = FUCK::GetWindowSize();
 
-				// --- Implicit Geometry Interception ---
+				// Auto-save settings on move/resize end preventing overwrite during collapse
 				if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-					if (winState.pos.x != curPos.x || winState.pos.y != curPos.y ||
-						winState.size.x != curSize.x || winState.size.y != curSize.y) {
-						winState.pos          = curPos;
-						winState.size         = curSize;
+					bool posChanged  = std::abs(curPos.x - winState.pos.x) > 1.0f || std::abs(curPos.y - winState.pos.y) > 1.0f;
+					bool sizeChanged = !isCollapsed && (std::abs(curSize.x - winState.size.x) > 1.0f || std::abs(curSize.y - winState.size.y) > 1.0f);
+
+					if (posChanged || sizeChanged) {
+						winState.pos = curPos;
+						if (!isCollapsed) {
+							winState.size = curSize;
+						}
 						winState.hasLoadedPos = true;
-
-						// Save
-						std::string path = std::format(R"(Data\FUCKs\{}\windowstates.ini)", win->PluginName());
-						std::filesystem::create_directories(std::filesystem::path(path).parent_path());
-
-						CSimpleIniA ini;
-						ini.SetUnicode();
-						ini.LoadFile(path.c_str());
-
-						float scale = ImGui::Renderer::GetResolutionScale();
-						ini.SetDoubleValue(win->Id(), "X", curPos.x / scale);
-						ini.SetDoubleValue(win->Id(), "Y", curPos.y / scale);
-						ini.SetDoubleValue(win->Id(), "Width", curSize.x / scale);
-						ini.SetDoubleValue(win->Id(), "Height", curSize.y / scale);
-
-						ini.SaveFile(path.c_str());
+						SaveWorkspace();
 					}
 				}
 
@@ -1152,8 +1148,12 @@ void FUCKMan::Draw()
 						if (ImGui::InvisibleButton("##CollapseToggle", ImVec2(btnWidth, m.titleH))) {
 							winState.isCollapsed = !isCollapsed;
 							if (!isCollapsed) {
+								// Capture the true live size before we force it to titleH next frame
 								winState.preCollapseSize = FUCK::GetWindowSize();
+								// Also persist it as the canonical size so cross-session restore works
+								winState.size = winState.preCollapseSize;
 							}
+							SaveWorkspace();
 						}
 						bool  isHovered = ImGui::IsItemHovered();
 						ImU32 iconColor = isHovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
@@ -1219,22 +1219,15 @@ void FUCKMan::Draw()
 							winState.isCollapsed = !isCollapsed;
 							if (!isCollapsed) {
 								winState.preCollapseSize = FUCK::GetWindowSize();
+								winState.size            = winState.preCollapseSize;
 							}
+							SaveWorkspace();
 						}
 					}
-
+					
 					// 4. Separator
 					FUCK::SetCursorPos({ headerStartCursor.x, m.titleH });
-
-					if (isCollapsed) {
-						ImVec2 sepStart = FUCK::GetCursorScreenPos();
-						ImVec2 sepEnd   = { sepStart.x + winWidth, sepStart.y };
-						ImGui::GetWindowDrawList()->AddLine(sepStart, sepEnd,
-							ImGui::GetColorU32(ImGuiCol_Separator),
-							ImGui::GetStyle().SeparatorTextBorderSize);
-					} else {
-						FUCK::SeparatorThick();
-					}
+					FUCK::SeparatorThick();
 
 					// 5. Content Child (scaled)
 					if (!winState.isCollapsed && !isCollapsed) {
@@ -1286,16 +1279,20 @@ void FUCKMan::Draw()
 
 	ImGui::GetIO().MouseDrawCursor = false;
 
+	const float collapsedH = m.titleH * 1.02f;
+
 	if (_pendingWindowRestore) {
 		ClampWindowToScreen(_cfg.windowPos, _cfg.windowSize);
 		FUCK::SetNextWindowPos(_cfg.windowPos, ImGuiCond_Always);
 		if (!_isCollapsed) {
 			FUCK::SetNextWindowSize(_cfg.windowSize, ImGuiCond_Always);
+		} else {
+			FUCK::SetNextWindowSize(ImVec2(_cfg.windowSize.x, collapsedH), ImGuiCond_Always);
 		}
 		_pendingWindowRestore = false;
 	} else {
 		if (_isCollapsed) {
-			FUCK::SetNextWindowSize(ImVec2(_cfg.windowSize.x, m.titleH));
+			FUCK::SetNextWindowSize(ImVec2(_cfg.windowSize.x, collapsedH));
 		} else if (_wasCollapsed && !_isCollapsed) {
 			FUCK::SetNextWindowSize(_cfg.windowSize);
 		} else {
@@ -1334,13 +1331,14 @@ void FUCKMan::Draw()
 
 		// -- Custom Title Bar (unscaled) --
 		{
+			FUCK::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
 			FUCK::BeginGroup();
 
 			float winWidth = FUCK::GetWindowSize().x;
 
 			ImVec2 cursorScreen = FUCK::GetCursorScreenPos();
 
-			// 1. Collapse Icon (Left)
+			// 1. Collapse Icon
 			if (iconArrow) {
 				// Calculate exact physical dimensions of the arrow first
 				bool pointsDown = !_isCollapsed;
@@ -1403,6 +1401,7 @@ void FUCKMan::Draw()
 			}
 
 			FUCK::EndGroup();
+			FUCK::PopStyleVar();
 
 			// Double Click Header
 			if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && !ImGui::IsAnyItemHovered()) {
