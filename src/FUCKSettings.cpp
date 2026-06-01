@@ -97,9 +97,11 @@ void SettingsTool::Draw()
 			FUCK::SetNextItemWidth(-1);
 			if (FUCK::Combo("$FUCK_Styles_Typeface"_T, &currentFontIdx, fontPtrs.data(), (int)fontPtrs.size())) {
 				if (currentFontIdx >= 0 && currentFontIdx < fonts.size()) {
-					manager->_cfg.currentFont = fonts[currentFontIdx];
-					IconFont::Manager::GetSingleton()->SetFontName(manager->_cfg.currentFont);
-					manager->Save();
+					manager->SetCurrentFont(fonts[currentFontIdx]);
+
+					Settings::GetSingleton()->Save(FileType::kStyle, [&](CSimpleIniA& ini) {
+						ini.SetValue("Style", "sFont", manager->_cfg.currentFont.c_str());
+					});
 				}
 			}
 			FUCK::Spacing(2);

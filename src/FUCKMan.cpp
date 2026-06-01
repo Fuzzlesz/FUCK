@@ -230,13 +230,12 @@ void FUCKMan::ResetSettings()
 		MANAGER(Hotkeys)->LoadHotKeys(ini);
 	});
 
-	MANAGER(IconFont)->SetFontName(_cfg.currentFont);
+	SetCurrentFont(_cfg.currentFont);
 
 	if (_isOpen) {
 		ClampWindowToScreen(_cfg.windowPos, _cfg.windowSize);
 		_pendingWindowRestore = true;
 		ImGui::Styles::GetSingleton()->RefreshStyle();
-		MANAGER(IconFont)->ReloadFonts();
 	}
 
 	_lastSavedPos  = _cfg.windowPos;
@@ -244,6 +243,10 @@ void FUCKMan::ResetSettings()
 
 	Save();
 	SaveKeybinds();
+
+	Settings::GetSingleton()->Save(FileType::kStyle, [](CSimpleIniA& ini) {
+		ini.Delete("Style", "sFont", true);
+	});
 }
 
 void FUCKMan::LoadSettings(const CSimpleIniA& a_ini)
@@ -260,11 +263,6 @@ void FUCKMan::LoadSettings(const CSimpleIniA& a_ini)
 	_cfg.injectSystemMenu = FUCK::INI::LoadBool(a_ini, "Settings", "bInjectSystemMenu", _def.injectSystemMenu);
 	_cfg.replaceHelpMenu  = FUCK::INI::LoadBool(a_ini, "Settings", "bReplaceHelpMenu", _def.replaceHelpMenu);
 
-	_cfg.currentFont = a_ini.GetValue("Appearance", "sFont", _def.currentFont.c_str());
-	if (!_cfg.currentFont.empty()) {
-		MANAGER(IconFont)->SetFontName(_cfg.currentFont);
-	}
-
 	_lastSavedPos         = _cfg.windowPos;
 	_lastSavedSize        = _cfg.windowSize;
 	_pendingWindowRestore = true;
@@ -280,8 +278,6 @@ void FUCKMan::SaveSettings(CSimpleIniA& a_ini)
 	FUCK::INI::SaveBool  (a_ini, "Settings", "bSidebarOnRight", _cfg.sidebarOnRight, _def.sidebarOnRight);
 	FUCK::INI::SaveBool  (a_ini, "Settings", "bInjectSystemMenu", _cfg.injectSystemMenu, _def.injectSystemMenu);
 	FUCK::INI::SaveBool  (a_ini, "Settings", "bReplaceHelpMenu", _cfg.replaceHelpMenu, _def.replaceHelpMenu);
-
-	FUCK::INI::SaveString(a_ini, "Appearance", "sFont", _cfg.currentFont.c_str(), _def.currentFont.c_str());
 }
 
 void FUCKMan::Save()
@@ -299,6 +295,12 @@ void FUCKMan::SetManualHardPause(bool paused) { _apiHardPause = paused; }
 void FUCKMan::SetManualSoftPause(bool paused) { _apiSoftPause = paused; }
 void FUCKMan::SetForceCursor(bool force) { _forceCursor = force; }
 void FUCKMan::SuspendRendering(bool suspend) { _suspendRendering = suspend; }
+
+void FUCKMan::SetCurrentFont(const std::string& a_font)
+{
+	_cfg.currentFont = a_font;
+	IconFont::Manager::GetSingleton()->SetFontName(a_font);
+}
 
 void FUCKMan::UpdateGameState()
 {

@@ -206,9 +206,14 @@ namespace ImGui
 	void Styles::LoadStyles()
 	{
 		std::string lastPreset = "";
+		std::string userFont   = "Default";
+
 		Settings::GetSingleton()->Load(FileType::kStyle, [&](auto& ini) {
 			lastPreset = ini.GetValue("Style", "sLastPreset", "");
+			userFont   = ini.GetValue("Style", "sFont", "Default");
 		});
+
+		FUCKMan::GetSingleton()->SetCurrentFont(userFont);
 
 		ResetToDefaults(false);
 		GetPresets();

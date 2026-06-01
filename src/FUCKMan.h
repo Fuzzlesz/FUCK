@@ -66,6 +66,7 @@ public:
 	float GetUserScale() const { return _cfg.userScale; }
 	bool  GetInjectSystemMenu() const { return _cfg.injectSystemMenu; }
 	bool  GetReplaceHelpMenu() const { return _cfg.replaceHelpMenu; }
+	void  SetCurrentFont(const std::string& a_font);
 
 	// --- API Overrides ---
 	void SetVanityBlocked(bool blocked);

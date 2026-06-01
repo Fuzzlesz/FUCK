@@ -187,7 +187,6 @@ namespace ImGui
 		ImU32 navHighlightU32;
 
 		bool        refreshStyle{ false };
-		std::string currentFont{ "Jost-Regular.ttf" };
 		std::string currentPresetName{ "" };
 
 		std::vector<std::string> cachedPresets;

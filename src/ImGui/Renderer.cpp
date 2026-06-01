@@ -124,6 +124,7 @@ namespace ImGui::Renderer
 				}
 
 				MANAGER(IconFont)->LoadIcons();
+				MANAGER(IconFont)->ReloadFonts();
 
 				auto styles = ImGui::Styles::GetSingleton();
 				styles->LoadStyles();

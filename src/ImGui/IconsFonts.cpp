@@ -111,7 +111,7 @@ namespace IconFont
 			ImFontConfig default_cfg;
 			default_cfg.FontDataOwnedByAtlas = false;
 			font                             = io.Fonts->AddFontFromMemoryCompressedBase85TTF(
-                GetDefaultFontData(), a_fontSize, &default_cfg, io.Fonts->GetGlyphRangesDefault());
+                GetDefaultFontData(), a_fontSize, &default_cfg, a_ranges.Data);
 		} else {
 			std::string fullPath = ResolveFontPath(fontName);
 			font                 = io.Fonts->AddFontFromFileTTF(fullPath.c_str(), a_fontSize, nullptr, a_ranges.Data);
