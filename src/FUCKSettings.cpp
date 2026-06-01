@@ -161,9 +161,6 @@ void SettingsTool::Draw()
 			FUCK::Spacing(4);
 
 			// --- Tools Header with inline Workspace Reset Button ---
-			auto  largeFont = MANAGER(IconFont)->GetLargeFont();
-			float fontScale = FUCKMan::GetSingleton()->GetActiveScale() * ImGui::Renderer::GetResolutionScale();
-
 			float startX     = FUCK::GetCursorPos().x;
 			float availW     = FUCK::GetContentRegionAvail().x;
 			float headerTopY = FUCK::GetCursorPos().y;
