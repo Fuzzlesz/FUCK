@@ -231,7 +231,15 @@ namespace FUCK::Host
 			*y = p.y;
 	}
 	static void SetCursorScreenPos_Impl(float x, float y) { ImGui::SetCursorScreenPos({ x, y }); }
-	static void AlignTextToFramePadding_Impl() { ImGui::AlignTextToFramePadding(); }
+	static void AlignTextToFramePadding_Impl()
+	{
+		float scale                      = GetGlobalScale_Impl();
+		float padY                       = 7.0f * scale;
+		float oldPadY                    = ImGui::GetStyle().FramePadding.y;
+		ImGui::GetStyle().FramePadding.y = padY;
+		ImGui::AlignTextToFramePadding();
+		ImGui::GetStyle().FramePadding.y = oldPadY;
+	}
 	static void GetContentRegionAvail_Impl(float* x, float* y)
 	{
 		ImVec2 p = ImGui::GetContentRegionAvail();
