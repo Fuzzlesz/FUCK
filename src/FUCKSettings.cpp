@@ -1,8 +1,10 @@
 #include "FUCKSettings.h"
 #include "FUCKMan.h"
 
+#include "ImGui/IconsFontAwesome6.h"
 #include "ImGui/IconsFonts.h"
 #include "ImGui/Styles.h"
+#include "ImGui/Widgets.h"
 #include "System/Hotkeys.h"
 #include "System/Settings.h"
 #include "System/Translation.h"
@@ -110,8 +112,6 @@ void SettingsTool::Draw()
 			if (FUCK::IsItemDeactivatedAfterEdit())
 				manager->Save();
 
-			if (FUCK::Checkbox("$FUCK_Settings_SidebarOnRight"_T, &manager->_cfg.sidebarOnRight, true, true))
-				manager->Save();
 			FUCK::Spacing(2);
 
 			if (FUCK::Button("$FUCK_Settings_Reset"_T)) {
@@ -123,8 +123,562 @@ void SettingsTool::Draw()
 		}
 
 		// --------------------------------------------------
-		// TAB 2: STYLES
-		// --------------------------------------------------------
+		// TAB 2: SIDEBAR
+		// --------------------------------------------------
+		static bool   s_wasSidebarTabOpen = false;
+		static int    s_tableResetCounter = 0;
+		static bool   s_needsRebuild      = true;
+		static size_t s_lastToolCount     = 0;
+
+		static std::vector<FUCK::ITool*>            looseTools;
+		static StringMap<std::vector<FUCK::ITool*>> groupedTools;
+		static std::vector<std::string>             groupNames;
+
+		bool isSidebarTabOpen = FUCK::BeginTabItem("$FUCK_Settings_TabSidebar"_T);
+
+		if (isSidebarTabOpen) {
+			if (!s_wasSidebarTabOpen) {
+				s_tableResetCounter++;
+				s_needsRebuild = true;
+			}
+			s_wasSidebarTabOpen = true;
+
+			FUCK::Header("$FUCK_Sidebar_Title"_T);
+			FUCK::Spacing(2);
+
+			if (FUCK::Checkbox("$FUCK_Settings_SidebarOnRight"_T, &manager->_cfg.sidebarOnRight, true, true))
+				manager->Save();
+			if (FUCK::Checkbox("$FUCK_Sidebar_ShowFilter"_T, &manager->_cfg.showSidebarFilter, true, true))
+				manager->Save();
+			if (FUCK::Checkbox("$FUCK_Sidebar_ShowFavourites"_T, &manager->_cfg.showSidebarFavourites, true, true))
+				manager->Save();
+
+			FUCK::BeginDisabled(!manager->_cfg.showSidebarFavourites);
+			if (FUCK::Checkbox("$FUCK_Sidebar_GroupFavourites"_T, &manager->_cfg.groupFavourites, true, true))
+				manager->Save();
+			FUCK::EndDisabled();
+
+			FUCK::Spacing(4);
+
+			// --- Tools Header with inline Workspace Reset Button ---
+			auto  largeFont = MANAGER(IconFont)->GetLargeFont();
+			float fontScale = FUCKMan::GetSingleton()->GetActiveScale() * ImGui::Renderer::GetResolutionScale();
+
+			float startX     = FUCK::GetCursorPos().x;
+			float availW     = FUCK::GetContentRegionAvail().x;
+			float headerTopY = FUCK::GetCursorPos().y;
+
+			FUCK::Header("$FUCK_Tools"_T);
+
+			// Check if layout is modified
+			bool isModified = false;
+			for (const auto& [k, v] : manager->_toolOverrides) {
+				if (!v.customName.empty() || !v.customGroup.empty() || v.sortOrder != 0) {
+					isModified = true;
+					break;
+				}
+			}
+			if (!isModified) {
+				for (const auto& [k, v] : manager->_groupOverrides) {
+					if (!v.customName.empty() || v.sortOrder != 0) {
+						isModified = true;
+						break;
+					}
+				}
+			}
+
+			if (isModified) {
+				float afterHeaderY = FUCK::GetCursorPos().y;
+				float btnW         = FUCK::CalcTextSize("$FUCK_Settings_Reset"_T).x + (ImGui::GetStyle().FramePadding.x * 2.0f);
+
+				FUCK::SetCursorPos({ startX + availW - btnW, headerTopY });
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(ImGui::GetStyle().FramePadding.x, 0.0f));
+				if (FUCK::Button("$FUCK_Settings_Reset"_T)) {
+					for (auto& [k, v] : manager->_toolOverrides) {
+						v.customName  = "";
+						v.customGroup = "";
+						v.sortOrder   = 0;
+					}
+					for (auto& [k, v] : manager->_groupOverrides) {
+						v.customName = "";
+						v.sortOrder  = 0;
+					}
+					manager->SaveWorkspace();
+					s_needsRebuild = true;
+				}
+				ImGui::PopStyleVar();
+
+				FUCK::SetCursorPosY(afterHeaderY);
+			}
+
+			FUCK::Spacing(2);
+
+			// --- Rebuild Active Tool Arrays ---
+			if (s_needsRebuild || manager->_tools.size() != s_lastToolCount) {
+				s_lastToolCount = manager->_tools.size();
+				looseTools.clear();
+				groupedTools.clear();
+				groupNames.clear();
+
+				for (auto* t : manager->_tools) {
+					if (!t->ShowInSidebar())
+						continue;
+
+					std::string key  = std::format("{}|{}", t->PluginName(), t->Name());
+					auto&       over = manager->_toolOverrides[key];
+
+					std::string grp = over.customGroup;
+					if (grp.empty())
+						grp = t->Group() ? t->Group() : "";
+					if (grp == "##ROOT")
+						grp = "";
+
+					if (grp.empty())
+						looseTools.push_back(t);
+					else
+						groupedTools[grp].push_back(t);
+				}
+
+				for (const auto& [grp, tools] : groupedTools) {
+					groupNames.push_back(grp);
+				}
+
+				Map<std::string, int>  groupBaseline;
+				Map<FUCK::ITool*, int> toolBaseline;
+
+				auto alphaGroups = groupNames;
+				std::sort(alphaGroups.begin(), alphaGroups.end(), [](const std::string& a, const std::string& b) {
+					return _stricmp(a.c_str(), b.c_str()) < 0;
+				});
+
+				for (size_t i = 0; i < alphaGroups.size(); ++i) {
+					groupBaseline[alphaGroups[i]] = static_cast<int>((i + 1) * 10000);
+				}
+
+				auto computeToolBaseline = [&](std::vector<FUCK::ITool*>& list) {
+					auto alphaList = list;
+					std::sort(alphaList.begin(), alphaList.end(), [&](FUCK::ITool* a, FUCK::ITool* b) {
+						auto&       oa = manager->_toolOverrides[std::format("{}|{}", a->PluginName(), a->Name())];
+						auto&       ob = manager->_toolOverrides[std::format("{}|{}", b->PluginName(), b->Name())];
+						const char* na = oa.customName.empty() ? a->Name() : oa.customName.c_str();
+						const char* nb = ob.customName.empty() ? b->Name() : ob.customName.c_str();
+						return _stricmp(na, nb) < 0;
+					});
+					for (size_t i = 0; i < alphaList.size(); ++i) {
+						toolBaseline[alphaList[i]] = static_cast<int>((i + 1) * 10000);
+					}
+				};
+
+				for (auto& [grp, tools] : groupedTools) computeToolBaseline(tools);
+				computeToolBaseline(looseTools);
+
+				auto getGroupEffectiveOrder = [&](const std::string& g) {
+					auto& over = manager->_groupOverrides[g];
+					return over.sortOrder != 0 ? over.sortOrder : groupBaseline[g];
+				};
+
+				auto getToolEffectiveOrder = [&](FUCK::ITool* t) {
+					auto& over = manager->_toolOverrides[std::format("{}|{}", t->PluginName(), t->Name())];
+					return over.sortOrder != 0 ? over.sortOrder : toolBaseline[t];
+				};
+
+				std::sort(groupNames.begin(), groupNames.end(), [&](const std::string& a, const std::string& b) {
+					int effA = getGroupEffectiveOrder(a);
+					int effB = getGroupEffectiveOrder(b);
+					if (effA != effB)
+						return effA < effB;
+					return _stricmp(a.c_str(), b.c_str()) < 0;
+				});
+
+				auto sortTools = [&](FUCK::ITool* a, FUCK::ITool* b) {
+					int effA = getToolEffectiveOrder(a);
+					int effB = getToolEffectiveOrder(b);
+					if (effA != effB)
+						return effA < effB;
+					auto&       oa = manager->_toolOverrides[std::format("{}|{}", a->PluginName(), a->Name())];
+					auto&       ob = manager->_toolOverrides[std::format("{}|{}", b->PluginName(), b->Name())];
+					const char* na = oa.customName.empty() ? a->Name() : oa.customName.c_str();
+					const char* nb = ob.customName.empty() ? b->Name() : ob.customName.c_str();
+					return _stricmp(na, nb) < 0;
+				};
+
+				for (auto& [grp, tools] : groupedTools) std::sort(tools.begin(), tools.end(), sortTools);
+				std::sort(looseTools.begin(), looseTools.end(), sortTools);
+
+				s_needsRebuild = false;
+			}
+
+			// --- Setup Reorderable List Table ---
+			float tableScale = FUCK::GetGlobalScale();
+			FUCK::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(FUCK::GetStyleVarVec(ImGuiStyleVar_FramePadding).x, 7.0f * tableScale));
+
+			float       tableRightEdge = FUCK::GetCursorScreenPos().x + FUCK::GetContentRegionAvail().x;
+			std::string tableId        = std::format("WorkspaceToolTable_{}", s_tableResetCounter);
+
+			if (FUCK::BeginTable(tableId.c_str(), 5, FUCK::TableFlags::kBorders | FUCK::TableFlags::kRowBg | FUCK::TableFlags::kResizable | FUCK::TableFlags::kSizingStretchProp | FUCK::TableFlags::kNoSavedSettings)) {
+				// Base Columns
+				FUCK::TableSetupColumn("$FUCK_Sidebar_TableOrig"_T, FUCK::TableColumnFlags::kWidthStretch | FUCK::TableColumnFlags::kNoSort, 2.0f);
+				FUCK::TableSetupColumn("$FUCK_Sidebar_TablePlugin"_T, FUCK::TableColumnFlags::kWidthStretch | FUCK::TableColumnFlags::kNoSort, 1.5f);
+				FUCK::TableSetupColumn("$FUCK_Sidebar_TableCustom"_T, FUCK::TableColumnFlags::kWidthStretch | FUCK::TableColumnFlags::kNoSort, 2.0f);
+				FUCK::TableSetupColumn("$FUCK_Sidebar_TableGroup"_T, FUCK::TableColumnFlags::kWidthStretch | FUCK::TableColumnFlags::kNoSort, 2.0f);
+				FUCK::TableSetupColumn("##Handle", FUCK::TableColumnFlags::kWidthFixed | FUCK::TableColumnFlags::kNoSort, 35.0f * tableScale);
+
+				// --- Header Row ---
+				FUCK::TableNextRow(ImGuiTableRowFlags_Headers);
+
+				// Header: Text Columns
+				auto DrawCenterHeader = [](const char* label) {
+					FUCK::TableNextColumn();
+					FUCK::TableSetBgColor(FUCK::TableBgTarget::kCellBg, ImGui::GetColorU32(ImGuiCol_TableHeaderBg));
+					float textW = FUCK::CalcTextSize(label).x;
+					FUCK::SetCursorPosX(FUCK::GetCursorPos().x + (FUCK::GetColumnWidth() - textW) * 0.5f);
+					FUCK::Text(label);
+				};
+
+				DrawCenterHeader("$FUCK_Sidebar_TableOrig"_T);
+				DrawCenterHeader("$FUCK_Sidebar_TablePlugin"_T);
+				DrawCenterHeader("$FUCK_Sidebar_TableCustom"_T);
+				DrawCenterHeader("$FUCK_Sidebar_TableGroup"_T);
+
+				// Header: Hand Icon
+				FUCK::TableNextColumn();
+				FUCK::TableSetBgColor(FUCK::TableBgTarget::kCellBg, ImGui::GetColorU32(ImGuiCol_TableHeaderBg));
+
+				// Bypassing FUCK::PushFont scaling
+				ImGui::PushFont(ImGui::GetFont(), ImGui::GetFontSize() * 0.8f);
+
+				float iconW = FUCK::CalcTextSize(ICON_FA_HAND).x;
+				float offX  = (FUCK::GetColumnWidth() - iconW) * 0.5f;
+
+				FUCK::SetCursorPosX(FUCK::GetCursorPos().x + std::max(0.0f, offX));
+
+				FUCK::SetCursorPosY(FUCK::GetCursorPos().y + (2.0f * tableScale));
+
+				FUCK::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.8f, 0.2f, 1.0f));
+				FUCK::Text(ICON_FA_HAND);
+				FUCK::PopStyleColor();
+
+				ImGui::PopFont();
+
+				// --- Table Context Generators ---
+				auto RenderToolRow = [&](FUCK::ITool* tool, bool indented, std::vector<FUCK::ITool*>& parentList) {
+					std::string key  = std::format("{}|{}", tool->PluginName(), tool->Name());
+					auto&       over = manager->_toolOverrides[key];
+
+					FUCK::PushID(key.c_str());
+					FUCK::TableNextRow();
+
+					// Col 0: Original Name / Drag Target Background
+					FUCK::TableNextColumn();
+					ImVec2 startPos = FUCK::GetCursorPos();
+
+					FUCK::Selectable("##Drag", false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap, ImVec2(0, FUCK::GetFrameHeight()));
+					bool   rowHovered = FUCK::IsItemHovered();
+					ImVec2 rowMin     = FUCK::GetItemRectMin();
+					ImVec2 rowMax     = FUCK::GetItemRectMax();
+					rowMax.x          = tableRightEdge;
+
+					bool isHoveringDrop = false;
+
+					// --- Drag & Drop: Drag Source ---
+					if (FUCK::BeginDragDropSource(FUCK::DragDropFlags::kSourceAllowNullID)) {
+						FUCK::SetDragDropPayload("TOOL_ORDER", &tool, sizeof(FUCK::ITool*));
+						FUCK::Text(std::format("Move {}", tool->Name()).c_str());
+						FUCK::EndDragDropSource();
+					}
+
+					// --- Drag & Drop: Drop Target (Tool Reordering) ---
+					if (FUCK::BeginDragDropTarget()) {
+						if (const ImGuiPayload* payload = FUCK::AcceptDragDropPayload("TOOL_ORDER", FUCK::DragDropFlags::kAcceptPeekOnly)) {
+							isHoveringDrop = true;
+						}
+
+						if (const ImGuiPayload* payload = FUCK::AcceptDragDropPayload("TOOL_ORDER", FUCK::DragDropFlags::kAcceptNoDrawDefaultRect)) {
+							FUCK::ITool* srcTool = *static_cast<FUCK::ITool**>(payload->Data);
+
+							if (srcTool != tool) {
+								std::string srcKey = std::format("{}|{}", srcTool->PluginName(), srcTool->Name());
+
+								std::string dstGrp = over.customGroup;
+								if (dstGrp.empty())
+									dstGrp = tool->Group() ? tool->Group() : "";
+								if (dstGrp == "##ROOT")
+									dstGrp = "";
+
+								std::string srcNativeGrp = srcTool->Group() ? srcTool->Group() : "";
+
+								if (dstGrp == srcNativeGrp) {
+									manager->_toolOverrides[srcKey].customGroup = "";
+								} else if (dstGrp.empty() && !srcNativeGrp.empty()) {
+									manager->_toolOverrides[srcKey].customGroup = "##ROOT";
+								} else {
+									manager->_toolOverrides[srcKey].customGroup = dstGrp;
+								}
+
+								// Execute sequential insertion to guarantee deterministic reordering
+								std::vector<FUCK::ITool*> newList = parentList;
+								std::erase(newList, srcTool);
+
+								auto it = std::find(newList.begin(), newList.end(), tool);
+								if (it != newList.end()) {
+									newList.insert(it, srcTool);
+								} else {
+									newList.push_back(srcTool);
+								}
+
+								int order = 10000;
+								for (auto* t : newList) {
+									manager->_toolOverrides[std::format("{}|{}", t->PluginName(), t->Name())].sortOrder = order;
+									order += 10000;
+								}
+
+								manager->SaveWorkspace();
+								s_needsRebuild = true;
+							}
+						}
+						FUCK::EndDragDropTarget();
+					}
+
+					// Visual Drop Indicator
+					if (isHoveringDrop) {
+						ImGui::GetForegroundDrawList()->AddLine(rowMin, ImVec2(rowMax.x, rowMin.y), ImGui::GetColorU32(ImGuiCol_DragDropTarget), 2.0f);
+					}
+
+					FUCK::SetCursorPos(startPos);
+					FUCK::AlignTextToFramePadding();
+
+					if (indented) {
+						ImVec2 p     = FUCK::GetCursorScreenPos();
+						float  lineX = p.x + 10.0f * tableScale;
+						float  lineY = p.y - ImGui::GetStyle().FramePadding.y;
+						float  midY  = p.y + FUCK::GetFrameHeight() * 0.5f;
+
+						ImU32 lineCol = ImGui::GetColorU32(ImGuiCol_TextDisabled);
+						ImGui::GetWindowDrawList()->AddLine(ImVec2(lineX, lineY), ImVec2(lineX, midY), lineCol);
+						ImGui::GetWindowDrawList()->AddLine(ImVec2(lineX, midY), ImVec2(lineX + 10.0f * tableScale, midY), lineCol);
+
+						FUCK::SetCursorPosX(FUCK::GetCursorPos().x + (25.0f * tableScale));
+					}
+
+					FUCK::Text(tool->Name());
+
+					// Col 1: Plugin Name
+					FUCK::TableNextColumn();
+					FUCK::AlignTextToFramePadding();
+					FUCK::TextDisabled(tool->PluginName());
+
+					// Col 2: Custom Name Override
+					FUCK::TableNextColumn();
+					FUCK::SetNextItemWidth(-1.0f);
+					char nameBuf[64];
+					FUCK::StringCopy(nameBuf, over.customName);
+					if (FUCK::InputText("##tname", nameBuf, sizeof(nameBuf))) {
+						over.customName = nameBuf;
+					}
+					if (FUCK::IsItemDeactivatedAfterEdit()) {
+						manager->SaveWorkspace();
+						s_needsRebuild = true;
+					}
+
+					// Col 3: Custom Group Override
+					FUCK::TableNextColumn();
+					FUCK::SetNextItemWidth(-1.0f);
+					char grpBuf[64];
+					FUCK::StringCopy(grpBuf, over.customGroup == "##ROOT" ? "" : over.customGroup);
+					if (FUCK::InputText("##tgrp", grpBuf, sizeof(grpBuf))) {
+						if (grpBuf[0] == '\0' && tool->Group() && tool->Group()[0] != '\0') {
+							over.customGroup = "##ROOT";
+						} else {
+							over.customGroup = grpBuf;
+						}
+					}
+					if (FUCK::IsItemDeactivatedAfterEdit()) {
+						manager->SaveWorkspace();
+						s_needsRebuild = true;
+					}
+
+					// Col 4: Drag Handle
+					FUCK::TableNextColumn();
+					ImU32  gripCol = rowHovered ? IM_COL32(50, 205, 50, 255) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
+					float  gripW   = FUCK::CalcTextSize(ICON_FA_GRIP_LINES).x;
+					float  gripH   = FUCK::CalcTextSize(ICON_FA_GRIP_LINES).y;
+					ImVec2 gripPos(FUCK::GetCursorScreenPos().x + (FUCK::GetColumnWidth() - gripW) * 0.5f, FUCK::GetCursorScreenPos().y + (FUCK::GetFrameHeight() - gripH) * 0.5f);
+					ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), ImGui::GetFontSize(), gripPos, gripCol, ICON_FA_GRIP_LINES);
+
+					FUCK::PopID();
+				};
+
+				auto RenderGroupRow = [&](const std::string& grp) {
+					FUCK::PushID(grp.c_str());
+					FUCK::TableNextRow();
+
+					// Col 0: Group Name & Collapse Indicator / Drag Target Background
+					FUCK::TableNextColumn();
+					ImVec2 startPos = FUCK::GetCursorPos();
+
+					FUCK::Selectable("##Drag", false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap, ImVec2(0, FUCK::GetFrameHeight()));
+					bool   rowHovered = FUCK::IsItemHovered();
+					ImVec2 rowMin     = FUCK::GetItemRectMin();
+					ImVec2 rowMax     = FUCK::GetItemRectMax();
+					rowMax.x          = tableRightEdge;
+
+					bool isHoveringGroupDrop       = false;
+					bool isHoveringToolDropOnGroup = false;
+
+					// --- Drag & Drop: Drag Source ---
+					if (FUCK::BeginDragDropSource(FUCK::DragDropFlags::kSourceAllowNullID)) {
+						FUCK::SetDragDropPayload("GROUP_ORDER", grp.c_str(), grp.size() + 1);
+						FUCK::Text(std::format("Move Group: {}", grp).c_str());
+						FUCK::EndDragDropSource();
+					}
+
+					// --- Drag & Drop: Drop Target (Group Reordering & Tool Assignment) ---
+					if (FUCK::BeginDragDropTarget()) {
+						if (const ImGuiPayload* payload = FUCK::AcceptDragDropPayload("GROUP_ORDER", FUCK::DragDropFlags::kAcceptPeekOnly)) {
+							isHoveringGroupDrop = true;
+						}
+
+						if (const ImGuiPayload* payload = FUCK::AcceptDragDropPayload("GROUP_ORDER", FUCK::DragDropFlags::kAcceptNoDrawDefaultRect)) {
+							std::string srcGrp = static_cast<const char*>(payload->Data);
+
+							if (srcGrp != grp) {
+								std::vector<std::string> newGroups = groupNames;
+								std::erase(newGroups, srcGrp);
+
+								auto it = std::find(newGroups.begin(), newGroups.end(), grp);
+								if (it != newGroups.end()) {
+									newGroups.insert(it, srcGrp);
+								} else {
+									newGroups.push_back(srcGrp);
+								}
+
+								int order = 10000;
+								for (const auto& g : newGroups) {
+									manager->_groupOverrides[g].sortOrder = order;
+									order += 10000;
+								}
+
+								manager->SaveWorkspace();
+								s_needsRebuild = true;
+							}
+						}
+
+						if (const ImGuiPayload* payload = FUCK::AcceptDragDropPayload("TOOL_ORDER", FUCK::DragDropFlags::kAcceptPeekOnly)) {
+							isHoveringToolDropOnGroup = true;
+						}
+
+						if (const ImGuiPayload* payload = FUCK::AcceptDragDropPayload("TOOL_ORDER", FUCK::DragDropFlags::kAcceptNoDrawDefaultRect)) {
+							FUCK::ITool* srcTool      = *static_cast<FUCK::ITool**>(payload->Data);
+							std::string  srcKey       = std::format("{}|{}", srcTool->PluginName(), srcTool->Name());
+							std::string  srcNativeGrp = srcTool->Group() ? srcTool->Group() : "";
+
+							if (grp == srcNativeGrp) {
+								manager->_toolOverrides[srcKey].customGroup = "";
+							} else if (grp.empty() && !srcNativeGrp.empty()) {
+								manager->_toolOverrides[srcKey].customGroup = "##ROOT";
+							} else {
+								manager->_toolOverrides[srcKey].customGroup = grp;
+							}
+
+							// Sequentially place the tool at the top of the destination group
+							std::vector<FUCK::ITool*> newList = groupedTools[grp];
+							std::erase(newList, srcTool);
+							newList.insert(newList.begin(), srcTool);
+
+							int order = 10000;
+							for (auto* t : newList) {
+								manager->_toolOverrides[std::format("{}|{}", t->PluginName(), t->Name())].sortOrder = order;
+								order += 10000;
+							}
+
+							manager->SaveWorkspace();
+							s_needsRebuild = true;
+						}
+						FUCK::EndDragDropTarget();
+					}
+
+					// Visual Drop Indicator
+					if (isHoveringGroupDrop) {
+						ImGui::GetForegroundDrawList()->AddLine(rowMin, ImVec2(rowMax.x, rowMin.y), ImGui::GetColorU32(ImGuiCol_DragDropTarget), 2.0f);
+					} else if (isHoveringToolDropOnGroup) {
+						ImGui::GetForegroundDrawList()->AddRect(rowMin, rowMax, ImGui::GetColorU32(ImGuiCol_DragDropTarget), 0.0f, 0, 2.0f);
+					}
+
+					FUCK::SetCursorPos(startPos);
+					FUCK::AlignTextToFramePadding();
+
+					ImVec2 curPos    = FUCK::GetCursorScreenPos();
+					float  rowH      = FUCK::GetFrameHeight();
+					auto   iconArrow = IconFont::Manager::GetSingleton()->GetStepperRight();
+					if (iconArrow) {
+						float  aspect  = iconArrow->imageSize.y > 0.0f ? (iconArrow->imageSize.x / iconArrow->imageSize.y) : 1.0f;
+						auto   ap      = ImGui::CalcArrowIconParams(aspect, true, rowH, 20.0f * tableScale, 1.0f);
+						ImVec2 drawPos = { curPos.x, curPos.y + ap.offsetY };
+						ImGui::DrawArrowIcon(ImGui::GetWindowDrawList(), drawPos, ap.drawSize, ImGui::GetColorU32(ImGuiCol_TextDisabled), ImGui::IconDirection::kDown);
+						FUCK::SetCursorPosX(FUCK::GetCursorPos().x + ap.drawSize.x + (6.0f * tableScale));
+					}
+
+					FUCK::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 0.8f, 1.0f));
+					FUCK::Text(grp.c_str());
+					FUCK::PopStyleColor();
+
+					// Col 1: Blank (no plugin name for groups)
+					FUCK::TableNextColumn();
+
+					// Col 2: Custom Name
+					FUCK::TableNextColumn();
+					FUCK::SetNextItemWidth(-1.0f);
+					auto& gOver = manager->_groupOverrides[grp];
+					char  nameBuf[64];
+					FUCK::StringCopy(nameBuf, gOver.customName);
+					if (FUCK::InputText("##gname", nameBuf, sizeof(nameBuf))) {
+						gOver.customName = nameBuf;
+					}
+					if (FUCK::IsItemDeactivatedAfterEdit()) {
+						manager->SaveWorkspace();
+						s_needsRebuild = true;
+					}
+
+					// Col 3: Blank (groups cannot override their own group)
+					FUCK::TableNextColumn();
+
+					// Col 4: Drag Handle
+					FUCK::TableNextColumn();
+					ImU32  gripCol = rowHovered ? IM_COL32(50, 205, 50, 255) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
+					float  gripW   = FUCK::CalcTextSize(ICON_FA_GRIP_LINES).x;
+					float  gripH   = FUCK::CalcTextSize(ICON_FA_GRIP_LINES).y;
+					ImVec2 gripPos(FUCK::GetCursorScreenPos().x + (FUCK::GetColumnWidth() - gripW) * 0.5f, FUCK::GetCursorScreenPos().y + (FUCK::GetFrameHeight() - gripH) * 0.5f);
+					ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), ImGui::GetFontSize(), gripPos, gripCol, ICON_FA_GRIP_LINES);
+
+					FUCK::PopID();
+
+					for (auto* tool : groupedTools[grp]) {
+						RenderToolRow(tool, true, groupedTools[grp]);
+					}
+				};
+
+				// --- Render Active Rows ---
+				for (const auto& grp : groupNames) {
+					RenderGroupRow(grp);
+				}
+
+				for (auto* tool : looseTools) {
+					RenderToolRow(tool, false, looseTools);
+				}
+
+				FUCK::EndTable();
+			}
+
+			FUCK::PopStyleVar();
+
+			FUCK::Spacing(4);
+			FUCK::EndTabItem();
+		} else {
+			s_wasSidebarTabOpen = false;
+		}
+
+		// --------------------------------------------------
+		// TAB 3: STYLES
 		// --------------------------------------------------
 		if (FUCK::BeginTabItem("$FUCK_Styles_Title"_T)) {
 
@@ -178,13 +732,12 @@ void SettingsTool::Draw()
 		}
 
 		// --------------------------------------------------
-		// TAB 3: INFO
+		// TAB 4: INFO
 		// --------------------------------------------------
 		static bool                     s_wasInfoTabOpen = false;
 		static bool                     s_infoCached     = false;
 		static std::vector<std::string> pluginsList;
 		static std::vector<std::string> iniList;
-		static std::vector<std::string> transList;
 
 		bool isInfoTabOpen = FUCK::BeginTabItem("$FUCK_Settings_TabInfo"_T);
 
@@ -209,35 +762,22 @@ void SettingsTool::Draw()
 				pluginsList.clear();
 				iniList.clear();
 
-				// 1. Gather DLLs via the VTable Poly Pointer Trick
-				std::set<std::string> consumerDLLs;
-				auto                  extractDLL = [&](void* polyPtr) {
-                    if (!polyPtr)
-                        return;
-                    void*   vtableAddr = *reinterpret_cast<void**>(polyPtr);
-                    HMODULE hModule    = nullptr;
-
-                    if (::GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-											 static_cast<LPCSTR>(vtableAddr), &hModule)) {
-                        char path[MAX_PATH];
-                        if (::GetModuleFileNameA(hModule, path, MAX_PATH)) {
-                            std::string filename = std::filesystem::path(path).filename().string();
-                            if (!Utils::IContains(filename, "FUCK.dll")) {
-                                consumerDLLs.insert(filename);
-                            }
-                        }
-                    }
-				};
+				// Gather Plugins
+				std::set<std::string> pluginNames;
 
 				for (auto* tool : manager->_tools) {
-					extractDLL(dynamic_cast<void*>(tool));
+					if (tool->PluginName() && tool->PluginName()[0] != '\0') {
+						pluginNames.insert(tool->PluginName());
+					}
 				}
 				for (auto* win : manager->_windows) {
-					extractDLL(dynamic_cast<void*>(win));
+					if (win->PluginName() && win->PluginName()[0] != '\0') {
+						pluginNames.insert(win->PluginName());
+					}
 				}
-				pluginsList.assign(consumerDLLs.begin(), consumerDLLs.end());
+				pluginsList.assign(pluginNames.begin(), pluginNames.end());
 
-				// 2. Gather INIs — single list, labelled as "PluginName/filename"
+				// Gather INIs — single list, labelled as "PluginName/filename"
 				{
 					std::lock_guard<std::mutex> iniLock(Settings::GetSingleton()->trackingMutex);
 					for (const auto& iniPath : Settings::GetSingleton()->trackedINIs) {

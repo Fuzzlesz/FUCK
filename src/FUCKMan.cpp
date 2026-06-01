@@ -11,6 +11,7 @@
 #include "System/Hotkeys.h"
 #include "System/Input.h"
 #include "System/Settings.h"
+#include "System/Utils.h"
 
 struct WindowState
 {
@@ -47,9 +48,54 @@ static void ClampWindowToScreen(ImVec2& pos, const ImVec2& size)
 		pos.y = 0.0f;
 }
 
+// ==================================================
+// Glaze JSON Serialization Structs
+// ==================================================
+struct WindowSaveData
+{
+	float x         = -1.0f;
+	float y         = -1.0f;
+	float w         = -1.0f;
+	float h         = -1.0f;
+	bool  collapsed = false;
+};
+
+struct ToolSaveData
+{
+	bool        bFavourited = false;
+	std::string sName       = "";
+	std::string sGroup      = "";
+};
+
+struct PluginSaveData
+{
+	StringMap<ToolSaveData>   tools;
+	StringMap<WindowSaveData> windows;
+};
+
+struct GroupSaveData
+{
+	bool        bFavourited = false;
+	std::string sName       = "";
+	int         iOrder      = 0;
+};
+
+struct WorkspaceSaveData
+{
+	WindowSaveData           mainWindow;
+	StringMap<int>           toolOrder;
+	StringMap<GroupSaveData> groups;
+};
+
 FUCKMan::FUCKMan()
 {
 	FUCK::GetInterface() = FUCK::Host::CreateInterface();
+
+	Settings::Core.LoadDefaults([this](CSimpleIniA& ini) {
+		this->LoadSettings(ini);
+		this->_def = this->_cfg;
+	});
+
 	RegisterWindow(&_themeEditorWindow);
 }
 
@@ -69,7 +115,7 @@ void FUCKMan::RegisterTool(FUCK::ITool* a_tool)
 
 	// 2. Name Collision Check
 	auto it = std::find_if(_tools.begin(), _tools.end(), [&](FUCK::ITool* existing) {
-		return existing && (strcmp(existing->Name(), a_tool->Name()) == 0);
+		return existing && (strcmp(existing->Name(), a_tool->Name()) == 0) && (strcmp(existing->PluginName(), a_tool->PluginName()) == 0);
 	});
 
 	if (it != _tools.end()) {
@@ -96,29 +142,6 @@ void FUCKMan::RegisterWindow(FUCK::IWindow* a_window)
 		return;
 
 	_windows.push_back(a_window);
-
-	// --- Implicitly load the Window's last known geometry ---
-	std::string key   = std::format("{}|{}", a_window->PluginName(), a_window->Id());
-	auto&       state = s_windowStates[key];
-
-	std::string path = std::format(R"(Data\FUCKs\{}\windowwtates.ini)", a_window->PluginName());
-	CSimpleIniA ini;
-	ini.SetUnicode();
-	if (ini.LoadFile(path.c_str()) >= 0) {
-		float scale = ImGui::Renderer::GetResolutionScale();
-		float x     = static_cast<float>(ini.GetDoubleValue(a_window->Id(), "X", -1.0));
-		float y     = static_cast<float>(ini.GetDoubleValue(a_window->Id(), "Y", -1.0));
-		float w     = static_cast<float>(ini.GetDoubleValue(a_window->Id(), "Width", -1.0));
-		float h     = static_cast<float>(ini.GetDoubleValue(a_window->Id(), "Height", -1.0));
-
-		if (x != -1.0f && y != -1.0f) {
-			state.pos          = { x * scale, y * scale };
-			state.hasLoadedPos = true;
-		}
-		if (w != -1.0f && h != -1.0f) {
-			state.size = { w * scale, h * scale };
-		}
-	}
 }
 
 void FUCKMan::UnregisterWindow(FUCK::IWindow* a_window)
@@ -128,8 +151,9 @@ void FUCKMan::UnregisterWindow(FUCK::IWindow* a_window)
 
 	auto it = std::find(_windows.begin(), _windows.end(), a_window);
 	if (it != _windows.end()) {
+		std::string key = std::format("{}|{}", a_window->PluginName(), a_window->Id());
 		// Clean up the persistent collapse/geometry state
-		s_windowStates.erase((*it)->Title());
+		s_windowStates.erase(key);
 
 		// Remove from render list
 		_windows.erase(it);
@@ -137,6 +161,183 @@ void FUCKMan::UnregisterWindow(FUCK::IWindow* a_window)
 
 	// Clean up from suspended windows
 	std::erase(_suspendedWindows, a_window);
+}
+
+// ==================================================
+// Sidebar & Geometry Management
+// ==================================================
+
+void FUCKMan::LoadWorkspace()
+{
+	float scale            = ImGui::Renderer::GetResolutionScale();
+	bool  mainWindowLoaded = false;
+
+	// 1. Load global Workspace settings (Main Window, Groups & Tool Order)
+	std::string workspacePath = Settings::GetSingleton()->GetWorkspacePath();
+	if (std::filesystem::exists(workspacePath)) {
+		WorkspaceSaveData sd;
+		std::string       wBuffer;
+		if (auto err = glz::read_file_json(sd, workspacePath, wBuffer); !err) {
+			// Apply Main Window state
+			if (sd.mainWindow.x != -1.0f && sd.mainWindow.y != -1.0f) {
+				_cfg.windowPos  = { sd.mainWindow.x * scale, sd.mainWindow.y * scale };
+				_cfg.windowSize = { sd.mainWindow.w * scale, sd.mainWindow.h * scale };
+				_isCollapsed    = sd.mainWindow.collapsed;
+
+				_lastSavedPos         = _cfg.windowPos;
+				_lastSavedSize        = _cfg.windowSize;
+				_pendingWindowRestore = true;
+				mainWindowLoaded      = true;
+			}
+
+			for (const auto& [k, v] : sd.toolOrder) {
+				_toolOverrides[k].sortOrder = v;
+			}
+			for (const auto& [k, v] : sd.groups) {
+				_groupOverrides[k].isFavourited = v.bFavourited;
+				_groupOverrides[k].customName   = v.sName;
+				_groupOverrides[k].sortOrder    = v.iOrder;
+			}
+		}
+	}
+
+	if (!mainWindowLoaded) {
+		_cfg.windowPos  = { _def.windowPos.x * scale, _def.windowPos.y * scale };
+		_cfg.windowSize = { _def.windowSize.x * scale, _def.windowSize.y * scale };
+		_lastSavedPos   = _cfg.windowPos;
+		_lastSavedSize  = _cfg.windowSize;
+	}
+
+	// 2. Load per-plugin tool states and window geometries
+	std::string toolsPath = Settings::GetSingleton()->GetToolsPath();
+	if (std::filesystem::exists(toolsPath)) {
+		for (const auto& entry : std::filesystem::directory_iterator(toolsPath)) {
+			if (entry.path().extension() == ".json") {
+				std::string pluginName = entry.path().stem().string();
+
+				PluginSaveData pd;
+				std::string    pBuffer;
+				if (auto err = glz::read_file_json(pd, entry.path().string(), pBuffer); !err) {
+					for (const auto& [toolName, toolData] : pd.tools) {
+						std::string key                  = std::format("{}|{}", pluginName, toolName);
+						_toolOverrides[key].isFavourited = toolData.bFavourited;
+						_toolOverrides[key].customName   = toolData.sName;
+						_toolOverrides[key].customGroup  = toolData.sGroup;
+					}
+
+					for (const auto& [winId, winData] : pd.windows) {
+						std::string key = std::format("{}|{}", pluginName, winId);
+						auto&       st  = s_windowStates[key];
+
+						if (winData.x != -1.0f && winData.y != -1.0f) {
+							st.pos          = { winData.x * scale, winData.y * scale };
+							st.hasLoadedPos = true;
+						}
+						if (winData.w != -1.0f && winData.h != -1.0f) {
+							st.size = { winData.w * scale, winData.h * scale };
+						}
+						st.isCollapsed = winData.collapsed;
+					}
+				}
+			}
+		}
+	}
+}
+
+void FUCKMan::SaveWorkspace()
+{
+	WorkspaceSaveData         sd;
+	StringMap<PluginSaveData> pdMap;
+
+	// Distribute Tool Overrides
+	for (const auto& [key, over] : _toolOverrides) {
+		auto pipe = key.find('|');
+		if (pipe != std::string::npos) {
+			std::string plugin   = key.substr(0, pipe);
+			std::string toolName = key.substr(pipe + 1);
+
+			if (over.isFavourited || !over.customName.empty() || !over.customGroup.empty()) {
+				ToolSaveData td;
+				td.bFavourited = over.isFavourited;
+				td.sName       = over.customName;
+				td.sGroup      = over.customGroup;
+
+				pdMap[plugin].tools[toolName] = td;
+			}
+
+			if (over.sortOrder != 0) {
+				sd.toolOrder[key] = over.sortOrder;
+			}
+		}
+	}
+
+	// Distribute Group Overrides
+	for (const auto& [grp, over] : _groupOverrides) {
+		if (over.isFavourited || !over.customName.empty() || over.sortOrder != 0) {
+			GroupSaveData gd;
+			gd.bFavourited = over.isFavourited;
+			gd.sName       = over.customName;
+			gd.iOrder      = over.sortOrder;
+
+			sd.groups[grp] = gd;
+		}
+	}
+
+	// Distribute Main Window Geometry
+	float scale = ImGui::Renderer::GetResolutionScale();
+	if (scale < 0.1f)
+		scale = 1.0f;  // Safety clamp
+
+	sd.mainWindow.x         = _cfg.windowPos.x / scale;
+	sd.mainWindow.y         = _cfg.windowPos.y / scale;
+	sd.mainWindow.w         = _cfg.windowSize.x / scale;
+	sd.mainWindow.h         = _cfg.windowSize.y / scale;
+	sd.mainWindow.collapsed = _isCollapsed;
+
+	// Distribute Window Geometries (External plugins)
+	for (const auto& [key, st] : s_windowStates) {
+		auto pipe = key.find('|');
+		if (pipe != std::string::npos) {
+			std::string plugin = key.substr(0, pipe);
+			std::string winId  = key.substr(pipe + 1);
+
+			WindowSaveData wd;
+			wd.x         = st.pos.x / scale;
+			wd.y         = st.pos.y / scale;
+			wd.w         = (st.size.x > 0.0f) ? st.size.x / scale : -1.0f;
+			wd.h         = (st.size.y > 0.0f) ? st.size.y / scale : -1.0f;
+			wd.collapsed = st.isCollapsed;
+
+			pdMap[plugin].windows[winId] = wd;
+		}
+	}
+
+	// Commit Workspace Settings
+	std::string workspacePath = Settings::GetSingleton()->GetWorkspacePath();
+	std::filesystem::create_directories(Settings::Core.GetConfigDirectory());
+	std::string sBuffer;
+	if (auto err = glz::write_file_json(sd, workspacePath, sBuffer); err) {
+		logger::warn("Failed to write to {}", workspacePath);
+	}
+
+	// Commit Per-Plugin Settings
+	std::string toolsPath = Settings::GetSingleton()->GetToolsPath();
+	std::filesystem::create_directories(toolsPath);
+
+	for (const auto& [plugin, pd] : pdMap) {
+		std::string path = std::format("{}/{}.json", toolsPath, plugin);
+
+		if (pd.tools.empty() && pd.windows.empty()) {
+			if (std::filesystem::exists(path)) {
+				std::filesystem::remove(path);
+			}
+		} else {
+			std::string pBuffer;
+			if (auto err = glz::write_file_json(pd, path, pBuffer); err) {
+				logger::warn("Failed to write to {}", path);
+			}
+		}
+	}
 }
 
 // ==================================================
@@ -219,10 +420,6 @@ void FUCKMan::ResetSettings()
 {
 	_cfg = _def;
 
-	Settings::Core.LoadDefaults([this](CSimpleIniA& ini) {
-		this->LoadSettings(ini);
-	});
-
 	auto hotkeys = MANAGER(Hotkeys);
 	hotkeys->GetToggleHotkey().Clear();
 
@@ -242,6 +439,7 @@ void FUCKMan::ResetSettings()
 	_lastSavedSize = _cfg.windowSize;
 
 	Save();
+	SaveWorkspace();
 	SaveKeybinds();
 
 	Settings::GetSingleton()->Save(FileType::kStyle, [](CSimpleIniA& ini) {
@@ -251,33 +449,31 @@ void FUCKMan::ResetSettings()
 
 void FUCKMan::LoadSettings(const CSimpleIniA& a_ini)
 {
-	_cfg.windowPos  = FUCK::INI::LoadScaledPos (a_ini, "Window", _def.windowPos);
-	_cfg.windowSize = FUCK::INI::LoadScaledSize(a_ini, "Window", _def.windowSize);
-
-	_cfg.globalPauseType = FUCK::INI::LoadInt(a_ini, "Settings", "iGlobalPauseType", _def.globalPauseType);
-
 	float loadedScale = FUCK::INI::LoadFloat(a_ini, "Settings", "fUserScale", _def.userScale);
 	_cfg.userScale    = std::clamp(loadedScale, 0.5f, 2.0f);
 
-	_cfg.sidebarOnRight   = FUCK::INI::LoadBool(a_ini, "Settings", "bSidebarOnRight", _def.sidebarOnRight);
-	_cfg.injectSystemMenu = FUCK::INI::LoadBool(a_ini, "Settings", "bInjectSystemMenu", _def.injectSystemMenu);
-	_cfg.replaceHelpMenu  = FUCK::INI::LoadBool(a_ini, "Settings", "bReplaceHelpMenu", _def.replaceHelpMenu);
+	_cfg.globalPauseType = FUCK::INI::LoadInt(a_ini, "Settings", "iGlobalPauseType", _def.globalPauseType);
 
-	_lastSavedPos         = _cfg.windowPos;
-	_lastSavedSize        = _cfg.windowSize;
-	_pendingWindowRestore = true;
+	_cfg.sidebarOnRight        = FUCK::INI::LoadBool(a_ini, "Settings", "bSidebarOnRight", _def.sidebarOnRight);
+	_cfg.injectSystemMenu      = FUCK::INI::LoadBool(a_ini, "Settings", "bInjectSystemMenu", _def.injectSystemMenu);
+	_cfg.replaceHelpMenu       = FUCK::INI::LoadBool(a_ini, "Settings", "bReplaceHelpMenu", _def.replaceHelpMenu);
+	_cfg.showSidebarFilter     = FUCK::INI::LoadBool(a_ini, "Settings", "bShowSidebarFilter", _def.showSidebarFilter);
+	_cfg.showSidebarFavourites = FUCK::INI::LoadBool(a_ini, "Settings", "bShowSidebarFavourites", _def.showSidebarFavourites);
+	_cfg.groupFavourites       = FUCK::INI::LoadBool(a_ini, "Settings", "bGroupFavourites", _def.groupFavourites);
 }
 
 void FUCKMan::SaveSettings(CSimpleIniA& a_ini)
 {
-	FUCK::INI::SaveScaledPos (a_ini, "Window", _cfg.windowPos, _def.windowPos);
-	FUCK::INI::SaveScaledSize(a_ini, "Window", _cfg.windowSize, _def.windowSize);
+	FUCK::INI::SaveInt(a_ini, "Settings", "iGlobalPauseType", static_cast<int>(_cfg.globalPauseType), static_cast<int>(_def.globalPauseType));
 
-	FUCK::INI::SaveInt   (a_ini, "Settings", "iGlobalPauseType", static_cast<int>(_cfg.globalPauseType), static_cast<int>(_def.globalPauseType));
 	FUCK::INI::SaveDouble(a_ini, "Settings", "fUserScale", _cfg.userScale, _def.userScale);
-	FUCK::INI::SaveBool  (a_ini, "Settings", "bSidebarOnRight", _cfg.sidebarOnRight, _def.sidebarOnRight);
-	FUCK::INI::SaveBool  (a_ini, "Settings", "bInjectSystemMenu", _cfg.injectSystemMenu, _def.injectSystemMenu);
-	FUCK::INI::SaveBool  (a_ini, "Settings", "bReplaceHelpMenu", _cfg.replaceHelpMenu, _def.replaceHelpMenu);
+
+	FUCK::INI::SaveBool(a_ini, "Settings", "bSidebarOnRight", _cfg.sidebarOnRight, _def.sidebarOnRight);
+	FUCK::INI::SaveBool(a_ini, "Settings", "bInjectSystemMenu", _cfg.injectSystemMenu, _def.injectSystemMenu);
+	FUCK::INI::SaveBool(a_ini, "Settings", "bReplaceHelpMenu", _cfg.replaceHelpMenu, _def.replaceHelpMenu);
+	FUCK::INI::SaveBool(a_ini, "Settings", "bShowSidebarFilter", _cfg.showSidebarFilter, _def.showSidebarFilter);
+	FUCK::INI::SaveBool(a_ini, "Settings", "bShowSidebarFavourites", _cfg.showSidebarFavourites, _def.showSidebarFavourites);
+	FUCK::INI::SaveBool(a_ini, "Settings", "bGroupFavourites", _cfg.groupFavourites, _def.groupFavourites);
 }
 
 void FUCKMan::Save()
@@ -577,6 +773,11 @@ RE::BSEventNotifyControl FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_e
 
 void FUCKMan::Draw()
 {
+	if (!_workspaceLoaded) {
+		LoadWorkspace();
+		_workspaceLoaded = true;
+	}
+
 	if (auto ui = RE::UI::GetSingleton(); ui && ui->closingAllMenus) {
 		bool closedSomething = false;
 
@@ -1126,7 +1327,7 @@ void FUCKMan::Draw()
 					_cfg.windowSize.x != _lastSavedSize.x || _cfg.windowSize.y != _lastSavedSize.y) {
 					_lastSavedPos  = _cfg.windowPos;
 					_lastSavedSize = _cfg.windowSize;
-					Save();
+					SaveWorkspace();
 				}
 			}
 		}
@@ -1229,47 +1430,13 @@ void FUCKMan::Draw()
 
 				ImFont* regularFont = MANAGER(IconFont)->GetRegularFont();
 
-				std::vector<FUCK::ITool*>            looseTools;
-				StringMap<std::vector<FUCK::ITool*>> toolGroups;
-
-				for (auto* tool : _tools) {
-					if (!tool->ShowInSidebar())
-						continue;
-					const char* grp = tool->Group();
-					if (grp && *grp)
-						toolGroups[grp].push_back(tool);
-					else
-						looseTools.push_back(tool);
-				}
-
-				struct SidebarEntry
-				{
-					std::string                label;
-					bool                       isGroup = false;
-					FUCK::ITool*               tool    = nullptr;
-					std::vector<FUCK::ITool*>* tools   = nullptr;
+				auto GetOverrides = [&](FUCK::ITool* t) -> ToolOverrideState& {
+					return _toolOverrides[std::format("{}|{}", t->PluginName(), t->Name())];
 				};
 
-				std::vector<SidebarEntry> entries;
-				entries.reserve(looseTools.size() + toolGroups.size());
-
-				for (auto* t : looseTools) {
-					entries.push_back({ t->Name(), false, t, nullptr });
-				}
-
-				for (auto& [name, tools] : toolGroups) {
-					std::sort(tools.begin(), tools.end(), [](FUCK::ITool* a, FUCK::ITool* b) {
-						return _stricmp(a->Name(), b->Name()) < 0;
-					});
-					entries.push_back({ name, true, nullptr, &tools });
-				}
-
-				std::sort(entries.begin(), entries.end(), [](const SidebarEntry& a, const SidebarEntry& b) {
-					return _stricmp(a.label.c_str(), b.label.c_str()) < 0;
-				});
-
-				auto  apRight           = chromeArrow(false, m.sidebarItemH);
-				float alignedTextOffset = (m.sidebarIndent * 0.5f) + apRight.drawSize.x + (10.0f * m.uiScale);
+				std::vector<FUCK::ITool*>            favTools;
+				std::vector<FUCK::ITool*>            looseTools;
+				StringMap<std::vector<FUCK::ITool*>> toolGroups;
 
 				FUCK::BeginChild("Sidebar", ImVec2(m.sidebarWidth, availHeight), true, ImGuiWindowFlags_None);
 				{
@@ -1295,15 +1462,132 @@ void FUCKMan::Draw()
 					FUCK::SetCursorPos(ImVec2(headerStart.x, headerStart.y + m.sidebarItemH));
 					FUCK::SeparatorThick();
 
+					// --- FILTER BOX ---
+					static char filterBuf[128] = "";
+					if (_cfg.showSidebarFilter) {
+						ImGui::PushFont(regularFont, m.sidebarFontSize * 0.8f);
+						ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8.0f * m.uiScale, 6.0f * m.uiScale));
+						ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f * m.uiScale);
+						ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f * m.uiScale);
+
+						// Sync background with the active theme's input box styling
+						ImGui::PushStyleColor(ImGuiCol_FrameBg, ImGui::GetUserStyleColorVec4(ImGui::USER_STYLE::kComboBoxTextBox));
+
+						ImGui::SetNextItemWidth(-1.0f);
+						ImGui::InputTextWithHint("##SidebarFilter", "$FUCK_Sidebar_FilterHint"_T, filterBuf, sizeof(filterBuf));
+
+						ImGui::PopStyleColor(1);
+						ImGui::PopStyleVar(3);
+						ImGui::PopFont();
+
+						FUCK::Dummy(ImVec2(0.0f, 4.0f * m.uiScale));
+					}
+
+					bool        filtering = filterBuf[0] != '\0';
+					std::string lowerFilter;
+					if (filtering) {
+						lowerFilter = string::tolower(filterBuf);
+					}
+
+					// Evaluate and distribute tools into collections
+					for (auto* tool : _tools) {
+						if (!tool->ShowInSidebar())
+							continue;
+
+						auto&       over         = GetOverrides(tool);
+						std::string resolvedName = over.customName.empty() ? tool->Name() : over.customName;
+
+						if (filtering) {
+							std::string lowerName = string::tolower(resolvedName);
+							auto        score     = rapidfuzz::fuzz::partial_token_ratio(lowerFilter, lowerName);
+							if (score < 65.0)
+								continue;
+						}
+
+						if (_cfg.showSidebarFavourites && over.isFavourited) {
+							favTools.push_back(tool);
+						} else {
+							// Use the exact same resolution logic as the Settings Table
+							std::string resolvedGrp = over.customGroup;
+							if (resolvedGrp.empty())
+								resolvedGrp = tool->Group() ? tool->Group() : "";
+							if (resolvedGrp == "##ROOT")
+								resolvedGrp = "";
+
+							if (resolvedGrp.empty())
+								looseTools.push_back(tool);
+							else
+								toolGroups[resolvedGrp].push_back(tool);
+						}
+					}
+
+					auto sortTools = [&](FUCK::ITool* a, FUCK::ITool* b) {
+						auto& oa = GetOverrides(a);
+						auto& ob = GetOverrides(b);
+						if (oa.sortOrder != ob.sortOrder)
+							return oa.sortOrder < ob.sortOrder;
+						std::string na = oa.customName.empty() ? a->Name() : oa.customName;
+						std::string nb = ob.customName.empty() ? b->Name() : ob.customName;
+						return _stricmp(na.c_str(), nb.c_str()) < 0;
+					};
+
+					struct SidebarEntry
+					{
+						std::string                label;
+						std::string                origGroup;
+						bool                       isGroup   = false;
+						FUCK::ITool*               tool      = nullptr;
+						std::vector<FUCK::ITool*>* tools     = nullptr;
+						int                        sortOrder = 0;
+					};
+
+					std::vector<SidebarEntry> entries;
+
+					if (!favTools.empty()) {
+						std::sort(favTools.begin(), favTools.end(), sortTools);
+						if (_cfg.groupFavourites) {
+							entries.push_back({ TRANSLATE_S("$FUCK_Sidebar_FavouritesGroup"), "", true, nullptr, &favTools, -1000000 });
+						} else {
+							for (auto* t : favTools) {
+								entries.push_back({ GetOverrides(t).customName.empty() ? t->Name() : GetOverrides(t).customName, "", false, t, nullptr, -1000000 });
+							}
+						}
+					}
+
+					for (auto* t : looseTools) {
+						entries.push_back({ GetOverrides(t).customName.empty() ? t->Name() : GetOverrides(t).customName, "", false, t, nullptr, GetOverrides(t).sortOrder });
+					}
+
+					for (auto& [name, tools] : toolGroups) {
+						std::sort(tools.begin(), tools.end(), sortTools);
+						auto&       gOver      = _groupOverrides[name];
+						std::string dispName   = gOver.customName.empty() ? name : gOver.customName;
+						int         groupOrder = (_cfg.showSidebarFavourites && gOver.isFavourited) ? -999999 : gOver.sortOrder;
+						entries.push_back({ dispName, name, true, nullptr, &tools, groupOrder });
+					}
+
+					std::sort(entries.begin(), entries.end(), [](const SidebarEntry& a, const SidebarEntry& b) {
+						if (a.sortOrder != b.sortOrder)
+							return a.sortOrder < b.sortOrder;
+						return _stricmp(a.label.c_str(), b.label.c_str()) < 0;
+					});
+
+					auto  apRight           = chromeArrow(false, m.sidebarItemH);
+					float alignedTextOffset = (m.sidebarIndent * 0.5f) + apRight.drawSize.x + (10.0f * m.uiScale);
+
 					auto RenderSidebarItem = [&](FUCK::ITool* tool, const char* label, float extraIndent = 0.0f) {
-						// Push ID to prevent conflicts if multiple tools have same name
-						ImGui::PushID(tool);
+						std::string idLabel = std::format("##{}", label);
+						FUCK::PushID(idLabel.c_str());
 
-						bool        isSelected = (_activeTool == tool);
-						const auto  cursorPos  = FUCK::GetCursorPos();
-						std::string idLabel    = std::format("##{}", label);
+						bool  isSelected = (_activeTool == tool);
+						auto& over       = GetOverrides(tool);
 
-						if (FUCK::Selectable(idLabel.c_str(), isSelected, 0, ImVec2(0, m.sidebarItemH))) {
+						// Cache both Screen and Window positions before the Selectable moves the cursor!
+						const auto startScreenPos = FUCK::GetCursorScreenPos();
+						const auto startPos       = FUCK::GetCursorPos();
+
+						// Draw Selectable (Full width background & highlight)
+						if (FUCK::Selectable(idLabel.c_str(), isSelected, ImGuiSelectableFlags_AllowOverlap, ImVec2(0, m.sidebarItemH))) {
 							if (_activeTool && _activeTool != tool) {
 								FUCK::AbortBinding();
 								_activeTool->OnClose();
@@ -1313,21 +1597,53 @@ void FUCKMan::Draw()
 							_activeTool->OnOpen();
 						}
 
-						ImVec2 endPos = FUCK::GetCursorPos();
+						bool   itemHovered = FUCK::IsItemHovered(0);
+						ImVec2 endPos      = FUCK::GetCursorPos();  // Save position after selectable
 
 						// Bypassing FUCK::PushFont scaling
 						ImGui::PushFont(regularFont, m.sidebarFontSize);
-						float textY = cursorPos.y + (m.sidebarItemH - textHeightCalc) * 0.5f + textVisualOffset;
+						float textY = startPos.y + (m.sidebarItemH - textHeightCalc) * 0.5f + textVisualOffset;
 
-						FUCK::SetCursorPos({ cursorPos.x + alignedTextOffset + extraIndent, textY });
+						FUCK::SetCursorPos({ startPos.x + alignedTextOffset + extraIndent, textY });
 						FUCK::Text(label);
-						ImGui::PopFont();
-						FUCK::SetCursorPos(endPos);
 
-						ImGui::PopID();
+						// Draw Star
+						if (_cfg.showSidebarFavourites && (over.isFavourited || itemHovered)) {
+							const char* starIcon     = ICON_FA_STAR;
+							float       starScale    = 0.85f;
+							float       starFontSize = m.sidebarFontSize * starScale;
+
+							ImGui::PushFont(regularFont, starFontSize);
+							ImVec2 starSize = ImGui::CalcTextSize(starIcon);
+							ImGui::PopFont();
+
+							float starX = startScreenPos.x + sidebarAvailW - starSize.x - (15.0f * m.uiScale);
+							float starY = startScreenPos.y + (m.sidebarItemH - starFontSize) * 0.5f - (1.0f * m.uiScale);
+
+							// Hit-testing logic bypassing ImGui Item overlap clashing
+							ImRect starBB(
+								ImVec2(starX - (5.0f * m.uiScale), startScreenPos.y),
+								ImVec2(starX + starSize.x + (5.0f * m.uiScale), startScreenPos.y + m.sidebarItemH));
+							bool starHovered = ImGui::IsMouseHoveringRect(starBB.Min, starBB.Max);
+
+							if (starHovered && FUCK::IsMouseClicked(0)) {
+								over.isFavourited = !over.isFavourited;
+								SaveWorkspace();
+							}
+
+							ImU32 starCol = starHovered ? IM_COL32(255, 255, 100, 255) : (over.isFavourited ? IM_COL32(255, 215, 0, 255) : IM_COL32(150, 150, 150, 150));
+
+							ImGui::GetWindowDrawList()->AddText(regularFont, starFontSize,
+								ImVec2(starX, starY),
+								starCol, starIcon);
+						}
+
+						ImGui::PopFont();
+						FUCK::SetCursorPos(endPos);  // Restore cursor to next line
+						FUCK::PopID();
 					};
 
-					auto RenderSidebarGroup = [&](const std::string& groupName, std::vector<FUCK::ITool*>& tools) {
+					auto RenderSidebarGroup = [&](const std::string& groupName, const std::string& origGroup, std::vector<FUCK::ITool*>& tools) {
 						// Bypassing FUCK::PushFont scaling
 						ImGui::PushFont(regularFont, m.sidebarFontSize);
 
@@ -1367,6 +1683,40 @@ void FUCKMan::Draw()
 
 							float textY = bb.Min.y + (m.sidebarItemH - ImGui::CalcTextSize(groupName.c_str()).y) * 0.5f + textVisualOffset;
 							ImGui::RenderText({ pos.x + alignedTextOffset, textY }, groupName.c_str());
+
+							// Draw Star
+							if (!origGroup.empty()) {
+								auto& gOver = _groupOverrides[origGroup];
+								if (_cfg.showSidebarFavourites && (gOver.isFavourited || hovered)) {
+									const char* starIcon     = ICON_FA_STAR;
+									float       starScale    = 0.85f;
+									float       starFontSize = m.sidebarFontSize * starScale;
+
+									ImGui::PushFont(regularFont, starFontSize);
+									ImVec2 starSize = ImGui::CalcTextSize(starIcon);
+									ImGui::PopFont();
+
+									float starX = bb.Min.x + sidebarAvailW - starSize.x - (15.0f * m.uiScale);
+									float starY = bb.Min.y + (m.sidebarItemH - starFontSize) * 0.5f - (1.0f * m.uiScale);
+
+									// Hit-testing logic bypassing ImGui Item overlap clashing
+									ImRect starBB(
+										ImVec2(starX - (5.0f * m.uiScale), bb.Min.y),
+										ImVec2(starX + starSize.x + (5.0f * m.uiScale), bb.Min.y + m.sidebarItemH));
+									bool starHovered = ImGui::IsMouseHoveringRect(starBB.Min, starBB.Max);
+
+									if (starHovered && FUCK::IsMouseClicked(0)) {
+										gOver.isFavourited = !gOver.isFavourited;
+										SaveWorkspace();
+									}
+
+									ImU32 starCol = starHovered ? IM_COL32(255, 255, 100, 255) : (gOver.isFavourited ? IM_COL32(255, 215, 0, 255) : IM_COL32(150, 150, 150, 150));
+
+									ImGui::GetWindowDrawList()->AddText(regularFont, starFontSize,
+										ImVec2(starX, starY),
+										starCol, starIcon);
+								}
+							}
 						}
 
 						if (isOpen) {
@@ -1381,7 +1731,7 @@ void FUCKMan::Draw()
 
 					for (auto& entry : entries) {
 						if (entry.isGroup) {
-							RenderSidebarGroup(entry.label, *entry.tools);
+							RenderSidebarGroup(entry.label, entry.origGroup, *entry.tools);
 						} else {
 							RenderSidebarItem(entry.tool, entry.label.c_str());
 						}

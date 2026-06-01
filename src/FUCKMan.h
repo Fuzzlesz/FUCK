@@ -24,7 +24,25 @@ public:
 		bool        sidebarOnRight{ false };
 		bool        injectSystemMenu{ true };
 		bool        replaceHelpMenu{ false };
+		bool        showSidebarFilter{ true };
+		bool        showSidebarFavourites{ true };
+		bool        groupFavourites{ true };
 		std::string currentFont{ "Default" };
+	};
+
+	struct ToolOverrideState
+	{
+		bool        isFavourited = false;
+		std::string customName   = "";
+		std::string customGroup  = "";
+		int         sortOrder    = 0;
+	};
+
+	struct GroupOverrideState
+	{
+		bool        isFavourited = false;
+		std::string customName   = "";
+		int         sortOrder    = 0;
 	};
 
 	friend class SettingsTool;
@@ -58,6 +76,9 @@ public:
 	void LoadSettings(const CSimpleIniA& a_ini);
 	void SaveSettings(CSimpleIniA& a_ini);
 	void ResetSettings();
+
+	void LoadWorkspace();
+	void SaveWorkspace();
 
 	void Save();
 	void SaveKeybinds();
@@ -115,8 +136,12 @@ private:
 	std::vector<FUCK::IWindow*>    _suspendedWindows;
 	std::set<std::string>          _pausedMenus;
 
-	FUCK::ITool* _activeTool = nullptr;
-	bool         _isOpen     = false;
+	StringMap<ToolOverrideState>  _toolOverrides;
+	StringMap<GroupOverrideState> _groupOverrides;
+
+	FUCK::ITool* _activeTool      = nullptr;
+	bool         _isOpen          = false;
+	bool         _workspaceLoaded = false;
 
 	// Game State
 	bool _isGameHardPaused = false;
@@ -132,8 +157,8 @@ private:
 	bool _suspendRendering = false;
 
 	// Config / Settings State
-	FUCKConfig       _cfg;
-	const FUCKConfig _def;  // defaults
+	FUCKConfig _cfg;
+	FUCKConfig _def;  // defaults
 
 	float _activeScale         = 1.0f;
 	bool  _isIgnoringUserScale = false;

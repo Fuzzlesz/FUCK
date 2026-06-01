@@ -18,7 +18,7 @@ public:
 	{
 		static Settings instance;
 		return &instance;
-	}
+	} 
 
 	// Centralised instance for the framework's own settings
 	static inline const FUCK::PluginSettings Core{ "FUCK" };
@@ -30,6 +30,8 @@ public:
 	std::string GetStylesPath() const       { return Core.GetConfigDirectory() + "styles"; }
 	std::string GetUserFontsPath() const    { return Core.GetConfigDirectory() + "fonts"; }
 	std::string GetDefaultStylePath() const { return Core.GetConfigDirectory() + "defaultstyle.ini"; }
+	std::string GetToolsPath() const        { return Core.GetConfigDirectory() + "tools"; }
+	std::string GetWorkspacePath() const    { return Core.GetConfigDirectory() + "workspace.json"; }
 
 	const char* GetLegacyFontsPath() const  { return legacyFontsPath; }
 	const char* GetCSFontsPath() const      { return csFontsPath; }

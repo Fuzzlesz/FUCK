@@ -1647,50 +1647,7 @@ namespace FUCK
 		{
 			const char* val = ini.GetValue(sec, key, defVal);
 			strncpy_s(dest, N, val, _TRUNCATE);
-		}
-
-		// --- Window Geometry Helpers ---
-		inline ImVec2 LoadScaledPos(const CSimpleIniA& ini, const char* sec, const ImVec2& defUnscaled)
-		{
-			float scale = GetResolutionScale();
-			if (scale < 0.1f)
-				scale = 1.0f;
-			float x = static_cast<float>(ini.GetDoubleValue(sec, "X", defUnscaled.x));
-			float y = static_cast<float>(ini.GetDoubleValue(sec, "Y", defUnscaled.y));
-			return ImVec2((x == -1.0f) ? -1.0f : (x * scale), (y == -1.0f) ? -1.0f : (y * scale));
-		}
-
-		inline ImVec2 LoadScaledSize(const CSimpleIniA& ini, const char* sec, const ImVec2& defUnscaled)
-		{
-			float scale = GetGlobalScale();
-			if (scale < 0.1f)
-				scale = 1.0f;
-			float w = static_cast<float>(ini.GetDoubleValue(sec, "Width", defUnscaled.x));
-			float h = static_cast<float>(ini.GetDoubleValue(sec, "Height", defUnscaled.y));
-			return ImVec2((w == -1.0f) ? -1.0f : (w * scale), (h == -1.0f) ? -1.0f : (h * scale));
-		}
-
-		inline void SaveScaledPos(CSimpleIniA& ini, const char* sec, const ImVec2& curScaled, const ImVec2& defUnscaled)
-		{
-			float scale = GetResolutionScale();
-			if (scale < 0.1f)
-				scale = 1.0f;
-			float unscaledX = (curScaled.x == -1.0f) ? -1.0f : (curScaled.x / scale);
-			float unscaledY = (curScaled.y == -1.0f) ? -1.0f : (curScaled.y / scale);
-			SaveDouble(ini, sec, "X", unscaledX, defUnscaled.x);
-			SaveDouble(ini, sec, "Y", unscaledY, defUnscaled.y);
-		}
-
-		inline void SaveScaledSize(CSimpleIniA& ini, const char* sec, const ImVec2& curScaled, const ImVec2& defUnscaled)
-		{
-			float scale = GetGlobalScale();
-			if (scale < 0.1f)
-				scale = 1.0f;
-			float unscaledW = (curScaled.x == -1.0f) ? -1.0f : (curScaled.x / scale);
-			float unscaledH = (curScaled.y == -1.0f) ? -1.0f : (curScaled.y / scale);
-			SaveDouble(ini, sec, "Width", unscaledW, defUnscaled.x);
-			SaveDouble(ini, sec, "Height", unscaledH, defUnscaled.y);
-		}
+		}		
 	}
 
 	/// @brief RAII Wrapper for listening to Skyrim UI Menu events.
