@@ -182,6 +182,8 @@ namespace ImGui
 		float scale     = FUCKMan::GetSingleton()->GetActiveScale() * ImGui::Renderer::GetResolutionScale();
 		float size      = (largeFont ? largeFont->LegacySize : ImGui::GetStyle().FontSizeBase) * scale;
 
+		ImGui::Dummy(ImVec2(0.0f, 12.0f * scale));
+
 		ImGui::PushFont(largeFont, size);
 		PushStyleColor(ImGuiCol_Text, GetUserStyleColorU32(USER_STYLE::kHeaderText));
 		TextUnformatted(label);

@@ -40,7 +40,6 @@ void SettingsTool::Draw()
 		// TAB 1: GENERAL
 		// --------------------------------------------------
 		if (FUCK::BeginTabItem("$FUCK_Settings_Tab"_T)) {
-			FUCK::Spacing(2);
 
 			FUCK::Header("$FUCK_Settings_Behaviour"_T);
 			FUCK::Spacing(2);
@@ -71,7 +70,6 @@ void SettingsTool::Draw()
 			}
 			FUCK::Spacing();
 			FUCK::TextColoredWrapped(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "$FUCK_Settings_PauseDesc"_T);
-			FUCK::Spacing(2);
 
 			FUCK::Header("$FUCK_Settings_Appearance"_T);
 			FUCK::Spacing(2);
@@ -129,7 +127,6 @@ void SettingsTool::Draw()
 		// --------------------------------------------------------
 		// --------------------------------------------------
 		if (FUCK::BeginTabItem("$FUCK_Styles_Title"_T)) {
-			FUCK::Spacing(2);
 
 			FUCK::Header("$FUCK_Styles_Presets"_T);
 			FUCK::Spacing();
@@ -196,8 +193,6 @@ void SettingsTool::Draw()
 				s_infoCached = false;
 			}
 			s_wasInfoTabOpen = true;
-
-			FUCK::Spacing(2);
 
 			FUCK::Header("$FUCK_Settings_Info"_T);
 			FUCK::Spacing(2);

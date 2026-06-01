@@ -161,11 +161,10 @@ void ThemeEditorWindow::Draw()
 		if (FUCK::SliderFloat("$FUCK_Styles_IndentSpacing"_T, &style->user.indentSpacing, 0.0f, 150.0f))
 			style->RefreshStyle();
 
-		FUCK::Spacing();
-		FUCK::Header("Widget Alignment");
+		FUCK::Header("$FUCK_Styles_WidgetAlignment"_T);
 
 		static float tempSplit = style->user.widgetSplit;
-		FUCK::DragFloat("Split Ratio", &tempSplit, 0.005f, 0.1f, 0.9f, "%.2f");
+		FUCK::DragFloat("$FUCK_Styles_SplitRatio"_T, &tempSplit, 0.005f, 0.1f, 0.9f, "%.2f");
 		if (FUCK::IsItemDeactivatedAfterEdit()) {
 			style->user.widgetSplit = tempSplit;
 			style->RefreshStyle();
@@ -173,22 +172,19 @@ void ThemeEditorWindow::Draw()
 			tempSplit = style->user.widgetSplit;
 		}
 
-		if (FUCK::DragFloat2("Label Align (X/Y)", &style->user.labelAlign.x, 0.01f, 0.0f, 1.0f, "%.2f"))
+		if (FUCK::DragFloat2("$FUCK_Styles_LabelAlign"_T, &style->user.labelAlign.x, 0.01f, 0.0f, 1.0f, "%.2f"))
 			style->RefreshStyle();
 
-		FUCK::Spacing();
 		FUCK::Header("$FUCK_Styles_Borders"_T);
 		if (FUCK::SliderFloat("$FUCK_Styles_WindowBorderSize"_T, &style->user.borderSize, 0.0f, 5.0f))
 			style->RefreshStyle();
 		if (FUCK::SliderFloat("$FUCK_Styles_ButtonTabBorderSize"_T, &style->user.buttonBorderSize, 0.0f, 5.0f))
 			style->RefreshStyle();
 
-		FUCK::Spacing();
-		FUCK::Header("Icons");
-		if (FUCK::SliderFloat("Icon Scale", &style->user.iconScale, 0.5f, 3.0f, "%.2f"))
+		FUCK::Header("$FUCK_Styles_Icons"_T);
+		if (FUCK::SliderFloat("$FUCK_Styles_IconScale"_T, &style->user.iconScale, 0.5f, 3.0f, "%.2f"))
 			style->RefreshStyle();
 
-		FUCK::Spacing();
 		FUCK::Header("$FUCK_Styles_Rounding"_T);
 		auto DragRound = [&](const char* label, float* v) {
 			if (FUCK::SliderFloat(label, v, 0.0f, 20.0f, "%.0f"))
