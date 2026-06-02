@@ -785,9 +785,15 @@ void SettingsTool::Draw()
 		// --------------------------------------------------
 		// TAB 4: INFO
 		// --------------------------------------------------
-		static bool                     s_wasInfoTabOpen = false;
-		static bool                     s_infoCached     = false;
-		static std::vector<std::string> pluginsList;
+		static bool s_wasInfoTabOpen = false;
+		static bool s_infoCached     = false;
+
+		struct PluginDetails
+		{
+			std::vector<std::string> tools;
+			std::vector<std::string> windows;
+		};
+		static StringMap<PluginDetails> pluginMap;
 		static std::vector<std::string> iniList;
 
 		bool isInfoTabOpen = FUCK::BeginTabItem("$FUCK_Settings_TabInfo"_T);
@@ -805,30 +811,42 @@ void SettingsTool::Draw()
 			FUCK::TextWrapped("$FUCK_Settings_Desc"_T);
 			FUCK::PopStyleColor();
 			FUCK::Spacing(2);
-			FUCK::TextDisabled("FUCK API Version: %d", FUCK_API_VERSION);
+
+			// Show API version and Root Config Path
+			FUCK::TextDisabled("$FUCK_Info_APIVersion"_T, FUCK_API_VERSION);
+			FUCK::TextDisabled("$FUCK_Info_ConfigDir"_T, R"(Data\FUCKs\)");
 			FUCK::Spacing(4);
 
-			// --- ON-DEMAND SCAN CACHING ---
-			if (!s_infoCached) {
-				pluginsList.clear();
-				iniList.clear();
+			static std::vector<std::string> sortedPluginNames;  // add alongside pluginMap/iniList statics
 
-				// Gather Plugins
-				std::set<std::string> pluginNames;
+			if (!s_infoCached) {
+				pluginMap.clear();
+				iniList.clear();
+				sortedPluginNames.clear();
 
 				for (auto* tool : manager->_tools) {
-					if (tool->PluginName() && tool->PluginName()[0] != '\0') {
-						pluginNames.insert(tool->PluginName());
+					if (!string::is_empty(tool->PluginName())) {
+						pluginMap[tool->PluginName()].tools.push_back(tool->Name());
 					}
 				}
 				for (auto* win : manager->_windows) {
-					if (win->PluginName() && win->PluginName()[0] != '\0') {
-						pluginNames.insert(win->PluginName());
+					if (!string::is_empty(win->PluginName())) {
+						pluginMap[win->PluginName()].windows.push_back(win->Id());
 					}
 				}
-				pluginsList.assign(pluginNames.begin(), pluginNames.end());
 
-				// Gather INIs — single list, labelled as "PluginName/filename"
+				for (auto& [pluginName, details] : pluginMap) {
+					std::sort(details.tools.begin(), details.tools.end(),
+						[](const std::string& a, const std::string& b) { return _stricmp(a.c_str(), b.c_str()) < 0; });
+					std::sort(details.windows.begin(), details.windows.end(),
+						[](const std::string& a, const std::string& b) { return _stricmp(a.c_str(), b.c_str()) < 0; });
+
+					sortedPluginNames.push_back(pluginName);
+				}
+
+				std::sort(sortedPluginNames.begin(), sortedPluginNames.end(),
+					[](const std::string& a, const std::string& b) { return _stricmp(a.c_str(), b.c_str()) < 0; });
+
 				{
 					std::lock_guard<std::mutex> iniLock(Settings::GetSingleton()->trackingMutex);
 					for (const auto& iniPath : Settings::GetSingleton()->trackedINIs) {
@@ -837,42 +855,43 @@ void SettingsTool::Draw()
 						std::string filename  = p.filename().string();
 						std::string parentDir = p.parent_path().filename().string();
 
-						if (Utils::IContains(filename, "SSEDisplayTweaks"))
+						if (string::icontains(filename, "SSEDisplayTweaks"))
 							continue;
 
-						std::string label = parentDir.empty() ? filename : parentDir + "/" + filename;
+						std::string label = parentDir.empty() ? filename : parentDir + "\\" + filename;
 						iniList.push_back(label);
 					}
+					std::sort(iniList.begin(), iniList.end(),
+						[](const std::string& a, const std::string& b) { return _stricmp(a.c_str(), b.c_str()) < 0; });
 				}
 				s_infoCached = true;
 			}
 
-			// Helper Lambda: Print a sorted list inside a dynamic scrolling panel
+			// --- Helper Lambda: Draw a tagged entry row (tool or window) ---
+			auto DrawEntry = [&](const std::string& name, const char* tag, float tagW, float maxTagW, const ImVec4& color) {
+				float startX = FUCK::GetCursorPos().x;
+				FUCK::SetCursorPosX(startX + (maxTagW - tagW));
+				FUCK::TextColored(color, "%s", tag);
+				FUCK::SameLine();
+				FUCK::TextUnformatted(name.c_str());
+			};
+
+			// --- Helper Lambda: Print a simple vertical list (Used for Settings Files) ---
 			auto PrintListInPanel = [&](std::vector<std::string>& items, const char* panelId) {
 				if (items.empty()) {
 					FUCK::TextDisabled("$FUCK_Info_NoneFound"_T);
 				} else {
-					// Case-Insensitive Alphabetical Sort
-					std::sort(items.begin(), items.end(), [](const std::string& a, const std::string& b) {
-						return _stricmp(a.c_str(), b.c_str()) < 0;
-					});
-
-					// Calculate how many columns we can fit inside this specific panel
-					float availWidth  = FUCK::GetContentRegionAvail().x;
-					float minColWidth = 280.0f * FUCK::GetGlobalScale();
-					int   numCols     = std::max(1, static_cast<int>(availWidth / minColWidth));
-
-					// Let the panel stretch to the bottom of the window
 					float childHeight = FUCK::GetContentRegionAvail().y;
-
-					// Draw an inset scrolling panel
 					FUCK::PushStyleColor(ImGuiCol_ChildBg, FUCK::GetStyleColorVec4(ImGuiCol_FrameBg));
 					FUCK::BeginChild(panelId, ImVec2(0, childHeight), true, 0);
 
-					if (FUCK::BeginTable(panelId, numCols, FUCK::TableFlags::kNone)) {
+					if (FUCK::BeginTable(panelId, 1, FUCK::TableFlags::kRowBg)) {
+						FUCK::TableSetupColumn("", FUCK::TableColumnFlags::kWidthStretch);
 						for (const auto& item : items) {
+							FUCK::TableNextRow();
 							FUCK::TableNextColumn();
-							FUCK::Text("  - %s", item.c_str());
+							FUCK::SetCursorPosX(FUCK::GetCursorPos().x + (5.0f * FUCK::GetGlobalScale()));
+							FUCK::TextUnformatted(item.c_str());
 						}
 						FUCK::EndTable();
 					}
@@ -884,11 +903,43 @@ void SettingsTool::Draw()
 
 			// --- 2-COLUMN SIDE-BY-SIDE LAYOUT ---
 			if (FUCK::BeginTable("InfoLayoutTable", 2, FUCK::TableFlags::kNone)) {
-				// Column 1: Plugins
+				// Column 1: Plugins Breakdown
 				FUCK::TableNextColumn();
 				FUCK::Header("$FUCK_Info_RegisteredMods"_T);
 				FUCK::Spacing(2);
-				PrintListInPanel(pluginsList, "PluginsPanel");
+
+				if (pluginMap.empty()) {
+					FUCK::TextDisabled("$FUCK_Info_NoneFound"_T);
+				} else {
+					float childHeight = FUCK::GetContentRegionAvail().y;
+					FUCK::PushStyleColor(ImGuiCol_ChildBg, FUCK::GetStyleColorVec4(ImGuiCol_FrameBg));
+
+					FUCK::BeginChild("PluginsPanelChild", ImVec2(0, childHeight), true, 0);
+
+					const char* toolTag  = "$FUCK_Info_Tool"_T;
+					const char* winTag   = "$FUCK_Info_Window"_T;
+					float       toolTagW = FUCK::CalcTextSize(toolTag).x;
+					float       winTagW  = FUCK::CalcTextSize(winTag).x;
+					float       maxTagW  = std::max(toolTagW, winTagW);
+
+					for (const auto& plugin : sortedPluginNames) {
+						const auto& details = pluginMap.at(plugin);
+						FUCK::PushID(plugin.c_str());
+						if (FUCK::TreeNode(plugin.c_str())) {
+							for (const auto& tool : details.tools) {
+								DrawEntry(tool, toolTag, toolTagW, maxTagW, ImVec4(0.5f, 0.8f, 1.0f, 1.0f));
+							}
+							for (const auto& win : details.windows) {
+								DrawEntry(win, winTag, winTagW, maxTagW, ImVec4(0.5f, 1.0f, 0.5f, 1.0f));
+							}
+							FUCK::TreePop();
+						}
+						FUCK::PopID();
+					}
+
+					FUCK::EndChild();
+					FUCK::PopStyleColor();
+				}
 
 				// Column 2: INIs
 				FUCK::TableNextColumn();
