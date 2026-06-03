@@ -51,7 +51,7 @@ namespace ImGui
 					srvDesc.Texture2D.MipLevels       = 1;
 					srvDesc.Texture2D.MostDetailedMip = 0;
 
-					hr     = reinterpret_cast<ID3D11Device*>(renderer->data.forwarder)->CreateShaderResourceView(pTexture.Get(), &srvDesc, &srView);
+					hr     = reinterpret_cast<ID3D11Device*>(renderer->data.forwarder)->CreateShaderResourceView(pTexture.Get(), &srvDesc, srView.ReleaseAndGetAddressOf());
 					result = SUCCEEDED(hr);
 				}
 

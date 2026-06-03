@@ -100,6 +100,7 @@ namespace ImGui
 		const bool hovered = IsWidgetFocused(newLabel.empty() ? label : newLabel.c_str());
 		const bool dim     = MANAGER(Input)->IsInputGamepad() && !hovered;
 
+		// Strip hidden ## IDs from the label before measuring text
 		std::string_view labelView(label);
 		auto             hashPos = labelView.find("##");
 		if (hashPos != std::string_view::npos) {
@@ -175,8 +176,9 @@ namespace ImGui
 
 	void Header(const char* label)
 	{
+		auto* manager   = FUCKMan::GetSingleton();
 		auto  largeFont = MANAGER(IconFont)->GetLargeFont();
-		float scale     = FUCKMan::GetSingleton()->GetActiveScale() * Renderer::GetResolutionScale();
+		float scale     = manager->GetActiveScale() * Renderer::GetResolutionScale();
 		float size      = (largeFont ? largeFont->LegacySize : GetStyle().FontSizeBase) * scale;
 
 		Dummy(ImVec2(0.0f, 12.0f * scale));

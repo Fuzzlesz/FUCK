@@ -310,10 +310,11 @@ void SettingsTool::Draw()
 			float tableScale = FUCK::GetGlobalScale();
 			FUCK::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(FUCK::GetStyleVarVec(ImGuiStyleVar_FramePadding).x, 7.0f * tableScale));
 
-			float       tableRightEdge = FUCK::GetCursorScreenPos().x + FUCK::GetContentRegionAvail().x;
-			std::string tableId        = std::format("WorkspaceToolTable_{}", s_tableResetCounter);
+			float tableRightEdge = FUCK::GetCursorScreenPos().x + FUCK::GetContentRegionAvail().x;
 
-			if (FUCK::BeginTable(tableId.c_str(), 6, FUCK::TableFlags::kBorders | FUCK::TableFlags::kRowBg | FUCK::TableFlags::kResizable | FUCK::TableFlags::kSizingStretchProp | FUCK::TableFlags::kNoSavedSettings)) {
+			FUCK::PushID(s_tableResetCounter);
+
+			if (FUCK::BeginTable("WorkspaceToolTable", 6, FUCK::TableFlags::kBorders | FUCK::TableFlags::kRowBg | FUCK::TableFlags::kResizable | FUCK::TableFlags::kSizingStretchProp | FUCK::TableFlags::kNoSavedSettings)) {
 				// Base Columns
 				FUCK::TableSetupColumn("##Hide", FUCK::TableColumnFlags::kWidthFixed | FUCK::TableColumnFlags::kNoSort, 35.0f * tableScale);
 				FUCK::TableSetupColumn("$FUCK_Sidebar_TableOrig"_T, FUCK::TableColumnFlags::kWidthStretch | FUCK::TableColumnFlags::kNoSort, 2.0f);
@@ -718,6 +719,7 @@ void SettingsTool::Draw()
 				}
 
 				FUCK::EndTable();
+				FUCK::PopID();
 			}
 
 			FUCK::PopStyleVar();

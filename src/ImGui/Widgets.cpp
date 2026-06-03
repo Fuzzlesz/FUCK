@@ -86,8 +86,9 @@ namespace ImGui
 			return result;
 		}
 
-	void AlignedWidgetLayout(const char* label, bool alignFar, bool labelLeft, float contentWidth, std::function<void()> drawContent, float targetHeight = -1.0f)
-	{
+		template <typename TDrawFunc>
+		void AlignedWidgetLayout(const char* label, bool alignFar, bool labelLeft, float contentWidth, TDrawFunc drawContent, float targetHeight = -1.0f)
+		{
 			BeginGroup();
 			PushID(label);
 
