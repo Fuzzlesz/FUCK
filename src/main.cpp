@@ -2,6 +2,7 @@
 #include "FUCKMan.h"
 #include "ImGui/Renderer.h"
 #include "ImGui/Styles.h"
+#include "ImGui/Widgets.h"
 #include "System/Compat.h"
 #include "System/Console.h"
 #include "System/Hooks.h"
@@ -38,6 +39,10 @@ void OnInit(SKSE::MessagingInterface::Message* a_msg)
 		MANAGER(Hotkeys)->Enable(true);
 
 		logger::info("FUCK Data Loaded & Hotkeys Enabled");
+		break;
+
+	case SKSE::MessagingInterface::kPreLoadGame:
+		ImGui::ClearFormCaches();
 		break;
 	}
 }

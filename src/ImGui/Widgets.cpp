@@ -240,6 +240,23 @@ namespace ImGui
 	}
 
 	// ==================================================
+	// CACHES
+	// ==================================================
+	struct ComboFilterState
+	{
+		char pattern[256] = { 0 };
+	};
+
+	static Map<ImGuiID, ComboFilterState>                  s_comboFilterStates;
+	static Map<ImGuiID, FormComboBoxFiltered<RE::TESForm>> s_FormCaches;
+
+	void ClearFormCaches()
+	{
+		s_comboFilterStates.clear();
+		s_FormCaches.clear();
+	}
+
+	// ==================================================
 	// CORE DRAWING & WIDGETS
 	// ==================================================
 
@@ -457,7 +474,7 @@ namespace ImGui
 		return pressed;
 	}
 
-	bool ComboWithFilter(const char* label, int* current_item, const std::vector<std::string>& items, int popup_max_height_in_items)
+	bool ComboWithFilter(const char* label, int* current_item, std::span<const std::string> items, int popup_max_height_in_items)
 	{
 		float scale = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
 
@@ -481,12 +498,7 @@ namespace ImGui
 		ImVec2 widgetPos = GetCursorScreenPos();
 		float  width     = CalcItemWidth();
 
-		struct State
-		{
-			char pattern[256] = { 0 };
-		};
-		static Map<ImGuiID, State> states;
-		ImGuiID                    id = window->GetID(idStr.c_str());
+		ImGuiID id = window->GetID(idStr.c_str());
 
 		if (popup_max_height_in_items == -1)
 			popup_max_height_in_items = 8;
@@ -547,16 +559,21 @@ namespace ImGui
 
 		ImGui::PushItemWidth(-FLT_MIN);
 		ImGui::Dummy(ImVec2(0.0f, 1.0f));
-		InputText("##filter", states[id].pattern, 256, ImGuiInputTextFlags_AutoSelectAll);
+		InputText("##filter", s_comboFilterStates[id].pattern, 256, ImGuiInputTextFlags_AutoSelectAll);
 		ImGui::PopItemWidth();
 
 		ImGui::PopStyleColor(3);
 
 		std::vector<std::pair<int, double>> itemScoreVector;
-		bool                                filtering = states[id].pattern[0] != '\0';
+		bool                                filtering = s_comboFilterStates[id].pattern[0] != '\0';
 		if (filtering) {
+			// Cast the search pattern to a string_view once
+			std::string_view searchPattern(s_comboFilterStates[id].pattern);
+
 			for (int i = 0; i < static_cast<int>(items.size()); i++) {
-				auto score = rapidfuzz::fuzz::partial_token_ratio(states[id].pattern, items[i].c_str());
+				// Cast the item to a string_view for RapidFuzz
+				auto score = rapidfuzz::fuzz::partial_token_ratio(searchPattern, std::string_view(items[i]));
+
 				if (score >= 65.0)
 					itemScoreVector.push_back({ i, score });
 			}
@@ -1289,9 +1306,6 @@ namespace ImGui
 			PopStyleColor();
 		return changed;
 	}
-
-	static Map<ImGuiID, FormComboBoxFiltered<RE::TESForm>> s_FormCaches;
-	void                                                   ClearFormCaches() { s_FormCaches.clear(); }
 
 	bool ComboForm(const char* label, RE::FormID* currentFormID, RE::FormType formType)
 	{
