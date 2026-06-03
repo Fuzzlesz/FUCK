@@ -793,8 +793,8 @@ void SettingsTool::Draw()
 			std::vector<std::string> tools;
 			std::vector<std::string> windows;
 		};
-		static StringMap<PluginDetails> pluginMap;
-		static std::vector<std::string> iniList;
+		static StringMap<PluginDetails>                         pluginMap;
+		static std::vector<std::pair<std::string, std::string>> iniList;
 
 		bool isInfoTabOpen = FUCK::BeginTabItem("$FUCK_Settings_TabInfo"_T);
 
@@ -817,7 +817,7 @@ void SettingsTool::Draw()
 			FUCK::TextDisabled("$FUCK_Info_ConfigDir"_T, R"(Data\FUCKs\)");
 			FUCK::Spacing(4);
 
-			static std::vector<std::string> sortedPluginNames;  // add alongside pluginMap/iniList statics
+			static std::vector<std::string> sortedPluginNames;
 
 			if (!s_infoCached) {
 				pluginMap.clear();
@@ -857,11 +857,17 @@ void SettingsTool::Draw()
 						if (string::icontains(filename, "SSEDisplayTweaks"))
 							continue;
 
-						std::string label = parentDir.empty() ? filename : parentDir + "\\" + filename;
-						iniList.push_back(label);
+						// Add separated to the list so we can sort properly by parent
+						iniList.push_back({ parentDir, filename });
 					}
+					// Sort specifically by parentDir (plugin) first, then filename
 					std::sort(iniList.begin(), iniList.end(),
-						[](const std::string& a, const std::string& b) { return _stricmp(a.c_str(), b.c_str()) < 0; });
+						[](const auto& a, const auto& b) {
+							int cmp = _stricmp(a.first.c_str(), b.first.c_str());
+							if (cmp != 0)
+								return cmp < 0;
+							return _stricmp(a.second.c_str(), b.second.c_str()) < 0;
+						});
 				}
 				s_infoCached = true;
 			}
@@ -876,7 +882,7 @@ void SettingsTool::Draw()
 			};
 
 			// --- Helper Lambda: Print a simple vertical list (Used for Settings Files) ---
-			auto PrintListInPanel = [&](std::vector<std::string>& items, const char* panelId) {
+			auto PrintListInPanel = [&](std::vector<std::pair<std::string, std::string>>& items, const char* panelId) {
 				if (items.empty()) {
 					FUCK::TextDisabled("$FUCK_Info_NoneFound"_T);
 				} else {
@@ -884,13 +890,14 @@ void SettingsTool::Draw()
 					FUCK::PushStyleColor(ImGuiCol_ChildBg, FUCK::GetStyleColorVec4(ImGuiCol_FrameBg));
 					FUCK::BeginChild(panelId, ImVec2(0, childHeight), true, 0);
 
-					if (FUCK::BeginTable(panelId, 1, FUCK::TableFlags::kRowBg)) {
+					if (FUCK::BeginTable(panelId, 1, FUCK::TableFlags::kNone)) {
 						FUCK::TableSetupColumn("", FUCK::TableColumnFlags::kWidthStretch);
 						for (const auto& item : items) {
 							FUCK::TableNextRow();
 							FUCK::TableNextColumn();
 							FUCK::SetCursorPosX(FUCK::GetCursorPos().x + (5.0f * FUCK::GetGlobalScale()));
-							FUCK::TextUnformatted(item.c_str());
+							std::string label = item.first.empty() ? item.second : item.first + "\\" + item.second;
+							FUCK::TextUnformatted(label.c_str());
 						}
 						FUCK::EndTable();
 					}
