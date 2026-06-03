@@ -8,12 +8,12 @@ void Settings::LoadINI(const char* a_path, const INIFunc a_func, bool a_generate
 	CSimpleIniA ini;
 	ini.SetUnicode();
 
-	std::filesystem::path p(a_path);
+	fs::path p(a_path);
 	p.make_preferred();
 	auto pathStr = p.string();
 
 	if (a_generate) {
-		std::filesystem::create_directories(p.parent_path());
+		fs::create_directories(p.parent_path());
 	}
 
 	SI_Error rc = ini.LoadFile(pathStr.c_str());
@@ -32,8 +32,8 @@ void Settings::LoadINI(const char* a_path, const INIFunc a_func, bool a_generate
 
 		if (a_generate) {
 			if (ini.IsEmpty()) {
-				if (std::filesystem::exists(p)) {
-					std::filesystem::remove(p);
+				if (fs::exists(p)) {
+					fs::remove(p);
 				}
 				std::lock_guard<std::mutex> lock(GetSingleton()->trackingMutex);
 				GetSingleton()->trackedINIs.erase(pathStr);

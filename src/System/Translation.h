@@ -29,7 +29,7 @@ namespace Translation
 		}
 
 	private:
-		bool ParseFile(const std::filesystem::path& a_path);
+		bool ParseFile(const fs::path& a_path);
 
 		StringMap<std::string> translationMap{};
 	};

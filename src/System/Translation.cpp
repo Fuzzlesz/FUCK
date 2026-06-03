@@ -18,12 +18,12 @@ namespace Translation
 
 		// Construct path: Data\Interface\Translations\{NAME}_{LANG}.txt
 		std::string lang = GetGameLanguage();
-		std::filesystem::path path{ std::format(R"(Data\Interface\Translations\{}_{}.txt)", a_name, lang) };
+		fs::path path{ std::format(R"(Data\Interface\Translations\{}_{}.txt)", a_name, lang) };
 
 		if (!ParseFile(path)) {
 			// Fallback to ENGLISH if specific language fails
-			std::filesystem::path fallback{ std::format(R"(Data\Interface\Translations\{}_ENGLISH.txt)", a_name) };
-			if (std::filesystem::exists(fallback)) {
+			fs::path fallback{ std::format(R"(Data\Interface\Translations\{}_ENGLISH.txt)", a_name) };
+			if (fs::exists(fallback)) {
 				logger::info("Failed to load translation file in {}, loading default ENGLISH file...", path.string());
 
 				std::lock_guard<std::mutex> lock(trackingMutex);
@@ -39,9 +39,9 @@ namespace Translation
 		}
 	}
 
-	bool Manager::ParseFile(const std::filesystem::path& a_path)
+	bool Manager::ParseFile(const fs::path& a_path)
 	{
-		if (!std::filesystem::exists(a_path)) {
+		if (!fs::exists(a_path)) {
 			return false;
 		}
 

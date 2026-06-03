@@ -180,7 +180,7 @@ void FUCKMan::LoadWorkspace()
 
 	// 1. Load global Workspace settings (Main Window, Groups & Tool Order)
 	std::string workspacePath = Settings::GetSingleton()->GetWorkspacePath();
-	if (std::filesystem::exists(workspacePath)) {
+	if (fs::exists(workspacePath)) {
 		WorkspaceSaveData sd;
 		std::string       wBuffer;
 		if (auto err = glz::read_file_json(sd, workspacePath, wBuffer); !err) {
@@ -216,8 +216,8 @@ void FUCKMan::LoadWorkspace()
 
 	// 2. Load per-plugin tool states and window geometries
 	std::string toolsPath = Settings::GetSingleton()->GetToolsPath();
-	if (std::filesystem::exists(toolsPath)) {
-		for (const auto& entry : std::filesystem::directory_iterator(toolsPath)) {
+	if (fs::exists(toolsPath)) {
+		for (const auto& entry : fs::directory_iterator(toolsPath)) {
 			if (entry.path().extension() == ".json") {
 				std::string pluginName = entry.path().stem().string();
 
@@ -322,7 +322,7 @@ void FUCKMan::SaveWorkspace()
 
 	// Commit Workspace Settings
 	std::string workspacePath = Settings::GetSingleton()->GetWorkspacePath();
-	std::filesystem::create_directories(Settings::Core.GetConfigDirectory());
+	fs::create_directories(Settings::Core.GetConfigDirectory());
 	std::string sBuffer;
 	if (auto err = glz::write_file_json(sd, workspacePath, sBuffer); err) {
 		logger::warn("Failed to write to {}", workspacePath);
@@ -330,14 +330,14 @@ void FUCKMan::SaveWorkspace()
 
 	// Commit Per-Plugin Settings
 	std::string toolsPath = Settings::GetSingleton()->GetToolsPath();
-	std::filesystem::create_directories(toolsPath);
+	fs::create_directories(toolsPath);
 
 	for (const auto& [plugin, pd] : pdMap) {
 		std::string path = std::format("{}/{}.json", toolsPath, plugin);
 
 		if (pd.tools.empty() && pd.windows.empty()) {
-			if (std::filesystem::exists(path)) {
-				std::filesystem::remove(path);
+			if (fs::exists(path)) {
+				fs::remove(path);
 			}
 		} else {
 			std::string pBuffer;

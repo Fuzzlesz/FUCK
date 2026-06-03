@@ -850,7 +850,6 @@ void SettingsTool::Draw()
 				{
 					std::lock_guard<std::mutex> iniLock(Settings::GetSingleton()->trackingMutex);
 					for (const auto& iniPath : Settings::GetSingleton()->trackedINIs) {
-						namespace fs = std::filesystem;
 						fs::path    p(iniPath);
 						std::string filename  = p.filename().string();
 						std::string parentDir = p.parent_path().filename().string();

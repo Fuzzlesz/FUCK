@@ -227,9 +227,9 @@ namespace ImGui
 
 	void Styles::SavePreset(const std::string& a_name)
 	{
-		std::filesystem::path p(Settings::GetSingleton()->GetStylesPath());
-		if (!std::filesystem::exists(p))
-			std::filesystem::create_directories(p);
+		fs::path p(Settings::GetSingleton()->GetStylesPath());
+		if (!fs::exists(p))
+			fs::create_directories(p);
 		std::string filename = a_name;
 		if (filename.length() < 4 || filename.substr(filename.length() - 4) != ".ini")
 			filename += ".ini";
@@ -249,7 +249,7 @@ namespace ImGui
 
 	void Styles::LoadPreset(const std::string& a_name, bool a_saveToIni)
 	{
-		std::filesystem::path p(Settings::GetSingleton()->GetStylesPath());
+		fs::path p(Settings::GetSingleton()->GetStylesPath());
 		p /= a_name;
 		CSimpleIniA ini;
 		ini.SetUnicode();
@@ -278,7 +278,7 @@ namespace ImGui
 		if (a_name.empty())
 			return;
 
-		std::filesystem::path p(Settings::GetSingleton()->GetStylesPath());
+		fs::path p(Settings::GetSingleton()->GetStylesPath());
 		std::string           filename = a_name;
 
 		if (filename.length() < 4 || filename.substr(filename.length() - 4) != ".ini")
@@ -286,7 +286,7 @@ namespace ImGui
 
 		p /= filename;
 
-		if (std::filesystem::exists(p)) {
+		if (fs::exists(p)) {
 			std::wstring widePath = p.wstring();
 			widePath.push_back(L'\0');
 
