@@ -8,10 +8,10 @@
 namespace ImGui
 {
 	namespace
-{
-	// ==================================================
-	// INTERNAL HELPERS
-	// ==================================================
+	{
+		// ==================================================
+		// INTERNAL HELPERS
+		// ==================================================
 
 		void DrawTreeIcon(ImDrawList* drawList, const ImVec2& pos, float frameHeight, bool isOpen, bool isHovered, float baseIconSize = 30.0f)
 		{
@@ -136,36 +136,36 @@ namespace ImGui
 				screenPos.x      = std::floor(screenPos.x + (xPos - startX));
 				screenPos.y      = std::floor(screenPos.y + std::max(0.0f, offY));
 				GetWindowDrawList()->AddText(GetFont(), GetFontSize(), screenPos, textColor, labelView.data(), labelView.data() + labelView.size());
-		};
+			};
 
-		// Tighter gap globally for near-aligned widgets to closely mimic vanilla grouping
-		float nearSpacing = std::max(1.0f, std::floor(g.Style.ItemInnerSpacing.x * 0.25f));
-		// Near (Tightly Coupled) - Uses LabelAlign.X as a rigid spacer pushing the label away (Adds 0 to 50px of adjustable spacing)
+			// Tighter gap globally for near-aligned widgets to closely mimic vanilla grouping
+			float nearSpacing = std::max(1.0f, std::floor(g.Style.ItemInnerSpacing.x * 0.25f));
+			// Near (Tightly Coupled) - Uses LabelAlign.X as a rigid spacer pushing the label away (Adds 0 to 50px of adjustable spacing)
 			float labelSpacer = style.labelAlign.x * 50.0f * FUCKMan::GetSingleton()->GetActiveScale() * Renderer::GetResolutionScale();
 
-		float widgetX = startX;
-		float maxX    = startX;
+			float widgetX = startX;
+			float maxX    = startX;
 
-		if (alignFar) {
-			// Center the widget inside the right-hand pane
-			float rightPaneCenter = rightPaneStart + (rightPaneEnd - rightPaneStart) * 0.5f;
-			float splitPoint      = rightPaneCenter - (contentWidth * 0.5f);
+			if (alignFar) {
+				// Center the widget inside the right-hand pane
+				float rightPaneCenter = rightPaneStart + (rightPaneEnd - rightPaneStart) * 0.5f;
+				float splitPoint      = rightPaneCenter - (contentWidth * 0.5f);
 
-			if (labelLeft) {
-				DrawLabel(startX);
-				widgetX = splitPoint;
+				if (labelLeft) {
+					DrawLabel(startX);
+					widgetX = splitPoint;
+				} else {
+					widgetX = startX;
+					DrawLabel((splitPoint + contentWidth) - labelWidth);
+				}
+				maxX = rightPaneEnd;
 			} else {
-				widgetX = startX;
-				DrawLabel((splitPoint + contentWidth) - labelWidth);
-			}
-			maxX = rightPaneEnd;
-		} else {
-			// Pack the widget tightly against the label
-			if (labelLeft) {
-				DrawLabel(startX);
-				widgetX = startX + labelWidth + nearSpacing + labelSpacer;
-				maxX    = widgetX + contentWidth;
-			} else {
+				// Pack the widget tightly against the label
+				if (labelLeft) {
+					DrawLabel(startX);
+					widgetX = startX + labelWidth + nearSpacing + labelSpacer;
+					maxX    = widgetX + contentWidth;
+				} else {
 					widgetX      = startX;
 					float labelX = startX + contentWidth + nearSpacing + labelSpacer;
 					DrawLabel(labelX);
@@ -205,10 +205,10 @@ namespace ImGui
 			if (moveX == 0.0f && moveY == 0.0f)
 				return false;
 
-		float stepSmall = (speed > 0.0f) ? speed : 1.0f;
-		float stepLarge = stepSmall * 10.0f;
+			float stepSmall = (speed > 0.0f) ? speed : 1.0f;
+			float stepLarge = stepSmall * 10.0f;
 
-		float totalMove = (moveX * stepSmall) + (moveY * stepLarge);
+			float totalMove = (moveX * stepSmall) + (moveY * stepLarge);
 
 			auto ClampedAdd = [](auto* v, float delta, const void* mn, const void* mx) {
 				using T = std::remove_pointer_t<decltype(v)>;
@@ -691,11 +691,10 @@ namespace ImGui
 		return changed;
 	}
 
-	void DrawTabBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered)
+	void DrawTabBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered, float rounding)
 	{
-		float borderSize = ImGui::GetUserStyleVar(USER_STYLE::kButtonBorderSize);
-		float round      = ImGui::GetStyle().TabRounding;
-		float scale      = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
+		float scale      = Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
+		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize);
 
 		if (borderSize <= 0.0f)
 			return;
@@ -707,20 +706,31 @@ namespace ImGui
 		                GetUserStyleColorU32(USER_STYLE::kTabBorderActive) :
 		                GetUserStyleColorU32(USER_STYLE::kTabBorder);
 
-		auto buildPath = [&](ImDrawList* dl, float botY, float inset) {
-			float r = std::max(0.0f, round - inset);
+		float halfB = tBlack * 0.5f;
+		float halfC = tColor * 0.5f;
+
+		auto buildPath = [&](ImDrawList* dl, float inset, float r, float botY) {
 			dl->PathLineTo({ bb.Min.x + inset, botY });
-			dl->PathArcToFast({ bb.Min.x + inset + r, bb.Min.y + inset + r }, r, 6, 9);
-			dl->PathArcToFast({ bb.Max.x - inset - r, bb.Min.y + inset + r }, r, 9, 12);
+
+			if (r > 0.0f) {
+				dl->PathArcTo({ bb.Min.x + rounding, bb.Min.y + rounding }, r, IM_PI, IM_PI * 1.5f, 24);
+				dl->PathArcTo({ bb.Max.x - rounding, bb.Min.y + rounding }, r, IM_PI * 1.5f, IM_PI * 2.0f, 24);
+			} else {
+				dl->PathLineTo({ bb.Min.x + inset, bb.Min.y + inset });
+				dl->PathLineTo({ bb.Max.x - inset, bb.Min.y + inset });
+			}
+
 			dl->PathLineTo({ bb.Max.x - inset, botY });
 		};
 
 		// Outer Black stroke (No bottom line)
-		buildPath(drawList, bb.Max.y, -tBlack * 0.5f);
+		drawList->PathClear();
+		buildPath(drawList, -halfB, rounding + halfB, bb.Max.y);
 		drawList->PathStroke(IM_COL32(0, 0, 0, 255), 0, tBlack);
 
 		// Inner Color stroke (No bottom line)
-		buildPath(drawList, bb.Max.y, tColor * 0.5f);
+		drawList->PathClear();
+		buildPath(drawList, halfC, std::max(0.0f, rounding - halfC), bb.Max.y);
 		drawList->PathStroke(col, 0, tColor);
 	}
 
@@ -774,11 +784,26 @@ namespace ImGui
 		// Chop the bottom of the drawn rect at max.y so it rests flush on the separator line
 		ImRect drawBb = { idealBb.Min.x, idealBb.Min.y, idealBb.Max.x, max.y };
 
-		// Draw standard button fill (Only rounding the TOP corners so the bottom sits flush against the separator)
-		float rounding = ImGui::GetStyle().TabRounding;
-		window->DrawList->AddRectFilled(drawBb.Min, drawBb.Max, GetColorU32(ImGuiCol_Button), rounding, ImDrawFlags_RoundCornersTop);
+		// Fetch the raw user value and scale it
+		float rounding = Styles::GetSingleton()->user.tabRounding * scale;
 
-		DrawTabBorder(window->DrawList, drawBb, active || IsItemHovered());
+		// Clamp rounding to prevent geometry artifacting at extreme scale
+		rounding = std::min(rounding, drawBb.GetWidth() * 0.5f);
+		rounding = std::min(rounding, drawBb.GetHeight());
+
+		window->DrawList->PathClear();
+		window->DrawList->PathLineTo({ drawBb.Max.x, drawBb.Max.y });
+		window->DrawList->PathLineTo({ drawBb.Min.x, drawBb.Max.y });
+		if (rounding > 0.0f) {
+			window->DrawList->PathArcTo({ drawBb.Min.x + rounding, drawBb.Min.y + rounding }, rounding, IM_PI, IM_PI * 1.5f, 24);
+			window->DrawList->PathArcTo({ drawBb.Max.x - rounding, drawBb.Min.y + rounding }, rounding, IM_PI * 1.5f, IM_PI * 2.0f, 24);
+		} else {
+			window->DrawList->PathLineTo({ drawBb.Min.x, drawBb.Min.y });
+			window->DrawList->PathLineTo({ drawBb.Max.x, drawBb.Min.y });
+		}
+		window->DrawList->PathFillConvex(GetColorU32(ImGuiCol_Button));
+
+		DrawTabBorder(window->DrawList, drawBb, active || IsItemHovered(), rounding);
 
 		// Switch to foreground channel to render our custom centered text
 		window->DrawList->ChannelsSetCurrent(1);
@@ -1283,18 +1308,32 @@ namespace ImGui
 
 		ImRect track = bb;
 		// Shrink Y-axis significantly so the track is narrow
-		float trackH = std::max(4.0f, 6.0f * ImGui::Renderer::GetResolutionScale());
+		float trackH = std::max(4.0f, 6.0f * Renderer::GetResolutionScale());
 		float s      = (track.GetHeight() - trackH) * 0.8f;
 		track.Min.y += s;
 		track.Max.y -= s;
 
 		window->DrawList->AddRectFilled(track.Min, track.Max, GetColorU32(active ? ImGuiCol_FrameBgActive : h ? ImGuiCol_FrameBgHovered :
 																												ImGuiCol_FrameBg),
-			ImGui::GetStyle().FrameRounding);
-		DrawWidgetBorder(window->DrawList, track, IsWidgetFocused(id) || active || h, ImGui::GetStyle().FrameRounding);
+			GetStyle().FrameRounding);
+		DrawWidgetBorder(window->DrawList, track, IsWidgetFocused(id) || active || h, GetStyle().FrameRounding);
 
-		if (grab.Max.x > grab.Min.x)
-			window->DrawList->AddRectFilled(grab.Min, grab.Max, GetColorU32(active ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab), ImGui::GetStyle().GrabRounding);
+		if (grab.Max.x > grab.Min.x) {
+			float scale     = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
+			float knobWidth = 8.0f * scale;  // Fixed slim width
+			float centerX   = grab.Min.x + (grab.Max.x - grab.Min.x) * 0.5f;
+
+			centerX = ImClamp(centerX, bb.Min.x + knobWidth * 0.5f, bb.Max.x - knobWidth * 0.5f);
+
+			// Span the full height of the widget, but keep width narrow
+			ImRect customGrab(
+				centerX - (knobWidth * 0.5f),
+				bb.Min.y,
+				centerX + (knobWidth * 0.5f),
+				bb.Max.y);
+
+			window->DrawList->AddRectFilled(customGrab.Min, customGrab.Max, GetColorU32(active ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab), GetStyle().GrabRounding);
+		}
 
 		bool dim = MANAGER(Input)->IsInputGamepad() && !IsWidgetFocused(id);
 		if (dim)
