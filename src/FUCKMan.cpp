@@ -1304,7 +1304,7 @@ void FUCKMan::Draw()
 		} else if (_wasCollapsed && !_isCollapsed) {
 			FUCK::SetNextWindowSize(_cfg.windowSize);
 		} else {
-			FUCK::SetNextWindowSize(ImVec2(1000.0f * m.uiScale, 600.0f * m.uiScale), ImGuiCond_FirstUseEver);
+			FUCK::SetNextWindowSize(_cfg.windowSize, ImGuiCond_FirstUseEver);
 		}
 	}
 
