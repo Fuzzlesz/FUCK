@@ -7,45 +7,7 @@
 
 namespace ImGui
 {
-	// ==================================================
-	// HELPER IMPLEMENTATION
-	// ==================================================
-
-	void DrawArrowIcon(ImDrawList* drawList, ImVec2 pos, ImVec2 size, ImU32 color, IconDirection direction)
-	{
-		static auto iconArrow = MANAGER(IconFont)->GetStepperRight();
-		if (!iconArrow || !iconArrow->srView)
-			return;
-
-		if (!drawList)
-			drawList = ImGui::GetWindowDrawList();
-
-		ImVec2 p_min = pos;
-		ImVec2 p_max = pos + size;
-
-		if (direction == IconDirection::kRight) {
-			// Normal (>): UVs {0,0} -> {1,1}
-			drawList->AddImage(reinterpret_cast<ImTextureID>(iconArrow->srView.Get()), p_min, p_max, { 0, 0 }, { 1, 1 }, color);
-		} else if (direction == IconDirection::kDown) {
-			// Rotate 90 CW (v): UVs {0,1}, {0,0}, {1,0}, {1,1}
-			drawList->AddImageQuad(reinterpret_cast<ImTextureID>(iconArrow->srView.Get()),
-				p_min, { p_max.x, p_min.y }, p_max, { p_min.x, p_max.y },
-				{ 0, 1 }, { 0, 0 }, { 1, 0 }, { 1, 1 }, color);
-		} else if (direction == IconDirection::kLeft) {
-			// Mirror Horizontal (<): Swap U {1,0} -> {0,0}
-			drawList->AddImageQuad(reinterpret_cast<ImTextureID>(iconArrow->srView.Get()),
-				p_min, { p_max.x, p_min.y }, p_max, { p_min.x, p_max.y },
-				{ 1, 0 }, { 0, 0 }, { 0, 1 }, { 1, 1 }, color);
-		} else if (direction == IconDirection::kUp) {
-			// Rotate 270 CW / 90 CCW (^): UVs {1,0}, {1,1}, {0,1}, {0,0}
-			drawList->AddImageQuad(reinterpret_cast<ImTextureID>(iconArrow->srView.Get()),
-				p_min, { p_max.x, p_min.y }, p_max, { p_min.x, p_max.y },
-				{ 1, 0 }, { 1, 1 }, { 0, 1 }, { 0, 0 }, color);
-		}
-	}
-}
-
-namespace
+	namespace
 {
 	// ==================================================
 	// INTERNAL HELPERS
@@ -223,16 +185,9 @@ namespace
 		ImGui::PopID();
 		ImGui::EndGroup();
 	}
-}
-
-namespace ImGui
-{
-	// ==================================================
-	// CORE DRAWING & WIDGETS
-	// ==================================================
 
 	// Helper function for adjusting hovered sliders with WASD
-	static bool ApplyWASDNudge(ImGuiDataType type, void* data, const void* min, const void* max, float speed)
+		bool ApplyWASDNudge(ImGuiDataType type, void* data, const void* min, const void* max, float speed)
 	{
 		float moveX = 0.0f;
 		float moveY = 0.0f;
@@ -276,6 +231,47 @@ namespace ImGui
 			return true;
 		}
 		return false;
+
+	// ==================================================
+	// CORE DRAWING & WIDGETS
+	// ==================================================
+
+	void DrawArrowIcon(ImDrawList* drawList, ImVec2 pos, ImVec2 size, ImU32 color, IconDirection direction)
+	{
+		static auto iconArrow = MANAGER(IconFont)->GetStepperRight();
+		if (!iconArrow || !iconArrow->srView)
+			return;
+
+		if (!drawList)
+			drawList = GetWindowDrawList();
+
+		ImVec2 p_min = pos;
+		ImVec2 p_max = pos + size;
+
+		switch (direction) {
+		case IconDirection::kRight:
+			// Normal (>): UVs {0,0} -> {1,1}
+			drawList->AddImage(reinterpret_cast<ImTextureID>(iconArrow->srView.Get()), p_min, p_max, { 0, 0 }, { 1, 1 }, color);
+			break;
+		case IconDirection::kDown:
+			// Rotate 90 CW (v): UVs {0,1}, {0,0}, {1,0}, {1,1}
+			drawList->AddImageQuad(reinterpret_cast<ImTextureID>(iconArrow->srView.Get()),
+				p_min, { p_max.x, p_min.y }, p_max, { p_min.x, p_max.y },
+				{ 0, 1 }, { 0, 0 }, { 1, 0 }, { 1, 1 }, color);
+			break;
+		case IconDirection::kLeft:
+			// Mirror Horizontal (<): Swap U {1,0} -> {0,0}
+			drawList->AddImageQuad(reinterpret_cast<ImTextureID>(iconArrow->srView.Get()),
+				p_min, { p_max.x, p_min.y }, p_max, { p_min.x, p_max.y },
+				{ 1, 0 }, { 0, 0 }, { 0, 1 }, { 1, 1 }, color);
+			break;
+		case IconDirection::kUp:
+			// Rotate 270 CW / 90 CCW (^): UVs {1,0}, {1,1}, {0,1}, {0,0}
+			drawList->AddImageQuad(reinterpret_cast<ImTextureID>(iconArrow->srView.Get()),
+				p_min, { p_max.x, p_min.y }, p_max, { p_min.x, p_max.y },
+				{ 1, 0 }, { 1, 1 }, { 0, 1 }, { 0, 0 }, color);
+			break;
+		}
 	}
 
 	void DrawWidgetBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered, float rounding)
