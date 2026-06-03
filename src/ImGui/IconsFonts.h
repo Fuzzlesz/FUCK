@@ -34,7 +34,7 @@ namespace IconFont
 		bool ProcessPendingReload();
 
 		void        SetFontName(const std::string& a_fontName);
-		std::string GetFontName() const { return fontName; }
+		std::string GetFontName() const { return _fontName; }
 
 		ImFont* GetLargeFont() const;
 		ImFont* GetRegularFont() const;
@@ -63,34 +63,34 @@ namespace IconFont
 		std::string ResolveFontPath(const std::string& a_filename) const;
 
 		// members
-		bool loadedFonts{ false };
+		bool _loadedFonts{ false };
 		bool _pendingReload{ false };  // Flag for deferred reload
 
-		BUTTON_SCHEME buttonScheme{ BUTTON_SCHEME::kAutoDetect };
+		BUTTON_SCHEME _buttonScheme{ BUTTON_SCHEME::kAutoDetect };
 
-		std::string fontName{ "Jost-Regular.ttf" };
+		std::string _fontName{ "Default" };
 
-		float baseFontSize{ 30.0f };       // was 24.0f
-		float baseIconSize{ 26.0f };       // was 20.0f
-		float baseLargeFontSize{ 34.0f };  // was 26.0f
-		float baseLargeIconSize{ 31.0f };  // was 24.0f
+		float _baseFontSize{ 30.0f };       // was 24.0f
+		float _baseIconSize{ 26.0f };       // was 20.0f
+		float _baseLargeFontSize{ 34.0f };  // was 26.0f
+		float _baseLargeIconSize{ 31.0f };  // was 24.0f
 
-		ImFont* largeFont{ nullptr };
-		ImFont* regularFont{ nullptr };
+		ImFont* _largeFont{ nullptr };
+		ImFont* _regularFont{ nullptr };
 
-		IconTexture stepperRight{ L"StepperRight"sv };
-		IconTexture checkbox{ L"Checkbox"sv };
-		IconTexture checkboxFilled{ L"Checkbox-Filled"sv };
+		IconTexture _stepperRight{ L"StepperRight"sv };
+		IconTexture _checkbox{ L"Checkbox"sv };
+		IconTexture _checkboxFilled{ L"Checkbox-Filled"sv };
 
-		IconTexture unknownKey{ L"UnknownKey"sv };
+		IconTexture _unknownKey{ L"UnknownKey"sv };
 
-		IconTexture leftKey{ L"Left"sv };
-		IconTexture rightKey{ L"Right"sv };
-		IconTexture upKey{ L"Up"sv };
-		IconTexture downKey{ L"Down"sv };
+		IconTexture _leftKey{ L"Left"sv };
+		IconTexture _rightKey{ L"Right"sv };
+		IconTexture _upKey{ L"Up"sv };
+		IconTexture _downKey{ L"Down"sv };
 
-		Map<KEY, IconTexture>           keyboard;
-		Map<std::uint32_t, GamepadIcon> gamePad;
-		Map<std::uint32_t, IconTexture> mouse;
+		Map<KEY, IconTexture>           _keyboard;
+		Map<std::uint32_t, GamepadIcon> _gamePad;
+		Map<std::uint32_t, IconTexture> _mouse;
 	};
 }

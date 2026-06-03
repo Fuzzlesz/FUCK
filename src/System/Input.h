@@ -95,16 +95,16 @@ namespace Input
 
 		bool CheckModifiersStrict(const std::uint32_t* mods, size_t count, std::int32_t req1, std::int32_t req2, std::uint32_t primaryKey) const;
 
-		DEVICE inputDevice{ DEVICE::kNone };
-		DEVICE lastInputDevice{ DEVICE::kNone };
+		DEVICE _inputDevice{ DEVICE::kNone };
+		DEVICE _lastInputDevice{ DEVICE::kNone };
 
 		RebindContext _rebindCtx;
 
-		std::optional<bool> cursorInit{ std::nullopt };
+		std::optional<bool> _cursorInit{ std::nullopt };
 
 		mutable std::shared_mutex _dataLock;
-		Map<std::uint32_t, float> keyStateCache;
+		Map<std::uint32_t, float> _keyStateCache;
 
-		std::vector<Context> contexts;
+		std::vector<Context> _contexts;
 	};
 }

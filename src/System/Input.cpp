@@ -37,23 +37,23 @@ namespace Input
 	void Manager::ClearState()
 	{
 		std::unique_lock lock(_dataLock);
-		keyStateCache.clear();
+		_keyStateCache.clear();
 		_rebindCtx.Reset();
 	}
 
 	DEVICE Manager::GetInputDevice() const
 	{
-		return inputDevice;
+		return _inputDevice;
 	}
 
 	bool Manager::IsInputKBM() const
 	{
-		return inputDevice == DEVICE::kKeyboard || inputDevice == DEVICE::kMouse;
+		return _inputDevice == DEVICE::kKeyboard || _inputDevice == DEVICE::kMouse;
 	}
 
 	bool Manager::IsInputGamepad() const
 	{
-		return inputDevice == DEVICE::kGamepadDirectX || inputDevice == DEVICE::kGamepadOrbis;
+		return _inputDevice == DEVICE::kGamepadDirectX || _inputDevice == DEVICE::kGamepadOrbis;
 	}
 
 	bool Manager::CanNavigateWithMouse() const
@@ -72,7 +72,7 @@ namespace Input
 
 	void Manager::ResetCursorState()
 	{
-		cursorInit = std::nullopt;
+		_cursorInit = std::nullopt;
 	}
 
 	bool Manager::IsInputPressed(const RE::InputEvent* const* a_event, std::uint32_t a_unifiedKey)
@@ -98,8 +98,8 @@ namespace Input
 	bool Manager::IsInputDown(std::uint32_t a_unifiedKey) const
 	{
 		std::shared_lock lock(_dataLock);
-		auto             it = keyStateCache.find(a_unifiedKey);
-		return it != keyStateCache.end() && it->second > 0.0f;
+		auto             it = _keyStateCache.find(a_unifiedKey);
+		return it != _keyStateCache.end() && it->second > 0.0f;
 	}
 
 	// --- Rebinding API ---
@@ -115,7 +115,7 @@ namespace Input
 
 		// Snapshot any keys currently held down so they don't instantly register as the new keybind
 		std::shared_lock lock(_dataLock);
-		for (const auto& [key, value] : keyStateCache) {
+		for (const auto& [key, value] : _keyStateCache) {
 			if (value > 0.0f) {
 				_rebindCtx.ignoredKeys.insert(key);
 			}
@@ -390,8 +390,8 @@ namespace Input
 	float Manager::GetAnalogInput(std::uint32_t a_unifiedKey) const
 	{
 		std::shared_lock lock(_dataLock);
-		auto             it = keyStateCache.find(a_unifiedKey);
-		return it != keyStateCache.end() ? it->second : 0.0f;
+		auto             it = _keyStateCache.find(a_unifiedKey);
+		return it != _keyStateCache.end() ? it->second : 0.0f;
 	}
 
 	bool Manager::IsModifierPressed(FUCK::Modifier a_modifier) const
@@ -422,24 +422,24 @@ namespace Input
 
 	void Manager::PushContext(Context a_ctx)
 	{
-		contexts.push_back(std::move(a_ctx));
-		std::sort(contexts.begin(), contexts.end(),
+		_contexts.push_back(std::move(a_ctx));
+		std::sort(_contexts.begin(), _contexts.end(),
 			[](const Context& a, const Context& b) { return a.priority > b.priority; });
 	}
 
 	void Manager::PopContext(std::string_view a_name)
 	{
-		std::erase_if(contexts, [&](const Context& c) { return c.name == a_name; });
+		std::erase_if(_contexts, [&](const Context& c) { return c.name == a_name; });
 	}
 
 	bool Manager::IsContextActive(std::string_view a_name) const
 	{
-		return std::ranges::any_of(contexts, [&](const Context& c) { return c.name == a_name; });
+		return std::ranges::any_of(_contexts, [&](const Context& c) { return c.name == a_name; });
 	}
 
 	bool Manager::ShouldBlockLowerContexts() const
 	{
-		return !contexts.empty() && contexts.front().blocksLower;
+		return !_contexts.empty() && _contexts.front().blocksLower;
 	}
 
 	// ==================================================
@@ -561,9 +561,9 @@ namespace Input
 					uint32_t unifiedKey = Keymap::GetUnifiedKey(button->GetDevice(), key);
 
 					if (button->Value() > 0.0f) {
-						keyStateCache[unifiedKey] = button->Value();
+						_keyStateCache[unifiedKey] = button->Value();
 					} else {
-						keyStateCache.erase(unifiedKey);
+						_keyStateCache.erase(unifiedKey);
 					}
 				}
 			} else if (auto stick = event->AsThumbstickEvent()) {
@@ -571,11 +571,11 @@ namespace Input
 				uint32_t baseOffset = SKSE::InputMap::kMacro_GamepadOffset;
 
 				if (id == 0x0B) {  // Left Stick
-					keyStateCache[baseOffset + CUSTOM_LEFT_STICK_X] = stick->xValue;
-					keyStateCache[baseOffset + CUSTOM_LEFT_STICK_Y] = stick->yValue;
+					_keyStateCache[baseOffset + CUSTOM_LEFT_STICK_X] = stick->xValue;
+					_keyStateCache[baseOffset + CUSTOM_LEFT_STICK_Y] = stick->yValue;
 				} else if (id == 0x0C) {  // Right Stick
-					keyStateCache[baseOffset + CUSTOM_RIGHT_STICK_X] = stick->xValue;
-					keyStateCache[baseOffset + CUSTOM_RIGHT_STICK_Y] = stick->yValue;
+					_keyStateCache[baseOffset + CUSTOM_RIGHT_STICK_X] = stick->xValue;
+					_keyStateCache[baseOffset + CUSTOM_RIGHT_STICK_Y] = stick->yValue;
 				}
 			}
 		}
@@ -583,26 +583,26 @@ namespace Input
 
 	void Manager::UpdateInputDevice(RE::INPUT_DEVICE a_device)
 	{
-		lastInputDevice = inputDevice;
+		_lastInputDevice = _inputDevice;
 
 		switch (a_device) {
 		case RE::INPUT_DEVICE::kKeyboard:
-			inputDevice = DEVICE::kKeyboard;
+			_inputDevice = DEVICE::kKeyboard;
 			break;
 		case RE::INPUT_DEVICE::kMouse:
-			inputDevice = DEVICE::kMouse;
+			_inputDevice = DEVICE::kMouse;
 			break;
 		case RE::INPUT_DEVICE::kGamepad:
 			if (RE::ControlMap::GetSingleton()->GetGamePadType() == RE::PC_GAMEPAD_TYPE::kOrbis)
-				inputDevice = DEVICE::kGamepadOrbis;
+				_inputDevice = DEVICE::kGamepadOrbis;
 			else
-				inputDevice = DEVICE::kGamepadDirectX;
+				_inputDevice = DEVICE::kGamepadDirectX;
 			break;
 		default:
 			break;
 		}
 
-		if (lastInputDevice == DEVICE::kNone || inputDevice == DEVICE::kNone || lastInputDevice != inputDevice) {
+		if (_lastInputDevice == DEVICE::kNone || _inputDevice == DEVICE::kNone || _lastInputDevice != _inputDevice) {
 			auto& io = ImGui::GetIO();
 			io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableGamepad;
 			io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard;
@@ -644,15 +644,15 @@ namespace Input
 		double        currentTime          = ImGui::GetTime();
 
 		if (shouldShowCursor) {
-			if (!cursorInit.has_value() || (*cursorInit == false && !cursorCurrentlyOpen)) {
+			if (!_cursorInit.has_value() || (*_cursorInit == false && !cursorCurrentlyOpen)) {
 				if (!cursorCurrentlyOpen) {
 					ToggleCursor(true);
-					cursorInit           = true;
+					_cursorInit          = true;
 					lastCursorToggleTime = currentTime;
 				} else {
-					cursorInit = false;
+					_cursorInit = false;
 				}
-			} else if (*cursorInit == true && !cursorCurrentlyOpen) {
+			} else if (*_cursorInit == true && !cursorCurrentlyOpen) {
 				// Recover the cursor if it was unexpectedly closed by the game engine
 				if (currentTime - lastCursorToggleTime > 0.1) {
 					ToggleCursor(true);
@@ -660,11 +660,11 @@ namespace Input
 				}
 			}
 		} else {
-			if (cursorInit.has_value()) {
-				if (*cursorInit == true) {
+			if (_cursorInit.has_value()) {
+				if (*_cursorInit == true) {
 					ToggleCursor(false);
 				}
-				cursorInit = std::nullopt;
+				_cursorInit = std::nullopt;
 			}
 		}
 
