@@ -6,19 +6,13 @@ enum class FileType
 	kDisplayTweaks,
 };
 
-class Settings
+class Settings : public REX::Singleton<Settings>
 {
 public:
 	using INIFunc = std::function<void(CSimpleIniA&)>;
 
 	std::set<std::string> trackedINIs;
 	std::mutex            trackingMutex;
-
-	static Settings* GetSingleton()
-	{
-		static Settings instance;
-		return &instance;
-	} 
 
 	// Centralised instance for the framework's own settings
 	static inline const FUCK::PluginSettings Core{ "FUCK" };
