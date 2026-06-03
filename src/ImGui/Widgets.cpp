@@ -467,7 +467,7 @@ namespace ImGui
 		PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);  // Prevents double frame
 
 		const bool  isHidden = std::string_view(label).starts_with("##");
-		std::string idStr    = isHidden ? label : "##"s + label;
+		std::string idStr    = isHidden ? std::string(label) : std::format("##{}", label);
 		if (!isHidden)
 			LeftAlignedTextImpl(label, idStr);
 
@@ -602,7 +602,7 @@ namespace ImGui
 		PushStyleVar(ImGuiStyleVar_FramePadding, { padX, padY });
 		PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);  // Prevents double frame
 
-		std::string idStr = "##"s + label;
+		std::string idStr = std::format("##{}", label);
 		LeftAlignedTextImpl(label, idStr);
 		ImVec2 widgetPos = GetCursorScreenPos();
 		float  width     = CalcItemWidth();
@@ -1518,7 +1518,7 @@ namespace ImGui
 	template <typename TWidgetFunc>
 	bool OutsetFramedWidget(const char* label, TWidgetFunc drawWidget)
 	{
-		std::string id = "##"s + label;
+		std::string id = std::format("##{}", label);
 
 		// Creates a visual "framed" background box to encapsulate an inner widget visually
 		float scale      = ImGui::Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());

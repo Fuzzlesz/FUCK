@@ -140,7 +140,7 @@ namespace ImGui
 
 	std::string LeftAlignedText(const char* label)
 	{
-		const auto newLabel = "##"s + label;
+		const auto newLabel = std::format("##{}", label);
 		LeftAlignedTextImpl(label, newLabel);
 		return newLabel;
 	}
