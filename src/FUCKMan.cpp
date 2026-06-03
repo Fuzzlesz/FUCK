@@ -25,7 +25,7 @@ struct WindowState
 static StringMap<WindowState> s_windowStates;  // Maps using "PluginName|WindowId"
 
 // Auto-Close list for Game Menus
-static const std::vector<std::string> s_closeOnOpen = {
+static constexpr std::array<std::string_view, 10> s_closeOnOpen = {
 	RE::Console::MENU_NAME.data(),     RE::ContainerMenu::MENU_NAME.data(),
 	RE::JournalMenu::MENU_NAME.data(), RE::InventoryMenu::MENU_NAME.data(),
 	RE::MapMenu::MENU_NAME.data(),     RE::DialogueMenu::MENU_NAME.data(),
