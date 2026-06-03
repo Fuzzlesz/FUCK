@@ -209,28 +209,35 @@ namespace ImGui
 
 		float totalMove = (moveX * stepSmall) + (moveY * stepLarge);
 
-		if (type == ImGuiDataType_Float || type == ImGuiDataType_Double) {
-			auto* v = static_cast<float*>(data);
-			*v += totalMove;
-			if (min && max) {
-				float mn = *static_cast<const float*>(min);
-				float mx = *static_cast<const float*>(max);
-				if (mn < mx)
-					*v = ImClamp(*v, mn, mx);
+			auto ClampedAdd = [](auto* v, float delta, const void* mn, const void* mx) {
+				using T = std::remove_pointer_t<decltype(v)>;
+				*v += static_cast<T>(delta);
+				if (mn && mx) {
+					T lo = *static_cast<const T*>(mn);
+					T hi = *static_cast<const T*>(mx);
+					if (lo < hi)
+						*v = ImClamp(*v, lo, hi);
+				}
+			};
+
+			switch (type) {
+			case ImGuiDataType_Float:
+				ClampedAdd(static_cast<float*>(data), totalMove, min, max);
+				return true;
+			case ImGuiDataType_Double:
+				ClampedAdd(static_cast<double*>(data), totalMove, min, max);
+				return true;
+			case ImGuiDataType_S32:
+				ClampedAdd(static_cast<int32_t*>(data), totalMove, min, max);
+				return true;
+			case ImGuiDataType_U32:
+				ClampedAdd(static_cast<uint32_t*>(data), totalMove, min, max);
+				return true;
+			default:
+				return false;
 			}
-			return true;
-		} else if (type == ImGuiDataType_S32) {
-			auto* v = static_cast<int*>(data);
-			*v += static_cast<int>(totalMove);
-			if (min && max) {
-				int mn = *static_cast<const int*>(min);
-				int mx = *static_cast<const int*>(max);
-				if (mn < mx)
-					*v = ImClamp(*v, mn, mx);
-			}
-			return true;
 		}
-		return false;
+	}
 
 	// ==================================================
 	// CORE DRAWING & WIDGETS
