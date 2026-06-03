@@ -386,8 +386,6 @@ namespace FUCK::Host
 
 			bool begin_tooltip = ImGui::BeginTooltip();
 
-			ImGui::GetIO().MousePos = origMousePos;
-
 			if (begin_tooltip) {
 				ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
 				ImGui::TextUnformatted(desc);
@@ -395,6 +393,7 @@ namespace FUCK::Host
 				ImGui::EndTooltip();
 			}
 
+			ImGui::GetIO().MousePos = origMousePos;
 			ImGui::PopStyleVar();
 		}
 	}
@@ -778,14 +777,12 @@ namespace FUCK::Host
 
 			bool begin_tooltip = ImGui::BeginTooltip();
 
-			// Instantly restore real mouse pos
-			ImGui::GetIO().MousePos = origMousePos;
-
 			if (begin_tooltip) {
 				ImGui::TextUnformatted(fmt);
 				ImGui::EndTooltip();
 			}
 
+			ImGui::GetIO().MousePos = origMousePos;
 			ImGui::PopStyleVar();
 		}
 	}
