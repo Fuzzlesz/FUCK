@@ -716,10 +716,10 @@ void FUCKMan::Toggle()
 	_isOpen ? Close() : Open();
 }
 
-RE::BSEventNotifyControl FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_event, RE::BSTEventSource<RE::MenuOpenCloseEvent>*)
+EventResult FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_event, RE::BSTEventSource<RE::MenuOpenCloseEvent>*)
 {
 	if (!a_event)
-		return RE::BSEventNotifyControl::kContinue;
+		return EventResult::kContinue;
 
 	DispatchMenuEvent(a_event->menuName.c_str(), a_event->opening);
 
