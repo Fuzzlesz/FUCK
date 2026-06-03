@@ -15,7 +15,7 @@ namespace ImGui
 	void        LeftAlignedTextImpl(const char* label, const std::string& newLabel = "");
 	std::string LeftAlignedText(const char* label);
 	void        CenteredText(const char* label, bool vertical = false);
-	void        TextColoredWrapped(const ImVec4& col, const char* fmt, ...);
+	void        TextColoredWrapped(const ImVec4& col, std::string_view text);
 	void        Header(const char* label);
 
 	ImU32  GetInteractiveColor(ImGuiCol base, ImGuiCol hovered, ImGuiCol active);

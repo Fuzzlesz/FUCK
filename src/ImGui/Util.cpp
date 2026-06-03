@@ -164,16 +164,13 @@ namespace ImGui
 		TextUnformatted(label);
 	}
 
-	void TextColoredWrapped(const ImVec4& col, const char* fmt, ...)
+	void TextColoredWrapped(const ImVec4& col, std::string_view text)
 	{
-		va_list args;
-		va_start(args, fmt);
 		PushStyleColor(ImGuiCol_Text, col);
 		PushTextWrapPos(0.0f);
-		TextV(fmt, args);
+		TextUnformatted(text.data(), text.data() + text.size());
 		PopTextWrapPos();
 		PopStyleColor();
-		va_end(args);
 	}
 
 	void Header(const char* label)

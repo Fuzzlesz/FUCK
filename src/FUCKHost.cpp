@@ -707,7 +707,7 @@ namespace FUCK::Host
 			ImGui::PopTextWrapPos();
 			ImGui::PopStyleColor();
 		} else {
-			ImGui::TextColoredWrapped(col, "%s", text);
+			ImGui::TextColoredWrapped(col, text);
 		}
 	}
 	static void TextDisabled_Impl(const char* text) { ImGui::TextDisabled("%s", text); }
