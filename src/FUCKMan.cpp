@@ -106,15 +106,17 @@ FUCKMan::FUCKMan()
 
 void FUCKMan::RegisterTool(FUCK::ITool* a_tool)
 {
-	if (!a_tool)
+	// Pointer & Null-String Check
+	if (!a_tool || !a_tool->Name() || !a_tool->PluginName()) {
+		logger::info("FUCK: Attempted to register a Tool with a null Name or PluginName.");
 		return;
+	}
 
-	// 1. Pointer Check
 	if (std::find(_tools.begin(), _tools.end(), a_tool) != _tools.end()) {
 		return;
 	}
 
-	// 2. Name Collision Check
+	// Name Collision Check
 	auto it = std::find_if(_tools.begin(), _tools.end(), [&](FUCK::ITool* existing) {
 		return existing && (strcmp(existing->Name(), a_tool->Name()) == 0) && (strcmp(existing->PluginName(), a_tool->PluginName()) == 0);
 	});
@@ -128,13 +130,16 @@ void FUCKMan::RegisterTool(FUCK::ITool* a_tool)
 
 void FUCKMan::RegisterWindow(FUCK::IWindow* a_window)
 {
-	if (!a_window)
+	// Pointer & Null-String Check
+	if (!a_window || !a_window->Id() || !a_window->PluginName()) {
+		logger::info("FUCK: Attempted to register a Window with a null Id or PluginName.");
 		return;
+	}
 
 	if (std::find(_windows.begin(), _windows.end(), a_window) != _windows.end())
 		return;
 
-	// Check for collisions based on PluginName + Id to ensure uniqueness
+	// Check for collisions based on PluginName + Id
 	auto it = std::find_if(_windows.begin(), _windows.end(), [&](FUCK::IWindow* existing) {
 		return existing && (strcmp(existing->Id(), a_window->Id()) == 0) && (strcmp(existing->PluginName(), a_window->PluginName()) == 0);
 	});
