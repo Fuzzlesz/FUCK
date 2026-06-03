@@ -28,7 +28,7 @@ namespace ImGui::Renderer
 			return;
 		}
 
-		ImGui::Styles::GetSingleton()->OnStyleRefresh();
+		Styles::GetSingleton()->OnStyleRefresh();
 		IconFont::Manager::GetSingleton()->ProcessPendingReload();
 
 		const auto manager = FUCKMan::GetSingleton();
@@ -43,20 +43,20 @@ namespace ImGui::Renderer
 			// trick imgui into rendering at game's real resolution (ie. if upscaled with Display Tweaks)
 			static const auto screenSize = RE::BSGraphics::Renderer::GetScreenSize();
 
-			auto& io         = ImGui::GetIO();
+			auto& io         = GetIO();
 			io.DisplaySize.x = static_cast<float>(screenSize.width);
 			io.DisplaySize.y = static_cast<float>(screenSize.height);
 		}
-		ImGui::NewFrame();
+		NewFrame();
 		{
 			// disable windowing
 			GImGui->NavWindowingTarget = nullptr;
 
 			manager->Draw();
 		}
-		ImGui::EndFrame();
-		ImGui::Render();
-		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+		EndFrame();
+		Render();
+		ImGui_ImplDX11_RenderDrawData(GetDrawData());
 	}
 
 	// ==================================================
@@ -70,7 +70,7 @@ namespace ImGui::Renderer
 			// Handle focus loss
 			if (uMsg == WM_KILLFOCUS) {
 				// 1. Clear ImGui's internal key buffer
-				auto& io = ImGui::GetIO();
+				auto& io = GetIO();
 				io.ClearInputKeys();
 
 				// 2. Clear our Input Manager's stuck keys
@@ -108,9 +108,9 @@ namespace ImGui::Renderer
 
 				logger::info("Initializing ImGui..."sv);
 
-				ImGui::CreateContext();
+				CreateContext();
 
-				auto& io       = ImGui::GetIO();
+				auto& io       = GetIO();
 				io.ConfigFlags = ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad | ImGuiConfigFlags_NoMouseCursorChange;
 				io.IniFilename = nullptr;
 
@@ -126,7 +126,7 @@ namespace ImGui::Renderer
 				MANAGER(IconFont)->LoadIcons();
 				MANAGER(IconFont)->ReloadFonts();
 
-				auto styles = ImGui::Styles::GetSingleton();
+				auto styles = Styles::GetSingleton();
 				styles->LoadStyles();
 
 				logger::info("ImGui initialized.");

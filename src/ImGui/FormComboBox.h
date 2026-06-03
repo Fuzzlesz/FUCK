@@ -72,9 +72,9 @@ namespace ImGui
 		T* GetComboWithFilterResult(RE::Actor* a_actor = nullptr)
 		{
 			UpdateValidForms(a_actor);
-			if (ImGui::ComboWithFilter("##forms", &index, edids)) {
+			if (ComboWithFilter("##forms", &index, edids)) {
 				// avoid losing focus
-				ImGui::SetKeyboardFocusHere(-1);
+				SetKeyboardFocusHere(-1);
 				return edidForms.find(edids[index])->second;
 			}
 			return nullptr;
@@ -185,14 +185,14 @@ namespace ImGui
 				translated = true;
 			}
 
-			ImGui::BeginGroup();
+			BeginGroup();
 			{
-				ImGui::SeparatorText(name.c_str());
-				ImGui::PushStyleColor(ImGuiCol_NavCursor, GetUserStyleColorVec4(USER_STYLE::kComboBoxText));
-				ImGui::PushID(name.c_str());
-				ImGui::PushMultiItemsWidths(2, ImGui::GetContentRegionAvail().x);
+				SeparatorText(name.c_str());
+				PushStyleColor(ImGuiCol_NavCursor, GetUserStyleColorVec4(USER_STYLE::kComboBoxText));
+				PushID(name.c_str());
+				PushMultiItemsWidths(2, GetContentRegionAvail().x);
 
-				if (ImGui::ComboWithFilter("##mods", &index, modNames)) {
+				if (ComboWithFilter("##mods", &index, modNames)) {
 					if (index == 0) {
 						curMod = allMods;
 					} else if (containsFF && index == modNames.size() - 1) {
@@ -202,16 +202,16 @@ namespace ImGui
 					}
 				}
 
-				ImGui::PopItemWidth();
-				ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+				PopItemWidth();
+				SameLine(0, GetStyle().ItemInnerSpacing.x);
 
 				formResult = modNameForms[curMod].GetComboWithFilterResult(a_actor);
 
-				ImGui::PopItemWidth();
-				ImGui::PopID();
-				ImGui::PopStyleColor(1);
+				PopItemWidth();
+				PopID();
+				PopStyleColor(1);
 			}
-			ImGui::EndGroup();
+			EndGroup();
 
 			if (formResult) {
 				a_func(formResult);

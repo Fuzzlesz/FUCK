@@ -8,14 +8,14 @@ namespace ImGui
 	// --------------------------------------------------
 	void Overlays::Draw(FUCK::Overlay type, float thickness, ImU32 color, float paramA, float paramB, float paramC, float paramD)
 	{
-		auto*  drawList    = ImGui::GetBackgroundDrawList();
-		ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+		auto*  drawList    = GetBackgroundDrawList();
+		ImVec2 displaySize = GetIO().DisplaySize;
 
 		if (color == 0) {
-			color = ImGui::GetUserStyleColorU32(USER_STYLE::kGridLines);
+			color = GetUserStyleColorU32(USER_STYLE::kGridLines);
 		}
 		if (thickness <= 0.0f) {
-			thickness = ImGui::GetUserStyleVar(USER_STYLE::kGridLines);
+			thickness = GetUserStyleVar(USER_STYLE::kGridLines);
 		}
 
 		switch (type) {

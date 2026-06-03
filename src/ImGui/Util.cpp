@@ -78,7 +78,7 @@ namespace ImGui
 		if (window->SkipItems)
 			return;
 
-		const float thickness = std::max(1.0f, std::round(ImGui::GetStyle().WindowBorderSize));
+		const float thickness = std::max(1.0f, std::round(GetStyle().WindowBorderSize));
 
 		const ImVec2 pos = window->DC.CursorPos;
 		const float  w   = GetContentRegionAvail().x;
@@ -93,9 +93,9 @@ namespace ImGui
 
 	void LeftAlignedTextImpl(const char* label, const std::string& newLabel)
 	{
-		float fullAvailX = ImGui::GetContentRegionAvail().x;
-		float startX     = ImGui::GetCursorPosX();
-		float startY     = ImGui::GetCursorPosY();
+		float fullAvailX = GetContentRegionAvail().x;
+		float startX     = GetCursorPosX();
+		float startY     = GetCursorPosY();
 
 		const bool hovered = IsWidgetFocused(newLabel.empty() ? label : newLabel.c_str());
 		const bool dim     = MANAGER(Input)->IsInputGamepad() && !hovered;
@@ -108,33 +108,33 @@ namespace ImGui
 
 		bool  hasLabel       = !labelView.empty();
 		float rightPaneStart = startX;
-		auto& style          = ImGui::Styles::GetSingleton()->user;
+		auto& style          = Styles::GetSingleton()->user;
 
 		if (hasLabel) {
-			rightPaneStart = startX + (fullAvailX * style.widgetSplit) + ImGui::GetStyle().ItemInnerSpacing.x;
+			rightPaneStart = startX + (fullAvailX * style.widgetSplit) + GetStyle().ItemInnerSpacing.x;
 
-			float targetHeight = ImGui::GetFrameHeight();
-			float textH        = ImGui::GetTextLineHeight();
+			float targetHeight = GetFrameHeight();
+			float textH        = GetTextLineHeight();
 
 			// 0.5f uses ImGui's native FramePadding identically to AlignTextToFramePadding()
-			float offY = style.labelAlign.y == 0.5f ? ImGui::GetStyle().FramePadding.y : (targetHeight - textH) * style.labelAlign.y;
+			float offY = style.labelAlign.y == 0.5f ? GetStyle().FramePadding.y : (targetHeight - textH) * style.labelAlign.y;
 
-			ImU32 textColor = dim ? ImGui::GetColorU32(ImGuiCol_TextDisabled) : ImGui::GetColorU32(ImGuiCol_Text);
+			ImU32 textColor = dim ? GetColorU32(ImGuiCol_TextDisabled) : GetColorU32(ImGuiCol_Text);
 
 			// Calculate exact screen position
-			ImVec2 screenPos = ImGui::GetCursorScreenPos();
+			ImVec2 screenPos = GetCursorScreenPos();
 			screenPos.y += std::max(0.0f, offY);
 
 			// Draw text directly to bypass layout engine interference and protect multi-widgets
-			ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), ImGui::GetFontSize(), screenPos, textColor, labelView.data(), labelView.data() + labelView.size());
+			GetWindowDrawList()->AddText(GetFont(), GetFontSize(), screenPos, textColor, labelView.data(), labelView.data() + labelView.size());
 		}
 
 		// Advance cursor to the start of the right pane safely
-		ImGui::SetCursorPos(ImVec2(rightPaneStart, startY));
+		SetCursorPos(ImVec2(rightPaneStart, startY));
 
 		if (!(GImGui->NextItemData.HasFlags & ImGuiNextItemDataFlags_HasWidth)) {
 			float rightPaneAvail = (startX + fullAvailX) - rightPaneStart;
-			ImGui::SetNextItemWidth(std::max(1.0f, rightPaneAvail));
+			SetNextItemWidth(std::max(1.0f, rightPaneAvail));
 		}
 	}
 
@@ -176,16 +176,16 @@ namespace ImGui
 	void Header(const char* label)
 	{
 		auto  largeFont = MANAGER(IconFont)->GetLargeFont();
-		float scale     = FUCKMan::GetSingleton()->GetActiveScale() * ImGui::Renderer::GetResolutionScale();
-		float size      = (largeFont ? largeFont->LegacySize : ImGui::GetStyle().FontSizeBase) * scale;
+		float scale     = FUCKMan::GetSingleton()->GetActiveScale() * Renderer::GetResolutionScale();
+		float size      = (largeFont ? largeFont->LegacySize : GetStyle().FontSizeBase) * scale;
 
-		ImGui::Dummy(ImVec2(0.0f, 12.0f * scale));
+		Dummy(ImVec2(0.0f, 12.0f * scale));
 
-		ImGui::PushFont(largeFont, size);
+		PushFont(largeFont, size);
 		PushStyleColor(ImGuiCol_Text, GetUserStyleColorU32(USER_STYLE::kHeaderText));
 		TextUnformatted(label);
 		PopStyleColor();
-		ImGui::PopFont();
+		PopFont();
 		Separator();
 	}
 
@@ -323,10 +323,10 @@ namespace ImGui
 			window->NavLastIds[1] = 0;
 		}
 
-		ImGui::SetWindowFocus(nullptr);
+		SetWindowFocus(nullptr);
 
-		ImGui::GetIO().ClearInputKeys();
-		ImGui::GetIO().ClearEventsQueue();
+		GetIO().ClearInputKeys();
+		GetIO().ClearEventsQueue();
 	}
 
 	void Spacing(std::uint32_t a_numSpaces)
