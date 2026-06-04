@@ -278,8 +278,8 @@ namespace ImGui
 		if (a_name.empty())
 			return;
 
-		fs::path p(Settings::GetSingleton()->GetStylesPath());
-		std::string           filename = a_name;
+		fs::path    p(Settings::GetSingleton()->GetStylesPath());
+		std::string filename = a_name;
 
 		if (filename.length() < 4 || filename.substr(filename.length() - 4) != ".ini")
 			filename += ".ini";
@@ -302,7 +302,7 @@ namespace ImGui
 
 		if (currentPresetName == filename || currentPresetName == a_name) {
 			currentPresetName = "";
-			Settings::Core.Save([](auto& sIni) {
+			Settings::GetSingleton()->Save(FileType::kStyle, [](auto& sIni) {
 				sIni.SetValue("Style", "sLastPreset", "");
 			});
 		}
