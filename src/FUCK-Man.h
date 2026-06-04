@@ -1,7 +1,7 @@
 #pragma once
 
-#include "FUCKSettings.h"
-#include "FUCKStyles.h"
+#include "FUCK-Settings.h"
+#include "FUCK-Styles.h"
 
 class FUCKMan :
 	public REX::Singleton<FUCKMan>,

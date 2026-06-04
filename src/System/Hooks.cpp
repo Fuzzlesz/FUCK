@@ -1,5 +1,6 @@
+#include "FUCK-Man.h"
+
 #include "Hooks.h"
-#include "FUCKMan.h"
 #include "Input.h"
 
 namespace Hooks

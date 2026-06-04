@@ -1,6 +1,6 @@
-#include "Input.h"
+#include "FUCK-Man.h"
 
-#include "FUCKMan.h"
+#include "Input.h"
 #include "Hotkeys.h"
 
 namespace Input

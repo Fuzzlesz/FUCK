@@ -1,5 +1,6 @@
-#include "FUCKHost.h"
-#include "FUCKMan.h"
+#include "FUCK-Host.h"
+#include "FUCK-Man.h"
+
 #include "ImGui/Graphics.h"
 #include "ImGui/IconsFonts.h"
 #include "ImGui/Overlays.h"
@@ -7,6 +8,7 @@
 #include "ImGui/Styles.h"
 #include "ImGui/Util.h"
 #include "ImGui/Widgets.h"
+
 #include "System/Input.h"
 #include "System/Settings.h"
 #include "System/Utils.h"

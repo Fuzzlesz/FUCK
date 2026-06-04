@@ -1,8 +1,8 @@
 set(sources ${sources}
-	src/FUCKHost.cpp
-	src/FUCKMan.cpp
-	src/FUCKSettings.cpp
-	src/FUCKStyles.cpp
+	src/FUCK-Host.cpp
+	src/FUCK-Man.cpp
+	src/FUCK-Settings.cpp
+	src/FUCK-Styles.cpp
 	src/ImGui/Backend/imgui_impl_win32.cpp
 	src/ImGui/Graphics.cpp
 	src/ImGui/IconsFonts.cpp

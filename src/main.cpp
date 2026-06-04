@@ -1,8 +1,10 @@
-#include "FUCKHost.h"
-#include "FUCKMan.h"
+#include "FUCK-Host.h"
+#include "FUCK-Man.h"
+
 #include "ImGui/Renderer.h"
 #include "ImGui/Styles.h"
 #include "ImGui/Widgets.h"
+
 #include "System/Compat.h"
 #include "System/Console.h"
 #include "System/Hooks.h"

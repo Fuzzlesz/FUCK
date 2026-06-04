@@ -1,5 +1,6 @@
+#include "FUCK-Man.h"
+
 #include "Console.h"
-#include "FUCKMan.h"
 
 namespace Console
 {

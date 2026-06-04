@@ -1,7 +1,8 @@
-#include "Hotkeys.h"
+#include "FUCK-Man.h"
 
-#include "FUCKMan.h"
 #include "ImGui/IconsFonts.h"
+
+#include "Hotkeys.h"
 #include "Input.h"
 
 namespace Hotkeys

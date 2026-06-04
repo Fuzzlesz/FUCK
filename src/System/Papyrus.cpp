@@ -1,5 +1,6 @@
+#include "FUCK-Man.h"
+
 #include "Papyrus.h"
-#include "FUCKMan.h"
 
 namespace Papyrus
 {

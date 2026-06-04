@@ -1,10 +1,11 @@
-#include "FUCKSettings.h"
-#include "FUCKMan.h"
+#include "FUCK-Settings.h"
+#include "FUCK-Man.h"
 
 #include "ImGui/IconsFontAwesome6.h"
 #include "ImGui/IconsFonts.h"
 #include "ImGui/Styles.h"
 #include "ImGui/Widgets.h"
+
 #include "System/Hotkeys.h"
 #include "System/Settings.h"
 #include "System/Translation.h"

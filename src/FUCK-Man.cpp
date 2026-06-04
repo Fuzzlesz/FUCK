@@ -1,5 +1,5 @@
-#include "FUCKMan.h"
-#include "FUCKHost.h"
+#include "FUCK-Man.h"
+#include "FUCK-Host.h"
 
 #include "ImGui/IconsFontAwesome6.h"
 #include "ImGui/IconsFonts.h"
@@ -7,6 +7,7 @@
 #include "ImGui/Styles.h"
 #include "ImGui/Util.h"
 #include "ImGui/Widgets.h"
+
 #include "System/Compat.h"
 #include "System/Hotkeys.h"
 #include "System/Input.h"
@@ -1204,7 +1205,7 @@ void FUCKMan::Draw()
                             btnScreenPos.x + (btnSize - textSize.x) * 0.5f,
                             btnScreenPos.y + (btnSize - textSize.y) * 0.5f + (1.0f * m.uiScale)
 						};
-						
+
 						ImU32 xColor = ImGui::IsItemHovered() ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
 
 						ImGui::GetWindowDrawList()->AddText(
@@ -1228,7 +1229,7 @@ void FUCKMan::Draw()
 							SaveWorkspace();
 						}
 					}
-					
+
 					// 4. Separator
 					FUCK::SetCursorPos({ headerStartCursor.x, m.titleH });
 					FUCK::SeparatorThick();

@@ -1,8 +1,8 @@
 set(headers ${headers}
-	src/FUCKHost.h
-	src/FUCKMan.h
-	src/FUCKSettings.h
-	src/FUCKStyles.h
+	src/FUCK-Host.h
+	src/FUCK-Man.h
+	src/FUCK-Settings.h
+	src/FUCK-Styles.h
 	src/FUCK_API.h
 	src/ImGui/Backend/imgui_default.h
 	src/ImGui/Backend/imgui_impl_win32.h

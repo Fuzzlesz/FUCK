@@ -1,6 +1,7 @@
 #pragma once
 
-#include "FUCKMan.h"
+#include "FUCK-Man.h"
+
 #include "Renderer.h"
 #include "Styles.h"
 #include "Util.h"

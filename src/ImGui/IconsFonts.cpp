@@ -1,15 +1,16 @@
-#include "IconsFonts.h"
+#include "FUCK-Man.h"
 
-#include "FUCKMan.h"
+#include "ImGui/Backend/imgui_default.h"
+
+#include "IconsFonts.h"
 #include "IconsFontAwesome6.h"
 #include "Renderer.h"
 #include "Styles.h"
+#include "Util.h"
+
 #include "System/Input.h"
 #include "System/Settings.h"
 #include "System/Utils.h"
-#include "Util.h"
-
-#include "ImGui/Backend/imgui_default.h"
 
 namespace IconFont
 {

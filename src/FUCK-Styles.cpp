@@ -1,5 +1,6 @@
-#include "FUCKStyles.h"
-#include "FUCKMan.h"
+#include "FUCK-Styles.h"
+#include "FUCK-Man.h"
+
 #include "ImGui/Styles.h"
 
 void ThemeEditorWindow::SetOpen(bool a_open)

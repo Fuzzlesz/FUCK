@@ -1,7 +1,9 @@
-#include "Styles.h"
-#include "FUCKMan.h"
+#include "FUCK-Man.h"
+
 #include "IconsFonts.h"
 #include "Renderer.h"
+#include "Styles.h"
+
 #include "System/Settings.h"
 #include "System/Utils.h"
 
