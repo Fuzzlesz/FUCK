@@ -97,81 +97,19 @@ namespace Hooks
 		return false;
 	}
 
-	// Filters the input event list. Allows Screenshot/Console, and conditionally Game Menus.
-	static RE::InputEvent* FilterInputEvents(RE::InputEvent* const* a_events)
-	{
-		auto* userEvents = RE::UserEvents::GetSingleton();
-		auto* manager    = FUCKMan::GetSingleton();
-
-		const bool allowGameMenus = !manager->IsOpen() &&
-		                            manager->HasWindowWithFlag(FUCK::WindowFlags::kCloseOnGameMenu) &&
-		                            !ImGui::GetIO().WantTextInput;
-
-		RE::InputEvent* head = nullptr;
-		RE::InputEvent* tail = nullptr;
-
-		for (auto iter = *a_events; iter;) {
-			auto next = iter->next;
-			bool keep = false;
-
-			if (auto button = iter->AsButtonEvent()) {
-				const auto& eventName = button->userEvent;
-
-				// Always let Key-Up events through so the game doesn't get stuck inputs
-				if (button->IsUp()) {
-					keep = true;
-				}
-
-				// Always allow Screenshot and Console
-				else if (userEvents && (eventName == userEvents->screenshot || eventName == userEvents->console)) {
-					keep = true;
-				}
-				// Pass menu inputs to the game so MenuOpenCloseEvent can trigger
-				else if (button->HasIDCode()) {
-					const auto rawKey     = button->GetIDCode();
-					const auto device     = button->GetDevice();
-					const auto unifiedKey = Input::Keymap::GetUnifiedKey(device, rawKey);
-
-					if (Input::Manager::IsUnifiedModifier(unifiedKey)) {
-						keep = true;
-					}
-					// Game menu passthrough — only relevant when a kCloseOnGameMenu window is open.
-					else if (allowGameMenus && userEvents) {
-						if (eventName == userEvents->tweenMenu ||
-							eventName == userEvents->journal ||
-							eventName == userEvents->map ||
-							eventName == userEvents->quickMap ||
-							eventName == userEvents->inventory ||
-							eventName == userEvents->quickInventory ||
-							eventName == userEvents->quickMagic ||
-							eventName == userEvents->stats ||
-							eventName == userEvents->quickStats ||
-							eventName == userEvents->favorites) {
-							keep = true;
-						}
-					}
-				}
-			}
-			if (keep) {
-				if (!head)
-					head = iter;
-				else
-					tail->next = iter;
-				tail       = iter;
-				tail->next = nullptr;
-			}
-			iter = next;
-		}
-
-		return head;
-	}
-
 	// ==================================================
 	// EVENT HOOKS
 	// ==================================================
 
+	// Hoping this doesn't bite me in the ass. I attempted to flag input to kNone instead
+	// of messing with the linked list, but it utterly failed.
+	
 	struct ProcessInputQueue
 	{
+		// Tracks key-down events that were blocked, so their corresponding key-up
+		// events can be suppressed to prevent orphaned releases reaching the game.
+		static inline Set<std::uint32_t> s_blockedKeys;
+
 		static void thunk(RE::BSTEventSource<RE::InputEvent*>* a_dispatcher, RE::InputEvent* const* a_events)
 		{
 			if (!a_events || !*a_events) {
@@ -186,8 +124,17 @@ namespace Hooks
 
 			MANAGER(Input)->ProcessInputEvents(a_events);
 
-			const bool wasBlocked = FUCKMan::GetSingleton()->IsInputBlocked();
-			const bool consumed   = FUCKMan::GetSingleton()->ProcessAsyncInput(a_events);
+			auto* manager = FUCKMan::GetSingleton();
+
+			// State before processing (did the user hit Esc while the menu was open?)
+			const bool wasBlocking = manager->IsInputBlocked() || manager->IsOpen();
+
+			// Process menu input (may change the open/blocked state mid-frame)
+			const bool consumed = manager->ProcessAsyncInput(a_events);
+
+			// State after processing
+			const bool isBlocking  = manager->IsInputBlocked() || manager->IsOpen();
+			const bool shouldBlock = wasBlocking || isBlocking || consumed;
 
 			if (CheckForJournalAccept(a_events)) {
 				constexpr RE::InputEvent* const empty_events[] = { nullptr };
@@ -195,33 +142,110 @@ namespace Hooks
 				return;
 			}
 
-			if (consumed || wasBlocked) {
-				// Get the new filtered list head
-				RE::InputEvent* filteredHead = FilterInputEvents(a_events);
+			// Only filter if there's an active block or lingering orphaned up-events.
+			if (shouldBlock || !s_blockedKeys.empty()) {
+				auto*      userEvents     = RE::UserEvents::GetSingleton();
+				const bool allowGameMenus = !manager->IsOpen() && manager->HasWindowWithFlag(FUCK::WindowFlags::kCloseOnGameMenu) && !ImGui::GetIO().WantTextInput;
 
+				RE::InputEvent* newHead = nullptr;
+				RE::InputEvent* newTail = nullptr;
+
+				for (auto iter = *a_events; iter; iter = iter->next) {
+					bool keep = true;
+
+					if (auto btn = iter->AsButtonEvent()) {
+						uint32_t key = btn->HasIDCode() ? Input::Keymap::GetUnifiedKey(btn->GetDevice(), btn->GetIDCode()) : 0;
+
+						if (shouldBlock) {
+							keep = false;
+
+							// Always allow Screenshot and Console
+							if (userEvents && (btn->userEvent == userEvents->screenshot || btn->userEvent == userEvents->console)) {
+								keep = true;
+							} else if (Input::Manager::IsUnifiedModifier(key)) {
+								keep = true;
+							}
+							// Game menu passthrough — only relevant when a kCloseOnGameMenu window is open.
+							else if (allowGameMenus && userEvents) {
+								if (btn->userEvent == userEvents->tweenMenu      ||
+									btn->userEvent == userEvents->journal        ||
+									btn->userEvent == userEvents->map            ||
+									btn->userEvent == userEvents->quickMap       ||
+									btn->userEvent == userEvents->inventory      ||
+									btn->userEvent == userEvents->quickInventory ||
+									btn->userEvent == userEvents->quickMagic     ||
+									btn->userEvent == userEvents->stats          ||
+									btn->userEvent == userEvents->quickStats     ||
+									btn->userEvent == userEvents->favorites)     {
+									keep = true;
+								}
+							}
+
+							// If the key is being blocked on the way down, track it for orphan suppression.
+							if (!keep && btn->Value() > 0.0f) {
+								s_blockedKeys.insert(key);
+							}
+						} else {
+							// Menu is closed, but this key was pressed while the menu was open — suppress the orphaned up-event.
+							if (s_blockedKeys.contains(key)) {
+								keep = false;
+							}
+						}
+
+						// Explicitly block mouse wheel while blocking (wheel events are discrete, they don't hold).
+						if (btn->GetDevice() == RE::INPUT_DEVICE::kMouse && (btn->GetIDCode() == 8 || btn->GetIDCode() == 9)) {
+							if (shouldBlock)
+								keep = false;
+						}
+
+						// Always clean up tracking on release.
+						if (btn->Value() <= 0.0f) {
+							s_blockedKeys.erase(key);
+						}
+
+					} else if (auto idEvent = iter->AsIDEvent()) {
+						uint32_t key = idEvent->HasIDCode() ? Input::Keymap::GetUnifiedKey(idEvent->GetDevice(), idEvent->GetIDCode()) : 0;
+						if (s_blockedKeys.contains(key)) {
+							keep = false;
+						}
+					}
+
+					// Rebuild the linked list with only kept events; blocked events are dropped.
+					if (keep) {
+						if (!newHead) {
+							newHead = iter;
+						} else {
+							newTail->next = iter;
+						}
+						newTail = iter;
+					}
+				}
+
+				if (newTail) {
+					newTail->next = nullptr;
+				}
+
+				// Temporarily lift the hard pause so filtered events can still reach
+				// active menus (e.g. game-menu passthrough). Restored after dispatch.
 				auto          ui          = RE::UI::GetSingleton();
 				std::uint32_t savedPauses = 0;
-
-				// Temporarily lift the hard pause
 				if (ui && ui->numPausesGame > 0) {
 					savedPauses       = ui->numPausesGame;
 					ui->numPausesGame = 0;
 				}
 
 				// Dispatch the events
-				if (filteredHead) {
-					RE::InputEvent* const filtered[] = { filteredHead };
+				if (newHead) {
+					RE::InputEvent* const filtered[] = { newHead };
 					func(a_dispatcher, filtered);
 				} else {
 					constexpr RE::InputEvent* const dummy[] = { nullptr };
 					func(a_dispatcher, dummy);
 				}
 
-				// Restore the hard pause
 				if (ui && savedPauses > 0) {
 					ui->numPausesGame = savedPauses;
 				}
-
 				return;
 			}
 
