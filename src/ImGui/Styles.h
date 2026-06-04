@@ -4,49 +4,39 @@ namespace ImGui
 {
 	enum class USER_STYLE
 	{
-		// Widget
-		kButtons,
-
-		// General Colours
-		kTextButton,
+		// Colours - Global
+		kTextHovered,
 		kHeaderText,
 		kDisabledTextAlpha,
-		kTextHovered,
+		kNavHighlight,
 
-		// Widget Colours
-		kIconDisabled,
-		kSeparator,
-		kGridLines,
-
-		// Sliders
-		kSliderBorder,
-		kSliderBorderActive,
-
-		// Frame/Combos
+		// Colours - Widgets
 		kFrameBG_Widget,
 		kFrameBG_WidgetActive,
-		kComboBoxTextBox,
-		kComboBoxText,
-
-		// Tabs
+		kButtons,
+		kSeparator,
 		kTabBorder,
 		kTabBorderActive,
+		kComboBoxTextBox,
+		kComboBoxText,
+		kWidgetFlash,
+		kTextButton,
+		kIconDisabled,
+		kGridLines,
 
-		// Toggles
+		// Colours - Controls
+		kSliderBorder,
+		kSliderBorderActive,
 		kToggleRailFilled,
 		kToggleKnob,
+		kWidgetToggleActive,
+		kScrollbarBG,
 
-		// Layout
-		kButtonRounding,
-		kButtonBorderSize,
+		// Layout & Geometry
 		kWindowPadding,
 		kItemSpacing,
-
-		kWidgetToggleActive,
-		kWidgetFlash,
-
-		kScrollbarBG,
-		kNavHighlight
+		kButtonRounding,
+		kButtonBorderSize,
 	};
 
 	class Styles : public REX::Singleton<Styles>
@@ -54,86 +44,85 @@ namespace ImGui
 	public:
 		struct Style
 		{
+			// --------------------------------------------------
 			// Helpers / Vars
-			float  bgAlpha{ 0.68f };
-			float  disabledAlpha{ 0.30f };
+			// --------------------------------------------------
+			float bgAlpha{ 0.68f };
+			float disabledAlpha{ 0.30f };
 
-			// Layout Metrics
-			float  widgetSplit{ 0.5f };
-			ImVec2 labelAlign{ 0.0f, 0.5f };
-			ImVec2 windowPadding{ 8.0f, 8.0f };
-			ImVec2 itemSpacing{ 8.0f, 4.0f };
-			float  indentSpacing{ 80.0f };
-
-			float  windowRounding{ 0.0f };
-			float  frameRounding{ 0.0f };
-			float  grabRounding{ 0.0f };
-			float  tabRounding{ 6.0f };
-			float  popupRounding{ 0.0f };
-			float  scrollbarRounding{ 0.0f };
-			float  buttonRounding{ 6.0f };
-			float  buttonBorderSize{ 3.0f };
-
-			// Windows & Borders
+			// --------------------------------------------------
+			// Colours - Global
+			// --------------------------------------------------
 			ImVec4 background{ 0.0f, 0.0f, 0.0f, bgAlpha };
 			ImVec4 border{ 0.25f, 0.25f, 0.25f, 1.0f };
-			float  borderSize{ 4.0f };
-
-			// Text
 			ImVec4 text{ 0.733f, 0.741f, 0.749f, 1.0f };
-			ImVec4 textDisabled{ 0.733f, 0.741f, 0.749f, disabledAlpha };
-			ImVec4 textButton{ 0.85f, 0.85f, 0.85f, 1.0f };
 			ImVec4 textHeader{ 0.90f, 0.90f, 0.90f, 0.90f };
 			ImVec4 textHovered{ 1.0f, 1.0f, 1.0f, 1.0f };
-
-			// Combos
-			ImVec4 comboBoxText{ 1.0f, 1.0f, 1.0f, 0.8f };
-			ImVec4 comboBoxTextBox{ 0.0f, 0.0f, 0.0f, 1.0f };
-			ImVec4 button{ 0.0f, 0.0f, 0.0f, 1.0f };
-
-			// General Frames / Lists
-			ImVec4 frameBG{ 0.0f, 0.0f, 0.0f, 1.0f };
-			ImVec4 frameBG_Widget{ 1.0f, 1.0f, 1.0f, 0.063f };
-			ImVec4 frameBG_WidgetActive{ 1.0f, 1.0f, 1.0f, 0.2f };
-
-			// Sliders
-			ImVec4 sliderGrab{ 0.60f, 0.60f, 0.60f, 1.0f };
-			ImVec4 sliderGrabActive{ 0.90f, 0.90f, 0.90f, 1.0f };
-			ImVec4 sliderBorder{ 0.25f, 0.25f, 0.25f, 1.0f };
-			ImVec4 sliderBorderActive{ 0.60f, 0.60f, 0.60f, 1.0f };
-
-			// Headers / Highlights
-			ImVec4 header{ 1.0f, 1.0f, 1.0f, 0.1f };
-			ImVec4 headerHovered{ 1.0f, 1.0f, 1.0f, 0.15f };
+			ImVec4 textDisabled{ 0.733f, 0.741f, 0.749f, disabledAlpha };
 			ImVec4 navHighlight{ 1.0f, 1.0f, 1.0f, 1.0f };
 
-			// Tabs
+			// --------------------------------------------------
+			// Colours - Widgets
+			// --------------------------------------------------
+			ImVec4 frameBG_Widget{ 1.0f, 1.0f, 1.0f, 0.063f };
+			ImVec4 frameBG_WidgetActive{ 1.0f, 1.0f, 1.0f, 0.2f };
+			ImVec4 button{ 0.0f, 0.0f, 0.0f, 1.0f };
+			ImVec4 separator{ 0.25f, 0.25f, 0.25f, 1.0f };
 			ImVec4 tab{ 0.0f, 0.0f, 0.0f, 0.0f };
 			ImVec4 tabHovered{ 0.0f, 0.0f, 0.0f, 1.0f };
 			ImVec4 tabBorder{ 0.25f, 0.25f, 0.25f, 1.0f };
 			ImVec4 tabBorderActive{ 0.60f, 0.60f, 0.60f, 1.0f };
+			ImVec4 frameBG{ 0.0f, 0.0f, 0.0f, 1.0f };  // ListBG
+			ImVec4 comboBoxTextBox{ 0.0f, 0.0f, 0.0f, 1.0f };
+			ImVec4 comboBoxText{ 1.0f, 1.0f, 1.0f, 0.8f };
+			ImVec4 widgetFlash{ 1.0f, 0.8f, 0.2f, 1.0f };
 
-			// Toggles
+			// Other Widget Colours
+			ImVec4 textButton{ 0.85f, 0.85f, 0.85f, 1.0f };
+			ImVec4 header{ 1.0f, 1.0f, 1.0f, 0.1f };
+			ImVec4 headerHovered{ 1.0f, 1.0f, 1.0f, 0.15f };
+			ImVec4 gridLines{ 1.0f, 1.0f, 1.0f, 0.329f };
+			ImVec4 iconDisabled{ 1.0f, 1.0f, 1.0f, disabledAlpha };
+
+			// --------------------------------------------------
+			// Colours - Controls
+			// --------------------------------------------------
+			ImVec4 sliderBorder{ 0.25f, 0.25f, 0.25f, 1.0f };
+			ImVec4 sliderBorderActive{ 0.60f, 0.60f, 0.60f, 1.0f };
+			ImVec4 sliderGrab{ 0.60f, 0.60f, 0.60f, 1.0f };
+			ImVec4 sliderGrabActive{ 0.90f, 0.90f, 0.90f, 1.0f };
 			ImVec4 toggleRail{ 0.25f, 0.25f, 0.25f, 1.0f };
 			ImVec4 toggleRailFilled{ 0.0f, 0.0f, 0.0f, 1.0f };
 			ImVec4 toggleKnob{ 0.0f, 0.0f, 0.0f, 1.0f };
-
-			// Decorations
-			ImVec4 gridLines{ 1.0f, 1.0f, 1.0f, 0.329f };
-			float  gridThickness{ 2.5f };
-			ImVec4 separator{ 0.25f, 0.25f, 0.25f, 1.0f };
-
-			// Scrollbars
+			ImVec4 widgetToggleActive{ 1.0f, 1.0f, 1.0f, 0.65f };
 			ImVec4 scrollbarBG{ 0.0f, 0.0f, 0.0f, 0.0f };
 			ImVec4 scrollbarGrab{ 0.31f, 0.31f, 0.31f, 1.0f };
 			ImVec4 scrollbarGrabHovered{ 0.408f, 0.408f, 0.408f, 1.0f };
 			ImVec4 scrollbarGrabActive{ 0.51f, 0.51f, 0.51f, 1.0f };
 
-			// Custom Icons
-			float  iconScale{ 1.2f };  // we set this to match OutlineButton and BeginTabItem's larger size in main FUCK menu.
-			ImVec4 iconDisabled{ 1.0f, 1.0f, 1.0f, disabledAlpha };
-			ImVec4 widgetToggleActive{ 1.0f, 1.0f, 1.0f, 0.65f };
-			ImVec4 widgetFlash{ 1.0f, 0.8f, 0.2f, 1.0f };
+			// --------------------------------------------------
+			// Layout & Geometry
+			// --------------------------------------------------
+			ImVec2 windowPadding{ 8.0f, 8.0f };
+			ImVec2 itemSpacing{ 8.0f, 4.0f };
+			float  indentSpacing{ 80.0f };
+
+			float  widgetSplit{ 0.5f };
+			ImVec2 labelAlign{ 0.0f, 0.5f };
+
+			float borderSize{ 4.0f };
+			float buttonBorderSize{ 3.0f };
+			float gridThickness{ 2.5f };
+
+			float iconScale{ 1.2f };
+
+			float windowRounding{ 0.0f };
+			float frameRounding{ 0.0f };
+			float buttonRounding{ 6.0f };
+			float tabRounding{ 6.0f };
+			float popupRounding{ 0.0f };
+			float scrollbarRounding{ 0.0f };
+			float grabRounding{ 0.0f };
 		};
 
 		// --- API ---
@@ -170,21 +159,21 @@ namespace ImGui
 		std::string ToString(const T& a_style, bool a_hex);
 
 		// Cached U32
+		ImU32 textHeaderU32;
+		ImU32 navHighlightU32;
 		ImU32 frameBG_WidgetU32;
 		ImU32 frameBG_WidgetActiveU32;
+		ImU32 tabBorderU32;
+		ImU32 tabBorderActiveU32;
+		ImU32 widgetFlashU32;
+		ImU32 iconDisabledU32;
 		ImU32 gridLinesU32;
 		ImU32 sliderBorderU32;
 		ImU32 sliderBorderActiveU32;
-		ImU32 iconDisabledU32;
-		ImU32 textHeaderU32;
-		ImU32 widgetToggleActiveU32;
-		ImU32 widgetFlashU32;
-		ImU32 tabBorderU32;
-		ImU32 tabBorderActiveU32;
 		ImU32 toggleRailFilledU32;
 		ImU32 toggleKnobU32;
+		ImU32 widgetToggleActiveU32;
 		ImU32 scrollbarBGU32;
-		ImU32 navHighlightU32;
 
 		bool        refreshStyle{ false };
 		std::string currentPresetName{ "" };
