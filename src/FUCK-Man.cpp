@@ -994,18 +994,21 @@ void FUCKMan::Draw()
 	// ==================================================
 	for (auto* win : _windows) {
 		if (win->IsOpen()) {
-			const char*      title = win->Title();
+			const char*       title     = win->Title();
+			FUCK::WindowFlags userFlags = win->GetFlags();
+
+			// --- Setup & State ---
+			std::string key      = std::format("{}|{}", win->PluginName(), win->Id());
+			auto&       winState = s_windowStates[key];
+
 			ImGuiWindowFlags flags = ImGuiWindowFlags_None;
 
 			// --- Flags Setup ---
-			bool noDecoration    = (win->GetFlags() & FUCK::WindowFlags::kNoDecoration);
-			bool ignoreUserScale = (win->GetFlags() & FUCK::WindowFlags::kIgnoreUserScale) != 0;
-			bool noResize        = (win->GetFlags() & FUCK::WindowFlags::kNoResize) != 0;
-			bool autoResize      = (win->GetFlags() & FUCK::WindowFlags::kAutoResize) != 0;
-			bool noMove          = (win->GetFlags() & FUCK::WindowFlags::kNoMove) != 0;
-
-			std::string key      = std::format("{}|{}", win->PluginName(), win->Id());
-			auto&       winState = s_windowStates[key];
+			bool noDecoration    = (userFlags & FUCK::WindowFlags::kNoDecoration);
+			bool ignoreUserScale = (userFlags & FUCK::WindowFlags::kIgnoreUserScale);
+			bool noResize        = (userFlags & FUCK::WindowFlags::kNoResize);
+			bool autoResize      = (userFlags & FUCK::WindowFlags::kAutoResize);
+			bool noMove          = (userFlags & FUCK::WindowFlags::kNoMove);
 
 			flags |= ImGuiWindowFlags_NoTitleBar;
 			if (noDecoration) {
@@ -1016,18 +1019,15 @@ void FUCKMan::Draw()
 				flags |= ImGuiWindowFlags_NoScrollbar;
 			}
 
-			if (noResize) {
+			if (noResize)
 				flags |= ImGuiWindowFlags_NoResize;
-			}
-			if (autoResize) {
+			if (autoResize)
 				flags |= ImGuiWindowFlags_AlwaysAutoResize;
-			}
-			if (noMove) {
+			if (noMove)
 				flags |= ImGuiWindowFlags_NoMove;
-			}
 
 			bool poppedInvisibleBg = false;
-			if (win->GetFlags() & FUCK::WindowFlags::kNoBackground) {
+			if (userFlags & FUCK::WindowFlags::kNoBackground) {
 				if (!IsInputBlocked()) {
 					flags |= ImGuiWindowFlags_NoBackground;
 				} else {
@@ -1039,7 +1039,7 @@ void FUCKMan::Draw()
 				}
 			}
 
-			if ((win->GetFlags() & FUCK::WindowFlags::kPassInputToGame) && !IsInputBlocked())
+			if ((userFlags & FUCK::WindowFlags::kPassInputToGame) && !IsInputBlocked())
 				flags |= ImGuiWindowFlags_NoInputs;
 
 			// --- Collapse Logic ---

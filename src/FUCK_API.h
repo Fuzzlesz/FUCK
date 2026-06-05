@@ -67,21 +67,21 @@ namespace FUCK
 	enum class WindowFlags
 	{
 		kNone            = 0,
-		kBlurBackground  = 1 << 0,   // Blurs the game world
-		kHideHUD         = 1 << 1,   // Hides the in-game HUD
-		kPauseHard       = 1 << 2,   // Fully suspends the game engine
-		kCloseOnEsc      = 1 << 3,   // Closes when Escape is pressed
-		kCloseOnGameMenu = 1 << 4,   // Hides when native game menus open
+		kPauseHard       = 1 << 0,   // Fully suspends the game engine
+		kPauseSoft       = 1 << 1,   // Freezes game time
+		kBlockVanity     = 1 << 2,   // Prevents idle vanity camera
+		kHideHUD         = 1 << 3,   // Hides the in-game HUD
+		kBlurBackground  = 1 << 4,   // Blurs the game world
 		kPassInputToGame = 1 << 5,   // Allows player control while open
-		kPauseSoft       = 1 << 6,   // Freezes game time
-		kBlockVanity     = 1 << 7,   // Prevents idle vanity camera
-		kNoBackground    = 1 << 8,   // Makes window background transparent
-		kNoDecoration    = 1 << 9,   // Removes title bar and controls
+		kCloseOnEsc      = 1 << 6,   // Closes when Escape is pressed
+		kCloseOnGameMenu = 1 << 7,   // Hides when native game menus open
+		kNoDecoration    = 1 << 8,   // Removes title bar and controls
+		kNoBackground    = 1 << 9,   // Makes window background transparent
 		kExtendBorder    = 1 << 10,  // Draws border outside window bounds
-		kIgnoreUserScale = 1 << 11,  // Ignores global UI scaling slider
-		kNoResize        = 1 << 12,  // Prevents manual resizing
+		kNoResize        = 1 << 11,  // Prevents manual resizing by the user
+		kNoMove          = 1 << 12,  // Prevents manual dragging by the user
 		kAutoResize      = 1 << 13,  // Sizes automatically to contents
-		kNoMove          = 1 << 14   // Prevents manual dragging via the window background
+		kIgnoreUserScale = 1 << 14   // Ignores global UI scaling slider
 	};
 
 	enum class TableFlags
