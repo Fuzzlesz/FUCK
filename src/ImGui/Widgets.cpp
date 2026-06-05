@@ -599,6 +599,10 @@ namespace ImGui
 		if (BeginListBox("##List", listSize)) {
 			for (int i = 0; i < show_count; i++) {
 				int idx = filtering ? itemScoreVector[i].first : i;
+
+				// Push the index to guarantee unique IDs for identical labels
+				PushID(idx);
+
 				if (Selectable(items[idx].c_str(), *current_item == idx)) {
 					*current_item = idx;
 					changed       = true;
@@ -607,6 +611,8 @@ namespace ImGui
 				}
 				if (*current_item == idx)
 					SetItemDefaultFocus();
+
+				PopID();
 			}
 			EndListBox();
 		}
@@ -676,6 +682,9 @@ namespace ImGui
 			PushFont(nullptr, fontSize);
 
 			for (int i = 0; i < items_count; i++) {
+				// Push the index to guarantee unique IDs for identical labels
+				PushID(i);
+
 				if (Selectable(items[i], *current_item == i)) {
 					*current_item = i;
 					changed       = true;
@@ -683,6 +692,8 @@ namespace ImGui
 				}
 				if (*current_item == i)
 					SetItemDefaultFocus();
+
+				PopID();
 			}
 
 			PopFont();
