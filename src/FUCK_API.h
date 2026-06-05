@@ -67,20 +67,20 @@ namespace FUCK
 	enum class WindowFlags
 	{
 		kNone            = 0,
-		kBlurBackground  = 1 << 0,
-		kHideHUD         = 1 << 1,
-		kPauseHard       = 1 << 2,
-		kCloseOnEsc      = 1 << 3,
-		kCloseOnGameMenu = 1 << 4,
-		kPassInputToGame = 1 << 5,
-		kPauseSoft       = 1 << 6,
-		kBlockVanity     = 1 << 7,
-		kNoBackground    = 1 << 8,
-		kNoDecoration    = 1 << 9,
-		kExtendBorder    = 1 << 10,
-		kIgnoreUserScale = 1 << 11,
-		kNoResize        = 1 << 12,
-		kAutoResize      = 1 << 13
+		kBlurBackground  = 1 << 0,   // Blurs the game world
+		kHideHUD         = 1 << 1,   // Hides the in-game HUD
+		kPauseHard       = 1 << 2,   // Fully suspends the game engine
+		kCloseOnEsc      = 1 << 3,   // Closes when Escape is pressed
+		kCloseOnGameMenu = 1 << 4,   // Hides when native game menus open
+		kPassInputToGame = 1 << 5,   // Allows player control while open
+		kPauseSoft       = 1 << 6,   // Freezes game time
+		kBlockVanity     = 1 << 7,   // Prevents idle vanity camera
+		kNoBackground    = 1 << 8,   // Makes window background transparent
+		kNoDecoration    = 1 << 9,   // Removes title bar and controls
+		kExtendBorder    = 1 << 10,  // Draws border outside window bounds
+		kIgnoreUserScale = 1 << 11,  // Ignores global UI scaling slider
+		kNoResize        = 1 << 12,  // Prevents manual resizing
+		kAutoResize      = 1 << 13   // Sizes automatically to contents
 	};
 
 	enum class TableFlags
