@@ -80,7 +80,8 @@ namespace FUCK
 		kExtendBorder    = 1 << 10,  // Draws border outside window bounds
 		kIgnoreUserScale = 1 << 11,  // Ignores global UI scaling slider
 		kNoResize        = 1 << 12,  // Prevents manual resizing
-		kAutoResize      = 1 << 13   // Sizes automatically to contents
+		kAutoResize      = 1 << 13,  // Sizes automatically to contents
+		kNoMove          = 1 << 14   // Prevents manual dragging via the window background
 	};
 
 	enum class TableFlags

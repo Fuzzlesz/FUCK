@@ -1002,6 +1002,7 @@ void FUCKMan::Draw()
 			bool ignoreUserScale = (win->GetFlags() & FUCK::WindowFlags::kIgnoreUserScale) != 0;
 			bool noResize        = (win->GetFlags() & FUCK::WindowFlags::kNoResize) != 0;
 			bool autoResize      = (win->GetFlags() & FUCK::WindowFlags::kAutoResize) != 0;
+			bool noMove          = (win->GetFlags() & FUCK::WindowFlags::kNoMove) != 0;
 
 			std::string key      = std::format("{}|{}", win->PluginName(), win->Id());
 			auto&       winState = s_windowStates[key];
@@ -1020,6 +1021,9 @@ void FUCKMan::Draw()
 			}
 			if (autoResize) {
 				flags |= ImGuiWindowFlags_AlwaysAutoResize;
+			}
+			if (noMove) {
+				flags |= ImGuiWindowFlags_NoMove;
 			}
 
 			bool poppedInvisibleBg = false;
