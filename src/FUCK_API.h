@@ -77,11 +77,10 @@ namespace FUCK
 		kBlockVanity     = 1 << 7,
 		kNoBackground    = 1 << 8,
 		kNoDecoration    = 1 << 9,
-		kCustomRender    = 1 << 10,
-		kExtendBorder    = 1 << 11,
-		kIgnoreUserScale = 1 << 12,
-		kNoResize        = 1 << 13,
-		kAutoResize      = 1 << 14
+		kExtendBorder    = 1 << 10,
+		kIgnoreUserScale = 1 << 11,
+		kNoResize        = 1 << 12,
+		kAutoResize      = 1 << 13
 	};
 
 	enum class TableFlags

@@ -994,11 +994,6 @@ void FUCKMan::Draw()
 	// ==================================================
 	for (auto* win : _windows) {
 		if (win->IsOpen()) {
-			if (win->GetFlags() & FUCK::WindowFlags::kCustomRender) {
-				win->Draw();
-				continue;
-			}
-
 			const char*      title = win->Title();
 			ImGuiWindowFlags flags = ImGuiWindowFlags_None;
 
