@@ -154,6 +154,14 @@ namespace FUCK
 		kNoNav        = 1 << 3
 	};
 
+	enum class PopupFlags
+	{
+		kNone          = 0,
+		kAnyPopupId    = 1 << 10,
+		kAnyPopupLevel = 1 << 11,
+		kAnyPopup      = kAnyPopupId | kAnyPopupLevel
+	};
+
 	inline WindowFlags      operator|(WindowFlags a, WindowFlags b) { return static_cast<WindowFlags>(static_cast<int>(a) | static_cast<int>(b)); }
 	inline bool             operator&(WindowFlags a, WindowFlags b) { return (static_cast<int>(a) & static_cast<int>(b)) != 0; }
 	inline TableFlags       operator|(TableFlags a, TableFlags b) { return static_cast<TableFlags>(static_cast<int>(a) | static_cast<int>(b)); }
@@ -383,6 +391,7 @@ struct FUCK_Interface
 	bool (*IsManagedHotkeyDown)(FUCK::ManagedHotkey*);
 
 	// Interaction
+	bool (*IsPopupOpen)(const char*, int);
 	bool (*IsItemHovered)(int);
 	bool (*IsItemClicked)(int);
 	bool (*IsItemActive)();
@@ -956,6 +965,7 @@ namespace FUCK
 	// Widgets & Interaction
 	// --------------------------------------------------
 
+	inline bool IsPopupOpen(const char* str_id = nullptr, PopupFlags flags = PopupFlags::kNone) { return GetInterface() ? GetInterface()->IsPopupOpen(str_id, static_cast<int>(flags)) : false; }
 	inline bool IsItemHovered(int flags = 0) { return GetInterface() ? GetInterface()->IsItemHovered(flags) : false; }
 	inline bool IsItemClicked(int mouse_button = 0) { return GetInterface() ? GetInterface()->IsItemClicked(mouse_button) : false; }
 	inline bool IsItemActive() { return GetInterface() ? GetInterface()->IsItemActive() : false; }
@@ -1647,7 +1657,7 @@ namespace FUCK
 		{
 			const char* val = ini.GetValue(sec, key, defVal);
 			strncpy_s(dest, N, val, _TRUNCATE);
-		}		
+		}
 	}
 
 	/// @brief RAII Wrapper for listening to Skyrim UI Menu events.

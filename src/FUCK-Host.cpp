@@ -556,6 +556,7 @@ namespace FUCK::Host
 	// ==================================================
 	// Interaction
 	// ==================================================
+	static bool IsPopupOpen_Impl(const char* str_id, int flags) { return ImGui::IsPopupOpen(str_id, static_cast<ImGuiPopupFlags>(flags)); }
 	static bool IsItemHovered_Impl(int flags) { return ImGui::IsItemHovered(flags); }
 	static bool IsItemClicked_Impl(int btn) { return ImGui::IsItemClicked(btn); }
 	static bool IsItemActive_Impl() { return ImGui::IsItemActive(); }
@@ -923,6 +924,7 @@ namespace FUCK::Host
 			.ProcessManagedHotkey = ProcessManagedHotkey_Impl,
 			.IsManagedHotkeyDown  = IsManagedHotkeyDown_Impl,
 			// Interaction
+			.IsPopupOpen                = IsPopupOpen_Impl,
 			.IsItemHovered              = IsItemHovered_Impl,
 			.IsItemClicked              = IsItemClicked_Impl,
 			.IsItemActive               = IsItemActive_Impl,
