@@ -689,17 +689,20 @@ namespace Input
 
 				switch (event->GetDevice()) {
 				case RE::INPUT_DEVICE::kKeyboard:
-					if (passKeyboardAndGamepad)
+					// Always forward KeyUp events (!isDown) to prevent stuck keys in ImGui
+					if (passKeyboardAndGamepad || !isDown)
 						io.AddKeyEvent(Keymap::ToImGuiKey(static_cast<KEY>(key)), isDown);
 					break;
 				case RE::INPUT_DEVICE::kMouse:
-					if (passMouse) {
+					if (passMouse || !isDown) {
 						switch (auto mouseKey = static_cast<MOUSE>(key)) {
 						case MOUSE::kWheelUp:
-							io.AddMouseWheelEvent(0, value);
+							if (passMouse)
+								io.AddMouseWheelEvent(0, value);
 							break;
 						case MOUSE::kWheelDown:
-							io.AddMouseWheelEvent(0, value * -1);
+							if (passMouse)
+								io.AddMouseWheelEvent(0, value * -1);
 							break;
 						default:
 							io.AddMouseButtonEvent(key, isDown);
@@ -708,13 +711,15 @@ namespace Input
 					}
 					break;
 				case RE::INPUT_DEVICE::kGamepad:
-					if (passKeyboardAndGamepad) {
+					if (passKeyboardAndGamepad || !isDown) {
 						if (RE::ControlMap::GetSingleton()->GetGamePadType() == RE::PC_GAMEPAD_TYPE::kOrbis) {
 							auto [imKey, analog] = Keymap::ToImGuiKey(static_cast<GAMEPAD_ORBIS>(key));
-							if (analog)
-								io.AddKeyAnalogEvent(imKey, isDown, value);
-							else
+							if (analog) {
+								if (passKeyboardAndGamepad)
+									io.AddKeyAnalogEvent(imKey, isDown, value);
+							} else {
 								io.AddKeyEvent(imKey, isDown);
+							}
 
 							if (key == AsKey(GAMEPAD_ORBIS::kPS3_L3) ||
 								key == AsKey(GAMEPAD_ORBIS::kPS3_R3)) {
@@ -722,10 +727,12 @@ namespace Input
 							}
 						} else {
 							auto [imKey, analog] = Keymap::ToImGuiKey(static_cast<GAMEPAD_DIRECTX>(key));
-							if (analog)
-								io.AddKeyAnalogEvent(imKey, isDown, value);
-							else
+							if (analog) {
+								if (passKeyboardAndGamepad)
+									io.AddKeyAnalogEvent(imKey, isDown, value);
+							} else {
 								io.AddKeyEvent(imKey, isDown);
+							}
 
 							if (key == AsKey(GAMEPAD_DIRECTX::kLeftThumb) ||
 								key == AsKey(GAMEPAD_DIRECTX::kRightThumb)) {
