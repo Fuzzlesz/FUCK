@@ -390,7 +390,7 @@ namespace FUCK::Host
 
 			if (begin_tooltip) {
 				ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-				ImGui::TextUnformatted(desc);
+				ImGui::DrawFormattedText(desc);
 				ImGui::PopTextWrapPos();
 				ImGui::EndTooltip();
 			}
@@ -781,7 +781,7 @@ namespace FUCK::Host
 			bool begin_tooltip = ImGui::BeginTooltip();
 
 			if (begin_tooltip) {
-				ImGui::TextUnformatted(fmt);
+				ImGui::DrawFormattedText(fmt);
 				ImGui::EndTooltip();
 			}
 

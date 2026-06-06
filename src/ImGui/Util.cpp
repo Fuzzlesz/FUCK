@@ -175,6 +175,74 @@ namespace ImGui
 		PopStyleColor();
 	}
 
+	// Parses \n into linebreaks and [Brackets] into yellow
+	void DrawFormattedText(const char* text)
+	{
+		if (!text)
+			return;
+
+		std::string s(text);
+
+		// Un-escape literal "\\n" from translation files into actual newlines
+		size_t pos = 0;
+		while ((pos = s.find("\\n", pos)) != std::string::npos) {
+			s.replace(pos, 2, "\n");
+			pos += 1;  // Advance past the newly inserted '\n'
+		}
+
+		// If there are no brackets, draw normally so native ImGui auto-wrap still functions optimally
+		if (s.find('[') == std::string::npos && s.find(']') == std::string::npos) {
+			TextUnformatted(s.c_str());
+			return;
+		}
+
+		ImVec4 cHighlight = ImVec4(1.0f, 0.85f, 0.2f, 1.0f);  // Yellow
+		ImVec4 cNormal    = GetStyleColorVec4(ImGuiCol_Text);
+
+		size_t line_start = 0;
+		while (line_start < s.length()) {
+			size_t      line_end = s.find('\n', line_start);
+			std::string line     = (line_end == std::string::npos) ? s.substr(line_start) : s.substr(line_start, line_end - line_start);
+
+			std::vector<std::pair<std::string, bool>> tokens;
+			const char*                               p            = line.c_str();
+			const char*                               start        = p;
+			bool                                      is_highlight = false;
+
+			while (*p) {
+				if (*p == '[' || *p == ']') {
+					if (p > start) {
+						tokens.push_back({ std::string(start, p - start), is_highlight });
+					}
+					is_highlight = (*p == '[');
+					start        = p + 1;
+				}
+				p++;
+			}
+			if (p > start) {
+				tokens.push_back({ std::string(start, p - start), is_highlight });
+			}
+
+			if (tokens.empty()) {
+				TextUnformatted("");
+			} else {
+				for (size_t i = 0; i < tokens.size(); ++i) {
+					PushStyleColor(ImGuiCol_Text, tokens[i].second ? cHighlight : cNormal);
+					TextUnformatted(tokens[i].first.c_str());
+					PopStyleColor();
+
+					if (i < tokens.size() - 1) {
+						SameLine(0.0f, 0.0f);  // Zero spacing keeps the highlighted word attached to punctuation
+					}
+				}
+			}
+
+			if (line_end == std::string::npos)
+				break;
+			line_start = line_end + 1;
+		}
+	}
+
 	void Header(const char* label)
 	{
 		auto* manager   = FUCKMan::GetSingleton();
