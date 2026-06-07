@@ -32,6 +32,7 @@ namespace Hooks
 
 		const std::string menuName = TRANSLATE_S("$FUCK_Title");
 
+		// If configured, overwrite the vanilla "Help" menu option.
 		if (manager->GetReplaceHelpMenu()) {
 			for (std::uint32_t i = 0; i < arraySize; ++i) {
 				RE::GFxValue element, textVal;
@@ -47,6 +48,7 @@ namespace Hooks
 			}
 		}
 
+		// Otherwise, append our button to the bottom of the list.
 		RE::GFxValue newEntry;
 		a_movieView->CreateObject(&newEntry);
 		newEntry.SetMember("text", RE::GFxValue(menuName.c_str()));
@@ -84,10 +86,12 @@ namespace Hooks
 		if (input->IsInputPressed(a_events, kKeyEnter) ||
 			input->IsInputPressed(a_events, kMouseLeft) ||
 			input->IsInputPressed(a_events, kGamepadA)) {
+			// Close the Journal menu natively so the game state clears
 			if (auto queue = RE::UIMessageQueue::GetSingleton()) {
 				queue->AddMessage(RE::JournalMenu::MENU_NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
 			}
 
+			// Defer opening our menu to the next frame to prevent input collisions
 			SKSE::GetTaskInterface()->AddTask([]() {
 				FUCKMan::GetSingleton()->Open();
 			});
@@ -254,6 +258,7 @@ namespace Hooks
 	{
 		static RE::UI_MESSAGE_RESULTS thunk(RE::JournalMenu* a_this, RE::UIMessage& a_message)
 		{
+			// Reset tracking when the journal menu closes
 			if (a_message.type == RE::UI_MESSAGE_TYPE::kHide) {
 				s_fuckButtonInjected = false;
 				s_fuckButtonIndex    = -1.0;
