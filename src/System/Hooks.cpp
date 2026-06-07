@@ -102,14 +102,10 @@ namespace Hooks
 	// EVENT HOOKS
 	// ==================================================
 
-	// Hoping this doesn't bite me in the ass. I attempted to flag input to kNone instead
-	// of messing with the linked list, but it utterly failed.
-	
 	struct ProcessInputQueue
 	{
-		// Tracks key-down events that were blocked, so their corresponding key-up
-		// events can be suppressed to prevent orphaned releases reaching the game.
-		static inline Set<std::uint32_t> s_blockedKeys;
+		// Tracks the blocking state of the previous frame
+		static inline bool s_wasBlocking = false;
 
 		static void thunk(RE::BSTEventSource<RE::InputEvent*>* a_dispatcher, RE::InputEvent* const* a_events)
 		{
@@ -118,6 +114,7 @@ namespace Hooks
 				return;
 			}
 
+			// Do not interfere if console is open
 			if (auto ui = RE::UI::GetSingleton(); ui && ui->IsMenuOpen(RE::Console::MENU_NAME)) {
 				func(a_dispatcher, a_events);
 				return;
@@ -127,24 +124,25 @@ namespace Hooks
 
 			auto* manager = FUCKMan::GetSingleton();
 
-			// State before processing (did the user hit Esc while the menu was open?)
-			const bool wasBlocking = manager->IsInputBlocked() || manager->IsOpen();
-
 			// Process menu input (may change the open/blocked state mid-frame)
 			const bool consumed = manager->ProcessAsyncInput(a_events);
 
 			// State after processing
-			const bool isBlocking  = manager->IsInputBlocked() || manager->IsOpen();
-			const bool shouldBlock = wasBlocking || isBlocking || consumed;
+			const bool isBlocking = manager->IsInputBlocked() || manager->IsOpen() || consumed;
 
+			// Detect the exact frame we transition into a blocked state
+			const bool justBlocked = isBlocking && !s_wasBlocking;
+			s_wasBlocking          = isBlocking;
+
+			// Check if the user just clicked our injected System Menu button
 			if (CheckForJournalAccept(a_events)) {
+				// Swallow the input
 				constexpr RE::InputEvent* const empty_events[] = { nullptr };
 				func(a_dispatcher, empty_events);
 				return;
 			}
 
-			// Only filter if there's an active block or lingering orphaned up-events.
-			if (shouldBlock || !s_blockedKeys.empty()) {
+			if (isBlocking) {
 				auto*      userEvents     = RE::UserEvents::GetSingleton();
 				const bool allowGameMenus = !manager->IsOpen() && manager->HasWindowWithFlag(FUCK::WindowFlags::kCloseOnGameMenu) && !ImGui::GetIO().WantTextInput;
 
@@ -152,66 +150,46 @@ namespace Hooks
 				RE::InputEvent* newTail = nullptr;
 
 				for (auto iter = *a_events; iter; iter = iter->next) {
-					bool keep = true;
+					bool keep = false;
 
 					if (auto btn = iter->AsButtonEvent()) {
-						uint32_t key = btn->HasIDCode() ? Input::Keymap::GetUnifiedKey(btn->GetDevice(), btn->GetIDCode()) : 0;
-
-						if (shouldBlock) {
-							keep = false;
-
-							// Always allow Screenshot and Console
-							if (userEvents && (btn->userEvent == userEvents->screenshot || btn->userEvent == userEvents->console)) {
+						// Always allow Screenshot and Console through the block
+						if (userEvents && (btn->userEvent == userEvents->screenshot || btn->userEvent == userEvents->console)) {
+							keep = true;
+						}
+						// Game menu passthrough — only relevant when a kCloseOnGameMenu window is open
+						else if (allowGameMenus && userEvents) {
+							if (btn->userEvent == userEvents->tweenMenu      ||
+								btn->userEvent == userEvents->journal        ||
+								btn->userEvent == userEvents->map            ||
+								btn->userEvent == userEvents->quickMap       ||
+								btn->userEvent == userEvents->inventory      ||
+								btn->userEvent == userEvents->quickInventory ||
+								btn->userEvent == userEvents->quickMagic     ||
+								btn->userEvent == userEvents->stats          ||
+								btn->userEvent == userEvents->quickStats     ||
+								btn->userEvent == userEvents->favorites)     {
 								keep = true;
-							} else if (Input::Manager::IsUnifiedModifier(key)) {
-								keep = true;
-							}
-							// Game menu passthrough — only relevant when a kCloseOnGameMenu window is open.
-							else if (allowGameMenus && userEvents) {
-								if (btn->userEvent == userEvents->tweenMenu      ||
-									btn->userEvent == userEvents->journal        ||
-									btn->userEvent == userEvents->map            ||
-									btn->userEvent == userEvents->quickMap       ||
-									btn->userEvent == userEvents->inventory      ||
-									btn->userEvent == userEvents->quickInventory ||
-									btn->userEvent == userEvents->quickMagic     ||
-									btn->userEvent == userEvents->stats          ||
-									btn->userEvent == userEvents->quickStats     ||
-									btn->userEvent == userEvents->favorites)     {
-									keep = true;
-								}
-							}
-
-							// If the key is being blocked on the way down, track it for orphan suppression.
-							if (!keep && btn->Value() > 0.0f) {
-								s_blockedKeys.insert(key);
-							}
-						} else {
-							// Menu is closed, but this key was pressed while the menu was open — suppress the orphaned up-event.
-							if (s_blockedKeys.contains(key)) {
-								keep = false;
 							}
 						}
 
-						// Explicitly block mouse wheel while blocking (wheel events are discrete, they don't hold).
-						if (btn->GetDevice() == RE::INPUT_DEVICE::kMouse && (btn->GetIDCode() == 8 || btn->GetIDCode() == 9)) {
-							if (shouldBlock)
-								keep = false;
+						// Zero-out on transition to blocked state to prevent "stuck" inputs
+						if (!keep && justBlocked) {
+							btn->value        = 0.0f;
+							btn->heldDownSecs = 0.0f;
+							keep              = true;
 						}
-
-						// Always clean up tracking on release.
-						if (btn->Value() <= 0.0f) {
-							s_blockedKeys.erase(key);
-						}
-
 					} else if (auto idEvent = iter->AsIDEvent()) {
-						uint32_t key = idEvent->HasIDCode() ? Input::Keymap::GetUnifiedKey(idEvent->GetDevice(), idEvent->GetIDCode()) : 0;
-						if (s_blockedKeys.contains(key)) {
-							keep = false;
+						if (justBlocked) {
+							if (auto thumb = idEvent->AsThumbstickEvent()) {
+								thumb->xValue = 0.0f;
+								thumb->yValue = 0.0f;
+							}
+							keep = true;
 						}
 					}
 
-					// Rebuild the linked list with only kept events; blocked events are dropped.
+					// Rebuild the linked list with only kept (or zeroed) events
 					if (keep) {
 						if (!newHead) {
 							newHead = iter;
@@ -222,20 +200,29 @@ namespace Hooks
 					}
 				}
 
+				// Terminate the chain
 				if (newTail) {
 					newTail->next = nullptr;
 				}
 
-				// Temporarily lift the hard pause so filtered events can still reach
-				// active menus (e.g. game-menu passthrough). Restored after dispatch.
-				auto          ui          = RE::UI::GetSingleton();
+				// Temporarily unpause the game if a paused menu opens, to ensure our filtered events are processed and don't get "stuck"
 				std::uint32_t savedPauses = 0;
-				if (ui && ui->numPausesGame > 0) {
-					savedPauses       = ui->numPausesGame;
-					ui->numPausesGame = 0;
+				bool          savedFreeze = false;
+				auto          ui          = RE::UI::GetSingleton();
+				auto          main        = RE::Main::GetSingleton();
+
+				if (justBlocked) {
+					if (ui && ui->numPausesGame > 0) {
+						savedPauses       = ui->numPausesGame;
+						ui->numPausesGame = 0;
+					}
+					if (main && main->freezeTime) {
+						savedFreeze      = main->freezeTime;
+						main->freezeTime = false;
+					}
 				}
 
-				// Dispatch the events
+				// Dispatch the filtered/zeroed events
 				if (newHead) {
 					RE::InputEvent* const filtered[] = { newHead };
 					func(a_dispatcher, filtered);
@@ -244,12 +231,20 @@ namespace Hooks
 					func(a_dispatcher, dummy);
 				}
 
-				if (ui && savedPauses > 0) {
-					ui->numPausesGame = savedPauses;
+				// Restore the pauses immediately after dispatch
+				if (justBlocked) {
+					if (main && savedFreeze) {
+						main->freezeTime = savedFreeze;
+					}
+					if (ui && savedPauses > 0) {
+						ui->numPausesGame = savedPauses;
+					}
 				}
+
 				return;
 			}
 
+			// Not blocking, normal pass-through
 			func(a_dispatcher, a_events);
 		}
 		static inline REL::Relocation<decltype(thunk)> func;
