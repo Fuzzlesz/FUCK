@@ -671,6 +671,19 @@ namespace Input
 			}
 		}
 
+		// --- Hide the visual cursor when playing with a gamepad ---
+		if (auto ui = RE::UI::GetSingleton()) {
+			if (auto cursorMenu = ui->GetMenu<RE::CursorMenu>()) {
+				if (cursorMenu->uiMovie) {
+					RE::GFxValue root;
+					if (cursorMenu->uiMovie->GetVariable(&root, "_root")) {
+						bool hideVisual = IsInputGamepad() && !menuOpen;
+						root.SetMember("_alpha", RE::GFxValue(hideVisual ? 0.0 : 100.0));
+					}
+				}
+			}
+		}
+
 		// -- Event Forwarding --
 		auto&      io             = ImGui::GetIO();
 		const bool cursorMenuOpen = RE::UI::GetSingleton()->IsMenuOpen(RE::CursorMenu::MENU_NAME);
