@@ -325,7 +325,7 @@ namespace Input::Keymap
 		if (a_device == RE::INPUT_DEVICE::kMouse)
 			return a_key + kMBBase;
 		if (a_device == RE::INPUT_DEVICE::kGamepad)
-			return SKSE::InputMap::GamepadMaskToKeycode(a_key) + kGPBase;
+			return SKSE::InputMap::GamepadMaskToKeycode(a_key);
 		return a_key;
 	}
 }

@@ -70,9 +70,9 @@ namespace Hotkeys
 
 	std::uint32_t Manager::EscapeKey()
 	{
-	return (FUCK::GetInputDevice() == FUCK::InputDevice::kGamepad)
-	? Input::Keymap::kGPBase + SKSE::InputMap::kGamepadButtonOffset_B
-	: Input::Keymap::AsKey(KEY::kEscape);
+		return (FUCK::GetInputDevice() == FUCK::InputDevice::kGamepad)
+		? SKSE::InputMap::kGamepadButtonOffset_B
+		: Input::Keymap::AsKey(KEY::kEscape);
 	}
 
 	const IconFont::IconTexture* Manager::EscapeIcon() const

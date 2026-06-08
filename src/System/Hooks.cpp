@@ -81,7 +81,7 @@ namespace Hooks
 
 		constexpr std::uint32_t kKeyEnter  = Input::Keymap::AsKey(KEY::kEnter);
 		constexpr std::uint32_t kMouseLeft = Input::Keymap::kMBBase;
-		constexpr std::uint32_t kGamepadA  = Input::Keymap::kGPBase + SKSE::InputMap::kGamepadButtonOffset_A;
+		constexpr std::uint32_t kGamepadA  = SKSE::InputMap::kGamepadButtonOffset_A;
 
 		if (input->IsInputPressed(a_events, kKeyEnter) ||
 			input->IsInputPressed(a_events, kMouseLeft) ||
@@ -113,17 +113,13 @@ namespace Hooks
 
 		static void thunk(RE::BSTEventSource<RE::InputEvent*>* a_dispatcher, RE::InputEvent* const* a_events)
 		{
-			if (!a_events || !*a_events) {
-				func(a_dispatcher, a_events);
-				return;
-			}
-
 			// Do not interfere if console is open
 			if (auto ui = RE::UI::GetSingleton(); ui && ui->IsMenuOpen(RE::Console::MENU_NAME)) {
 				func(a_dispatcher, a_events);
 				return;
 			}
 
+			// FUCKMan needs to run state checks every frame, even if a_events is empty
 			MANAGER(Input)->ProcessInputEvents(a_events);
 
 			auto* manager = FUCKMan::GetSingleton();
@@ -153,6 +149,7 @@ namespace Hooks
 				RE::InputEvent* newHead = nullptr;
 				RE::InputEvent* newTail = nullptr;
 
+				if (a_events && *a_events) {
 				for (auto iter = *a_events; iter; iter = iter->next) {
 					bool keep = false;
 
@@ -197,10 +194,11 @@ namespace Hooks
 					if (keep) {
 						if (!newHead) {
 							newHead = iter;
-						} else {
-							newTail->next = iter;
+							} else {
+								newTail->next = iter;
+							}
+							newTail = iter;
 						}
-						newTail = iter;
 					}
 				}
 

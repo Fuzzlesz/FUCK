@@ -1,7 +1,7 @@
 #include "FUCK-Man.h"
 
-#include "Input.h"
 #include "Hotkeys.h"
+#include "Input.h"
 
 namespace Input
 {
@@ -620,15 +620,18 @@ namespace Input
 
 	void Manager::ProcessInputEvents(RE::InputEvent* const* a_events)
 	{
-		CacheInputState(a_events);
+		if (a_events && *a_events) {
+			CacheInputState(a_events);
+		}
 
 		// -- Cursor Visibility Logic --
-		const auto fuck        = FUCKMan::GetSingleton();
-		const bool blockInput  = fuck->IsInputBlocked();
-		const bool forceCursor = fuck->IsCursorForced();
-		const bool menuOpen    = fuck->IsOpen();
+		const auto fuck         = FUCKMan::GetSingleton();
+		const bool blockInput   = fuck->IsInputBlocked();
+		const bool forceCursor  = fuck->IsCursorForced();
+		const bool menuOpen     = fuck->IsOpen();
+		const bool shouldRender = fuck->ShouldRender();
 
-		bool shouldShowCursor = forceCursor || menuOpen;
+		bool shouldShowCursor = forceCursor || menuOpen || shouldRender;
 		if (!shouldShowCursor && blockInput) {
 			if (CanNavigateWithMouse() || IsInputGamepad()) {
 				shouldShowCursor = true;
@@ -672,104 +675,104 @@ namespace Input
 		auto&      io             = ImGui::GetIO();
 		const bool cursorMenuOpen = RE::UI::GetSingleton()->IsMenuOpen(RE::CursorMenu::MENU_NAME);
 
-		// Determine exactly what input ImGui is allowed to see right now
-		const bool shouldRender           = fuck->ShouldRender();
 		const bool passKeyboardAndGamepad = shouldRender && blockInput;
 		const bool passMouse              = shouldRender && (blockInput || forceCursor);
 
-		for (auto event = *a_events; event; event = event->next) {
-			if (const auto charEvent = event->AsCharEvent()) {
-				if (passKeyboardAndGamepad) {
-					io.AddInputCharacter(charEvent->keyCode);
-				}
-			} else if (const auto buttonEvent = event->AsButtonEvent()) {
-				const auto  key    = buttonEvent->GetIDCode();
-				const float value  = buttonEvent->Value();
-				const bool  isDown = value > 0.0f;
-
-				switch (event->GetDevice()) {
-				case RE::INPUT_DEVICE::kKeyboard:
-					// Always forward KeyUp events (!isDown) to prevent stuck keys in ImGui
-					if (passKeyboardAndGamepad || !isDown)
-						io.AddKeyEvent(Keymap::ToImGuiKey(static_cast<KEY>(key)), isDown);
-					break;
-				case RE::INPUT_DEVICE::kMouse:
-					if (passMouse || !isDown) {
-						switch (auto mouseKey = static_cast<MOUSE>(key)) {
-						case MOUSE::kWheelUp:
-							if (passMouse)
-								io.AddMouseWheelEvent(0, value);
-							break;
-						case MOUSE::kWheelDown:
-							if (passMouse)
-								io.AddMouseWheelEvent(0, value * -1);
-							break;
-						default:
-							io.AddMouseButtonEvent(key, isDown);
-							break;
-						}
+		if (a_events && *a_events) {
+			for (auto event = *a_events; event; event = event->next) {
+				if (const auto charEvent = event->AsCharEvent()) {
+					if (passKeyboardAndGamepad) {
+						io.AddInputCharacter(charEvent->keyCode);
 					}
-					break;
-				case RE::INPUT_DEVICE::kGamepad:
-					if (passKeyboardAndGamepad || !isDown) {
-						if (RE::ControlMap::GetSingleton()->GetGamePadType() == RE::PC_GAMEPAD_TYPE::kOrbis) {
-							auto [imKey, analog] = Keymap::ToImGuiKey(static_cast<GAMEPAD_ORBIS>(key));
-							if (analog) {
-								if (passKeyboardAndGamepad)
-									io.AddKeyAnalogEvent(imKey, isDown, value);
+				} else if (const auto buttonEvent = event->AsButtonEvent()) {
+					const auto  key    = buttonEvent->GetIDCode();
+					const float value  = buttonEvent->Value();
+					const bool  isDown = value > 0.0f;
+
+					switch (event->GetDevice()) {
+					case RE::INPUT_DEVICE::kKeyboard:
+						// Always forward KeyUp events (!isDown) to prevent stuck keys in ImGui
+						if (passKeyboardAndGamepad || !isDown)
+							io.AddKeyEvent(Keymap::ToImGuiKey(static_cast<KEY>(key)), isDown);
+						break;
+					case RE::INPUT_DEVICE::kMouse:
+						if (passMouse || !isDown) {
+							switch (auto mouseKey = static_cast<MOUSE>(key)) {
+							case MOUSE::kWheelUp:
+								if (passMouse)
+									io.AddMouseWheelEvent(0, value);
+								break;
+							case MOUSE::kWheelDown:
+								if (passMouse)
+									io.AddMouseWheelEvent(0, value * -1);
+								break;
+							default:
+								io.AddMouseButtonEvent(key, isDown);
+								break;
+							}
+						}
+						break;
+					case RE::INPUT_DEVICE::kGamepad:
+						if (passKeyboardAndGamepad || !isDown) {
+							if (RE::ControlMap::GetSingleton()->GetGamePadType() == RE::PC_GAMEPAD_TYPE::kOrbis) {
+								auto [imKey, analog] = Keymap::ToImGuiKey(static_cast<GAMEPAD_ORBIS>(key));
+								if (analog) {
+									if (passKeyboardAndGamepad)
+										io.AddKeyAnalogEvent(imKey, isDown, value);
+								} else {
+									io.AddKeyEvent(imKey, isDown);
+								}
+
+								if (key == AsKey(GAMEPAD_ORBIS::kPS3_L3) ||
+									key == AsKey(GAMEPAD_ORBIS::kPS3_R3)) {
+									io.AddMouseButtonEvent(0, isDown);
+								}
 							} else {
-								io.AddKeyEvent(imKey, isDown);
-							}
+								auto [imKey, analog] = Keymap::ToImGuiKey(static_cast<GAMEPAD_DIRECTX>(key));
+								if (analog) {
+									if (passKeyboardAndGamepad)
+										io.AddKeyAnalogEvent(imKey, isDown, value);
+								} else {
+									io.AddKeyEvent(imKey, isDown);
+								}
 
-							if (key == AsKey(GAMEPAD_ORBIS::kPS3_L3) ||
-								key == AsKey(GAMEPAD_ORBIS::kPS3_R3)) {
-								io.AddMouseButtonEvent(0, isDown);
-							}
-						} else {
-							auto [imKey, analog] = Keymap::ToImGuiKey(static_cast<GAMEPAD_DIRECTX>(key));
-							if (analog) {
-								if (passKeyboardAndGamepad)
-									io.AddKeyAnalogEvent(imKey, isDown, value);
-							} else {
-								io.AddKeyEvent(imKey, isDown);
-							}
-
-							if (key == AsKey(GAMEPAD_DIRECTX::kLeftThumb) ||
-								key == AsKey(GAMEPAD_DIRECTX::kRightThumb)) {
-								io.AddMouseButtonEvent(0, isDown);
+								if (key == AsKey(GAMEPAD_DIRECTX::kLeftThumb) ||
+									key == AsKey(GAMEPAD_DIRECTX::kRightThumb)) {
+									io.AddMouseButtonEvent(0, isDown);
+								}
 							}
 						}
+						break;
+					default:
+						break;
 					}
-					break;
-				default:
-					break;
-				}
-			} else if (passMouse) {
-				if (auto mouseEvent = event->AsMouseMoveEvent()) {
-					if (cursorMenuOpen) {
-						if (auto cursorMenu = RE::UI::GetSingleton()->GetMenu<RE::CursorMenu>()) {
-							cursorMenu->ProcessMouseMove(mouseEvent);
+				} else if (passMouse) {
+					if (auto mouseEvent = event->AsMouseMoveEvent()) {
+						if (cursorMenuOpen) {
+							if (auto cursorMenu = RE::UI::GetSingleton()->GetMenu<RE::CursorMenu>()) {
+								cursorMenu->ProcessMouseMove(mouseEvent);
+							}
 						}
-					}
-				} else if (const auto thumbstickEvent = event->AsThumbstickEvent()) {
-					if (cursorMenuOpen) {
-						if (auto cursorMenu = RE::UI::GetSingleton()->GetMenu<RE::CursorMenu>()) {
-							cursorMenu->ProcessThumbstick(thumbstickEvent);
+					} else if (const auto thumbstickEvent = event->AsThumbstickEvent()) {
+						if (cursorMenuOpen && (fuck->IsOpen() || forceCursor)) {
+							if (auto cursorMenu = RE::UI::GetSingleton()->GetMenu<RE::CursorMenu>()) {
+								cursorMenu->ProcessThumbstick(thumbstickEvent);
+							}
 						}
 					}
 				}
-			}
 		}
 
-		// Explicitly sync modifiers to ImGui
-		if (passKeyboardAndGamepad) {
-			io.AddKeyEvent(ImGuiMod_Ctrl,	IsModifierPressed(FUCK::Modifier::kCtrl));
-			io.AddKeyEvent(ImGuiMod_Shift,	IsModifierPressed(FUCK::Modifier::kShift));
-			io.AddKeyEvent(ImGuiMod_Alt,	IsModifierPressed(FUCK::Modifier::kAlt));
+			// Explicitly sync modifiers to ImGui
+			if (passKeyboardAndGamepad) {
+				io.AddKeyEvent(ImGuiMod_Ctrl,	IsModifierPressed(FUCK::Modifier::kCtrl));
+				io.AddKeyEvent(ImGuiMod_Shift,	IsModifierPressed(FUCK::Modifier::kShift));
+				io.AddKeyEvent(ImGuiMod_Alt,	IsModifierPressed(FUCK::Modifier::kAlt));
 
-			bool superDown = IsInputDown(AsKey(KEY::kLeftWin)) ||
-			                 IsInputDown(AsKey(KEY::kRightWin));
-			io.AddKeyEvent(ImGuiMod_Super, superDown);
+				bool superDown = IsInputDown(AsKey(KEY::kLeftWin)) ||
+				                 IsInputDown(AsKey(KEY::kRightWin));
+				io.AddKeyEvent(ImGuiMod_Super, superDown);
+			}
 		}
 	}
 }
