@@ -561,9 +561,18 @@ namespace ImGui
 		PushItemWidth(-FLT_MIN);
 		Dummy(ImVec2(0.0f, 1.0f));
 		InputText("##filter", s_comboFilterStates[id].pattern, 256, ImGuiInputTextFlags_AutoSelectAll);
+		bool isInputFocused = IsItemFocused() || IsItemActive();
 		PopItemWidth();
 
 		PopStyleColor(3);
+
+		bool navigateToItems = false;
+		if (isInputFocused) {
+			if (IsKeyPressed(ImGuiKey_DownArrow, false) || IsKeyPressed(ImGuiKey_GamepadDpadDown, false) ||
+				IsKeyPressed(ImGuiKey_UpArrow, false)   || IsKeyPressed(ImGuiKey_GamepadDpadUp, false)) {
+				navigateToItems = true;
+			}
+		}
 
 		std::vector<std::pair<int, double>> itemScoreVector;
 		bool                                filtering = s_comboFilterStates[id].pattern[0] != '\0';
@@ -603,14 +612,22 @@ namespace ImGui
 				// Push the index to guarantee unique IDs for identical labels
 				PushID(idx);
 
-				if (Selectable(items[idx].c_str(), *current_item == idx)) {
+				if (navigateToItems) {
+					if (i == 0 || *current_item == idx) {
+						SetKeyboardFocusHere(0);
+					}
+				}
+
+				bool isSelected = (*current_item == idx);
+				if (Selectable(items[idx].c_str(), isSelected)) {
 					*current_item = idx;
 					changed       = true;
 					CloseCurrentPopup();
 					RE::PlaySound("UIMenuFocus");
 				}
-				if (*current_item == idx)
-					SetItemDefaultFocus();
+
+				if (isSelected && IsWindowAppearing())
+					SetScrollHereY();
 
 				PopID();
 			}
@@ -685,13 +702,18 @@ namespace ImGui
 				// Push the index to guarantee unique IDs for identical labels
 				PushID(i);
 
-				if (Selectable(items[i], *current_item == i)) {
+				bool isSelected = (*current_item == i);
+				if (Selectable(items[i], isSelected)) {
 					*current_item = i;
 					changed       = true;
 					RE::PlaySound("UIMenuFocus");
 				}
-				if (*current_item == i)
-					SetItemDefaultFocus();
+
+				if (IsWindowAppearing()) {
+					if (isSelected || (*current_item < 0 && i == 0)) {
+						SetKeyboardFocusHere(-1);
+					}
+				}
 
 				PopID();
 			}
