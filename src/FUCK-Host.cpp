@@ -376,9 +376,41 @@ namespace FUCK::Host
 
 	static void HelpMarker_Impl(const char* desc)
 	{
-		ImGui::TextDisabled("(?)");
-		if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) {
-			const float scale = GetGlobalScale_Impl();
+		ImGuiWindow* window = ImGui::GetCurrentWindow();
+		if (window->SkipItems)
+			return;
+
+		const ImGuiID id = window->GetID(desc);
+
+		ImVec2 label_size = ImGui::CalcTextSize("(?)", nullptr, true);
+		float  scale      = GetGlobalScale_Impl();
+		ImVec2 padding(6.0f * scale, 4.0f * scale);
+		ImVec2 size(label_size.x + padding.x * 2.0f, label_size.y + padding.y * 2.0f);
+
+		ImVec2 pos = window->DC.CursorPos;
+		ImRect bb(pos, ImVec2(pos.x + size.x, pos.y + size.y));
+
+		ImGui::ItemSize(size, padding.y);
+		if (!ImGui::ItemAdd(bb, id)) {
+			return;
+		}
+
+		bool hovered, held;
+		ImGui::ButtonBehavior(bb, id, &hovered, &held);
+
+		bool isFocused = ImGui::IsItemFocused();
+
+		ImU32 textColor = (isFocused || hovered) ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
+
+		window->DrawList->AddText(ImVec2(pos.x + padding.x, pos.y + padding.y), textColor, "(?)");
+
+		if (isFocused) {
+			ImU32 navColor = ImGui::GetColorU32(ImGuiCol_NavHighlight);
+			float rounding = ImGui::GetStyle().FrameRounding;
+			window->DrawList->AddRect(bb.Min, bb.Max, navColor, rounding, 0, 2.0f * scale);
+		}
+
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip) || isFocused) {
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * scale, 12.0f * scale));
 
 			ImVec2 origMousePos = ImGui::GetIO().MousePos;
@@ -386,9 +418,7 @@ namespace FUCK::Host
 			ImGui::GetIO().MousePos.x += offset;
 			ImGui::GetIO().MousePos.y += offset;
 
-			bool begin_tooltip = ImGui::BeginTooltip();
-
-			if (begin_tooltip) {
+			if (ImGui::BeginTooltip()) {
 				ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
 				ImGui::DrawFormattedText(desc);
 				ImGui::PopTextWrapPos();
@@ -767,7 +797,7 @@ namespace FUCK::Host
 	static bool IsWidgetFocused_Impl(const char* label) { return ImGui::IsWidgetFocused(label); }
 	static void SetTooltip_Impl(const char* fmt)
 	{
-		if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) {
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip) || ImGui::IsItemFocused()) {
 			const float scale = GetGlobalScale_Impl();
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * scale, 12.0f * scale));
 
@@ -778,9 +808,7 @@ namespace FUCK::Host
 			ImGui::GetIO().MousePos.x += offset;
 			ImGui::GetIO().MousePos.y += offset;
 
-			bool begin_tooltip = ImGui::BeginTooltip();
-
-			if (begin_tooltip) {
+			if (ImGui::BeginTooltip()) {
 				ImGui::DrawFormattedText(fmt);
 				ImGui::EndTooltip();
 			}
