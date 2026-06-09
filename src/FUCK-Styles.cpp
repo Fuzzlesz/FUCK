@@ -125,12 +125,6 @@ void ThemeEditorWindow::Draw()
 		ColorPick("$FUCK_Styles_ButtonColor"_T, style->user.button);
 		ColorPick("$FUCK_Styles_SeparatorColor"_T, style->user.separator);
 		FUCK::Separator();
-		ColorPick("$FUCK_Styles_TabBG"_T, style->user.tab);
-		ColorPick("$FUCK_Styles_TabBGActive"_T, style->user.tabHovered);
-		ColorPick("$FUCK_Styles_TabBorder"_T, style->user.tabBorder);
-		ColorPick("$FUCK_Styles_TabBorderActive"_T, style->user.tabBorderActive);
-		FUCK::Separator();
-		ColorPick("$FUCK_Styles_ListBG"_T, style->user.frameBG);
 		ColorPick("$FUCK_Styles_TextBoxBG"_T, style->user.comboBoxTextBox);
 		ColorPick("$FUCK_Styles_ComboText"_T, style->user.comboBoxText);
 		FUCK::Separator();
@@ -138,16 +132,30 @@ void ThemeEditorWindow::Draw()
 	}
 
 	if (FUCK::CollapsingHeader("$FUCK_Styles_Cat_ColoursControls"_T)) {
-		ColorPick("$FUCK_Styles_SliderIdle"_T, style->user.sliderBorder);
-		ColorPick("$FUCK_Styles_SliderActive"_T, style->user.sliderBorderActive);
+		// Borders
+		ColorPick("$FUCK_Styles_WidgetBorder"_T, style->user.widgetBorder);
+		ColorPick("$FUCK_Styles_WidgetBorderActive"_T, style->user.widgetBorderActive);
+		ColorPick("$FUCK_Styles_TabBorder"_T, style->user.tabBorder);
+		ColorPick("$FUCK_Styles_TabBorderActive"_T, style->user.tabBorderActive);
+		FUCK::Separator();
+
+		// Tabs
+		ColorPick("$FUCK_Styles_TabBG"_T, style->user.tab);
+		ColorPick("$FUCK_Styles_TabBGActive"_T, style->user.tabHovered);
+		FUCK::Separator();
+
+		// Sliders
 		ColorPick("$FUCK_Styles_SliderGrab"_T, style->user.sliderGrab);
 		ColorPick("$FUCK_Styles_SliderGrabActive"_T, style->user.sliderGrabActive);
 		FUCK::Separator();
-		ColorPick("$FUCK_Styles_ToggleRail"_T, style->user.toggleRail);
+
+		// Toggles
 		ColorPick("$FUCK_Styles_ToggleRailFill"_T, style->user.toggleRailFilled);
 		ColorPick("$FUCK_Styles_ToggleKnob"_T, style->user.toggleKnob);
 		ColorPick("$FUCK_Styles_ToggleActive"_T, style->user.widgetToggleActive);
 		FUCK::Separator();
+
+		// Scrollbars
 		ColorPick("$FUCK_Styles_ScrollbarBG"_T, style->user.scrollbarBG);
 		ColorPick("$FUCK_Styles_ScrollbarGrab"_T, style->user.scrollbarGrab);
 		ColorPick("$FUCK_Styles_ScrollbarGrabActive"_T, style->user.scrollbarGrabActive);

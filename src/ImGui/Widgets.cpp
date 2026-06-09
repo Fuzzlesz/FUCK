@@ -313,8 +313,8 @@ namespace ImGui
 		float tBlack = std::max(1.0f, std::floor(1.0f * scale));
 
 		ImU32 col = isActiveOrHovered ?
-		                GetUserStyleColorU32(USER_STYLE::kSliderBorderActive) :
-		                GetUserStyleColorU32(USER_STYLE::kSliderBorder);
+		                GetUserStyleColorU32(USER_STYLE::kWidgetBorderActive) :
+		                GetUserStyleColorU32(USER_STYLE::kWidgetBorder);
 
 		// Floor the bounding box to ensure pixel-perfect strokes
 		ImVec2 min = { std::floor(bb.Min.x), std::floor(bb.Min.y) };
@@ -441,7 +441,7 @@ namespace ImGui
 
 			ImU32 col_rail_fill = GetUserStyleColorU32(USER_STYLE::kToggleRailFilled);
 			ImU32 col_knob_fill = GetUserStyleColorU32(USER_STYLE::kToggleKnob);
-			ImU32 col_knob_ring = *v ? GetColorU32(ImGuiCol_Text) : (showFrame ? GetUserStyleColorU32(USER_STYLE::kWidgetToggleActive) : GetUserStyleColorU32(USER_STYLE::kSliderBorder));
+			ImU32 col_knob_ring = *v ? GetColorU32(ImGuiCol_Text) : (showFrame ? GetUserStyleColorU32(USER_STYLE::kWidgetToggleActive) : GetUserStyleColorU32(USER_STYLE::kWidgetBorder));
 
 			// Visual bounds for the toggle graphic, pushed down by offY
 			ImRect visBB(std::floor(p.x), std::floor(p.y + offY), std::floor(p.x + visualW), std::floor(p.y + offY + visualH));
@@ -1108,7 +1108,9 @@ namespace ImGui
 				ImVec2 drawPos(std::floor(currentX), std::floor(p.y + offY + visualNudgeY));
 
 				if (item.type == RenderItem::kIcon) {
-					ImVec4 tint = flashing ? ImVec4(1.0f, 0.8f, 0.2f, 0.4f + (0.6f * (float)fabs(sin(GetTime() * 5.0f)))) : GetHighlightTint(true, hovered || isFocused || alwaysHighlight, false);
+					ImVec4 flashCol = GetUserStyleColorVec4(USER_STYLE::kWidgetFlash);
+					flashCol.w      = 0.4f + (0.6f * (float)fabs(sin(GetTime() * 5.0f)));
+					ImVec4 tint     = flashing ? flashCol : GetHighlightTint(true, hovered || isFocused || alwaysHighlight, false);
 
 					// Draw graphic natively
 					window->DrawList->AddImage((ImTextureID)item.icon->srView.Get(), drawPos, drawPos + item.size, ImVec2(0, 0), ImVec2(1, 1), ColorConvertFloat4ToU32(tint));

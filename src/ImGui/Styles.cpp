@@ -27,8 +27,8 @@ namespace ImGui
 		gridLinesU32            = ColorConvertFloat4ToU32(user.gridLines);
 
 		// Controls
-		sliderBorderU32       = ColorConvertFloat4ToU32(user.sliderBorder);
-		sliderBorderActiveU32 = ColorConvertFloat4ToU32(user.sliderBorderActive);
+		widgetBorderU32       = ColorConvertFloat4ToU32(user.widgetBorder);
+		widgetBorderActiveU32 = ColorConvertFloat4ToU32(user.widgetBorderActive);
 		toggleRailFilledU32   = ColorConvertFloat4ToU32(user.toggleRailFilled);
 		toggleKnobU32         = ColorConvertFloat4ToU32(user.toggleKnob);
 		widgetToggleActiveU32 = ColorConvertFloat4ToU32(user.widgetToggleActive);
@@ -64,10 +64,10 @@ namespace ImGui
 			return iconDisabledU32;
 		case USER_STYLE::kGridLines:
 			return gridLinesU32;
-		case USER_STYLE::kSliderBorder:
-			return sliderBorderU32;
-		case USER_STYLE::kSliderBorderActive:
-			return sliderBorderActiveU32;
+		case USER_STYLE::kWidgetBorder:
+			return widgetBorderU32;
+		case USER_STYLE::kWidgetBorderActive:
+			return widgetBorderActiveU32;
 		case USER_STYLE::kToggleRailFilled:
 			return toggleRailFilledU32;
 		case USER_STYLE::kToggleKnob:
@@ -106,8 +106,6 @@ namespace ImGui
 			return user.comboBoxText;
 		case USER_STYLE::kWidgetFlash:
 			return user.widgetFlash;
-		case USER_STYLE::kTextButton:
-			return user.textButton;
 		case USER_STYLE::kIconDisabled:
 			return user.iconDisabled;
 		case USER_STYLE::kToggleRailFilled:
@@ -341,23 +339,20 @@ namespace ImGui
 		SET_VALUE(tabHovered, "Widget", "rTabActiveColor");
 		SET_VALUE(tabBorder, "Widget", "rTabBorderColor");
 		SET_VALUE(tabBorderActive, "Widget", "rTabBorderActiveColor");
-		SET_VALUE(frameBG, "ComboBox", "rListBoxColor");
 		SET_VALUE(comboBoxTextBox, "ComboBox", "rTextBoxColor");
 		SET_VALUE(comboBoxText, "ComboBox", "rTextColor");
 		SET_VALUE(widgetFlash, "Icon", "rFlashColor");
 
-		SET_VALUE(textButton, "Text", "rButtonTextColor");
 		SET_VALUE(header, "Header", "rHighlightColor");
 		SET_VALUE(headerHovered, "Header", "rHighlightHoveredColor");
 		SET_VALUE(gridLines, "Widget", "rGridColor");
 		SET_VALUE(iconDisabled, "Icon", "rDisabledColor");
 
 		// Colours - Controls
-		SET_VALUE(sliderBorder, "Slider", "rBorderColor");
-		SET_VALUE(sliderBorderActive, "Slider", "rBorderActiveColor");
+		SET_VALUE(widgetBorder, "Widget", "rBorderColor");
+		SET_VALUE(widgetBorderActive, "Widget", "rBorderActiveColor");
 		SET_VALUE(sliderGrab, "Slider", "rColor");
 		SET_VALUE(sliderGrabActive, "Slider", "rActiveColor");
-		SET_VALUE(toggleRail, "Slider", "rToggleRailColor");
 		SET_VALUE(toggleRailFilled, "Slider", "rToggleRailFillColor");
 		SET_VALUE(toggleKnob, "Slider", "rToggleKnobColor");
 		SET_VALUE(widgetToggleActive, "Icon", "rToggleActiveColor");
@@ -414,23 +409,20 @@ namespace ImGui
 		GET_VALUE(tabHovered, "Widget", "rTabActiveColor");
 		GET_VALUE(tabBorder, "Widget", "rTabBorderColor");
 		GET_VALUE(tabBorderActive, "Widget", "rTabBorderActiveColor");
-		GET_VALUE(frameBG, "ComboBox", "rListBoxColor");
 		GET_VALUE(comboBoxTextBox, "ComboBox", "rTextBoxColor");
 		GET_VALUE(comboBoxText, "ComboBox", "rTextColor");
 		GET_VALUE(widgetFlash, "Icon", "rFlashColor");
 
-		GET_VALUE(textButton, "Text", "rButtonTextColor");
 		GET_VALUE(header, "Header", "rHighlightColor");
 		GET_VALUE(headerHovered, "Header", "rHighlightHoveredColor");
 		GET_VALUE(gridLines, "Widget", "rGridColor");
 		GET_VALUE(iconDisabled, "Icon", "rDisabledColor");
 
 		// Colours - Controls
-		GET_VALUE(sliderBorder, "Slider", "rBorderColor");
-		GET_VALUE(sliderBorderActive, "Slider", "rBorderActiveColor");
+		GET_VALUE(widgetBorder, "Widget", "rBorderColor");
+		GET_VALUE(widgetBorderActive, "Widget", "rBorderActiveColor");
 		GET_VALUE(sliderGrab, "Slider", "rColor");
 		GET_VALUE(sliderGrabActive, "Slider", "rActiveColor");
-		GET_VALUE(toggleRail, "Slider", "rToggleRailColor");
 		GET_VALUE(toggleRailFilled, "Slider", "rToggleRailFillColor");
 		GET_VALUE(toggleKnob, "Slider", "rToggleKnobColor");
 		GET_VALUE(widgetToggleActive, "Icon", "rToggleActiveColor");
@@ -520,7 +512,7 @@ namespace ImGui
 
 		colors[ImGuiCol_Button]        = user.button;
 		colors[ImGuiCol_ButtonHovered] = user.frameBG_WidgetActive;
-		colors[ImGuiCol_ButtonActive]  = user.sliderBorderActive;
+		colors[ImGuiCol_ButtonActive]  = user.widgetBorderActive;
 
 		colors[ImGuiCol_Tab]                = user.tab;
 		colors[ImGuiCol_TabHovered]         = user.tabHovered;
@@ -528,19 +520,23 @@ namespace ImGui
 		colors[ImGuiCol_TabUnfocused]       = user.tab;
 		colors[ImGuiCol_TabUnfocusedActive] = user.tab;
 
-		colors[ImGuiCol_ResizeGrip]        = user.sliderBorderActive;
-		colors[ImGuiCol_ResizeGripHovered] = user.sliderBorderActive;
-		colors[ImGuiCol_ResizeGripActive]  = user.sliderBorderActive;
+		colors[ImGuiCol_ResizeGrip]        = user.widgetBorderActive;
+		colors[ImGuiCol_ResizeGripHovered] = user.widgetBorderActive;
+		colors[ImGuiCol_ResizeGripActive]  = user.widgetBorderActive;
 
 		colors[ImGuiCol_Border]           = user.border;
 		colors[ImGuiCol_Separator]        = user.separator;
-		colors[ImGuiCol_SeparatorHovered] = user.sliderBorderActive;
-		colors[ImGuiCol_SeparatorActive]  = user.sliderBorderActive;
+		colors[ImGuiCol_SeparatorHovered] = user.widgetBorderActive;
+		colors[ImGuiCol_SeparatorActive]  = user.widgetBorderActive;
 
 		colors[ImGuiCol_SliderGrab]       = user.sliderGrab;
 		colors[ImGuiCol_SliderGrabActive] = user.sliderGrabActive;
 
-		colors[ImGuiCol_ScrollbarBg]  = user.scrollbarBG;
+		colors[ImGuiCol_ScrollbarBg]          = user.scrollbarBG;
+		colors[ImGuiCol_ScrollbarGrab]        = user.scrollbarGrab;
+		colors[ImGuiCol_ScrollbarGrabHovered] = user.scrollbarGrabHovered;
+		colors[ImGuiCol_ScrollbarGrabActive]  = user.scrollbarGrabActive;
+
 		colors[ImGuiCol_NavHighlight] = user.navHighlight;
 
 		refreshStyle = false;

@@ -20,13 +20,12 @@ namespace ImGui
 		kComboBoxTextBox,
 		kComboBoxText,
 		kWidgetFlash,
-		kTextButton,
 		kIconDisabled,
 		kGridLines,
 
 		// Colours - Controls
-		kSliderBorder,
-		kSliderBorderActive,
+		kWidgetBorder,
+		kWidgetBorderActive,
 		kToggleRailFilled,
 		kToggleKnob,
 		kWidgetToggleActive,
@@ -72,13 +71,11 @@ namespace ImGui
 			ImVec4 tabHovered{ 0.0f, 0.0f, 0.0f, 1.0f };
 			ImVec4 tabBorder{ 0.25f, 0.25f, 0.25f, 1.0f };
 			ImVec4 tabBorderActive{ 0.60f, 0.60f, 0.60f, 1.0f };
-			ImVec4 frameBG{ 0.0f, 0.0f, 0.0f, 1.0f };  // ListBG
 			ImVec4 comboBoxTextBox{ 0.0f, 0.0f, 0.0f, 1.0f };
 			ImVec4 comboBoxText{ 1.0f, 1.0f, 1.0f, 0.8f };
 			ImVec4 widgetFlash{ 1.0f, 0.8f, 0.2f, 1.0f };
 
 			// Other Widget Colours
-			ImVec4 textButton{ 0.85f, 0.85f, 0.85f, 1.0f };
 			ImVec4 header{ 1.0f, 1.0f, 1.0f, 0.1f };
 			ImVec4 headerHovered{ 1.0f, 1.0f, 1.0f, 0.15f };
 			ImVec4 gridLines{ 1.0f, 1.0f, 1.0f, 0.329f };
@@ -87,11 +84,10 @@ namespace ImGui
 			// --------------------------------------------------
 			// Colours - Controls
 			// --------------------------------------------------
-			ImVec4 sliderBorder{ 0.25f, 0.25f, 0.25f, 1.0f };
-			ImVec4 sliderBorderActive{ 0.60f, 0.60f, 0.60f, 1.0f };
+			ImVec4 widgetBorder{ 0.25f, 0.25f, 0.25f, 1.0f };
+			ImVec4 widgetBorderActive{ 0.60f, 0.60f, 0.60f, 1.0f };
 			ImVec4 sliderGrab{ 0.60f, 0.60f, 0.60f, 1.0f };
 			ImVec4 sliderGrabActive{ 0.90f, 0.90f, 0.90f, 1.0f };
-			ImVec4 toggleRail{ 0.25f, 0.25f, 0.25f, 1.0f };
 			ImVec4 toggleRailFilled{ 0.0f, 0.0f, 0.0f, 1.0f };
 			ImVec4 toggleKnob{ 0.0f, 0.0f, 0.0f, 1.0f };
 			ImVec4 widgetToggleActive{ 1.0f, 1.0f, 1.0f, 0.65f };
@@ -168,8 +164,8 @@ namespace ImGui
 		ImU32 widgetFlashU32;
 		ImU32 iconDisabledU32;
 		ImU32 gridLinesU32;
-		ImU32 sliderBorderU32;
-		ImU32 sliderBorderActiveU32;
+		ImU32 widgetBorderU32;
+		ImU32 widgetBorderActiveU32;
 		ImU32 toggleRailFilledU32;
 		ImU32 toggleKnobU32;
 		ImU32 widgetToggleActiveU32;
