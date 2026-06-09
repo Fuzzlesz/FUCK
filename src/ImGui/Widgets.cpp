@@ -1419,6 +1419,33 @@ namespace ImGui
 		return changed;
 	}
 
+	bool ComboFormStr(const char* label, std::string* currentEdid, RE::FormType formType)
+	{
+		ImGuiID id       = GetID(label);
+		ImGuiID cacheKey = ImHashData(&formType, sizeof(formType), id);
+
+		auto [it, inserted] = s_FormCaches.try_emplace(cacheKey, label);
+		it->second.InitForms(formType);
+
+		if (currentEdid && !currentEdid->empty()) {
+			it->second.Sync(*currentEdid);
+		}
+
+		bool changed = false;
+
+		it->second.GetFormResultFromCombo([&](RE::TESForm* form) {
+			if (form) {
+				std::string edid = clib_util::editorID::get_editorID(form);
+				if (!edid.empty()) {
+					*currentEdid = edid;
+					changed      = true;
+				}
+			}
+		});
+
+		return changed;
+	}
+
 	bool CollapsingHeaderIcon(const char* label, int flags)
 	{
 		ImGuiWindow* window = GetCurrentWindow();

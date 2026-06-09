@@ -641,6 +641,17 @@ namespace FUCK::Host
 		return ImGui::ComboWithFilter(label, current_item, vecItems, popup_max_height);
 	}
 	static bool ComboForm_Impl(const char* label, std::uint32_t* id, std::uint8_t t) { return ImGui::ComboForm(label, reinterpret_cast<RE::FormID*>(id), static_cast<RE::FormType>(t)); }
+
+	static bool ComboFormStr_Impl(const char* label, char* buf, size_t buf_size, std::uint8_t t)
+	{
+		std::string edid(buf);
+		if (ImGui::ComboFormStr(label, &edid, static_cast<RE::FormType>(t))) {
+			strncpy_s(buf, buf_size, edid.c_str(), _TRUNCATE);
+			return true;
+		}
+		return false;
+	}
+
 	static bool Selectable_Impl(const char* label, bool selected, int flags, const ImVec2& size) { return ImGui::SelectableStyled(label, selected, flags, size); }
 
 	static ImGuiTableSortSpecs* GetTableSortSpecs_Impl() { return ImGui::TableGetSortSpecs(); }
@@ -902,6 +913,7 @@ namespace FUCK::Host
 			.Combo                  = Combo_Impl,
 			.ComboWithFilter        = ComboWithFilter_Impl,
 			.ComboForm              = ComboForm_Impl,
+			.ComboFormStr           = ComboFormStr_Impl,
 			.Selectable             = Selectable_Impl,
 			.GetTableSortSpecs      = GetTableSortSpecs_Impl,
 			.Header                 = Header_Impl,

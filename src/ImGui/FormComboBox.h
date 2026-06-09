@@ -43,7 +43,7 @@ namespace ImGui
 
 		void ResetIndex()
 		{
-			index = 0;
+			index = -1;
 
 			if constexpr (std::is_same_v<T, RE::TESWeather>) {
 				if (auto currentWeather = RE::Sky::GetSingleton()->currentWeather) {
@@ -70,6 +70,18 @@ namespace ImGui
 			return false;
 		}
 
+		// OVERLOAD: Sync by EditorID string (Case-Insensitive)
+		bool Sync(const std::string& a_edid)
+		{
+			for (size_t i = 0; i < edids.size(); ++i) {
+				if (_stricmp(edids[i].c_str(), a_edid.c_str()) == 0) {
+					index = static_cast<std::int32_t>(i);
+					return true;
+				}
+			}
+			return false;
+		}
+
 		T* GetComboWithFilterResult(RE::Actor* a_actor = nullptr)
 		{
 			UpdateValidForms(a_actor);
@@ -85,7 +97,7 @@ namespace ImGui
 		// members
 		StringMap<T*>            edidForms{};
 		std::vector<std::string> edids{};
-		std::int32_t             index{};
+		std::int32_t             index{ -1 };
 		bool                     valid{ false };
 	};
 
@@ -171,6 +183,27 @@ namespace ImGui
 			for (size_t i = 0; i < modNames.size(); ++i) {
 				const auto& mod = modNames[i];
 				if (modNameForms[mod].Sync(a_formID)) {
+					index  = static_cast<std::int32_t>(i);
+					curMod = mod;
+					return;
+				}
+			}
+		}
+
+		// OVERLOAD: Sync by EditorID string (Case-Insensitive)
+		void Sync(const std::string& a_edid)
+		{
+			if (a_edid.empty())
+				return;
+
+			// Check the currently active mod list first
+			if (modNameForms[curMod].Sync(a_edid))
+				return;
+
+			// Otherwise, search all mod lists
+			for (size_t i = 0; i < modNames.size(); ++i) {
+				const auto& mod = modNames[i];
+				if (modNameForms[mod].Sync(a_edid)) {
 					index  = static_cast<std::int32_t>(i);
 					curMod = mod;
 					return;

@@ -99,6 +99,7 @@ namespace ImGui
 	bool ComboStyled(const char* label, int* current_item, const char* const* items, int items_count, int popup_max_height_in_items = -1);
 	bool ComboWithFilter(const char* label, int* current_item, std::span<const std::string> items, int popup_max_height_in_items = -1);
 	bool ComboForm(const char* label, RE::FormID* currentFormID, RE::FormType formType);
+	bool ComboFormStr(const char* label, std::string* currentEdid, RE::FormType formType);
 
 	// Core Widgets
 	bool SelectableStyled(const char* label, bool selected = false, int flags = 0, const ImVec2& size = ImVec2(0, 0));

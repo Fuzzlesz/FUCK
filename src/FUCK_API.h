@@ -469,6 +469,7 @@ struct FUCK_Interface
 	bool (*Combo)(const char*, int*, const char* const*, int);
 	bool (*ComboWithFilter)(const char*, int*, const char* const*, int, int);
 	bool (*ComboForm)(const char*, std::uint32_t*, std::uint8_t);
+	bool (*ComboFormStr)(const char*, char*, size_t, std::uint8_t);
 	bool (*Selectable)(const char*, bool, int, const ImVec2&);
 	ImGuiTableSortSpecs* (*GetTableSortSpecs)();
 	void (*Header)(const char*);
@@ -1027,6 +1028,19 @@ namespace FUCK
 	inline bool Combo(const char* label, int* current_item, const char* const* items, int items_count) { return GetInterface() ? GetInterface()->Combo(label, current_item, items, items_count) : false; }
 	inline bool ComboWithFilter(const char* label, int* current_item, const char* const* items, int items_count, int popup_max_height_in_items = -1) { return GetInterface() ? GetInterface()->ComboWithFilter(label, current_item, items, items_count, popup_max_height_in_items) : false; }
 	inline bool ComboForm(const char* label, std::uint32_t* currentFormID, std::uint8_t formType) { return GetInterface() ? GetInterface()->ComboForm(label, currentFormID, formType) : false; }
+	inline bool ComboForm(const char* label, std::string* currentEdid, std::uint8_t formType)
+	{
+		if (!currentEdid || !GetInterface())
+			return false;
+		char buf[256];
+		strncpy_s(buf, sizeof(buf), currentEdid->c_str(), _TRUNCATE);
+		if (GetInterface()->ComboFormStr(label, buf, sizeof(buf), formType)) {
+			*currentEdid = buf;
+			return true;
+		}
+		return false;
+	}
+
 	inline bool Selectable(const char* label, bool selected = false, int flags = 0, const ImVec2& size = ImVec2(0, 0)) { return GetInterface() ? GetInterface()->Selectable(label, selected, flags, size) : false; }
 
 	inline ImGuiTableSortSpecs* GetTableSortSpecs() { return GetInterface() ? GetInterface()->GetTableSortSpecs() : nullptr; }
