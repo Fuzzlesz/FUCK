@@ -16,8 +16,13 @@ namespace ImGui
 	std::string LeftAlignedText(const char* label);
 	void        CenteredText(const char* label, bool vertical = false);
 	void        TextColoredWrapped(const ImVec4& col, std::string_view text);
+	void        TextWrappedEx(const char* text);
 	void        DrawFormattedText(const char* text);
 	void        Header(const char* label);
+
+	void Spinner(const char* label, float radius, float thickness, const ImVec4& color);
+	void HelpMarker(const char* desc);
+	void SetTooltipEx(const char* fmt);
 
 	ImU32  GetInteractiveColor(ImGuiCol base, ImGuiCol hovered, ImGuiCol active);
 	ImVec4 GetInteractiveColorVec4(ImGuiCol base, ImGuiCol hovered, ImGuiCol active);

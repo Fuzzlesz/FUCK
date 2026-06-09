@@ -374,62 +374,6 @@ namespace FUCK::Host
 	static void PushItemFlag_Impl(ItemFlags flag, bool enabled) { ImGui::PushItemFlag(static_cast<ImGuiItemFlags>(flag), enabled); }
 	static void PopItemFlag_Impl() { ImGui::PopItemFlag(); }
 
-	static void HelpMarker_Impl(const char* desc)
-	{
-		ImGuiWindow* window = ImGui::GetCurrentWindow();
-		if (window->SkipItems)
-			return;
-
-		const ImGuiID id = window->GetID(desc);
-
-		ImVec2 label_size = ImGui::CalcTextSize("(?)", nullptr, true);
-		float  scale      = GetGlobalScale_Impl();
-		ImVec2 padding(6.0f * scale, 4.0f * scale);
-		ImVec2 size(label_size.x + padding.x * 2.0f, label_size.y + padding.y * 2.0f);
-
-		ImVec2 pos = window->DC.CursorPos;
-		ImRect bb(pos, ImVec2(pos.x + size.x, pos.y + size.y));
-
-		ImGui::ItemSize(size, padding.y);
-		if (!ImGui::ItemAdd(bb, id)) {
-			return;
-		}
-
-		bool hovered, held;
-		ImGui::ButtonBehavior(bb, id, &hovered, &held);
-
-		bool isFocused = ImGui::IsItemFocused();
-
-		ImU32 textColor = (isFocused || hovered) ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
-
-		window->DrawList->AddText(ImVec2(pos.x + padding.x, pos.y + padding.y), textColor, "(?)");
-
-		if (isFocused) {
-			ImU32 navColor = ImGui::GetColorU32(ImGuiCol_NavHighlight);
-			float rounding = ImGui::GetStyle().FrameRounding;
-			window->DrawList->AddRect(bb.Min, bb.Max, navColor, rounding, 0, 2.0f * scale);
-		}
-
-		if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip) || isFocused) {
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * scale, 12.0f * scale));
-
-			ImVec2 origMousePos = ImGui::GetIO().MousePos;
-			float  offset       = 20.0f * scale;
-			ImGui::GetIO().MousePos.x += offset;
-			ImGui::GetIO().MousePos.y += offset;
-
-			if (ImGui::BeginTooltip()) {
-				ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-				ImGui::DrawFormattedText(desc);
-				ImGui::PopTextWrapPos();
-				ImGui::EndTooltip();
-			}
-
-			ImGui::GetIO().MousePos = origMousePos;
-			ImGui::PopStyleVar();
-		}
-	}
-
 	static void PushID_Str_Impl(const char* str_id) { ImGui::PushID(str_id); }
 	static void PushID_Int_Impl(int int_id) { ImGui::PushID(int_id); }
 	static void PushID_Ptr_Impl(const void* ptr_id) { ImGui::PushID(ptr_id); }
@@ -501,32 +445,7 @@ namespace FUCK::Host
 				*h = 0.0f;
 		}
 	}
-	static void Spinner_Impl(const char* label, float radius, float thickness, const ImVec4& color)
-	{
-		ImGuiWindow* window = ImGui::GetCurrentWindow();
-		if (window->SkipItems)
-			return;
-		ImGuiContext& g   = *GImGui;
-		const ImGuiID id  = window->GetID(label);
-		const ImVec2  pos = window->DC.CursorPos;
-		const ImVec2  size((radius) * 2, (radius + g.Style.FramePadding.y) * 2);
-		const ImRect  bb(pos, ImVec2(pos.x + size.x, pos.y + size.y));
-		ImGui::ItemSize(bb, g.Style.FramePadding.y);
-		if (!ImGui::ItemAdd(bb, id))
-			return;
-		window->DrawList->PathClear();
-		int          num_segments = 30;
-		int          start        = static_cast<int>(ImAbs(ImSin(static_cast<float>(g.Time) * 1.8f) * (num_segments - 5)));
-		const float  a_min        = IM_PI * 2.0f * ((float)start) / (float)num_segments;
-		const float  a_max        = IM_PI * 2.0f * ((float)num_segments - 3) / (float)num_segments;
-		const ImVec2 centre       = ImVec2(pos.x + radius, pos.y + radius + g.Style.FramePadding.y);
-		for (int i = 0; i < num_segments; i++) {
-			const float a = a_min + ((float)i / (float)num_segments) * (a_max - a_min);
-			window->DrawList->PathLineTo(ImVec2(centre.x + ImCos(a + static_cast<float>(g.Time) * 8.0f) * radius,
-				centre.y + ImSin(a + static_cast<float>(g.Time) * 8.0f) * radius));
-		}
-		window->DrawList->PathStroke(ImGui::ColorConvertFloat4ToU32(color), false, thickness);
-	}
+	static void Spinner_Impl(const char* label, float radius, float thickness, const ImVec4& color) { ImGui::Spinner(label, radius, thickness, color); }
 	static void DrawOverlay_Impl(FUCK::Overlay type, float thickness, ImU32 color, float paramA, float paramB, float paramC, float paramD) { ImGui::Overlays::Draw(type, thickness, color, paramA, paramB, paramC, paramD); }
 
 	// ==================================================
@@ -728,21 +647,10 @@ namespace FUCK::Host
 
 	static void Header_Impl(const char* label) { ImGui::Header(label); }
 	static void LeftLabel_Impl(const char* label) { ImGui::LeftAlignedTextImpl(label); }
+	static void HelpMarker_Impl(const char* desc) { ImGui::HelpMarker(desc); }
 
 	static void TextColored_Impl(const ImVec4& col, const char* text) { ImGui::TextColored(col, "%s", text); }
-	static void TextColoredWrapped_Impl(const ImVec4& col, const char* text)
-	{
-		// Protect against ImGui Frame 1 Auto-Resize height spike
-		if (ImGui::GetContentRegionAvail().x < 15.0f) {
-			ImGui::PushStyleColor(ImGuiCol_Text, col);
-			ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + (350.0f * GetGlobalScale_Impl()));
-			ImGui::TextUnformatted(text);
-			ImGui::PopTextWrapPos();
-			ImGui::PopStyleColor();
-		} else {
-			ImGui::TextColoredWrapped(col, text);
-		}
-	}
+	static void TextColoredWrapped_Impl(const ImVec4& col, const char* text) { ImGui::TextColoredWrapped(col, text); }
 	static void TextDisabled_Impl(const char* text) { ImGui::TextDisabled("%s", text); }
 	static void CenteredText_Impl(const char* label, bool v) { ImGui::CenteredText(label, v); }
 	static void CenteredTextWithArrows_Impl(const char* label, const char* text, bool* h, bool* l, bool* r)
@@ -795,43 +703,12 @@ namespace FUCK::Host
 	static void EndDisabled_Impl() { ImGui::EndDisabled(); }
 
 	static bool IsWidgetFocused_Impl(const char* label) { return ImGui::IsWidgetFocused(label); }
-	static void SetTooltip_Impl(const char* fmt)
-	{
-		if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip) || ImGui::IsItemFocused()) {
-			const float scale = GetGlobalScale_Impl();
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * scale, 12.0f * scale));
-
-			// Temporarily spoof the mouse position so ImGui spawns the tooltip offset,
-			// while still utilising its native screen-edge clamping
-			ImVec2 origMousePos = ImGui::GetIO().MousePos;
-			float  offset       = 20.0f * scale;
-			ImGui::GetIO().MousePos.x += offset;
-			ImGui::GetIO().MousePos.y += offset;
-
-			if (ImGui::BeginTooltip()) {
-				ImGui::DrawFormattedText(fmt);
-				ImGui::EndTooltip();
-			}
-
-			ImGui::GetIO().MousePos = origMousePos;
-			ImGui::PopStyleVar();
-		}
-	}
+	static void SetTooltip_Impl(const char* fmt) { ImGui::SetTooltipEx(fmt); }
 	static void Indent_Impl(float w) { ImGui::Indent(w); }
 	static void Unindent_Impl(float w) { ImGui::Unindent(w); }
 
 	static void Text_Impl(const char* text) { ImGui::TextUnformatted(text); }
-	static void TextWrapped_Impl(const char* text)
-	{
-		// Protect against ImGui Frame 1 Auto-Resize height spike
-		if (ImGui::GetContentRegionAvail().x < 15.0f) {
-			ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + (350.0f * GetGlobalScale_Impl()));
-			ImGui::TextUnformatted(text);
-			ImGui::PopTextWrapPos();
-		} else {
-			ImGui::TextWrapped("%s", text);
-		}
-	}
+	static void TextWrapped_Impl(const char* text) { ImGui::TextWrappedEx(text); }
 	static void TextUnformatted_Impl(const char* text, const char* text_end) { ImGui::TextUnformatted(text, text_end); }
 
 	// ==================================================

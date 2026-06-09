@@ -168,11 +168,140 @@ namespace ImGui
 
 	void TextColoredWrapped(const ImVec4& col, std::string_view text)
 	{
-		PushStyleColor(ImGuiCol_Text, col);
-		PushTextWrapPos(0.0f);
-		TextUnformatted(text.data(), text.data() + text.size());
-		PopTextWrapPos();
-		PopStyleColor();
+		float scale = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
+		if (GetContentRegionAvail().x < 15.0f) {
+			PushStyleColor(ImGuiCol_Text, col);
+			PushTextWrapPos(GetCursorPos().x + (350.0f * scale));
+			TextUnformatted(text.data(), text.data() + text.size());
+			PopTextWrapPos();
+			PopStyleColor();
+		} else {
+			PushStyleColor(ImGuiCol_Text, col);
+			PushTextWrapPos(0.0f);
+			TextUnformatted(text.data(), text.data() + text.size());
+			PopTextWrapPos();
+			PopStyleColor();
+		}
+	}
+
+	void TextWrappedEx(const char* text)
+	{
+		float scale = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
+		if (GetContentRegionAvail().x < 15.0f) {
+			PushTextWrapPos(GetCursorPos().x + (350.0f * scale));
+			TextUnformatted(text);
+			PopTextWrapPos();
+		} else {
+			PushTextWrapPos(0.0f);
+			TextUnformatted(text);
+			PopTextWrapPos();
+		}
+	}
+
+	void Spinner(const char* label, float radius, float thickness, const ImVec4& color)
+	{
+		ImGuiWindow* window = GetCurrentWindow();
+		if (window->SkipItems)
+			return;
+		ImGuiContext& g   = *GImGui;
+		const ImGuiID id  = window->GetID(label);
+		const ImVec2  pos = window->DC.CursorPos;
+		const ImVec2  size((radius) * 2, (radius + g.Style.FramePadding.y) * 2);
+		const ImRect  bb(pos, ImVec2(pos.x + size.x, pos.y + size.y));
+		ItemSize(bb, g.Style.FramePadding.y);
+		if (!ItemAdd(bb, id))
+			return;
+		window->DrawList->PathClear();
+		int          num_segments = 30;
+		int          start        = static_cast<int>(ImAbs(ImSin(static_cast<float>(g.Time) * 1.8f) * (num_segments - 5)));
+		const float  a_min        = IM_PI * 2.0f * ((float)start) / (float)num_segments;
+		const float  a_max        = IM_PI * 2.0f * ((float)num_segments - 3) / (float)num_segments;
+		const ImVec2 centre       = ImVec2(pos.x + radius, pos.y + radius + g.Style.FramePadding.y);
+		for (int i = 0; i < num_segments; i++) {
+			const float a = a_min + ((float)i / (float)num_segments) * (a_max - a_min);
+			window->DrawList->PathLineTo(ImVec2(centre.x + ImCos(a + static_cast<float>(g.Time) * 8.0f) * radius,
+				centre.y + ImSin(a + static_cast<float>(g.Time) * 8.0f) * radius));
+		}
+		window->DrawList->PathStroke(ColorConvertFloat4ToU32(color), false, thickness);
+	}
+
+	void HelpMarker(const char* desc)
+	{
+		ImGuiWindow* window = GetCurrentWindow();
+		if (window->SkipItems)
+			return;
+
+		const ImGuiID id = window->GetID(desc);
+
+		ImVec2 label_size = CalcTextSize("(?)", nullptr, true);
+		float  scale      = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
+		ImVec2 padding(6.0f * scale, 4.0f * scale);
+		ImVec2 size(label_size.x + padding.x * 2.0f, label_size.y + padding.y * 2.0f);
+
+		ImVec2 pos = window->DC.CursorPos;
+		ImRect bb(pos, ImVec2(pos.x + size.x, pos.y + size.y));
+
+		ItemSize(size, padding.y);
+		if (!ItemAdd(bb, id)) {
+			return;
+		}
+
+		bool hovered, held;
+		ButtonBehavior(bb, id, &hovered, &held);
+
+		bool isFocused = IsItemFocused();
+
+		ImU32 textColor = (isFocused || hovered) ? GetColorU32(ImGuiCol_Text) : GetColorU32(ImGuiCol_TextDisabled);
+
+		window->DrawList->AddText(ImVec2(pos.x + padding.x, pos.y + padding.y), textColor, "(?)");
+
+		if (isFocused) {
+			ImU32 navColor = GetColorU32(ImGuiCol_NavHighlight);
+			float rounding = GetStyle().FrameRounding;
+			window->DrawList->AddRect(bb.Min, bb.Max, navColor, rounding, 0, 2.0f * scale);
+		}
+
+		if (IsItemHovered(ImGuiHoveredFlags_ForTooltip) || isFocused) {
+			PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * scale, 12.0f * scale));
+
+			ImVec2 origMousePos = GetIO().MousePos;
+			float  offset       = 20.0f * scale;
+			GetIO().MousePos.x += offset;
+			GetIO().MousePos.y += offset;
+
+			if (BeginTooltip()) {
+				PushTextWrapPos(GetFontSize() * 35.0f);
+				DrawFormattedText(desc);
+				PopTextWrapPos();
+				EndTooltip();
+			}
+
+			GetIO().MousePos = origMousePos;
+			PopStyleVar();
+		}
+	}
+
+	void SetTooltipEx(const char* fmt)
+	{
+		if (IsItemHovered(ImGuiHoveredFlags_ForTooltip) || IsItemFocused()) {
+			float scale = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
+			PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * scale, 12.0f * scale));
+
+			// Temporarily spoof the mouse position so ImGui spawns the tooltip offset,
+			// while still utilising its native screen-edge clamping
+			ImVec2 origMousePos = GetIO().MousePos;
+			float  offset       = 20.0f * scale;
+			GetIO().MousePos.x += offset;
+			GetIO().MousePos.y += offset;
+
+			if (BeginTooltip()) {
+				DrawFormattedText(fmt);
+				EndTooltip();
+			}
+
+			GetIO().MousePos = origMousePos;
+			PopStyleVar();
+		}
 	}
 
 	// Parses \n into linebreaks and [Brackets] into yellow
