@@ -582,12 +582,18 @@ namespace ImGui
 		std::vector<std::pair<int, double>> itemScoreVector;
 		bool                                filtering = s_comboFilterStates[id].pattern[0] != '\0';
 		if (filtering) {
-			// Cast the search pattern to a string_view once
-			std::string_view searchPattern(s_comboFilterStates[id].pattern);
+			std::string lowerFilter = clib_util::string::tolower(s_comboFilterStates[id].pattern);
+
+			// Use a static buffer to prevent thousands of memory allocations per frame
+			static std::string lowerItemBuffer;
 
 			for (int i = 0; i < static_cast<int>(items.size()); i++) {
-				// Cast the item to a string_view for RapidFuzz
-				auto score = rapidfuzz::fuzz::partial_token_ratio(searchPattern, std::string_view(items[i]));
+				// Copy into buffer and convert to lowercase in-place
+				lowerItemBuffer = items[i];
+				std::transform(lowerItemBuffer.begin(), lowerItemBuffer.end(), lowerItemBuffer.begin(),
+					[](unsigned char c) { return static_cast<unsigned char>(std::tolower(c)); });
+
+				auto score = rapidfuzz::fuzz::partial_token_ratio(lowerFilter, lowerItemBuffer);
 
 				if (score >= 65.0)
 					itemScoreVector.push_back({ i, score });

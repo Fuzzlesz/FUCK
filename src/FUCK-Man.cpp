@@ -1489,8 +1489,10 @@ void FUCKMan::Draw()
 					bool        filtering = filterBuf[0] != '\0';
 					std::string lowerFilter;
 					if (filtering) {
-						lowerFilter = string::tolower(filterBuf);
+						lowerFilter = clib_util::string::tolower(filterBuf);
 					}
+
+					static std::string lowerNameBuffer;
 
 					// Evaluate and distribute tools into collections
 					for (auto* tool : _tools) {
@@ -1504,8 +1506,12 @@ void FUCKMan::Draw()
 						std::string resolvedName = over.customName.empty() ? tool->Name() : over.customName;
 
 						if (filtering) {
-							std::string lowerName = string::tolower(resolvedName);
-							auto        score     = rapidfuzz::fuzz::partial_token_ratio(lowerFilter, lowerName);
+							// Copy to buffer and lower-case in-place to avoid allocations
+							lowerNameBuffer = resolvedName;
+							std::transform(lowerNameBuffer.begin(), lowerNameBuffer.end(), lowerNameBuffer.begin(),
+								[](unsigned char c) { return static_cast<unsigned char>(std::tolower(c)); });
+
+							auto score = rapidfuzz::fuzz::partial_token_ratio(lowerFilter, lowerNameBuffer);
 							if (score < 65.0)
 								continue;
 						}
