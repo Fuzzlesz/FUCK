@@ -1,3 +1,4 @@
+#include "Audio.h"
 #include "FormComboBox.h"
 #include "IconsFonts.h"
 #include "Renderer.h"
@@ -378,7 +379,7 @@ namespace ImGui
 		AlignedWidgetLayout(label, alignFar, labelLeft, iconW, DrawContent, actualLayoutH);
 
 		if (selected)
-			RE::PlaySound("UIMenuFocus");
+			PlayAudio(Audio::kFocus);
 		return selected;
 	}
 
@@ -476,7 +477,7 @@ namespace ImGui
 		AlignedWidgetLayout(label, alignFar, labelLeft, visualW, DrawContent, actualLayoutH);
 
 		if (pressed)
-			RE::PlaySound("UIMenuFocus");
+			PlayAudio(Audio::kFocus);
 		return pressed;
 	}
 
@@ -634,7 +635,7 @@ namespace ImGui
 					*current_item = idx;
 					changed       = true;
 					CloseCurrentPopup();
-					RE::PlaySound("UIMenuFocus");
+					PlayAudio(Audio::kFocus);
 				}
 
 				if (isSelected && IsWindowAppearing())
@@ -717,7 +718,7 @@ namespace ImGui
 				if (Selectable(items[i], isSelected)) {
 					*current_item = i;
 					changed       = true;
-					RE::PlaySound("UIMenuFocus");
+					PlayAudio(Audio::kFocus);
 				}
 
 				if (IsWindowAppearing()) {
@@ -881,7 +882,7 @@ namespace ImGui
 			window->StateStorage.SetInt(storageKey, id);
 
 			if (!wasActive) {
-				RE::PlaySound("UIJournalTabsSD");
+				PlayAudio(Audio::kTab);
 			}
 			ActivateOnHover();
 		}
@@ -938,7 +939,7 @@ namespace ImGui
 			PopStyleColor();
 
 		if (p)
-			RE::PlaySound("UIMenuOK");
+			PlayAudio(Audio::kOk);
 		if (wasFocused)
 			*wasFocused = h;
 		return p;
@@ -980,7 +981,7 @@ namespace ImGui
 		AlignedWidgetLayout(label, alignFar, labelLeft, size.x, DrawContent, actualLayoutH);
 
 		if (clicked)
-			RE::PlaySound("UIMenuOK");
+			PlayAudio(Audio::kOk);
 		return clicked;
 	}
 
@@ -1134,7 +1135,7 @@ namespace ImGui
 		AlignedWidgetLayout(label, alignFar, labelLeft, contentWidth, DrawContent, actualLayoutH);
 
 		if (clicked)
-			RE::PlaySound("UIMenuFocus");
+			PlayAudio(Audio::kFocus);
 		return clicked;
 	}
 
@@ -1480,7 +1481,7 @@ namespace ImGui
 		if (ButtonBehavior(bb, id, &h, &held)) {
 			is_open = !is_open;
 			window->DC.StateStorage->SetInt(id, is_open);
-			RE::PlaySound(is_open ? "UIMenuFocus" : "UIMenuCancel");
+			PlayAudio(is_open ? Audio::kFocus : Audio::kCancel);
 		}
 
 		// Draw Background
@@ -1557,7 +1558,7 @@ namespace ImGui
 		if (ButtonBehavior(bb, id, &h, &held, flags)) {
 			is_open = !is_open;
 			window->DC.StateStorage->SetInt(id, is_open);
-			RE::PlaySound(is_open ? "UIMenuFocus" : "UIMenuCancel");
+			PlayAudio(is_open ? Audio::kFocus : Audio::kCancel);
 		}
 		if (h) {
 			window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_HeaderHovered), GImGui->Style.FrameRounding);
@@ -1652,7 +1653,7 @@ namespace ImGui
 	{
 		bool pressed = Selectable(label, selected, flags, size);
 		if (pressed)
-			RE::PlaySound("UIMenuFocus");
+			PlayAudio(Audio::kFocus);
 		return pressed;
 	}
 
@@ -1704,9 +1705,9 @@ namespace ImGui
 			return ColorEdit3(id, col, flags | ImGuiColorEditFlags_NoLabel);
 		});
 		if (res)
-			RE::PlaySound("UIMenuPrevNext");
+			PlayAudio(Audio::kPrevNext);
 		else if (IsItemActivated())
-			RE::PlaySound("UIMenuFocus");
+			PlayAudio(Audio::kFocus);
 		return res;
 	}
 
@@ -1716,9 +1717,9 @@ namespace ImGui
 			return ColorEdit4(id, col, flags | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_AlphaBar);
 		});
 		if (res)
-			RE::PlaySound("UIMenuPrevNext");
+			PlayAudio(Audio::kPrevNext);
 		else if (IsItemActivated())
-			RE::PlaySound("UIMenuFocus");
+			PlayAudio(Audio::kFocus);
 		return res;
 	}
 
@@ -1732,7 +1733,7 @@ namespace ImGui
 			return internalRes;
 		});
 		if (IsItemActivated())
-			RE::PlaySound("UIMenuFocus");
+			PlayAudio(Audio::kFocus);
 		return res;
 	}
 
@@ -1742,7 +1743,7 @@ namespace ImGui
 			return DragFloat2(id, v, speed, min, max, fmt);
 		});
 		if (res)
-			RE::PlaySound("UIMenuPrevNext");
+			PlayAudio(Audio::kPrevNext);;
 		return res;
 	}
 
@@ -1752,7 +1753,7 @@ namespace ImGui
 			return DragFloat3(id, v, speed, min, max, fmt);
 		});
 		if (res)
-			RE::PlaySound("UIMenuPrevNext");
+			PlayAudio(Audio::kPrevNext);;
 		return res;
 	}
 
@@ -1762,7 +1763,7 @@ namespace ImGui
 			return DragFloat4(id, v, speed, min, max, fmt);
 		});
 		if (res)
-			RE::PlaySound("UIMenuPrevNext");
+			PlayAudio(Audio::kPrevNext);;
 		return res;
 	}
 
@@ -1777,11 +1778,11 @@ namespace ImGui
 			bool pR = r || IsKeyPressed(ImGuiKey_D, false) || IsKeyPressed(ImGuiKey_GamepadDpadRight, false);
 			if (pL) {
 				*outLeft = true;
-				RE::PlaySound("UIMenuPrevNext");
+				PlayAudio(Audio::kPrevNext);;
 			}
 			if (pR) {
 				*outRight = true;
-				RE::PlaySound("UIMenuPrevNext");
+				PlayAudio(Audio::kPrevNext);;
 			}
 		}
 	}

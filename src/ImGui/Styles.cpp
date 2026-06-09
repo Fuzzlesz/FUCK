@@ -379,6 +379,13 @@ namespace ImGui
 		SET_VALUE(scrollbarRounding, "Widget", "fScrollbarRounding");
 		SET_VALUE(grabRounding, "Slider", "fGrabRounding");
 
+		// Audio
+		SET_VALUE(soundOk, "Audio", "sSoundOk");
+		SET_VALUE(soundCancel, "Audio", "sSoundCancel");
+		SET_VALUE(soundFocus, "Audio", "sSoundFocus");
+		SET_VALUE(soundPrevNext, "Audio", "sSoundPrevNext");
+		SET_VALUE(soundTab, "Audio", "sSoundTab");
+
 #undef SET_VALUE
 	}
 
@@ -448,6 +455,13 @@ namespace ImGui
 		GET_VALUE(popupRounding, "ComboBox", "fPopupRounding");
 		GET_VALUE(scrollbarRounding, "Widget", "fScrollbarRounding");
 		GET_VALUE(grabRounding, "Slider", "fGrabRounding");
+
+		// Audio
+		GET_VALUE(soundOk, "Audio", "sSoundOk");
+		GET_VALUE(soundCancel, "Audio", "sSoundCancel");
+		GET_VALUE(soundFocus, "Audio", "sSoundFocus");
+		GET_VALUE(soundPrevNext, "Audio", "sSoundPrevNext");
+		GET_VALUE(soundTab, "Audio", "sSoundTab");
 
 #undef GET_VALUE
 		ConvertVec4StylesToU32();

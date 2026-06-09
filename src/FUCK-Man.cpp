@@ -1,6 +1,7 @@
 #include "FUCK-Man.h"
 #include "FUCK-Host.h"
 
+#include "ImGui/Audio.h"
 #include "ImGui/IconsFontAwesome6.h"
 #include "ImGui/IconsFonts.h"
 #include "ImGui/Renderer.h"
@@ -469,6 +470,7 @@ void FUCKMan::LoadSettings(const CSimpleIniA& a_ini)
 	_cfg.showSidebarFilter     = FUCK::INI::LoadBool(a_ini, "Settings", "bShowSidebarFilter", _def.showSidebarFilter);
 	_cfg.showSidebarFavourites = FUCK::INI::LoadBool(a_ini, "Settings", "bShowSidebarFavourites", _def.showSidebarFavourites);
 	_cfg.groupFavourites       = FUCK::INI::LoadBool(a_ini, "Settings", "bGroupFavourites", _def.groupFavourites);
+	_cfg.muteAudio             = FUCK::INI::LoadBool(a_ini, "Settings", "bMuteAudio", _def.muteAudio);
 }
 
 void FUCKMan::SaveSettings(CSimpleIniA& a_ini)
@@ -483,6 +485,7 @@ void FUCKMan::SaveSettings(CSimpleIniA& a_ini)
 	FUCK::INI::SaveBool(a_ini, "Settings", "bShowSidebarFilter", _cfg.showSidebarFilter, _def.showSidebarFilter);
 	FUCK::INI::SaveBool(a_ini, "Settings", "bShowSidebarFavourites", _cfg.showSidebarFavourites, _def.showSidebarFavourites);
 	FUCK::INI::SaveBool(a_ini, "Settings", "bGroupFavourites", _cfg.groupFavourites, _def.groupFavourites);
+	FUCK::INI::SaveBool(a_ini, "Settings", "bMuteAudio", _cfg.muteAudio, _def.muteAudio);
 }
 
 void FUCKMan::Save()
@@ -685,7 +688,7 @@ void FUCKMan::Open()
 
 	_pendingWindowRestore = true;
 
-	RE::PlaySound("UIMenuOK");
+	ImGui::PlayAudio(ImGui::Audio::kOk);
 }
 
 void FUCKMan::Close()
@@ -709,7 +712,7 @@ void FUCKMan::Close()
 	UpdateGameState();
 
 	ImGui::ClearNavState();
-	RE::PlaySound("UIMenuCancel");
+	ImGui::PlayAudio(ImGui::Audio::kCancel);
 }
 
 void FUCKMan::Toggle()
@@ -1604,7 +1607,7 @@ void FUCKMan::Draw()
 								FUCK::AbortBinding();
 								_activeTool->OnClose();
 							}
-							RE::PlaySound("UIMenuOK");
+							ImGui::PlayAudio(ImGui::Audio::kOk);
 							_activeTool = tool;
 							_activeTool->OnOpen();
 						}
@@ -1674,7 +1677,7 @@ void FUCKMan::Draw()
 							if (ImGui::ButtonBehavior(bb, id, &hovered, &held, 0)) {
 								isOpen = !isOpen;
 								window->DC.StateStorage->SetInt(id, isOpen);
-								RE::PlaySound(isOpen ? "UIMenuFocus" : "UIMenuCancel");
+								ImGui::PlayAudio(isOpen ? ImGui::Audio::kFocus : ImGui::Audio::kCancel);
 							}
 							if (hovered)
 								ImGui::RenderFrame(bb.Min, bb.Max, ImGui::GetColorU32(ImGuiCol_HeaderHovered), false);
@@ -1772,7 +1775,7 @@ void FUCKMan::Draw()
 								FUCK::AbortBinding();
 								_activeTool->OnClose();
 							}
-							RE::PlaySound("UIMenuOK");
+							PlayAudio(ImGui::Audio::kOk);
 							_activeTool = settingsTool;
 							_activeTool->OnOpen();
 						}

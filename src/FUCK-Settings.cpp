@@ -50,6 +50,9 @@ void SettingsTool::Draw()
 			FUCK::DrawManagedHotkey("$FUCK_Settings_Hotkey"_T, hotkey);
 			FUCK::Spacing(2);
 
+			if (FUCK::Checkbox("$FUCK_Settings_MuteAudio"_T, &manager->_cfg.muteAudio, true, true))
+				manager->Save();
+
 			if (FUCK::Checkbox("$FUCK_Settings_InjectSystemMenu"_T, &manager->_cfg.injectSystemMenu, true, true))
 				manager->Save();
 			FUCK::SetTooltip("$FUCK_Settings_InjectSystemMenuTT"_T);

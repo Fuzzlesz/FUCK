@@ -206,4 +206,27 @@ void ThemeEditorWindow::Draw()
 		DragRound("$FUCK_Styles_ScrollbarRounding"_T, &style->user.scrollbarRounding);
 		DragRound("$FUCK_Styles_GrabRounding"_T, &style->user.grabRounding);
 	}
+
+	if (FUCK::CollapsingHeader("$FUCK_Styles_Cat_Audio"_T)) {
+		bool changed = false;
+
+		std::uint8_t type = static_cast<std::uint8_t>(RE::FormType::SoundRecord);
+
+		auto PlayPreview = [&](const char* label, std::string& soundVar) {
+			if (FUCK::ComboForm(label, &soundVar, type)) {
+				RE::PlaySound(soundVar.c_str());
+				changed = true;
+			}
+		};
+
+		PlayPreview("$FUCK_Styles_SoundOk"_T, style->user.soundOk);
+		PlayPreview("$FUCK_Styles_SoundCancel"_T, style->user.soundCancel);
+		PlayPreview("$FUCK_Styles_SoundFocus"_T, style->user.soundFocus);
+		PlayPreview("$FUCK_Styles_SoundPrevNext"_T, style->user.soundPrevNext);
+		PlayPreview("$FUCK_Styles_SoundTab"_T, style->user.soundTab);
+
+		if (changed) {
+			style->RefreshStyle();
+		}
+	}
 }

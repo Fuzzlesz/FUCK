@@ -119,6 +119,15 @@ namespace ImGui
 			float popupRounding{ 0.0f };
 			float scrollbarRounding{ 0.0f };
 			float grabRounding{ 0.0f };
+
+			// --------------------------------------------------
+			// Audio
+			// --------------------------------------------------
+			std::string soundOk{ "UIMenuOKSD" };
+			std::string soundCancel{ "UIMenuCancelSD" };
+			std::string soundFocus{ "UIMenuFocus" };
+			std::string soundPrevNext{ "UIMenuPrevNextSD" };
+			std::string soundTab{ "UIJournalTabsSD" };
 		};
 
 		// --- API ---
@@ -186,7 +195,9 @@ namespace ImGui
 	template <class T>
 	inline std::pair<T, bool> Styles::ToStyle(const std::string& a_str)
 	{
-		if constexpr (std::is_same_v<ImVec4, T>) {
+		if constexpr (std::is_same_v<std::string, T>) {
+			return { a_str, false };
+		} else if constexpr (std::is_same_v<ImVec4, T>) {
 			static srell::regex rgb_pattern("([0-9]+),([0-9]+),([0-9]+),([0-9]+)");
 			static srell::regex hex_pattern("#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})");
 
@@ -224,7 +235,9 @@ namespace ImGui
 	template <class T>
 	inline std::string Styles::ToString(const T& a_style, bool a_hex)
 	{
-		if constexpr (std::is_same_v<ImVec4, T>) {
+		if constexpr (std::is_same_v<std::string, T>) {
+			return a_style;
+		} else if constexpr (std::is_same_v<ImVec4, T>) {
 			if (a_hex) {
 				return std::format("#{:02X}{:02X}{:02X}{:02X}",
 					std::uint8_t(255.0f * a_style.x), std::uint8_t(255.0f * a_style.y),

@@ -1,5 +1,7 @@
 #include "FUCK-Man.h"
 
+#include "ImGui/Audio.h"
+
 #include "Hotkeys.h"
 #include "Input.h"
 
@@ -198,7 +200,7 @@ namespace Input
 				continue;
 
 			if (unifiedKey == Hotkeys::Manager::EscapeKey()) {
-				RE::PlaySound("UIMenuCancel");
+				ImGui::PlayAudio(ImGui::Audio::kCancel);
 				return FUCK::BindResult::kCancelled;
 			}
 

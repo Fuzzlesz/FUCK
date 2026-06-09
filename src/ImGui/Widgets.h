@@ -2,6 +2,7 @@
 
 #include "FUCK-Man.h"
 
+#include "Audio.h"
 #include "Renderer.h"
 #include "Styles.h"
 #include "Util.h"
@@ -153,7 +154,7 @@ namespace ImGui
 
 		bool result = DragScalarEx(newLabel.c_str(), detail::GetDataType<T>(), v, v_speed, &v_min, &v_max, format ? format : detail::GetDefaultFormat<T>(), flags);
 		if (result)
-			RE::PlaySound("UIMenuPrevNext");
+			PlayAudio(Audio::kPrevNext);;
 
 		ActivateOnHover();
 		PopStyleVar(2);
@@ -183,7 +184,7 @@ namespace ImGui
 
 		bool result = ThinSliderScalar(newLabel.c_str(), detail::GetDataType<T>(), v, &v_min, &v_max, format ? format : detail::GetDefaultFormat<T>(), flags);
 		if (result)
-			RE::PlaySound("UIMenuPrevNext");
+			PlayAudio(Audio::kPrevNext);;
 
 		ActivateOnHover();
 		PopStyleVar(2);

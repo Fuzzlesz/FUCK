@@ -27,6 +27,7 @@ public:
 		bool        showSidebarFilter{ true };
 		bool        showSidebarFavourites{ true };
 		bool        groupFavourites{ true };
+		bool        muteAudio{ false };
 		std::string currentFont{ "Default" };
 	};
 
@@ -84,6 +85,7 @@ public:
 	void Save();
 	void SaveKeybinds();
 
+	bool  GetMuteAudio() const { return _cfg.muteAudio; }
 	float GetActiveScale() const { return _activeScale; }
 	float GetUserScale() const { return _cfg.userScale; }
 	bool  GetInjectSystemMenu() const { return _cfg.injectSystemMenu; }
