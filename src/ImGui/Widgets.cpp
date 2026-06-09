@@ -308,20 +308,25 @@ namespace ImGui
 
 		float scale = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
 
-		float tColor = std::max(1.0f, std::round(borderSize));
-		float tBlack = std::max(1.0f, std::round(1.0f * scale));
+		// Floor thickness
+		float tColor = std::max(1.0f, std::floor(borderSize));
+		float tBlack = std::max(1.0f, std::floor(1.0f * scale));
 
 		ImU32 col = isActiveOrHovered ?
 		                GetUserStyleColorU32(USER_STYLE::kSliderBorderActive) :
 		                GetUserStyleColorU32(USER_STYLE::kSliderBorder);
 
+		// Floor the bounding box to ensure pixel-perfect strokes
+		ImVec2 min = { std::floor(bb.Min.x), std::floor(bb.Min.y) };
+		ImVec2 max = { std::floor(bb.Max.x), std::floor(bb.Max.y) };
+
 		// Outer Black: Expands strictly outwards
 		float halfB = tBlack * 0.5f;
-		drawList->AddRect(bb.Min - ImVec2(halfB, halfB), bb.Max + ImVec2(halfB, halfB), IM_COL32(0, 0, 0, 255), rounding + halfB, 0, tBlack);
+		drawList->AddRect(min - ImVec2(halfB, halfB), max + ImVec2(halfB, halfB), IM_COL32(0, 0, 0, 255), rounding + halfB, 0, tBlack);
 
 		// Inner Colour: Shrinks strictly inwards
 		float halfC = tColor * 0.5f;
-		drawList->AddRect(bb.Min + ImVec2(halfC, halfC), bb.Max - ImVec2(halfC, halfC), col, rounding, 0, tColor);
+		drawList->AddRect(min + ImVec2(halfC, halfC), max - ImVec2(halfC, halfC), col, std::max(0.0f, rounding - halfC), 0, tColor);
 	}
 
 	bool CheckBox(const char* label, bool* a_toggle, bool alignFar, bool labelLeft)
@@ -439,7 +444,7 @@ namespace ImGui
 			ImU32 col_knob_ring = *v ? GetColorU32(ImGuiCol_Text) : (showFrame ? GetUserStyleColorU32(USER_STYLE::kWidgetToggleActive) : GetUserStyleColorU32(USER_STYLE::kSliderBorder));
 
 			// Visual bounds for the toggle graphic, pushed down by offY
-			ImRect visBB(p.x, p.y + offY, p.x + visualW, p.y + offY + visualH);
+			ImRect visBB(std::floor(p.x), std::floor(p.y + offY), std::floor(p.x + visualW), std::floor(p.y + offY + visualH));
 
 			if (showFrame) {
 				draw_list->AddRect(visBB.Min, visBB.Max, GetColorU32(ImGuiCol_NavHighlight), GetStyle().FrameRounding, 0, 2.0f * scale);
@@ -452,8 +457,8 @@ namespace ImGui
 			ImVec2 knobCenter = { knobX, visBB.Min.y + (visualH * 0.5f) };
 
 			float  railH   = visualH * 0.35f;
-			ImVec2 railMin = { knobMinX, visBB.Min.y + (visualH - railH) * 0.5f };
-			ImVec2 railMax = { knobMaxX, visBB.Min.y + (visualH + railH) * 0.5f };
+			ImVec2 railMin = { std::floor(knobMinX), std::floor(visBB.Min.y + (visualH - railH) * 0.5f) };
+			ImVec2 railMax = { std::floor(knobMaxX), std::floor(visBB.Min.y + (visualH + railH) * 0.5f) };
 			ImRect railBB(railMin, railMax);
 
 			draw_list->AddRectFilled(railMin, railMax, col_rail_fill, GetStyle().FrameRounding);
@@ -539,8 +544,8 @@ namespace ImGui
 				opensUp = true;
 		}
 
-		DrawDropdownIcon(parentDrawList, { widgetPos.x + width - frameH, widgetPos.y }, { frameH, frameH }, isOpen, opensUp, IsItemHovered());
-		DrawWidgetBorder(parentDrawList, { widgetPos, widgetPos + ImVec2(width, frameH) }, isOpen || IsItemHovered() || IsWidgetFocused(id), GetStyle().FrameRounding);
+		DrawDropdownIcon(parentDrawList, { std::floor(widgetPos.x + width - frameH), std::floor(widgetPos.y) }, { frameH, frameH }, isOpen, opensUp, IsItemHovered());
+		DrawWidgetBorder(parentDrawList, { std::floor(widgetPos.x), std::floor(widgetPos.y), std::floor(widgetPos.x + width), std::floor(widgetPos.y + frameH) }, isOpen || IsItemHovered() || IsWidgetFocused(id), GetStyle().FrameRounding);
 
 		if (!isOpen)
 			return false;
@@ -687,8 +692,8 @@ namespace ImGui
 				opensUp = true;
 		}
 
-		DrawDropdownIcon(parentDrawList, { widgetPos.x + width - frameH, widgetPos.y }, { frameH, frameH }, isOpen, opensUp, IsItemHovered());
-		DrawWidgetBorder(parentDrawList, { widgetPos, widgetPos + ImVec2(width, frameH) }, isOpen || IsItemHovered() || IsWidgetFocused(GetID(idStr.c_str())), GetStyle().FrameRounding);
+		DrawDropdownIcon(parentDrawList, { std::floor(widgetPos.x + width - frameH), std::floor(widgetPos.y) }, { frameH, frameH }, isOpen, opensUp, IsItemHovered());
+		DrawWidgetBorder(parentDrawList, { std::floor(widgetPos.x), std::floor(widgetPos.y), std::floor(widgetPos.x + width), std::floor(widgetPos.y + frameH) }, isOpen || IsItemHovered() || IsWidgetFocused(GetID(idStr.c_str())), GetStyle().FrameRounding);
 
 		bool changed = false;
 		if (isOpen) {
@@ -732,8 +737,9 @@ namespace ImGui
 		if (borderSize <= 0.0f)
 			return;
 
-		float tColor = std::max(1.0f, std::round(borderSize));
-		float tBlack = std::max(1.0f, std::round(1.0f * scale));
+		// Floor thickness
+		float tColor = std::max(1.0f, std::floor(borderSize));
+		float tBlack = std::max(1.0f, std::floor(1.0f * scale));
 
 		ImU32 col = isActiveOrHovered ?
 		                GetUserStyleColorU32(USER_STYLE::kTabBorderActive) :
@@ -742,28 +748,32 @@ namespace ImGui
 		float halfB = tBlack * 0.5f;
 		float halfC = tColor * 0.5f;
 
+		// Floor Bounding Box
+		ImVec2 min = { std::floor(bb.Min.x), std::floor(bb.Min.y) };
+		ImVec2 max = { std::floor(bb.Max.x), std::floor(bb.Max.y) };
+
 		auto buildPath = [&](ImDrawList* dl, float inset, float r, float botY) {
-			dl->PathLineTo({ bb.Min.x + inset, botY });
+			dl->PathLineTo({ min.x + inset, botY });
 
 			if (r > 0.0f) {
-				dl->PathArcTo({ bb.Min.x + rounding, bb.Min.y + rounding }, r, IM_PI, IM_PI * 1.5f, 24);
-				dl->PathArcTo({ bb.Max.x - rounding, bb.Min.y + rounding }, r, IM_PI * 1.5f, IM_PI * 2.0f, 24);
+				dl->PathArcTo({ min.x + rounding, min.y + rounding }, r, IM_PI, IM_PI * 1.5f, 24);
+				dl->PathArcTo({ max.x - rounding, min.y + rounding }, r, IM_PI * 1.5f, IM_PI * 2.0f, 24);
 			} else {
-				dl->PathLineTo({ bb.Min.x + inset, bb.Min.y + inset });
-				dl->PathLineTo({ bb.Max.x - inset, bb.Min.y + inset });
+				dl->PathLineTo({ min.x + inset, min.y + inset });
+				dl->PathLineTo({ max.x - inset, min.y + inset });
 			}
 
-			dl->PathLineTo({ bb.Max.x - inset, botY });
+			dl->PathLineTo({ max.x - inset, botY });
 		};
 
 		// Outer Black stroke (No bottom line)
 		drawList->PathClear();
-		buildPath(drawList, -halfB, rounding + halfB, bb.Max.y);
+		buildPath(drawList, -halfB, rounding + halfB, max.y + halfB);  // Extend down past max.y slightly so it connects to separator cleanly
 		drawList->PathStroke(IM_COL32(0, 0, 0, 255), 0, tBlack);
 
 		// Inner Color stroke (No bottom line)
 		drawList->PathClear();
-		buildPath(drawList, halfC, std::max(0.0f, rounding - halfC), bb.Max.y);
+		buildPath(drawList, halfC, std::max(0.0f, rounding - halfC), max.y);
 		drawList->PathStroke(col, 0, tColor);
 	}
 
@@ -815,7 +825,8 @@ namespace ImGui
 		ImRect idealBb = { min.x, min.y + offY, max.x, min.y + offY + visualH };
 
 		// Chop the bottom of the drawn rect at max.y so it rests flush on the separator line
-		ImRect drawBb = { idealBb.Min.x, idealBb.Min.y, idealBb.Max.x, max.y };
+		// Use std::floor to prevent subpixel geometry artifacts
+		ImRect drawBb = { std::floor(idealBb.Min.x), std::floor(idealBb.Min.y), std::floor(idealBb.Max.x), std::floor(max.y) };
 
 		// Fetch the raw user value and scale it
 		float rounding = Styles::GetSingleton()->user.tabRounding * scale;
@@ -900,9 +911,9 @@ namespace ImGui
 		if (!ItemAdd(bb, window->GetID(label)))
 			return false;
 
-		// Shift visual rect vertically to center it cleanly
+		// Shift visual rect vertically to center it cleanly and strictly align to pixel boundaries
 		float  offY = (logical_sz.y - visualH) * 0.5f;
-		ImRect bbVisual(pos.x, pos.y + offY, pos.x + width, pos.y + offY + visualH);
+		ImRect bbVisual(std::floor(pos.x), std::floor(pos.y + offY), std::floor(pos.x + width), std::floor(pos.y + offY + visualH));
 
 		bool h, held;
 		bool p = ButtonBehavior(bb, window->GetID(label), &h, &held);
