@@ -1,12 +1,13 @@
 #include "FUCK-Man.h"
 
+#include "ImGui/Audio.h"
+
 #include "Hooks.h"
 #include "Input.h"
 
 namespace Hooks
 {
-	static bool   s_fuckButtonInjected = false;
-	static double s_fuckButtonIndex    = -1.0;
+	static bool s_fuckButtonInjected = false;
 
 	constexpr const char* kSystemPagePath = "_root.QuestJournalFader.Menu_mc.SystemFader.Page_mc";
 
@@ -20,9 +21,10 @@ namespace Hooks
 			return;
 
 		RE::GFxValue page, cat, listObj, entryList;
-		if (!a_movieView->GetVariable(&page, kSystemPagePath) ||
-			!page.GetMember("CategoryList_mc", &cat) || !cat.GetMember("List_mc", &listObj) ||
-			!listObj.GetMember("entryList", &entryList) || !entryList.IsArray()) {
+		if (!a_movieView->GetVariable(&page, kSystemPagePath) || !page.IsObject()      ||
+			!page.GetMember("CategoryList_mc", &cat)          || !cat.IsObject()       ||
+			!cat.GetMember("List_mc", &listObj)               || !listObj.IsObject()   ||
+			!listObj.GetMember("entryList", &entryList)       || !entryList.IsArray())  {
 			return;
 		}
 
@@ -30,76 +32,158 @@ namespace Hooks
 		if (arraySize == 0)
 			return;
 
-		const std::string menuName = TRANSLATE_S("$FUCK_Title");
+		const char* menuName = ("$FUCK_Title"_T);
 
-		// If configured, overwrite the vanilla "Help" menu option.
-		if (manager->GetReplaceHelpMenu()) {
-			for (std::uint32_t i = 0; i < arraySize; ++i) {
-				RE::GFxValue element, textVal;
-				if (entryList.GetElement(i, &element) && element.GetMember("text", &textVal) &&
-					textVal.IsString() && std::string_view(textVal.GetString()) == "$HELP") {
-					element.SetMember("text", RE::GFxValue(menuName.c_str()));
-					entryList.SetElement(i, element);
-					s_fuckButtonIndex = static_cast<double>(i);
-					listObj.Invoke("InvalidateData", nullptr, nullptr, 0);
+		// Determine menu version
+		bool isSafeMenu = page.HasMember("UpdateIndices");
+		manager->SetJournalMenuType(isSafeMenu ? FUCKMan::JournalMenuType::kSafe : FUCKMan::JournalMenuType::kSkyUIv5);
+
+		bool          replaced = false;
+		std::uint32_t quitIdx  = arraySize;
+
+		// 1. Check for duplicates, locate $QUIT, and optionally replace $HELP
+		for (std::uint32_t i = 0; i < arraySize; ++i) {
+			RE::GFxValue element, textVal;
+			if (entryList.GetElement(i, &element) && element.IsObject() && element.GetMember("text", &textVal) && textVal.IsString()) {
+				std::string_view textStr(textVal.GetString());
+
+				if (textStr == menuName) {
 					s_fuckButtonInjected = true;
 					return;
+				}
+
+				if (textStr == "$QUIT") {
+					quitIdx = i;
+				}
+
+				// Only replace $HELP if the user enabled it AND we are on SkyUI v5
+				if (!isSafeMenu && manager->GetReplaceHelpMenu() && textStr == "$HELP") {
+					element.SetMember("text", menuName);
+					replaced = true;
 				}
 			}
 		}
 
-		// Otherwise, append our button to the bottom of the list.
-		RE::GFxValue newEntry;
-		a_movieView->CreateObject(&newEntry);
-		newEntry.SetMember("text", RE::GFxValue(menuName.c_str()));
-		entryList.PushBack(newEntry);
+		// 2. If we didn't replace $HELP, inject our new entry
+		if (!replaced) {
+			RE::GFxValue newEntry;
+			a_movieView->CreateObject(&newEntry);
+			newEntry.SetMember("text", menuName);
+
+			if (isSafeMenu && quitIdx < arraySize) {
+				// Push the last element back to safely grow the array size by 1 in GFx
+				RE::GFxValue lastTemp;
+				entryList.GetElement(arraySize - 1, &lastTemp);
+				entryList.PushBack(lastTemp);
+
+				// Shift elements down by 1 to make room at quitIdx
+				for (std::uint32_t i = arraySize - 1; i > quitIdx; --i) {
+					RE::GFxValue temp;
+					entryList.GetElement(i - 1, &temp);
+					entryList.SetElement(i, temp);
+				}
+				// Insert our new entry above $QUIT
+				entryList.SetElement(quitIdx, newEntry);
+
+				// Re-align internal indices for SkyUI v6+
+				page.Invoke("UpdateIndices", nullptr, nullptr, 0);
+			} else {
+				// Fallback: append to the very bottom for SkyUI v5 so we don't shift hardcoded indices
+				entryList.PushBack(newEntry);
+			}
+		}
+
+		// 3. Invalidate lets us actually select the new entry
 		listObj.Invoke("InvalidateData", nullptr, nullptr, 0);
 
-		s_fuckButtonIndex    = static_cast<double>(arraySize);
 		s_fuckButtonInjected = true;
 	}
 
 	// Returns true if the injected entry is selected and an accept input is detected.
 	[[nodiscard]] static bool CheckForJournalAccept(RE::InputEvent* const* a_events)
 	{
-		if (!FUCKMan::GetSingleton()->GetInjectSystemMenu() || !s_fuckButtonInjected)
-			return false;
-
-		auto* journal = RE::UI::GetSingleton()->GetMenu<RE::JournalMenu>().get();
-		if (!journal || !journal->uiMovie)
-			return false;
-
-		RE::GFxValue page, cat, listObj, selIdx;
-		if (!journal->uiMovie->GetVariable(&page, kSystemPagePath) ||
-			!page.GetMember("CategoryList_mc", &cat) || !cat.GetMember("List_mc", &listObj) ||
-			!listObj.GetMember("selectedIndex", &selIdx) || !selIdx.IsNumber() ||
-			selIdx.GetNumber() != s_fuckButtonIndex) {
+		if (!FUCKMan::GetSingleton()->GetInjectSystemMenu() || !s_fuckButtonInjected) {
 			return false;
 		}
 
+		// Fast path: check input before doing GFx queries
 		auto* input = MANAGER(Input);
 
 		constexpr std::uint32_t kKeyEnter  = Input::Keymap::AsKey(KEY::kEnter);
 		constexpr std::uint32_t kMouseLeft = Input::Keymap::kMBBase;
 		constexpr std::uint32_t kGamepadA  = SKSE::InputMap::kGamepadButtonOffset_A;
 
-		if (input->IsInputPressed(a_events, kKeyEnter) ||
-			input->IsInputPressed(a_events, kMouseLeft) ||
-			input->IsInputPressed(a_events, kGamepadA)) {
-			// Close the Journal menu natively so the game state clears
-			if (auto queue = RE::UIMessageQueue::GetSingleton()) {
-				queue->AddMessage(RE::JournalMenu::MENU_NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
-			}
-
-			// Defer opening our menu to the next frame to prevent input collisions
-			SKSE::GetTaskInterface()->AddTask([]() {
-				FUCKMan::GetSingleton()->Open();
-			});
-
-			return true;
+		if (!input->IsInputPressed(a_events, kKeyEnter) &&
+			!input->IsInputPressed(a_events, kMouseLeft) &&
+			!input->IsInputPressed(a_events, kGamepadA)) {
+			return false;
 		}
 
-		return false;
+		// Slow path: validate active selection
+		auto* journal = RE::UI::GetSingleton()->GetMenu<RE::JournalMenu>().get();
+		if (!journal || !journal->uiMovie) {
+			return false;
+		}
+
+		RE::GFxValue page, cat, listObj, selIdx, entryList, selectedEntry, textVal;
+
+		// Fetch the base object
+		if (!journal->uiMovie->GetVariable(&page, kSystemPagePath) || !page.IsObject()) {
+			return false;
+		}
+
+		// Only process if the System menu is actually focused and in the MAIN_STATE (0).
+		// This prevents wire-crossing when the user clicks inside sub-menus like the Quit confirmation.
+		RE::GFxValue currentStateVal;
+		if (page.GetMember("iCurrentState", &currentStateVal) && currentStateVal.IsNumber()) {
+			if (currentStateVal.GetNumber() != 0.0) {
+				return false;
+			}
+		}
+
+		// Null check harder than my ex did
+		if (!page.GetMember("CategoryList_mc", &cat)     || !cat.IsObject()       ||
+			!cat.GetMember("List_mc", &listObj)          || !listObj.IsObject()   ||
+			!listObj.GetMember("selectedIndex", &selIdx) || !selIdx.IsNumber()    ||
+			!listObj.GetMember("entryList", &entryList)  || !entryList.IsArray())  {
+			return false;
+		}
+
+		double rawIdx = selIdx.GetNumber();
+		if (rawIdx < 0.0) {
+			return false;
+		}
+
+		std::uint32_t index = static_cast<std::uint32_t>(rawIdx);
+		if (index >= entryList.GetArraySize()) {
+			return false;
+		}
+
+		if (!entryList.GetElement(index, &selectedEntry) || !selectedEntry.IsObject() ||
+			!selectedEntry.GetMember("text", &textVal)   || !textVal.IsString())       {
+			return false;
+		}
+
+		const char* menuName = ("$FUCK_Title"_T);
+		if (std::string_view(textVal.GetString()) != menuName) {
+			return false;
+		}
+
+
+		// It's go time
+		ImGui::PlayAudio(ImGui::Audio::kOk);
+
+		// Close the Journal menu natively so the game state clears
+		if (auto queue = RE::UIMessageQueue::GetSingleton()) {
+			queue->AddMessage(RE::JournalMenu::MENU_NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
+		}
+
+		// Defer opening our menu to the next frame to prevent input collisions
+		SKSE::GetTaskInterface()->AddTask([]() {
+			FUCKMan::GetSingleton()->Open();
+		});
+
+		return true;
 	}
 
 	// ==================================================
@@ -113,14 +197,14 @@ namespace Hooks
 
 		static void thunk(RE::BSTEventSource<RE::InputEvent*>* a_dispatcher, RE::InputEvent* const* a_events)
 		{
+			// Update keystate tracking
+			MANAGER(Input)->ProcessInputEvents(a_events);
+
 			// Do not interfere if console is open
 			if (auto ui = RE::UI::GetSingleton(); ui && ui->IsMenuOpen(RE::Console::MENU_NAME)) {
 				func(a_dispatcher, a_events);
 				return;
 			}
-
-			// FUCKMan needs to run state checks every frame, even if a_events is empty
-			MANAGER(Input)->ProcessInputEvents(a_events);
 
 			auto* manager = FUCKMan::GetSingleton();
 
@@ -169,31 +253,31 @@ namespace Hooks
 								btn->userEvent == userEvents->quickMagic     ||
 								btn->userEvent == userEvents->stats          ||
 								btn->userEvent == userEvents->quickStats     ||
-								btn->userEvent == userEvents->favorites)     {
+								btn->userEvent == userEvents->favorites)      {
 								keep = true;
 							}
 						}
 
 						// Zero-out on transition to blocked state to prevent "stuck" inputs
-						if (!keep && justBlocked) {
-							btn->value        = 0.0f;
-							btn->heldDownSecs = 0.0f;
-							keep              = true;
-						}
-					} else if (auto idEvent = iter->AsIDEvent()) {
-						if (justBlocked) {
-							if (auto thumb = idEvent->AsThumbstickEvent()) {
-								thumb->xValue = 0.0f;
-								thumb->yValue = 0.0f;
+							if (!keep && justBlocked) {
+								btn->value        = 0.0f;
+								btn->heldDownSecs = 0.0f;
+								keep              = true;
 							}
-							keep = true;
+						} else if (auto idEvent = iter->AsIDEvent()) {
+							if (justBlocked) {
+								if (auto thumb = idEvent->AsThumbstickEvent()) {
+									thumb->xValue = 0.0f;
+									thumb->yValue = 0.0f;
+								}
+								keep = true;
+							}
 						}
-					}
 
 					// Rebuild the linked list with only kept (or zeroed) events
-					if (keep) {
-						if (!newHead) {
-							newHead = iter;
+						if (keep) {
+							if (!newHead) {
+								newHead = iter;
 							} else {
 								newTail->next = iter;
 							}
@@ -239,7 +323,7 @@ namespace Hooks
 						main->freezeTime = savedFreeze;
 					}
 					if (ui && savedPauses > 0) {
-						ui->numPausesGame = savedPauses;
+						ui->numPausesGame += savedPauses;
 					}
 				}
 
@@ -259,7 +343,6 @@ namespace Hooks
 			// Reset tracking when the journal menu closes
 			if (a_message.type == RE::UI_MESSAGE_TYPE::kHide) {
 				s_fuckButtonInjected = false;
-				s_fuckButtonIndex    = -1.0;
 				return func(a_this, a_message);
 			}
 

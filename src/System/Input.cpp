@@ -626,7 +626,12 @@ namespace Input
 			CacheInputState(a_events);
 		}
 
-		// -- Cursor Visibility Logic --
+		// Prevent forwarding keys to ImGui if the console is open
+		if (auto ui = RE::UI::GetSingleton(); ui && ui->IsMenuOpen(RE::Console::MENU_NAME)) {
+			return;
+		}
+
+		// Cursor Visibility
 		const auto fuck         = FUCKMan::GetSingleton();
 		const bool blockInput   = fuck->IsInputBlocked();
 		const bool forceCursor  = fuck->IsCursorForced();
@@ -673,7 +678,7 @@ namespace Input
 			}
 		}
 
-		// --- Hide the visual cursor when playing with a gamepad ---
+		// Hide visual cursor when playing with a gamepad
 		if (auto ui = RE::UI::GetSingleton()) {
 			if (auto cursorMenu = ui->GetMenu<RE::CursorMenu>()) {
 				if (cursorMenu->uiMovie) {
@@ -686,7 +691,7 @@ namespace Input
 			}
 		}
 
-		// -- Event Forwarding --
+		// Event Forwarding
 		auto&      io             = ImGui::GetIO();
 		const bool cursorMenuOpen = RE::UI::GetSingleton()->IsMenuOpen(RE::CursorMenu::MENU_NAME);
 

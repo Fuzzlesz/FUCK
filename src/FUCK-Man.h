@@ -15,6 +15,14 @@ public:
 		kHard = 2
 	};
 
+
+	enum class JournalMenuType : int
+	{
+		kUnknown = 0,
+		kSkyUIv5 = 1, // covers SkyUI v5 and Vanilla
+		kSafe    = 2  // covers SkyUI v6
+	};
+
 	struct FUCKConfig
 	{
 		ImVec2      windowPos{ 130.0f, 75.0f };
@@ -88,9 +96,12 @@ public:
 	bool  GetMuteAudio() const { return _cfg.muteAudio; }
 	float GetActiveScale() const { return _activeScale; }
 	float GetUserScale() const { return _cfg.userScale; }
-	bool  GetInjectSystemMenu() const { return _cfg.injectSystemMenu; }
-	bool  GetReplaceHelpMenu() const { return _cfg.replaceHelpMenu; }
 	void  SetCurrentFont(const std::string& a_font);
+
+	bool            GetInjectSystemMenu() const { return _cfg.injectSystemMenu; }
+	bool            GetReplaceHelpMenu() const { return _cfg.replaceHelpMenu; }
+	JournalMenuType GetJournalMenuType() const { return _journalMenuType; }
+	void            SetJournalMenuType(JournalMenuType type) { _journalMenuType = type; }
 
 	// --- API Overrides ---
 	void SetVanityBlocked(bool blocked);
@@ -145,6 +156,8 @@ private:
 	FUCK::ITool* _activeTool      = nullptr;
 	bool         _isOpen          = false;
 	bool         _workspaceLoaded = false;
+
+	JournalMenuType _journalMenuType{ JournalMenuType::kUnknown };
 
 	// Game State
 	bool _isGameHardPaused = false;

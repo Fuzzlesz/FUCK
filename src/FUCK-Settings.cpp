@@ -57,11 +57,13 @@ void SettingsTool::Draw()
 				manager->Save();
 			FUCK::SetTooltip("$FUCK_Settings_InjectSystemMenuTT"_T);
 
-			FUCK::BeginDisabled(!manager->_cfg.injectSystemMenu);
-			if (FUCK::Checkbox("$FUCK_Settings_ReplaceHelpMenu"_T, &manager->_cfg.replaceHelpMenu, true, true))
-				manager->Save();
-			FUCK::SetTooltip("$FUCK_Settings_ReplaceHelpMenuTT"_T);
-			FUCK::EndDisabled();
+			if (manager->GetJournalMenuType() != FUCKMan::JournalMenuType::kSafe) {
+				FUCK::BeginDisabled(!manager->_cfg.injectSystemMenu);
+				if (FUCK::Checkbox("$FUCK_Settings_ReplaceHelpMenu"_T, &manager->_cfg.replaceHelpMenu, true, true))
+					manager->Save();
+				FUCK::SetTooltip("$FUCK_Settings_ReplaceHelpMenuTT"_T);
+				FUCK::EndDisabled();
+			}
 
 			FUCK::Spacing(2);
 
