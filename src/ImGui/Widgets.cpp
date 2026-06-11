@@ -1029,7 +1029,7 @@ namespace ImGui
 		if (kIcon) {
 			AddIcon(kIcon);
 		} else {
-			AddText("None");
+			AddText(Input::Manager::GetSingleton()->GetKeyName(key));
 		}
 
 		// 2. Mod 2 ( Grows Left )

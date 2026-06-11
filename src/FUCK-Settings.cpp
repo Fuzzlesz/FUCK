@@ -527,7 +527,7 @@ void SettingsTool::Draw()
 					// Col 3: Custom Name Override
 					FUCK::TableNextColumn();
 					FUCK::SetNextItemWidth(-1.0f);
-					char nameBuf[64];
+					char nameBuf[64] = "";
 					FUCK::StringCopy(nameBuf, over.customName);
 					if (FUCK::InputText("##tname", nameBuf, sizeof(nameBuf))) {
 						over.customName = nameBuf;
@@ -540,7 +540,7 @@ void SettingsTool::Draw()
 					// Col 4: Custom Group Override
 					FUCK::TableNextColumn();
 					FUCK::SetNextItemWidth(-1.0f);
-					char grpBuf[64];
+					char grpBuf[64] = "";
 					FUCK::StringCopy(grpBuf, over.customGroup == "##ROOT" ? "" : over.customGroup);
 					if (FUCK::InputText("##tgrp", grpBuf, sizeof(grpBuf))) {
 						if (grpBuf[0] == '\0' && tool->Group() && tool->Group()[0] != '\0') {
@@ -686,8 +686,8 @@ void SettingsTool::Draw()
 					// Col 3: Custom Name
 					FUCK::TableNextColumn();
 					FUCK::SetNextItemWidth(-1.0f);
-					auto& gOver = manager->_groupOverrides[grp];
-					char  nameBuf[64];
+					auto& gOver       = manager->_groupOverrides[grp];
+					char  nameBuf[64] = "";
 					FUCK::StringCopy(nameBuf, gOver.customName);
 					if (FUCK::InputText("##gname", nameBuf, sizeof(nameBuf))) {
 						gOver.customName = nameBuf;

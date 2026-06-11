@@ -128,8 +128,8 @@ namespace ImGui
 
 	// Helpers
 	std::tuple<bool, bool, bool> CenteredTextWithArrows(const char* label, std::string_view centerText);
-	void                         DrawWidgetBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered, float rounding = 0.0f);
-	void                         DrawTabBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered);
+	void                         DrawWidgetBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered, float rounding);
+	void                         DrawTabBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered, float rounding);
 	inline void                  LeftLabel(const char* label) { LeftAlignedTextImpl(label); }
 
 	bool DragScalarEx(const char* label, ImGuiDataType data_type, void* p_data, float v_speed, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags);
