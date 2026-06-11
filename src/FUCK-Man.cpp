@@ -39,6 +39,11 @@ static constexpr std::array<std::string_view, 10> s_closeOnOpen = {
 static void ClampWindowToScreen(ImVec2& pos, const ImVec2& size)
 {
 	const ImGuiIO& io = ImGui::GetIO();
+
+	if (io.DisplaySize.x < 100.0f || io.DisplaySize.y < 100.0f) {
+		return;
+	}
+
 	// Simple AABB clamping
 	if (pos.x + size.x > io.DisplaySize.x)
 		pos.x = std::max(0.0f, io.DisplaySize.x - size.x);

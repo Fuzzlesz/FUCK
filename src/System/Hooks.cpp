@@ -56,9 +56,12 @@ namespace Hooks
 					quitIdx = i;
 				}
 
-				// Only replace $HELP if the user enabled it AND we are on SkyUI v5
+				// Only replace $HELP if the user enabled it AND we are on SkyUI v5 or Vanilla
 				if (!isSafeMenu && manager->GetReplaceHelpMenu() && textStr == "$HELP") {
-					element.SetMember("text", menuName);
+					RE::GFxValue newEntry;
+					a_movieView->CreateObject(&newEntry);
+					newEntry.SetMember("text", menuName);
+					entryList.SetElement(i, newEntry);
 					replaced = true;
 				}
 			}
