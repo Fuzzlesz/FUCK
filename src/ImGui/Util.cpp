@@ -92,14 +92,11 @@ namespace ImGui
 		window->DrawList->AddRectFilled(bb.Min, bb.Max, GetUserStyleColorU32(USER_STYLE::kSeparator));
 	}
 
-	void LeftAlignedTextImpl(const char* label, const std::string& newLabel)
+	void LeftAlignedTextImpl(const char* label)
 	{
 		float fullAvailX = GetContentRegionAvail().x;
 		float startX     = GetCursorPosX();
 		float startY     = GetCursorPosY();
-
-		const bool hovered = IsWidgetFocused(newLabel.empty() ? label : newLabel.c_str());
-		const bool dim     = MANAGER(Input)->IsInputGamepad() && !hovered;
 
 		// Strip hidden ## IDs from the label before measuring text
 		std::string_view labelView(label);
@@ -121,7 +118,7 @@ namespace ImGui
 			// 0.5f uses ImGui's native FramePadding identically to AlignTextToFramePadding()
 			float offY = style.labelAlign.y == 0.5f ? GetStyle().FramePadding.y : (targetHeight - textH) * style.labelAlign.y;
 
-			ImU32 textColor = dim ? GetColorU32(ImGuiCol_TextDisabled) : GetColorU32(ImGuiCol_Text);
+			ImU32 textColor = GetColorU32(ImGuiCol_Text);
 
 			// Calculate exact screen position
 			ImVec2 screenPos = GetCursorScreenPos();
@@ -143,7 +140,7 @@ namespace ImGui
 	std::string LeftAlignedText(const char* label)
 	{
 		const auto newLabel = std::format("##{}", label);
-		LeftAlignedTextImpl(label, newLabel);
+		LeftAlignedTextImpl(label);
 		return newLabel;
 	}
 

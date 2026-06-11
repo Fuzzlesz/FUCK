@@ -12,7 +12,7 @@ namespace ImGui
 
 	void SeparatorThick();
 
-	void        LeftAlignedTextImpl(const char* label, const std::string& newLabel = "");
+	void        LeftAlignedTextImpl(const char* label);
 	std::string LeftAlignedText(const char* label);
 	void        CenteredText(const char* label, bool vertical = false);
 	void        TextColoredWrapped(const ImVec4& col, std::string_view text);

@@ -126,9 +126,7 @@ namespace ImGui
 			float textH         = GetTextLineHeight();
 			float offY          = std::floor((actualTargetH - textH) * style.labelAlign.y);
 
-			bool  isFocused = IsWidgetFocused(GetID(label));
-			bool  dim       = MANAGER(Input)->IsInputGamepad() && !isFocused;
-			ImU32 textColor = dim ? GetColorU32(ImGuiCol_TextDisabled) : GetColorU32(ImGuiCol_Text);
+			ImU32 textColor = GetColorU32(ImGuiCol_Text);
 
 			// Natively draw the label to the screen without disrupting ImGui's internal cursor bounds.
 			// This prevents SameLine() and ItemSize() desyncs.
@@ -500,7 +498,7 @@ namespace ImGui
 		const bool  isHidden = std::string_view(label).starts_with("##");
 		std::string idStr    = isHidden ? std::string(label) : std::format("##{}", label);
 		if (!isHidden)
-			LeftAlignedTextImpl(label, idStr);
+			LeftAlignedTextImpl(label);
 
 		ImVec2 widgetPos = GetCursorScreenPos();
 		float  width     = CalcItemWidth();
@@ -663,7 +661,7 @@ namespace ImGui
 		PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);  // Prevents double frame
 
 		std::string idStr = std::format("##{}", label);
-		LeftAlignedTextImpl(label, idStr);
+		LeftAlignedTextImpl(label);
 		ImVec2 widgetPos = GetCursorScreenPos();
 		float  width     = CalcItemWidth();
 
@@ -929,14 +927,7 @@ namespace ImGui
 		window->DrawList->AddRectFilled(bbVisual.Min, bbVisual.Max, GetColorU32(ImGuiCol_Button), rounding);
 		DrawWidgetBorder(window->DrawList, bbVisual, h || held, rounding);
 
-		bool dim = MANAGER(Input)->IsInputGamepad() && !h;
-		if (dim)
-			PushStyleColor(ImGuiCol_Text, GetColorU32(ImGuiCol_TextDisabled));
-
 		RenderTextClipped(bbVisual.Min, bbVisual.Max, label, NULL, &textSize, { 0.5f, 0.5f });
-
-		if (dim)
-			PopStyleColor();
 
 		if (p)
 			PlayAudio(Audio::kOk);
@@ -1274,16 +1265,10 @@ namespace ImGui
 		if (changed)
 			MarkItemEdited(id);
 
-		bool dim = MANAGER(Input)->IsInputGamepad() && !IsWidgetFocused(id);
-		if (dim)
-			PushStyleColor(ImGuiCol_Text, GetColorU32(ImGuiCol_TextDisabled));
-
-		char        buf[64];
+		char        buf[64] = "";
 		const char* buf_end = buf + DataTypeFormatString(buf, 64, type, data, fmt);
 		RenderTextClipped(bb.Min, bb.Max, buf, buf_end, NULL, { 0.5f, 0.5f });
 
-		if (dim)
-			PopStyleColor();
 		return changed;
 	}
 
@@ -1379,16 +1364,10 @@ namespace ImGui
 			window->DrawList->AddRectFilled(customGrab.Min, customGrab.Max, GetColorU32(active ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab), GetStyle().GrabRounding);
 		}
 
-		bool dim = MANAGER(Input)->IsInputGamepad() && !IsWidgetFocused(id);
-		if (dim)
-			PushStyleColor(ImGuiCol_Text, GetColorU32(ImGuiCol_TextDisabled));
-
-		char        buf[64];
+		char        buf[64] = "";
 		const char* buf_end = buf + DataTypeFormatString(buf, 64, type, data, fmt);
 		RenderTextClipped(bb.Min, bb.Max, buf, buf_end, NULL, { 0.5f, 0.5f });
 
-		if (dim)
-			PopStyleColor();
 		return changed;
 	}
 
@@ -1612,10 +1591,6 @@ namespace ImGui
 		}
 
 		bool showNavHighlight = isFocused && (MANAGER(Input)->GetInputDevice() != Input::DEVICE::kMouse);
-		bool dimText          = MANAGER(Input)->IsInputGamepad() && !(isFocused || isHovered);
-
-		if (dimText)
-			PushStyleColor(ImGuiCol_Text, GetColorU32(ImGuiCol_TextDisabled));
 
 		auto  largeFont = MANAGER(IconFont)->GetLargeFont();
 		float fontScale = FUCKMan::GetSingleton()->GetActiveScale() * Renderer::GetResolutionScale();
@@ -1624,9 +1599,6 @@ namespace ImGui
 		PushFont(largeFont, fontSize);
 		RenderTextClipped(widgetBounds.Min + ImVec2(arrowSize.x, 0), widgetBounds.Max - ImVec2(arrowSize.x, 0), centerText.data(), nullptr, nullptr, { 0.5f, 0.5f });
 		PopFont();
-
-		if (dimText)
-			PopStyleColor();
 
 		if (arrowIcon) {
 			ImU32 colorLeft   = (showNavHighlight || hoveredLeft || hoveredCenter) ? IM_COL32_WHITE : GetUserStyleColorU32(USER_STYLE::kIconDisabled);
@@ -1663,7 +1635,7 @@ namespace ImGui
 
 		PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(padX, padY));
 
-		LeftAlignedTextImpl(label, id);
+		LeftAlignedTextImpl(label);
 
 		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox));
 		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox));
