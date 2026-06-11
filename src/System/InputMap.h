@@ -5,6 +5,16 @@ namespace Input::Keymap
 	inline constexpr std::uint32_t kGPBase = static_cast<std::uint32_t>(SKSE::InputMap::kMacro_GamepadOffset);
 	inline constexpr std::uint32_t kMBBase = static_cast<std::uint32_t>(SKSE::InputMap::kMacro_MouseButtonOffset);
 
+	static constexpr std::uint32_t kGP_A     = kGPBase + SKSE::InputMap::kGamepadButtonOffset_A;
+	static constexpr std::uint32_t kGP_L3    = kGPBase + SKSE::InputMap::kGamepadButtonOffset_LEFT_THUMB;
+	static constexpr std::uint32_t kGP_R3    = kGPBase + SKSE::InputMap::kGamepadButtonOffset_RIGHT_THUMB;
+	static constexpr std::uint32_t kGP_Up    = kGPBase + SKSE::InputMap::kGamepadButtonOffset_DPAD_UP;
+	static constexpr std::uint32_t kGP_Down  = kGPBase + SKSE::InputMap::kGamepadButtonOffset_DPAD_DOWN;
+	static constexpr std::uint32_t kGP_Left  = kGPBase + SKSE::InputMap::kGamepadButtonOffset_DPAD_LEFT;
+	static constexpr std::uint32_t kGP_Right = kGPBase + SKSE::InputMap::kGamepadButtonOffset_DPAD_RIGHT;
+	static constexpr std::uint32_t kGP_LT    = kGPBase + SKSE::InputMap::kGamepadButtonOffset_LT;
+	static constexpr std::uint32_t kGP_RT    = kGPBase + SKSE::InputMap::kGamepadButtonOffset_RT;
+
 	template <typename T>
 	constexpr std::uint32_t AsKey(T a_enum) noexcept
 	{
@@ -325,7 +335,7 @@ namespace Input::Keymap
 		if (a_device == RE::INPUT_DEVICE::kMouse)
 			return a_key + kMBBase;
 		if (a_device == RE::INPUT_DEVICE::kGamepad)
-			return SKSE::InputMap::GamepadMaskToKeycode(a_key);
+			return SKSE::InputMap::GamepadMaskToKeycode(a_key) + kGPBase;
 		return a_key;
 	}
 }

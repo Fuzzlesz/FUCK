@@ -1159,17 +1159,8 @@ namespace ImGui
 
 		h.disallowModifiers = noModifiers;
 
-		auto inputMgr  = Input::Manager::GetSingleton();
-		bool inputIsGP = (inputMgr->GetInputDevice() == Input::DEVICE::kGamepadDirectX || inputMgr->GetInputDevice() == Input::DEVICE::kGamepadOrbis);
-
-		bool gpSlotValid = (h.gKey != 0) && (h.gKey >= Input::Keymap::kGPBase);
-		bool kbSlotValid = (h.kKey != 0) && (h.kKey < Input::Keymap::kGPBase);
-
-		bool showGP = inputIsGP;
-		if (showGP && !gpSlotValid && kbSlotValid)
-			showGP = false;
-		if (!showGP && !kbSlotValid && gpSlotValid)
-			showGP = true;
+		auto inputMgr = Input::Manager::GetSingleton();
+		bool showGP   = (inputMgr->GetInputDevice() == Input::DEVICE::kGamepadDirectX || inputMgr->GetInputDevice() == Input::DEVICE::kGamepadOrbis);
 
 		std::uint32_t k  = showGP ? h.gKey : h.kKey;
 		std::int32_t  m1 = showGP ? h.gMod1 : h.kMod1;

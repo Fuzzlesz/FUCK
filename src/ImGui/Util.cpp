@@ -444,12 +444,14 @@ namespace ImGui
 
 	bool IsItemSelected()
 	{
-		if (IsItemHovered() || IsItemFocused()) {
-			return IsMouseClicked(ImGuiMouseButton_Left) ||
-			       IsKeyPressed(ImGuiKey_GamepadFaceDown) ||
-			       IsKeyPressed(ImGuiKey_Enter) ||
-			       IsKeyPressed(ImGuiKey_Space);
-		}
+		if (IsItemHovered() && IsMouseClicked(ImGuiMouseButton_Left))
+			return true;
+
+		if (IsItemFocused() && (IsKeyPressed(ImGuiKey_GamepadFaceDown) ||
+								   IsKeyPressed(ImGuiKey_Enter) ||
+								   IsKeyPressed(ImGuiKey_Space)))
+			return true;
+
 		return false;
 	}
 
@@ -476,7 +478,14 @@ namespace ImGui
 
 	bool ActivateOnHover()
 	{
-		if (MANAGER(Input)->IsInputGamepad() || !MANAGER(Input)->CanNavigateWithMouse()) {
+		auto inputMgr = MANAGER(Input);
+
+		// Do not forcefully trap focus if the user is operating the cursor via joystick
+		if (inputMgr->IsCursorMovedByJoystick()) {
+			return false;
+		}
+
+		if (inputMgr->IsInputGamepad() || !inputMgr->CanNavigateWithMouse()) {
 			if (!IsItemActive()) {
 				if (IsItemFocused()) {
 					ActivateItemByID(GetItemID());
@@ -550,5 +559,19 @@ namespace ImGui
 	{
 		const auto Size = GetNativeViewportSize();
 		return { Size.x * 0.5f, Size.y * 0.5f };
+	}
+
+	ImVec2 TranslateScaleformToScreen(float stageX, float stageY)
+	{
+		auto  screenSize = RE::BSGraphics::Renderer::GetScreenSize();
+		float screenW    = static_cast<float>(screenSize.width);
+		float screenH    = static_cast<float>(screenSize.height);
+
+		float scaleY  = screenH / 720.0f;
+		float scaleX  = scaleY;
+		float offsetX = (screenW - (1280.0f * scaleX)) / 2.0f;
+		float offsetY = (screenH - (720.0f * scaleY)) / 2.0f;
+
+		return { offsetX + (stageX * scaleX), offsetY + (stageY * scaleY) };
 	}
 }

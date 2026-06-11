@@ -46,4 +46,6 @@ namespace ImGui
 	ImVec2 GetNativeViewportSize();
 	ImVec2 GetNativeViewportPos();
 	ImVec2 GetNativeViewportCenter();
+
+	ImVec2 TranslateScaleformToScreen(float stageX, float stageY);
 }

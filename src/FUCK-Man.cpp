@@ -1612,8 +1612,16 @@ void FUCKMan::Draw()
 							_activeTool->OnOpen();
 						}
 
-						bool   itemHovered = FUCK::IsItemHovered(0);
-						ImVec2 endPos      = FUCK::GetCursorPos();  // Save position after selectable
+						bool itemHovered = FUCK::IsItemHovered(0);
+						bool itemFocused = FUCK::IsItemFocused();
+
+						// Add Gamepad 'Y' shortcut to favourite tools on the sidebar
+						if ((itemHovered || itemFocused) && FUCK::IsKeyPressed(ImGuiKey_GamepadFaceUp, false)) {
+							over.isFavourited = !over.isFavourited;
+							SaveWorkspace();
+						}
+
+						ImVec2 endPos = FUCK::GetCursorPos();  // Save position after selectable
 
 						// Bypassing FUCK::PushFont scaling
 						ImGui::PushFont(regularFont, m.sidebarFontSize);
@@ -1681,6 +1689,17 @@ void FUCKMan::Draw()
 							}
 							if (hovered)
 								ImGui::RenderFrame(bb.Min, bb.Max, ImGui::GetColorU32(ImGuiCol_HeaderHovered), false);
+
+							bool isFocused = ImGui::IsItemFocused();
+
+							// Add Gamepad 'Y' shortcut to favourite groups on the sidebar
+							if ((hovered || isFocused) && FUCK::IsKeyPressed(ImGuiKey_GamepadFaceUp, false)) {
+								if (!origGroup.empty()) {
+									auto& gOver        = _groupOverrides[origGroup];
+									gOver.isFavourited = !gOver.isFavourited;
+									SaveWorkspace();
+								}
+							}
 
 							// Draw chevron
 							if (iconArrow) {

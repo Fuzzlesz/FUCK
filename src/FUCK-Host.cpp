@@ -39,19 +39,11 @@ namespace FUCK::Host
 	}
 	static void TranslateScaleformToScreen_Impl(float stageX, float stageY, float* screenX, float* screenY)
 	{
-		auto  screenSize = RE::BSGraphics::Renderer::GetScreenSize();
-		float screenW    = static_cast<float>(screenSize.width);
-		float screenH    = static_cast<float>(screenSize.height);
-
-		float scaleY  = screenH / 720.0f;
-		float scaleX  = scaleY;
-		float offsetX = (screenW - (1280.0f * scaleX)) / 2.0f;
-		float offsetY = (screenH - (720.0f * scaleY)) / 2.0f;
-
+		ImVec2 pos = ImGui::TranslateScaleformToScreen(stageX, stageY);
 		if (screenX)
-			*screenX = offsetX + (stageX * scaleX);
+			*screenX = pos.x;
 		if (screenY)
-			*screenY = offsetY + (stageY * scaleY);
+			*screenY = pos.y;
 	}
 	static ImFont* GetFont_Impl(FUCK::Font f)
 	{

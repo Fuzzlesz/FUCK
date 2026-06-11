@@ -1,6 +1,7 @@
 #include "FUCK-Man.h"
 
 #include "ImGui/Audio.h"
+#include "ImGui/Util.h"
 
 #include "Hotkeys.h"
 #include "Input.h"
@@ -27,9 +28,6 @@ namespace Input
 		kGPBase + SKSE::InputMap::kGamepadButtonOffset_LT,
 		kGPBase + SKSE::InputMap::kGamepadButtonOffset_RT
 	};
-
-	static constexpr std::uint32_t kGP_LT = kGPBase + SKSE::InputMap::kGamepadButtonOffset_LT;
-	static constexpr std::uint32_t kGP_RT = kGPBase + SKSE::InputMap::kGamepadButtonOffset_RT;
 
 	void Manager::Register()
 	{
@@ -555,7 +553,29 @@ namespace Input
 		std::unique_lock lock(_dataLock);
 
 		for (auto event = *a_events; event; event = event->next) {
-			UpdateInputDevice(event->GetDevice());
+			// Only update input device for meaningful events, ignoring micro sensor drift
+			bool meaningful = false;
+			if (event->GetEventType() == RE::INPUT_EVENT_TYPE::kButton) {
+				// Any press or release solidifies device mode to keep UI responsive
+				meaningful = true;
+			} else if (event->GetEventType() == RE::INPUT_EVENT_TYPE::kThumbstick) {
+				auto stick = event->AsThumbstickEvent();
+				if (std::abs(stick->xValue) > 0.15f || std::abs(stick->yValue) > 0.15f) {
+					meaningful = true;
+				}
+			} else if (event->GetEventType() == RE::INPUT_EVENT_TYPE::kMouseMove) {
+				// Ignore mouse events entirely if we just issued a synthetic OS cursor snap
+				if (!_expectingSyntheticMouseMove) {
+					auto mouse = event->AsMouseMoveEvent();
+					if (std::abs(mouse->mouseInputX) > 2.0f || std::abs(mouse->mouseInputY) > 2.0f) {
+						meaningful = true;
+					}
+				}
+			}
+
+			if (meaningful) {
+				UpdateInputDevice(event->GetDevice());
+			}
 
 			if (auto button = event->AsButtonEvent()) {
 				if (button->HasIDCode()) {
@@ -604,18 +624,21 @@ namespace Input
 			break;
 		}
 
-		if (_lastInputDevice == DEVICE::kNone || _inputDevice == DEVICE::kNone || _lastInputDevice != _inputDevice) {
+		if (_lastInputDevice != _inputDevice) {
 			auto& io = ImGui::GetIO();
-			io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableGamepad;
-			io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableKeyboard;
+
+			io.ConfigFlags  &= ~ImGuiConfigFlags_NavEnableGamepad;
+			io.ConfigFlags  &= ~ImGuiConfigFlags_NavEnableKeyboard;
+			io.ConfigFlags  &= ~ImGuiConfigFlags_IsTouchScreen;
+			io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
 
 			if (IsInputGamepad()) {
-				io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-				io.ConfigFlags |= ImGuiConfigFlags_IsTouchScreen;  // unused flag to force ImGui to update gamepad input from backend
+				io.ConfigFlags  |= ImGuiConfigFlags_NavEnableGamepad; 
+				io.ConfigFlags  |= ImGuiConfigFlags_IsTouchScreen;  // unused flag to force ImGui to update gamepad input from backend
+				io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
 			} else {
-				if (IsInputKBM()) {
-					io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-				}
+				io.ConfigFlags  |= ImGuiConfigFlags_NavEnableKeyboard;
+				ImGui::ClearNavState();
 			}
 		}
 	}
@@ -709,6 +732,8 @@ namespace Input
 					const float value  = buttonEvent->Value();
 					const bool  isDown = value > 0.0f;
 
+					std::uint32_t unifiedKey = Keymap::GetUnifiedKey(event->GetDevice(), key);
+
 					switch (event->GetDevice()) {
 					case RE::INPUT_DEVICE::kKeyboard:
 						// Always forward KeyUp events (!isDown) to prevent stuck keys in ImGui
@@ -734,31 +759,34 @@ namespace Input
 						break;
 					case RE::INPUT_DEVICE::kGamepad:
 						if (passKeyboardAndGamepad || !isDown) {
-							if (RE::ControlMap::GetSingleton()->GetGamePadType() == RE::PC_GAMEPAD_TYPE::kOrbis) {
-								auto [imKey, analog] = Keymap::ToImGuiKey(static_cast<GAMEPAD_ORBIS>(key));
-								if (analog) {
-									if (passKeyboardAndGamepad)
-										io.AddKeyAnalogEvent(imKey, isDown, value);
-								} else {
-									io.AddKeyEvent(imKey, isDown);
-								}
+							bool isDpad = (unifiedKey == kGP_Up || unifiedKey == kGP_Down || unifiedKey == kGP_Left || unifiedKey == kGP_Right);
+							if (isDpad && isDown) {
+								_cursorMovedByJoystick = false;  // Revert to standard D-Pad Nav
+							}
 
-								if (key == AsKey(GAMEPAD_ORBIS::kPS3_L3) ||
-									key == AsKey(GAMEPAD_ORBIS::kPS3_R3)) {
-									io.AddMouseButtonEvent(0, isDown);
-								}
+							bool isMouseClickOverride = (unifiedKey == kGP_L3) || (unifiedKey == kGP_R3) || (unifiedKey == kGP_A && _cursorMovedByJoystick);
+
+							if (isMouseClickOverride) {
+								// Inject mouse click AND suppress native gamepad button
+								io.AddMouseButtonEvent(0, isDown);
 							} else {
-								auto [imKey, analog] = Keymap::ToImGuiKey(static_cast<GAMEPAD_DIRECTX>(key));
-								if (analog) {
-									if (passKeyboardAndGamepad)
-										io.AddKeyAnalogEvent(imKey, isDown, value);
+								// Pass native gamepad button to ImGui
+								if (RE::ControlMap::GetSingleton()->GetGamePadType() == RE::PC_GAMEPAD_TYPE::kOrbis) {
+									auto mapped = Keymap::ToImGuiKey(static_cast<GAMEPAD_ORBIS>(key));
+									if (mapped.second) {
+										if (passKeyboardAndGamepad)
+											io.AddKeyAnalogEvent(mapped.first, isDown, value);
+									} else {
+										io.AddKeyEvent(mapped.first, isDown);
+									}
 								} else {
-									io.AddKeyEvent(imKey, isDown);
-								}
-
-								if (key == AsKey(GAMEPAD_DIRECTX::kLeftThumb) ||
-									key == AsKey(GAMEPAD_DIRECTX::kRightThumb)) {
-									io.AddMouseButtonEvent(0, isDown);
+									auto mapped = Keymap::ToImGuiKey(static_cast<GAMEPAD_DIRECTX>(key));
+									if (mapped.second) {
+										if (passKeyboardAndGamepad)
+											io.AddKeyAnalogEvent(mapped.first, isDown, value);
+									} else {
+										io.AddKeyEvent(mapped.first, isDown);
+									}
 								}
 							}
 						}
@@ -768,12 +796,23 @@ namespace Input
 					}
 				} else if (passMouse) {
 					if (auto mouseEvent = event->AsMouseMoveEvent()) {
+						// Drop the "Echo" from SetCursorPos
+						if (_expectingSyntheticMouseMove) {
+							_expectingSyntheticMouseMove = false;
+							continue;
+						}
+						if (std::abs(mouseEvent->mouseInputX) > 2.0f || std::abs(mouseEvent->mouseInputY) > 2.0f) {
+							_cursorMovedByJoystick = false;
+						}
 						if (cursorMenuOpen) {
 							if (auto cursorMenu = RE::UI::GetSingleton()->GetMenu<RE::CursorMenu>()) {
 								cursorMenu->ProcessMouseMove(mouseEvent);
 							}
 						}
 					} else if (const auto thumbstickEvent = event->AsThumbstickEvent()) {
+						if (std::abs(thumbstickEvent->xValue) > 0.05f || std::abs(thumbstickEvent->yValue) > 0.05f) {
+							_cursorMovedByJoystick = true;
+						}
 						if (cursorMenuOpen && (fuck->IsOpen() || forceCursor)) {
 							if (auto cursorMenu = RE::UI::GetSingleton()->GetMenu<RE::CursorMenu>()) {
 								cursorMenu->ProcessThumbstick(thumbstickEvent);
@@ -781,17 +820,39 @@ namespace Input
 						}
 					}
 				}
-		}
+			}
 
-			// Explicitly sync modifiers to ImGui
+			// Sync modifiers to ImGui
 			if (passKeyboardAndGamepad) {
-				io.AddKeyEvent(ImGuiMod_Ctrl,	IsModifierPressed(FUCK::Modifier::kCtrl));
-				io.AddKeyEvent(ImGuiMod_Shift,	IsModifierPressed(FUCK::Modifier::kShift));
-				io.AddKeyEvent(ImGuiMod_Alt,	IsModifierPressed(FUCK::Modifier::kAlt));
+				io.AddKeyEvent(ImGuiMod_Ctrl,  IsModifierPressed(FUCK::Modifier::kCtrl));
+				io.AddKeyEvent(ImGuiMod_Shift, IsModifierPressed(FUCK::Modifier::kShift));
+				io.AddKeyEvent(ImGuiMod_Alt,   IsModifierPressed(FUCK::Modifier::kAlt));
 
 				bool superDown = IsInputDown(AsKey(KEY::kLeftWin)) ||
 				                 IsInputDown(AsKey(KEY::kRightWin));
 				io.AddKeyEvent(ImGuiMod_Super, superDown);
+			}
+
+			// Sync OS hardware cursor to the virtual joystick cursor
+			if (_cursorMovedByJoystick && cursorMenuOpen && passMouse) {
+				if (auto mc = RE::MenuCursor::GetSingleton()) {
+					ImVec2 clientPos = ImGui::TranslateScaleformToScreen(mc->cursorPosX, mc->cursorPosY);
+
+					static float s_lastClientX = -1.0f;
+					static float s_lastClientY = -1.0f;
+
+					if (clientPos.x != s_lastClientX || clientPos.y != s_lastClientY) {
+						s_lastClientX = clientPos.x;
+						s_lastClientY = clientPos.y;
+
+						if (HWND hwnd = ::GetActiveWindow()) {
+							POINT pt = { static_cast<LONG>(clientPos.x), static_cast<LONG>(clientPos.y) };
+							::ClientToScreen(hwnd, &pt);
+							::SetCursorPos(pt.x, pt.y);
+							_expectingSyntheticMouseMove = true;
+						}
+					}
+				}
 			}
 		}
 	}

@@ -76,11 +76,11 @@ namespace Input
 		bool ProcessManagedHotkey(const RE::InputEvent* const* a_event, FUCK::ManagedHotkey& h);
 		bool IsManagedHotkeyDown(FUCK::ManagedHotkey& h);
 
-		bool  IsInputDown(std::uint32_t a_unifiedKey) const;
-		float GetAnalogInput(std::uint32_t a_unifiedKey) const;
-		bool  IsModifierPressed(FUCK::Modifier a_modifier) const;
-
+		bool        IsInputDown(std::uint32_t a_unifiedKey) const;
+		float       GetAnalogInput(std::uint32_t a_unifiedKey) const;
+		bool        IsModifierPressed(FUCK::Modifier a_modifier) const;
 		static bool IsUnifiedModifier(std::uint32_t a_unifiedKey);
+		bool        IsCursorMovedByJoystick() const { return _cursorMovedByJoystick; }
 
 		void PushContext(Context a_ctx);
 		void PopContext(std::string_view a_name);
@@ -101,6 +101,8 @@ namespace Input
 		RebindContext _rebindCtx;
 
 		std::optional<bool> _cursorInit{ std::nullopt };
+		bool                _cursorMovedByJoystick{ false };
+		bool                _expectingSyntheticMouseMove{ false };
 
 		mutable std::shared_mutex _dataLock;
 		Map<std::uint32_t, float> _keyStateCache;

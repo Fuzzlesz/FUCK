@@ -109,13 +109,15 @@ namespace Hooks
 		// Fast path: check input before doing GFx queries
 		auto* input = MANAGER(Input);
 
-		constexpr std::uint32_t kKeyEnter  = Input::Keymap::AsKey(KEY::kEnter);
-		constexpr std::uint32_t kMouseLeft = Input::Keymap::kMBBase;
-		constexpr std::uint32_t kGamepadA  = SKSE::InputMap::kGamepadButtonOffset_A;
+		constexpr std::uint32_t kKeyEnter         = Input::Keymap::AsKey(KEY::kEnter);
+		constexpr std::uint32_t kMouseLeft        = Input::Keymap::kMBBase;
+		constexpr std::uint32_t kGamepadA         = Input::Keymap::kGPBase + SKSE::InputMap::kGamepadButtonOffset_A;
+		constexpr std::uint32_t kGamepadDpadRight = Input::Keymap::kGPBase + SKSE::InputMap::kGamepadButtonOffset_DPAD_RIGHT;
 
 		if (!input->IsInputPressed(a_events, kKeyEnter) &&
 			!input->IsInputPressed(a_events, kMouseLeft) &&
-			!input->IsInputPressed(a_events, kGamepadA)) {
+			!input->IsInputPressed(a_events, kGamepadA) &&
+			!input->IsInputPressed(a_events, kGamepadDpadRight)) {
 			return false;
 		}
 
@@ -168,7 +170,6 @@ namespace Hooks
 		if (std::string_view(textVal.GetString()) != menuName) {
 			return false;
 		}
-
 
 		// It's go time
 		ImGui::PlayAudio(ImGui::Audio::kOk);
