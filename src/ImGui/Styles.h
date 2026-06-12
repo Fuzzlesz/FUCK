@@ -53,6 +53,7 @@ namespace ImGui
 			// Colours - Global
 			// --------------------------------------------------
 			ImVec4 background{ 0.0f, 0.0f, 0.0f, bgAlpha };
+			ImVec4 childBG{ 0.0f, 0.0f, 0.0f, bgAlpha };
 			ImVec4 border{ 0.25f, 0.25f, 0.25f, 1.0f };
 			ImVec4 text{ 0.733f, 0.741f, 0.749f, 1.0f };
 			ImVec4 textHeader{ 0.90f, 0.90f, 0.90f, 0.90f };

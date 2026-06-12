@@ -148,20 +148,20 @@ namespace ImGui
 		auto settings = Settings::GetSingleton();
 
 		// Passing 'true' enables recursion
-		auto userFonts = Utils::GetDirectoryFiles(settings->GetUserFontsPath(), ".ttf", true);
+		auto userFonts = Utils::GetDirectoryFiles(settings->GetUserFontsPath(),   ".ttf", true);
 		auto gameFonts = Utils::GetDirectoryFiles(settings->GetLegacyFontsPath(), ".ttf", true);
-		auto csFonts   = Utils::GetDirectoryFiles(settings->GetCSFontsPath(), ".ttf", true);
+		auto csFonts   = Utils::GetDirectoryFiles(settings->GetCSFontsPath(),     ".ttf", true);
 
-		auto userOtf = Utils::GetDirectoryFiles(settings->GetUserFontsPath(), ".otf", true);
+		auto userOtf = Utils::GetDirectoryFiles(settings->GetUserFontsPath(),   ".otf", true);
 		auto gameOtf = Utils::GetDirectoryFiles(settings->GetLegacyFontsPath(), ".otf", true);
-		auto csOtf   = Utils::GetDirectoryFiles(settings->GetCSFontsPath(), ".otf", true);
+		auto csOtf   = Utils::GetDirectoryFiles(settings->GetCSFontsPath(),     ".otf", true);
 
 		userFonts.insert(userFonts.end(), gameFonts.begin(), gameFonts.end());
-		userFonts.insert(userFonts.end(), csFonts.begin(), csFonts.end());
+		userFonts.insert(userFonts.end(),   csFonts.begin(),   csFonts.end());
 
 		userFonts.insert(userFonts.end(), userOtf.begin(), userOtf.end());
 		userFonts.insert(userFonts.end(), gameOtf.begin(), gameOtf.end());
-		userFonts.insert(userFonts.end(), csOtf.begin(), csOtf.end());
+		userFonts.insert(userFonts.end(),   csOtf.begin(),   csOtf.end());
 
 		std::sort(userFonts.begin(), userFonts.end());
 		userFonts.erase(std::unique(userFonts.begin(), userFonts.end()), userFonts.end());
@@ -323,6 +323,7 @@ namespace ImGui
 
 		// Colours - Global
 		SET_VALUE(background, "Window", "rBackgroundColor");
+		SET_VALUE(childBG, "Window", "rChildBackgroundColor");
 		SET_VALUE(border, "Window", "rBorderColor");
 		SET_VALUE(text, "Text", "rColor");
 		SET_VALUE(textHeader, "Header", "rTextColor");
@@ -400,6 +401,7 @@ namespace ImGui
 
 		// Colours - Global
 		GET_VALUE(background, "Window", "rBackgroundColor");
+		GET_VALUE(childBG, "Window", "rChildBackgroundColor");
 		GET_VALUE(border, "Window", "rBorderColor");
 		GET_VALUE(text, "Text", "rColor");
 		GET_VALUE(textHeader, "Header", "rTextColor");
@@ -510,7 +512,7 @@ namespace ImGui
 		style.TabRounding       = user.tabRounding * scale;
 
 		colors[ImGuiCol_WindowBg] = user.background;
-		colors[ImGuiCol_ChildBg]  = user.background;
+		colors[ImGuiCol_ChildBg]  = user.childBG;
 		colors[ImGuiCol_PopupBg]  = user.background;
 
 		colors[ImGuiCol_Text]         = user.text;

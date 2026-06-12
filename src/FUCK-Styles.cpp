@@ -80,10 +80,10 @@ void ThemeEditorWindow::Draw()
 		FUCK::Dummy(ImVec2(20.0f, 0.0f));
 		FUCK::SameLine();
 
-		FUCK::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+		FUCK::PushStyleColor(ImGuiCol_Button,        ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
 		FUCK::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 1.0f));
-		FUCK::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.1f, 0.1f, 1.0f));
-		FUCK::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.8f, 1.0f));
+		FUCK::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.6f, 0.1f, 0.1f, 1.0f));
+		FUCK::PushStyleColor(ImGuiCol_Text,          ImVec4(1.0f, 0.8f, 0.8f, 1.0f));
 
 		ImFont* defaultFont  = FUCK::GetFont(FUCK::Font::kRegular);
 		float   baseFontSize = defaultFont ? defaultFont->LegacySize : ImGui::GetStyle().FontSizeBase;
@@ -109,63 +109,64 @@ void ThemeEditorWindow::Draw()
 	}
 
 	if (FUCK::CollapsingHeader("$FUCK_Styles_Cat_ColoursGlobal"_T)) {
-		ColorPick("$FUCK_Styles_Background"_T, style->user.background);
-		ColorPick("$FUCK_Styles_Border"_T, style->user.border);
+		ColorPick("$FUCK_Styles_Background"_T,   style->user.background);
+		ColorPick("$FUCK_Styles_ChildBG"_T,      style->user.childBG);
+		ColorPick("$FUCK_Styles_Border"_T,       style->user.border);
 		FUCK::Separator();
-		ColorPick("$FUCK_Styles_Primary"_T, style->user.text);
-		ColorPick("$FUCK_Styles_Header"_T, style->user.textHeader);
-		ColorPick("$FUCK_Styles_HoverActive"_T, style->user.textHovered);
-		ColorPick("$FUCK_Styles_Disabled"_T, style->user.textDisabled);
+		ColorPick("$FUCK_Styles_Primary"_T,      style->user.text);
+		ColorPick("$FUCK_Styles_Header"_T,       style->user.textHeader);
+		ColorPick("$FUCK_Styles_HoverActive"_T,  style->user.textHovered);
+		ColorPick("$FUCK_Styles_Disabled"_T,     style->user.textDisabled);
 		ColorPick("$FUCK_Styles_NavHighlight"_T, style->user.navHighlight);
 	}
 
 	if (FUCK::CollapsingHeader("$FUCK_Styles_Cat_ColoursWidgets"_T)) {
-		ColorPick("$FUCK_Styles_FrameBG"_T, style->user.frameBG_Widget);
-		ColorPick("$FUCK_Styles_FrameBGActive"_T, style->user.frameBG_WidgetActive);
-		ColorPick("$FUCK_Styles_ButtonColor"_T, style->user.button);
+		ColorPick("$FUCK_Styles_FrameBG"_T,        style->user.frameBG_Widget);
+		ColorPick("$FUCK_Styles_FrameBGActive"_T,  style->user.frameBG_WidgetActive);
+		ColorPick("$FUCK_Styles_ButtonColor"_T,    style->user.button);
 		ColorPick("$FUCK_Styles_SeparatorColor"_T, style->user.separator);
 		FUCK::Separator();
-		ColorPick("$FUCK_Styles_TextBoxBG"_T, style->user.comboBoxTextBox);
-		ColorPick("$FUCK_Styles_ComboText"_T, style->user.comboBoxText);
+		ColorPick("$FUCK_Styles_TextBoxBG"_T,      style->user.comboBoxTextBox);
+		ColorPick("$FUCK_Styles_ComboText"_T,      style->user.comboBoxText);
 		FUCK::Separator();
-		ColorPick("$FUCK_Styles_Flash"_T, style->user.widgetFlash);
+		ColorPick("$FUCK_Styles_Flash"_T,          style->user.widgetFlash);
 	}
 
 	if (FUCK::CollapsingHeader("$FUCK_Styles_Cat_ColoursControls"_T)) {
 		// Borders
-		ColorPick("$FUCK_Styles_WidgetBorder"_T, style->user.widgetBorder);
+		ColorPick("$FUCK_Styles_WidgetBorder"_T,       style->user.widgetBorder);
 		ColorPick("$FUCK_Styles_WidgetBorderActive"_T, style->user.widgetBorderActive);
-		ColorPick("$FUCK_Styles_TabBorder"_T, style->user.tabBorder);
-		ColorPick("$FUCK_Styles_TabBorderActive"_T, style->user.tabBorderActive);
+		ColorPick("$FUCK_Styles_TabBorder"_T,          style->user.tabBorder);
+		ColorPick("$FUCK_Styles_TabBorderActive"_T,    style->user.tabBorderActive);
 		FUCK::Separator();
 
 		// Tabs
-		ColorPick("$FUCK_Styles_TabBG"_T, style->user.tab);
+		ColorPick("$FUCK_Styles_TabBG"_T,       style->user.tab);
 		ColorPick("$FUCK_Styles_TabBGActive"_T, style->user.tabHovered);
 		FUCK::Separator();
 
 		// Sliders
-		ColorPick("$FUCK_Styles_SliderGrab"_T, style->user.sliderGrab);
+		ColorPick("$FUCK_Styles_SliderGrab"_T,       style->user.sliderGrab);
 		ColorPick("$FUCK_Styles_SliderGrabActive"_T, style->user.sliderGrabActive);
 		FUCK::Separator();
 
 		// Toggles
 		ColorPick("$FUCK_Styles_ToggleRailFill"_T, style->user.toggleRailFilled);
-		ColorPick("$FUCK_Styles_ToggleKnob"_T, style->user.toggleKnob);
-		ColorPick("$FUCK_Styles_ToggleActive"_T, style->user.widgetToggleActive);
+		ColorPick("$FUCK_Styles_ToggleKnob"_T,     style->user.toggleKnob);
+		ColorPick("$FUCK_Styles_ToggleActive"_T,   style->user.widgetToggleActive);
 		FUCK::Separator();
 
 		// Scrollbars
-		ColorPick("$FUCK_Styles_ScrollbarBG"_T, style->user.scrollbarBG);
-		ColorPick("$FUCK_Styles_ScrollbarGrab"_T, style->user.scrollbarGrab);
+		ColorPick("$FUCK_Styles_ScrollbarBG"_T,         style->user.scrollbarBG);
+		ColorPick("$FUCK_Styles_ScrollbarGrab"_T,       style->user.scrollbarGrab);
 		ColorPick("$FUCK_Styles_ScrollbarGrabActive"_T, style->user.scrollbarGrabActive);
 	}
 
 	if (FUCK::CollapsingHeader("$FUCK_Styles_Cat_LayoutGeometry"_T)) {
 		FUCK::Header("$FUCK_Styles_PaddingSpacing"_T);
-		if (FUCK::DragFloat2("$FUCK_Styles_WindowPadding"_T, &style->user.windowPadding.x, 0.5f, 0.0f, 30.0f, "%.0f"))
+		if (FUCK::DragFloat2("$FUCK_Styles_WindowPadding"_T,  &style->user.windowPadding.x, 0.5f, 0.0f, 30.0f, "%.0f"))
 			style->RefreshStyle();
-		if (FUCK::DragFloat2("$FUCK_Styles_ItemSpacing"_T, &style->user.itemSpacing.x, 0.5f, 0.0f, 30.0f, "%.0f"))
+		if (FUCK::DragFloat2("$FUCK_Styles_ItemSpacing"_T,    &style->user.itemSpacing.x, 0.5f, 0.0f, 30.0f, "%.0f"))
 			style->RefreshStyle();
 		if (FUCK::SliderFloat("$FUCK_Styles_IndentSpacing"_T, &style->user.indentSpacing, 0.0f, 150.0f))
 			style->RefreshStyle();
@@ -185,7 +186,7 @@ void ThemeEditorWindow::Draw()
 			style->RefreshStyle();
 
 		FUCK::Header("$FUCK_Styles_Borders"_T);
-		if (FUCK::SliderFloat("$FUCK_Styles_WindowBorderSize"_T, &style->user.borderSize, 0.0f, 5.0f))
+		if (FUCK::SliderFloat("$FUCK_Styles_WindowBorderSize"_T,    &style->user.borderSize, 0.0f, 5.0f))
 			style->RefreshStyle();
 		if (FUCK::SliderFloat("$FUCK_Styles_ButtonTabBorderSize"_T, &style->user.buttonBorderSize, 0.0f, 5.0f))
 			style->RefreshStyle();
@@ -199,12 +200,12 @@ void ThemeEditorWindow::Draw()
 			if (FUCK::SliderFloat(label, v, 0.0f, 20.0f, "%.0f"))
 				style->RefreshStyle();
 		};
-		DragRound("$FUCK_Styles_WindowRounding"_T, &style->user.windowRounding);
-		DragRound("$FUCK_Styles_FrameRounding"_T, &style->user.frameRounding);
+		DragRound("$FUCK_Styles_WindowRounding"_T,    &style->user.windowRounding);
+		DragRound("$FUCK_Styles_FrameRounding"_T,     &style->user.frameRounding);
 		DragRound("$FUCK_Styles_ButtonTabRounding"_T, &style->user.buttonRounding);
-		DragRound("$FUCK_Styles_PopupRounding"_T, &style->user.popupRounding);
+		DragRound("$FUCK_Styles_PopupRounding"_T,     &style->user.popupRounding);
 		DragRound("$FUCK_Styles_ScrollbarRounding"_T, &style->user.scrollbarRounding);
-		DragRound("$FUCK_Styles_GrabRounding"_T, &style->user.grabRounding);
+		DragRound("$FUCK_Styles_GrabRounding"_T,      &style->user.grabRounding);
 	}
 
 	if (FUCK::CollapsingHeader("$FUCK_Styles_Cat_Audio"_T)) {
@@ -219,11 +220,11 @@ void ThemeEditorWindow::Draw()
 			}
 		};
 
-		PlayPreview("$FUCK_Styles_SoundOk"_T, style->user.soundOk);
-		PlayPreview("$FUCK_Styles_SoundCancel"_T, style->user.soundCancel);
-		PlayPreview("$FUCK_Styles_SoundFocus"_T, style->user.soundFocus);
+		PlayPreview("$FUCK_Styles_SoundOk"_T,       style->user.soundOk);
+		PlayPreview("$FUCK_Styles_SoundCancel"_T,   style->user.soundCancel);
+		PlayPreview("$FUCK_Styles_SoundFocus"_T,    style->user.soundFocus);
 		PlayPreview("$FUCK_Styles_SoundPrevNext"_T, style->user.soundPrevNext);
-		PlayPreview("$FUCK_Styles_SoundTab"_T, style->user.soundTab);
+		PlayPreview("$FUCK_Styles_SoundTab"_T,      style->user.soundTab);
 
 		if (changed) {
 			style->RefreshStyle();
