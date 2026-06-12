@@ -197,11 +197,6 @@ namespace Input
 			if (device == RE::INPUT_DEVICE::kKeyboard && (key == static_cast<uint32_t>(KEY::kLeftWin) || key == static_cast<uint32_t>(KEY::kRightWin)))
 				continue;
 
-			if (unifiedKey == Hotkeys::Manager::EscapeKey()) {
-				ImGui::PlayAudio(ImGui::Audio::kCancel);
-				return FUCK::BindResult::kCancelled;
-			}
-
 			// MODIFIER COLLEC
 			std::vector<int32_t> pressedMods;
 			if (!_rebindCtx.disallowModifiers) {
@@ -224,25 +219,28 @@ namespace Input
 						}
 					}
 				}
-			}
 
-			// MODIFIER PROTEC
-			if (IsUnifiedModifier(unifiedKey)) {
-				if (button->Value() < 1.0f || !pressedMods.empty())
-					continue;
-			}
-
-			// PREVENT SELF-BIND
-			auto IsSameModPair = [](uint32_t a, uint32_t b) {
-				if (a > b)
-					std::swap(a, b);
-				return a == b ||
+				// PREVENT SELF-BIND
+				auto IsSameModPair = [](uint32_t a, uint32_t b) {
+					if (a > b)
+						std::swap(a, b);
+					return a == b ||
 				       (a == AsKey(KEY::kLeftShift) && b ==		AsKey(KEY::kRightShift)) ||
 				       (a == AsKey(KEY::kLeftControl) && b ==	AsKey(KEY::kRightControl)) ||
 				       (a == AsKey(KEY::kLeftAlt) && b ==		AsKey(KEY::kRightAlt));
-			};
+				};
 
-			if (std::ranges::any_of(pressedMods, [&](int32_t m) { return IsSameModPair(m, unifiedKey); })) {
+				std::erase_if(pressedMods, [&](int32_t m) { return IsSameModPair(m, unifiedKey); });
+			}
+
+			// CANCEL BIND
+			if (unifiedKey == Hotkeys::Manager::EscapeKey() && pressedMods.empty()) {
+				ImGui::PlayAudio(ImGui::Audio::kCancel);
+				return FUCK::BindResult::kCancelled;
+			}
+
+			// MODIFIER PROTEC
+			if (!_rebindCtx.disallowModifiers && IsUnifiedModifier(unifiedKey)) {
 				continue;
 			}
 
@@ -290,7 +288,7 @@ namespace Input
 			h.isBinding = false;
 			return true;
 		}
-		return true;
+		return false;
 	}
 
 	bool Manager::CheckModifiersStrict(const std::uint32_t* mods, size_t count, std::int32_t req1, std::int32_t req2, std::uint32_t primaryKey) const
@@ -714,11 +712,12 @@ namespace Input
 			}
 		}
 
-		// Event Forwarding
+	// Event Forwarding
 		auto&      io             = ImGui::GetIO();
 		const bool cursorMenuOpen = RE::UI::GetSingleton()->IsMenuOpen(RE::CursorMenu::MENU_NAME);
 
-		const bool passKeyboardAndGamepad = shouldRender && blockInput;
+		const bool isBinding              = IsBinding();
+		const bool passKeyboardAndGamepad = shouldRender && blockInput && !isBinding;
 		const bool passMouse              = shouldRender && (blockInput || forceCursor);
 
 		if (a_events && *a_events) {

@@ -362,6 +362,7 @@ void FUCKMan::SaveWorkspace()
 bool FUCKMan::ProcessAsyncInput(const RE::InputEvent* const* a_event)
 {
 	bool consumed = false;
+	bool wasBinding = MANAGER(Input)->IsBinding();
 
 	// Active Tool Input (Priority)
 	if (_activeTool && _activeTool->OnAsyncInput(a_event)) {
@@ -369,7 +370,7 @@ bool FUCKMan::ProcessAsyncInput(const RE::InputEvent* const* a_event)
 	}
 
 	// Make sure we skip the global Escape-to-Close override if rebinding
-	if (!consumed && !MANAGER(Input)->IsBinding() && (_isOpen || IsInputBlocked())) {
+	if (!consumed && !wasBinding && (_isOpen || IsInputBlocked())) {
 		// ESC / Close Logic (Priority over Global Hotkeys)
 		if (MANAGER(Input)->IsInputPressed(a_event, Hotkeys::Manager::EscapeKey())) {
 			bool handled = false;
