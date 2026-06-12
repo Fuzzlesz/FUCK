@@ -1454,7 +1454,7 @@ namespace FUCK
 	// [ SECTION 4 ] SMART WRAPPERS & UTILITIES
 	// ==================================================
 
-	/// @brief Safe Resource-Acquisition-Is-Initialization wrapper for custom Images.
+	/// @brief RAII wrapper for custom images.
 	class Image
 	{
 	public:
@@ -1589,7 +1589,7 @@ namespace FUCK
 		const char* _pluginName;
 	};
 
-	/// @brief Safe string copy utility preventing buffer overruns.
+	/// @brief String copy utility.
 	template <size_t N>
 	inline void StringCopy(char (&dest)[N], const char* source)
 	{
@@ -1606,7 +1606,7 @@ namespace FUCK
 		strncpy_s(dest, N, source.c_str(), _TRUNCATE);
 	}
 
-	/// @brief Helper functions for delta saving/loading INI values with automatic default value handling.
+	/// @brief Delta save/load INI values.
 	namespace INI
 	{
 		inline bool LoadBool(const CSimpleIniA& ini, const char* sec, const char* key, bool defVal)
@@ -1619,7 +1619,7 @@ namespace FUCK
 			return static_cast<float>(ini.GetDoubleValue(sec, key, static_cast<double>(defVal)));
 		}
 
-		/// Automatically handles mixed ints
+		// Handles mixed ints
 		template <typename T>
 		inline T LoadInt(const CSimpleIniA& ini, const char* sec, const char* key, T defVal)
 		{
@@ -1635,7 +1635,7 @@ namespace FUCK
 				ini.SetBoolValue(sec, key, val);
 		}
 
-		/// Automatically handles mixed ints
+		// Handles mixed ints
 		template <typename T, typename U>
 		inline void SaveInt(CSimpleIniA& ini, const char* sec, const char* key, T val, U defVal)
 		{
@@ -1752,7 +1752,7 @@ namespace FUCK
 	// Overloads & Templates
 	// --------------------------------------------------
 
-	/// @brief Standardized visual for UI widget editing. Handles both Screen-Space and Window-Space rendering.
+	/// @brief Visual for UI widget editing. Handles Screen-Space and Window-Space.
 	inline void DrawEditorBounds(const ImVec2& min, const ImVec2& max, EditorBoundsState state = EditorBoundsState::kNormal, float thickness = 2.0f, bool screenSpace = false, const ImVec2* customAnchor = nullptr)
 	{
 		ImU32 boundsColor;
@@ -1793,7 +1793,7 @@ namespace FUCK
 		}
 	}
 
-	/// @brief Helper for handling WASD Key widget nudging. Returns true if movement occurred, outputting the delta.
+	/// @brief WASD key widget nudging.
 	inline bool WASDNudge(float& outDeltaX, float& outDeltaY, bool isActiveOrHovered, float step = 1.0f, float sprintMult = 10.0f)
 	{
 		if (!isActiveOrHovered || IsMouseDown(0))
