@@ -382,7 +382,6 @@ void SettingsTool::Draw()
 				ImGui::PopFont();
 				FUCK::SetTooltip("$FUCK_Sidebar_TableDragTT"_T);
 
-
 				// --- Table Context Generators ---
 				auto RenderToolRow = [&](FUCK::ITool* tool, bool indented, std::vector<FUCK::ITool*>& parentList) {
 					std::string key  = std::format("{}|{}", tool->PluginName(), tool->Name());
