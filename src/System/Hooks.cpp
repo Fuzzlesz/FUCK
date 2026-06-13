@@ -11,14 +11,12 @@ namespace Hooks
 
 	constexpr const char* kSystemPagePath = "_root.QuestJournalFader.Menu_mc.SystemFader.Page_mc";
 
-	static void TryInjectFUCKButton(RE::GFxMovieView* a_movieView)
+	static void TryInjectFUCKButton(RE::GFxMovieView * a_movieView)
 	{
 		if (!a_movieView || s_fuckButtonInjected)
 			return;
 
 		auto* manager = FUCKMan::GetSingleton();
-		if (!manager->GetInjectSystemMenu())
-			return;
 
 		RE::GFxValue page, cat, listObj, entryList;
 		if (!a_movieView->GetVariable(&page, kSystemPagePath) || !page.IsObject()      ||
@@ -100,6 +98,61 @@ namespace Hooks
 		listObj.Invoke("InvalidateData", nullptr, nullptr, 0);
 
 		s_fuckButtonInjected = true;
+	}
+
+	static void TryRemoveFUCKButton(RE::GFxMovieView * a_movieView)
+	{
+		if (!a_movieView || !s_fuckButtonInjected)
+			return;
+
+		auto*        manager = FUCKMan::GetSingleton();
+		RE::GFxValue page, cat, listObj, entryList;
+		if (!a_movieView->GetVariable(&page, kSystemPagePath) || !page.IsObject() ||
+			!page.GetMember("CategoryList_mc", &cat) || !cat.IsObject() ||
+			!cat.GetMember("List_mc", &listObj) || !listObj.IsObject() ||
+			!listObj.GetMember("entryList", &entryList) || !entryList.IsArray()) {
+			return;
+		}
+
+		const std::uint32_t arraySize = entryList.GetArraySize();
+		if (arraySize == 0)
+			return;
+
+		const char* menuName   = ("$FUCK_Title"_T);
+		bool        isSafeMenu = page.HasMember("UpdateIndices");
+		bool        removed    = false;
+
+		for (std::uint32_t i = 0; i < arraySize; ++i) {
+			RE::GFxValue element, textVal;
+			if (entryList.GetElement(i, &element) && element.IsObject() && element.GetMember("text", &textVal) && textVal.IsString()) {
+				if (std::string_view(textVal.GetString()) == menuName) {
+					if (!isSafeMenu && manager->GetReplaceHelpMenu()) {
+						element.SetMember("text", "$HELP");
+						entryList.SetElement(i, element);
+					} else {
+						// Shift up to overwrite the injected entry
+						for (std::uint32_t j = i; j < arraySize - 1; ++j) {
+							RE::GFxValue temp;
+							entryList.GetElement(j + 1, &temp);
+							entryList.SetElement(j, temp);
+						}
+
+						entryList.SetArraySize(arraySize - 1);
+
+						if (isSafeMenu) {
+							page.Invoke("UpdateIndices", nullptr, nullptr, 0);
+						}
+					}
+					removed = true;
+					break;
+				}
+			}
+		}
+
+		if (removed) {
+			listObj.Invoke("InvalidateData", nullptr, nullptr, 0);
+		}
+		s_fuckButtonInjected = false;
 	}
 
 	// Returns true if the injected entry is selected and an accept input is detected.
@@ -238,12 +291,12 @@ namespace Hooks
 				RE::InputEvent* newTail = nullptr;
 
 				if (a_events && *a_events) {
-				for (auto iter = *a_events; iter; iter = iter->next) {
-					bool keep = false;
+					for (auto iter = *a_events; iter; iter = iter->next) {
+						bool keep = false;
 
-					if (auto btn = iter->AsButtonEvent()) {
-						// Always allow Screenshot and Console through the block
-						if (userEvents && (btn->userEvent == userEvents->screenshot || btn->userEvent == userEvents->console)) {
+						if (auto btn = iter->AsButtonEvent()) {
+							// Always allow Screenshot and Console through the block
+							if (userEvents && (btn->userEvent == userEvents->screenshot || btn->userEvent == userEvents->console)) {
 							keep = true;
 						}
 						// Game menu passthrough — only relevant when a kCloseOnGameMenu window is open
@@ -262,7 +315,7 @@ namespace Hooks
 							}
 						}
 
-						// Zero-out on transition to blocked state to prevent "stuck" inputs
+							// Zero-out on transition to blocked state to prevent "stuck" inputs
 							if (!keep && justBlocked) {
 								btn->value        = 0.0f;
 								btn->heldDownSecs = 0.0f;
@@ -278,7 +331,7 @@ namespace Hooks
 							}
 						}
 
-					// Rebuild the linked list with only kept (or zeroed) events
+						// Rebuild the linked list with only kept (or zeroed) events
 						if (keep) {
 							if (!newHead) {
 								newHead = iter;
@@ -352,8 +405,15 @@ namespace Hooks
 
 			auto result = func(a_this, a_message);
 
-			if (a_message.type == RE::UI_MESSAGE_TYPE::kUpdate && !s_fuckButtonInjected && a_this->uiMovie) {
-				TryInjectFUCKButton(a_this->uiMovie.get());
+			if (a_message.type == RE::UI_MESSAGE_TYPE::kUpdate && a_this->uiMovie) {
+				auto* manager      = FUCKMan::GetSingleton();
+				bool  shouldInject = manager->GetInjectSystemMenu() && MANAGER(Input)->IsInputGamepad();
+
+				if (shouldInject && !s_fuckButtonInjected) {
+					TryInjectFUCKButton(a_this->uiMovie.get());
+				} else if (!shouldInject && s_fuckButtonInjected) {
+					TryRemoveFUCKButton(a_this->uiMovie.get());
+				}
 			}
 
 			return result;

@@ -53,18 +53,6 @@ void SettingsTool::Draw()
 			if (FUCK::Checkbox("$FUCK_Settings_MuteAudio"_T, &manager->_cfg.muteAudio, true, true))
 				manager->Save();
 
-			if (FUCK::Checkbox("$FUCK_Settings_InjectSystemMenu"_T, &manager->_cfg.injectSystemMenu, true, true))
-				manager->Save();
-			FUCK::SetTooltip("$FUCK_Settings_InjectSystemMenuTT"_T);
-
-			if (manager->GetJournalMenuType() != FUCKMan::JournalMenuType::kSafe) {
-				FUCK::BeginDisabled(!manager->_cfg.injectSystemMenu);
-				if (FUCK::Checkbox("$FUCK_Settings_ReplaceHelpMenu"_T, &manager->_cfg.replaceHelpMenu, true, true))
-					manager->Save();
-				FUCK::SetTooltip("$FUCK_Settings_ReplaceHelpMenuTT"_T);
-				FUCK::EndDisabled();
-			}
-
 			FUCK::Spacing(2);
 
 			const char* pauseTypes[]    = { "$FUCK_Settings_PauseNone"_T, "$FUCK_Settings_PauseSoft"_T, "$FUCK_Settings_PauseHard"_T };
@@ -78,6 +66,21 @@ void SettingsTool::Draw()
 			}
 			FUCK::Spacing();
 			FUCK::TextColoredWrapped(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "$FUCK_Settings_PauseDesc"_T);
+
+			FUCK::Header("$FUCK_Settings_Controller"_T);
+			FUCK::Spacing(2);
+
+			if (FUCK::Checkbox("$FUCK_Settings_InjectSystemMenu"_T, &manager->_cfg.injectSystemMenu, true, true))
+				manager->Save();
+			FUCK::SetTooltip("$FUCK_Settings_InjectSystemMenuTT"_T);
+
+			if (manager->GetJournalMenuType() != FUCKMan::JournalMenuType::kSafe) {
+				FUCK::BeginDisabled(!manager->_cfg.injectSystemMenu);
+				if (FUCK::Checkbox("$FUCK_Settings_ReplaceHelpMenu"_T, &manager->_cfg.replaceHelpMenu, true, true))
+					manager->Save();
+				FUCK::SetTooltip("$FUCK_Settings_ReplaceHelpMenuTT"_T);
+				FUCK::EndDisabled();
+			}
 
 			FUCK::Header("$FUCK_Settings_Appearance"_T);
 			FUCK::Spacing(2);
@@ -120,6 +123,11 @@ void SettingsTool::Draw()
 
 			FUCK::Spacing(2);
 
+			if (FUCK::Button("$FUCK_Settings_Unmap"_T)) {
+				hotkey.Clear();
+				manager->SaveKeybinds();
+			}
+			FUCK::SameLine();
 			if (FUCK::Button("$FUCK_Settings_Reset"_T)) {
 				manager->ResetSettings();
 			}
