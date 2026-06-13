@@ -1706,7 +1706,7 @@ namespace ImGui
 			return DragFloat2(id, v, speed, min, max, fmt);
 		});
 		if (res)
-			PlayAudio(Audio::kPrevNext);;
+			PlayAudio(Audio::kPrevNext);
 		return res;
 	}
 
@@ -1716,7 +1716,7 @@ namespace ImGui
 			return DragFloat3(id, v, speed, min, max, fmt);
 		});
 		if (res)
-			PlayAudio(Audio::kPrevNext);;
+			PlayAudio(Audio::kPrevNext);
 		return res;
 	}
 
@@ -1726,7 +1726,7 @@ namespace ImGui
 			return DragFloat4(id, v, speed, min, max, fmt);
 		});
 		if (res)
-			PlayAudio(Audio::kPrevNext);;
+			PlayAudio(Audio::kPrevNext);
 		return res;
 	}
 
@@ -1741,11 +1741,11 @@ namespace ImGui
 			bool pR = r || IsKeyPressed(ImGuiKey_D, false) || IsKeyPressed(ImGuiKey_GamepadDpadRight, false);
 			if (pL) {
 				*outLeft = true;
-				PlayAudio(Audio::kPrevNext);;
+				PlayAudio(Audio::kPrevNext);
 			}
 			if (pR) {
 				*outRight = true;
-				PlayAudio(Audio::kPrevNext);;
+				PlayAudio(Audio::kPrevNext);
 			}
 		}
 	}
