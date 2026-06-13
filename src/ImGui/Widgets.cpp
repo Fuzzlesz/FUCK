@@ -488,9 +488,24 @@ namespace ImGui
 		if (window->SkipItems)
 			return false;
 
+		if (popup_max_height_in_items == -1)
+			popup_max_height_in_items = 8;
+
 		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize);
 		float padX       = std::max(GetStyle().FramePadding.x, borderSize + (8.0f * scale));
 		float padY       = 7.0f * scale;
+
+		float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
+		float resScale    = Renderer::GetResolutionScale();
+		float fontSize    = std::round(GetStyle().FontSizeBase * activeScale * resScale * 2.0f) / 2.0f;
+
+		PushFont(nullptr, fontSize);
+
+		float maxListH = (GetTextLineHeightWithSpacing() * popup_max_height_in_items) - GetStyle().ItemSpacing.y + (padY * 2.0f) + (GetStyle().ChildBorderSize * 2.0f) + 4.0f;  // Epsilon
+
+		float maxContentH = GetFrameHeight() + (GetStyle().ItemSpacing.y * 2.0f) + maxListH;
+		float constraintH = maxContentH + (GetStyle().WindowPadding.y * 2.0f) + (50.0f * scale);
+		PopFont();
 
 		PushStyleVar(ImGuiStyleVar_FramePadding, { padX, padY });
 		PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);  // Prevents double frame
@@ -504,12 +519,6 @@ namespace ImGui
 		float  width     = CalcItemWidth();
 
 		ImGuiID id = window->GetID(idStr.c_str());
-
-		if (popup_max_height_in_items == -1)
-			popup_max_height_in_items = 8;
-
-		float listH_Max   = GetTextLineHeightWithSpacing() * popup_max_height_in_items;
-		float constraintH = GetFrameHeight() + g.Style.ItemSpacing.y + listH_Max + (g.Style.WindowPadding.y * 2.0f) + 20.0f;
 
 		if (!(g.NextWindowData.HasFlags & ImGuiNextWindowDataFlags_HasSizeConstraint)) {
 			SetNextWindowSizeConstraints({ width, 0.0f }, { width, constraintH });
@@ -525,22 +534,28 @@ namespace ImGui
 		PushStyleColor(ImGuiCol_Text, GetUserStyleColorVec4(USER_STYLE::kComboBoxText));
 		PushStyleColor(ImGuiCol_PopupBg, textBoxColor);
 
-		// Capture height while padding is active
-		float frameH = GetFrameHeight();
+		float popPadX = GetStyle().WindowPadding.x;
+		float popPadY = std::max(0.0f, GetStyle().WindowPadding.y - (2.0f * scale));
+		PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(popPadX, popPadY));
 
+		float       frameH         = GetFrameHeight();
 		ImDrawList* parentDrawList = GetWindowDrawList();
 
 		bool isOpen = BeginCombo(idStr.c_str(), preview, ImGuiComboFlags_NoArrowButton);
 
-		PopStyleVar(2);
+		PopStyleVar(3);
 		PopStyleColor(5);
 
 		// Detect if opened Upwards
 		bool opensUp = false;
 		if (isOpen) {
 			ImGuiWindow* popupWindow = GetCurrentWindow();
-			if (popupWindow && popupWindow->Pos.y < widgetPos.y)
-				opensUp = true;
+			if (popupWindow) {
+				popupWindow->Flags |= ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+				if (popupWindow->Pos.y < widgetPos.y) {
+					opensUp = true;
+				}
+			}
 		}
 
 		DrawDropdownIcon(parentDrawList, { std::floor(widgetPos.x + width - frameH), std::floor(widgetPos.y) }, { frameH, frameH }, isOpen, opensUp, IsItemHovered());
@@ -549,9 +564,6 @@ namespace ImGui
 		if (!isOpen)
 			return false;
 
-		float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
-		float resScale    = Renderer::GetResolutionScale();
-		float fontSize    = std::round(GetStyle().FontSizeBase * activeScale * resScale * 2.0f) / 2.0f;
 		PushFont(nullptr, fontSize);
 
 		if (IsWindowAppearing())
@@ -563,7 +575,6 @@ namespace ImGui
 		PushStyleColor(ImGuiCol_NavCursor, ImVec4(0, 0, 0, 0));
 
 		PushItemWidth(-FLT_MIN);
-		Dummy(ImVec2(0.0f, 1.0f));
 		InputText("##filter", s_comboFilterStates[id].pattern, 256, ImGuiInputTextFlags_AutoSelectAll);
 		bool isInputFocused = IsItemFocused() || IsItemActive();
 		PopItemWidth();
@@ -571,10 +582,13 @@ namespace ImGui
 		PopStyleColor(3);
 
 		bool navigateToItems = false;
+		bool enterPressed    = false;
 		if (isInputFocused) {
 			if (IsKeyPressed(ImGuiKey_DownArrow, false) || IsKeyPressed(ImGuiKey_GamepadDpadDown, false) ||
-				IsKeyPressed(ImGuiKey_UpArrow, false)   || IsKeyPressed(ImGuiKey_GamepadDpadUp, false)) {
+				IsKeyPressed(ImGuiKey_UpArrow, false) || IsKeyPressed(ImGuiKey_GamepadDpadUp, false)) {
 				navigateToItems = true;
+			} else if (IsKeyPressed(ImGuiKey_Enter, false) || IsKeyPressed(ImGuiKey_KeypadEnter, false) || IsKeyPressed(ImGuiKey_GamepadFaceDown, false)) {
+				enterPressed = true;
 			}
 		}
 
@@ -603,19 +617,49 @@ namespace ImGui
 		bool changed    = false;
 		int  show_count = filtering ? static_cast<int>(itemScoreVector.size()) : static_cast<int>(items.size());
 
-		// Calculate height for list
-		int heightInItems = show_count;
-		if (heightInItems > popup_max_height_in_items)
-			heightInItems = popup_max_height_in_items;
+		if (enterPressed && show_count > 0) {
+			*current_item = filtering ? itemScoreVector[0].first : 0;
+			changed       = true;
+			CloseCurrentPopup();
+			PlayAudio(Audio::kFocus);
+		}
+
+		// --- Inner List Setup ---
+		PushStyleColor(ImGuiCol_NavCursor, ImVec4(0, 0, 0, 0));
+		PushStyleColor(ImGuiCol_ChildBg, textBoxColor);
+		PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padX, padY));
+
+		int heightInItems = popup_max_height_in_items;
 		if (heightInItems < 2)
 			heightInItems = 2;
 
-		float  listH = GetTextLineHeightWithSpacing() * heightInItems + g.Style.FramePadding.y * 2.0f;
-		ImVec2 listSize(-FLT_MIN, listH);
+		float idealListH = CalcMaxPopupHeightFromItemCount(heightInItems);
 
-		PushStyleColor(ImGuiCol_NavCursor, ImVec4(0, 0, 0, 0));
+		ImVec2 displaySize = GetIO().DisplaySize;
+		float  spaceBelow  = displaySize.y - (widgetPos.y + frameH) - (8.0f * scale);
+		float  spaceAbove  = widgetPos.y - (8.0f * scale);
+		float  maxPopupH   = opensUp ? spaceAbove : spaceBelow;
 
-		if (BeginListBox("##List", listSize)) {
+		float nonListH        = GetFrameHeight() + (g.Style.ItemSpacing.y * 2.0f) + (popPadY * 2.0f) + (g.Style.PopupBorderSize * 2.0f);
+		float maxListH_screen = maxPopupH - nonListH;
+
+		bool clampToScreen = false;
+		if (maxListH_screen > 0.0f && idealListH > maxListH_screen) {
+			idealListH    = maxListH_screen;
+			clampToScreen = true;
+		}
+
+		ImGuiChildFlags  childFlags = ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY;
+		ImGuiWindowFlags winFlags   = ImGuiWindowFlags_NoMove;
+
+		if (show_count <= heightInItems && !clampToScreen) {
+			winFlags |= ImGuiWindowFlags_NoScrollbar;
+			idealListH += 2.0f;
+		}
+
+		SetNextWindowSizeConstraints(ImVec2(0.0f, 0.0f), ImVec2(FLT_MAX, idealListH));
+
+		if (BeginChild("##List", ImVec2(-FLT_MIN, 0.0f), childFlags, winFlags)) {
 			for (int i = 0; i < show_count; i++) {
 				int idx = filtering ? itemScoreVector[i].first : i;
 
@@ -641,9 +685,11 @@ namespace ImGui
 
 				PopID();
 			}
-			EndListBox();
 		}
-		PopStyleColor();
+		EndChild();
+
+		PopStyleVar();
+		PopStyleColor(2);
 		PopFont();
 		EndCombo();
 		return changed;
