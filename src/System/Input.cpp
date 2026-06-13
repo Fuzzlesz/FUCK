@@ -622,7 +622,11 @@ namespace Input
 			break;
 		}
 
-		if (_lastInputDevice != _inputDevice) {
+		bool wasGamepad = (_lastInputDevice == DEVICE::kGamepadDirectX || _lastInputDevice == DEVICE::kGamepadOrbis);
+		bool isGamepad  = (_inputDevice     == DEVICE::kGamepadDirectX || _inputDevice     == DEVICE::kGamepadOrbis);
+
+		// Only reset navigation state when crossing the boundary between KBM and Gamepad
+		if (wasGamepad != isGamepad || _lastInputDevice == DEVICE::kNone) {
 			auto& io = ImGui::GetIO();
 
 			io.ConfigFlags  &= ~ImGuiConfigFlags_NavEnableGamepad;
@@ -630,13 +634,15 @@ namespace Input
 			io.ConfigFlags  &= ~ImGuiConfigFlags_IsTouchScreen;
 			io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
 
-			if (IsInputGamepad()) {
-				io.ConfigFlags  |= ImGuiConfigFlags_NavEnableGamepad; 
+			if (isGamepad) {
+				io.ConfigFlags  |= ImGuiConfigFlags_NavEnableGamepad;
 				io.ConfigFlags  |= ImGuiConfigFlags_IsTouchScreen;  // unused flag to force ImGui to update gamepad input from backend
 				io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
 			} else {
 				io.ConfigFlags  |= ImGuiConfigFlags_NavEnableKeyboard;
-				ImGui::ClearNavState();
+				if (_lastInputDevice != DEVICE::kNone) {
+					ImGui::ClearNavState();
+				}
 			}
 		}
 	}
