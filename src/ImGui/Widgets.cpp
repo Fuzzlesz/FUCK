@@ -524,7 +524,16 @@ namespace ImGui
 			SetNextWindowSizeConstraints({ width, 0.0f }, { width, constraintH });
 		}
 
-		const char* preview = (*current_item >= 0 && *current_item < static_cast<int>(items.size())) ? items[*current_item].c_str() : "";
+		// Strip ## hidden tags from the preview text so it displays cleanly when closed
+		std::string previewStr;
+		if (*current_item >= 0 && *current_item < static_cast<int>(items.size())) {
+			previewStr   = items[*current_item];
+			auto hashPos = previewStr.find("##");
+			if (hashPos != std::string::npos) {
+				previewStr.erase(hashPos);
+			}
+		}
+		const char* preview = previewStr.c_str();
 
 		ImVec4 textBoxColor = GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox);
 		PushStyleColor(ImGuiCol_FrameBg, textBoxColor);
@@ -601,6 +610,11 @@ namespace ImGui
 			static std::string lowerItemBuffer;
 
 			for (int i = 0; i < static_cast<int>(items.size()); i++) {
+				// Exclude items marked with ##NOFILTER from search results
+				if (items[i].find("##NOFILTER") != std::string::npos) {
+					continue;
+				}
+
 				// Copy into buffer and convert to lowercase in-place
 				lowerItemBuffer = items[i];
 				std::transform(lowerItemBuffer.begin(), lowerItemBuffer.end(), lowerItemBuffer.begin(),
@@ -611,7 +625,15 @@ namespace ImGui
 				if (score >= 65.0)
 					itemScoreVector.push_back({ i, score });
 			}
-			std::ranges::sort(itemScoreVector, [](const auto& a, const auto& b) { return b.second < a.second; });
+
+			std::ranges::sort(itemScoreVector, [](const auto& a, const auto& b) {
+				// If the fuzzy match scores are identical, fallback to their original index (alphabetical order)
+				if (std::abs(a.second - b.second) < 0.0001)
+					return a.first < b.first;
+
+				// Otherwise, float the best fuzzy matches to the top
+				return a.second > b.second;
+			});
 		}
 
 		bool changed    = false;
@@ -727,7 +749,16 @@ namespace ImGui
 
 		ImDrawList* parentDrawList = GetWindowDrawList();
 
-		const char* preview = (*current_item >= 0 && *current_item < items_count) ? items[*current_item] : "";
+		// Strip ## hidden tags from the preview text so it displays cleanly when closed
+		std::string previewStr;
+		if (*current_item >= 0 && *current_item < items_count) {
+			previewStr   = items[*current_item];
+			auto hashPos = previewStr.find("##");
+			if (hashPos != std::string::npos) {
+				previewStr.erase(hashPos);
+			}
+		}
+		const char* preview = previewStr.c_str();
 
 		parentDrawList->AddRectFilled(widgetPos, widgetPos + ImVec2(width, frameH), GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox), GetStyle().FrameRounding);
 
