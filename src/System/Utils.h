@@ -18,14 +18,18 @@ namespace Utils
 		strncpy_s(dest, destSize, path.c_str(), _TRUNCATE);
 	}
 
-	inline std::vector<std::string> GetDirectoryFiles(const fs::path& a_path, const std::string& a_ext = ".ini", bool a_recursive = false)
+	inline std::vector<std::string> GetDirectoryFiles(const fs::path& a_path, const std::string& a_ext = ".ini", bool a_recursive = false, bool a_createIfMissing = false)
 	{
 		std::vector<std::string> files;
 
 		if (!fs::exists(a_path)) {
-			try {
-				fs::create_directories(a_path);
-			} catch (...) {
+			if (a_createIfMissing) {
+				try {
+					fs::create_directories(a_path);
+				} catch (...) {
+					return files;
+				}
+			} else {
 				return files;
 			}
 		}

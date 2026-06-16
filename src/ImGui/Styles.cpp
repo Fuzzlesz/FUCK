@@ -148,13 +148,13 @@ namespace ImGui
 		auto settings = Settings::GetSingleton();
 
 		// Passing 'true' enables recursion
-		auto userFonts = Utils::GetDirectoryFiles(settings->GetUserFontsPath(),   ".ttf", true);
-		auto gameFonts = Utils::GetDirectoryFiles(settings->GetLegacyFontsPath(), ".ttf", true);
-		auto csFonts   = Utils::GetDirectoryFiles(settings->GetCSFontsPath(),     ".ttf", true);
+		auto userFonts = Utils::GetDirectoryFiles(settings->GetUserFontsPath(),   ".ttf", true, false);
+		auto gameFonts = Utils::GetDirectoryFiles(settings->GetLegacyFontsPath(), ".ttf", true, false);
+		auto csFonts   = Utils::GetDirectoryFiles(settings->GetCSFontsPath(),     ".ttf", true, false);
 
-		auto userOtf = Utils::GetDirectoryFiles(settings->GetUserFontsPath(),   ".otf", true);
-		auto gameOtf = Utils::GetDirectoryFiles(settings->GetLegacyFontsPath(), ".otf", true);
-		auto csOtf   = Utils::GetDirectoryFiles(settings->GetCSFontsPath(),     ".otf", true);
+		auto userOtf   = Utils::GetDirectoryFiles(settings->GetUserFontsPath(),   ".otf", true, false);
+		auto gameOtf   = Utils::GetDirectoryFiles(settings->GetLegacyFontsPath(), ".otf", true, false);
+		auto csOtf     = Utils::GetDirectoryFiles(settings->GetCSFontsPath(),     ".otf", true, false);
 
 		userFonts.insert(userFonts.end(), gameFonts.begin(), gameFonts.end());
 		userFonts.insert(userFonts.end(),   csFonts.begin(),   csFonts.end());
@@ -173,7 +173,7 @@ namespace ImGui
 	const std::vector<std::string>& Styles::GetPresets()
 	{
 		if (cachedPresets.empty()) {
-			cachedPresets      = Utils::GetDirectoryFiles(Settings::GetSingleton()->GetStylesPath());
+			cachedPresets      = Utils::GetDirectoryFiles(Settings::GetSingleton()->GetStylesPath(), ".ini", false, false);
 			static bool logged = false;
 			if (!logged) {
 				logger::info("Found [{}] style presets.", cachedPresets.size());
