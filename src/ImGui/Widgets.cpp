@@ -44,7 +44,7 @@ namespace ImGui
 
 			ImU32 col       = GetDynamicTextColor(isHovered || isOpen);
 			float uiScale   = Renderer::GetResolutionScale();
-			float userScale = FUCKMan::GetSingleton()->GetActiveScale();
+			float userScale = FUCKMan::GetSingleton()->GetActiveScale() * GetCurrentWindow()->FontWindowScale;
 			float aspect    = iconArrow->imageSize.y > 0.0f ? (iconArrow->imageSize.x / iconArrow->imageSize.y) : 1.0f;
 
 			auto ap = CalcArrowIconParams(aspect, isOpen, bSize.y, 30.0f * uiScale, userScale);
