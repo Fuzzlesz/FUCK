@@ -71,17 +71,38 @@ namespace ImGui::Renderer
 		{
 			// Handle focus loss
 			if (uMsg == WM_KILLFOCUS) {
-				// 1. Clear ImGui's internal key buffer
+				// Clear ImGui's internal key buffer
 				auto& io = GetIO();
 				io.ClearInputKeys();
 
-				// 2. Clear our Input Manager's stuck keys
+				// Clear our Input Manager's stuck keys
 				if (initialized.load()) {
 					Input::Manager::GetSingleton()->ClearState();
 				}
 			}
 
-			return func(hWnd, uMsg, wParam, lParam);
+			// Defensively call the original/next WndProc in the chain
+			if (func) {
+				MEMORY_BASIC_INFORMATION mbi;
+				// Query the memory region of the function pointer
+				if (VirtualQuery(reinterpret_cast<LPCVOID>(func), &mbi, sizeof(mbi))) {
+					// Check if the memory is committed and holds executable code
+					if (mbi.State == MEM_COMMIT &&
+						(mbi.Protect & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY))) {
+						// Safe to call. Use CallWindowProc for proper subclass chaining.
+						return CallWindowProc(func, hWnd, uMsg, wParam, lParam);
+					}
+				}
+
+				static bool s_LoggedCorruption = false;
+				if (!s_LoggedCorruption) {
+					logger::critical("WndProc chain corruption detected! Falling back to DefWindowProc.");
+					s_LoggedCorruption = true;
+				}
+			}
+
+			// If func is null or points to dead memory, fallback to OS default
+			return DefWindowProc(hWnd, uMsg, wParam, lParam);
 		}
 		static inline WNDPROC func;
 	};
