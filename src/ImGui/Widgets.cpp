@@ -483,31 +483,32 @@ namespace ImGui
 
 	bool ComboWithFilter(const char* label, int* current_item, std::span<const std::string> items, int popup_max_height_in_items)
 	{
-		float scale = Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
-
 		ImGuiContext& g      = *GImGui;
 		ImGuiWindow*  window = GetCurrentWindow();
 		if (window->SkipItems)
 			return false;
 
+		float currentFontScale = window->FontWindowScale;
+		float scale            = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale() * currentFontScale;
+
 		if (popup_max_height_in_items == -1)
 			popup_max_height_in_items = 8;
 
-		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize);
-		float padX       = std::max(GetStyle().FramePadding.x, borderSize + (8.0f * scale));
-		float padY       = 7.0f * scale;
+		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize) * currentFontScale;
+		float padX       = std::floor(std::max(GetStyle().FramePadding.x, borderSize + (8.0f * scale)));
+		float padY       = std::floor(7.0f * scale);
 
-		float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
-		float resScale    = Renderer::GetResolutionScale();
-		float fontSize    = std::round(GetStyle().FontSizeBase * activeScale * resScale * 2.0f) / 2.0f;
+		auto CalcListHeight = [&](int items_count) -> float {
+			if (items_count <= 0)
+				return 0.0f;
+			float actualFontSize = GetFontSize();
+			float spacingY       = GetStyle().ItemSpacing.y;
+			// Round to ensure integer height
+			return std::round((actualFontSize + spacingY) * items_count - spacingY + (padY * 2.0f) + (GetStyle().ChildBorderSize * 2.0f));
+		};
 
-		PushFont(nullptr, fontSize);
-
-		float maxListH = (GetTextLineHeightWithSpacing() * popup_max_height_in_items) - GetStyle().ItemSpacing.y + (padY * 2.0f) + (GetStyle().ChildBorderSize * 2.0f) + 4.0f;  // Epsilon
-
-		float maxContentH = GetFrameHeight() + (GetStyle().ItemSpacing.y * 2.0f) + maxListH;
-		float constraintH = maxContentH + (GetStyle().WindowPadding.y * 2.0f) + (50.0f * scale);
-		PopFont();
+		// Capture the default frame height BEFORE we push our custom padding
+		float defaultFrameH = std::round(GetFrameHeight());
 
 		PushStyleVar(ImGuiStyleVar_FramePadding, { padX, padY });
 		PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);  // Prevents double frame
@@ -517,13 +518,36 @@ namespace ImGui
 		if (!isHidden)
 			LeftAlignedTextImpl(label);
 
-		ImVec2 widgetPos = GetCursorScreenPos();
-		float  width     = CalcItemWidth();
+		ImVec2  widgetPos = GetCursorScreenPos();
+		float   width     = std::round(CalcItemWidth());
+		ImGuiID id        = window->GetID(idStr.c_str());
 
-		ImGuiID id = window->GetID(idStr.c_str());
+		float popupPad = std::round(std::max(0.0f, GetStyle().WindowPadding.y - (2.0f * scale)));
 
+		float       frameH         = GetFrameHeight();
+		ImDrawList* parentDrawList = GetWindowDrawList();
+
+		// nonListH = filter input row + spacing between it and the child + outer popup top+bottom padding + border
+		float nonListH = std::round(defaultFrameH + GetStyle().ItemSpacing.y + (popupPad * 2.0f) + (GetStyle().PopupBorderSize * 2.0f));
+
+		// Pre-compute the popup height before BeginCombo
+		float committedPopupH = 0.0f;
 		if (!(g.NextWindowData.HasFlags & ImGuiNextWindowDataFlags_HasSizeConstraint)) {
-			SetNextWindowSizeConstraints({ width, 0.0f }, { width, constraintH });
+			int   heightInItemsPre = std::max(2, popup_max_height_in_items);
+			float idealListH_pre   = CalcListHeight(std::min(static_cast<int>(items.size()), heightInItemsPre));
+
+			// Use the larger of above/below space since we don't know direction yet
+			ImVec2 displaySize_pre = GetIO().DisplaySize;
+			float  maxSpace_pre    = std::max(
+                displaySize_pre.y - (widgetPos.y + frameH) - (8.0f * scale),
+                widgetPos.y - (8.0f * scale));
+
+			float maxListH_pre = std::floor(maxSpace_pre - nonListH) - 1.0f;
+			if (maxListH_pre > 0.0f && idealListH_pre > maxListH_pre)
+				idealListH_pre = maxListH_pre;
+
+			committedPopupH = std::round(idealListH_pre + nonListH);
+			SetNextWindowSizeConstraints({ width, committedPopupH }, { width, committedPopupH });
 		}
 
 		// Strip ## hidden tags from the preview text so it displays cleanly when closed
@@ -545,14 +569,9 @@ namespace ImGui
 		PushStyleColor(ImGuiCol_Text, GetUserStyleColorVec4(USER_STYLE::kComboBoxText));
 		PushStyleColor(ImGuiCol_PopupBg, textBoxColor);
 
-		float popPadX = GetStyle().WindowPadding.x;
-		float popPadY = std::max(0.0f, GetStyle().WindowPadding.y - (2.0f * scale));
-		PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(popPadX, popPadY));
+		PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(popupPad, popupPad));
 
-		float       frameH         = GetFrameHeight();
-		ImDrawList* parentDrawList = GetWindowDrawList();
-
-		bool isOpen = BeginCombo(idStr.c_str(), preview, ImGuiComboFlags_NoArrowButton);
+		bool isOpen = BeginCombo(idStr.c_str(), preview, ImGuiComboFlags_NoArrowButton | ImGuiComboFlags_HeightLarge);
 
 		PopStyleVar(3);
 		PopStyleColor(5);
@@ -561,12 +580,8 @@ namespace ImGui
 		bool opensUp = false;
 		if (isOpen) {
 			ImGuiWindow* popupWindow = GetCurrentWindow();
-			if (popupWindow) {
-				popupWindow->Flags |= ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
-				if (popupWindow->Pos.y < widgetPos.y) {
-					opensUp = true;
-				}
-			}
+			if (popupWindow && popupWindow->Pos.y < widgetPos.y)
+				opensUp = true;
 		}
 
 		DrawDropdownIcon(parentDrawList, { std::floor(widgetPos.x + width - frameH), std::floor(widgetPos.y) }, { frameH, frameH }, isOpen, opensUp, IsItemHovered());
@@ -575,7 +590,7 @@ namespace ImGui
 		if (!isOpen)
 			return false;
 
-		PushFont(nullptr, fontSize);
+		SetWindowFontScale(currentFontScale);
 
 		if (IsWindowAppearing())
 			SetKeyboardFocusHere();
@@ -584,8 +599,7 @@ namespace ImGui
 		PushStyleColor(ImGuiCol_FrameBg, GetColorU32(ImVec4(0.1f, 0.1f, 0.1f, 1.0f)));
 		PushStyleColor(ImGuiCol_Text, GetUserStyleColorU32(USER_STYLE::kComboBoxText));
 		PushStyleColor(ImGuiCol_NavCursor, ImVec4(0, 0, 0, 0));
-
-		PushItemWidth(-FLT_MIN);
+		PushItemWidth(GetContentRegionAvail().x);
 		InputText("##filter", s_comboFilterStates[id].pattern, 256, ImGuiInputTextFlags_AutoSelectAll);
 		bool isInputFocused = IsItemFocused() || IsItemActive();
 		PopItemWidth();
@@ -653,37 +667,20 @@ namespace ImGui
 		PushStyleColor(ImGuiCol_ChildBg, textBoxColor);
 		PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(padX, padY));
 
-		int heightInItems = popup_max_height_in_items;
-		if (heightInItems < 2)
-			heightInItems = 2;
+		int   heightInItems = std::max(2, popup_max_height_in_items);
+		float requiredListH = CalcListHeight(std::min(show_count, heightInItems));
 
-		float idealListH = CalcMaxPopupHeightFromItemCount(heightInItems);
+		float idealListH = std::max(0.0f, std::round(GetContentRegionAvail().y));
 
-		ImVec2 displaySize = GetIO().DisplaySize;
-		float  spaceBelow  = displaySize.y - (widgetPos.y + frameH) - (8.0f * scale);
-		float  spaceAbove  = widgetPos.y - (8.0f * scale);
-		float  maxPopupH   = opensUp ? spaceAbove : spaceBelow;
-
-		float nonListH        = GetFrameHeight() + (g.Style.ItemSpacing.y * 2.0f) + (popPadY * 2.0f) + (g.Style.PopupBorderSize * 2.0f);
-		float maxListH_screen = maxPopupH - nonListH;
-
-		bool clampToScreen = false;
-		if (maxListH_screen > 0.0f && idealListH > maxListH_screen) {
-			idealListH    = maxListH_screen;
-			clampToScreen = true;
-		}
-
-		ImGuiChildFlags  childFlags = ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY;
+		ImGuiChildFlags  childFlags = ImGuiChildFlags_Borders;
 		ImGuiWindowFlags winFlags   = ImGuiWindowFlags_NoMove;
 
-		if (show_count <= heightInItems && !clampToScreen) {
+		if (show_count <= heightInItems && idealListH >= requiredListH - 1.0f)
 			winFlags |= ImGuiWindowFlags_NoScrollbar;
-			idealListH += 2.0f;
-		}
 
-		SetNextWindowSizeConstraints(ImVec2(0.0f, 0.0f), ImVec2(FLT_MAX, idealListH));
+		if (BeginChild("##List", ImVec2(0.0f, idealListH), childFlags, winFlags)) {
+			SetWindowFontScale(currentFontScale);
 
-		if (BeginChild("##List", ImVec2(-FLT_MIN, 0.0f), childFlags, winFlags)) {
 			for (int i = 0; i < show_count; i++) {
 				int idx = filtering ? itemScoreVector[i].first : i;
 
@@ -714,30 +711,55 @@ namespace ImGui
 
 		PopStyleVar();
 		PopStyleColor(2);
-		PopFont();
 		EndCombo();
 		return changed;
 	}
 
 	bool ComboStyled(const char* label, int* current_item, const char* const* items, int items_count, int popup_max_height_in_items)
 	{
-		float scale = Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
+		ImGuiContext& g      = *GImGui;
+		ImGuiWindow*  window = GetCurrentWindow();
+		if (window->SkipItems)
+			return false;
 
-		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize);
-		float padX       = std::max(GetStyle().FramePadding.x, borderSize + (8.0f * scale));
-		float padY       = 7.0f * scale;
+		float currentFontScale = window->FontWindowScale;
+		float scale            = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale() * currentFontScale;
+
+		if (popup_max_height_in_items == -1)
+			popup_max_height_in_items = 8;
+
+		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize) * currentFontScale;
+		float padX       = std::floor(std::max(GetStyle().FramePadding.x, borderSize + (8.0f * scale)));
+		float padY       = std::floor(7.0f * scale);
+
+		auto CalcListHeight = [&](int num_items) -> float {
+			if (num_items <= 0)
+				return 0.0f;
+			float actualFontSize = GetFontSize();
+			float spacingY       = GetStyle().ItemSpacing.y;
+			// Round to ensure integer height
+			return std::round((actualFontSize + spacingY) * num_items - spacingY);
+		};
 
 		PushStyleVar(ImGuiStyleVar_FramePadding, { padX, padY });
 		PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);  // Prevents double frame
 
 		std::string idStr = std::format("##{}", label);
 		LeftAlignedTextImpl(label);
-		ImVec2 widgetPos = GetCursorScreenPos();
-		float  width     = CalcItemWidth();
 
-		if (popup_max_height_in_items == -1)
-			popup_max_height_in_items = 8;
-		SetNextWindowSizeConstraints({ width, 0 }, { width, CalcMaxPopupHeightFromItemCount(popup_max_height_in_items) });
+		ImVec2 widgetPos = GetCursorScreenPos();
+		float  width     = std::round(CalcItemWidth());
+		float  frameH    = std::round(GetFrameHeight());
+
+		// In ComboStyled, the popup padding is native ImGui padding.
+		float popupPadY = std::round(GetStyle().WindowPadding.y);
+
+		// Compute an exact popup height so ImGui never allocates outer scrollbar space.
+		float maxPopupH = std::round((popupPadY * 2.0f) + CalcListHeight(std::min(items_count, popup_max_height_in_items)) + (GetStyle().PopupBorderSize * 2.0f));
+
+		if (!(g.NextWindowData.HasFlags & ImGuiNextWindowDataFlags_HasSizeConstraint)) {
+			SetNextWindowSizeConstraints({ width, maxPopupH }, { width, maxPopupH });
+		}
 
 		PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
 		PushStyleColor(ImGuiCol_FrameBg, ImVec4(0, 0, 0, 0));
@@ -746,8 +768,6 @@ namespace ImGui
 
 		PushStyleColor(ImGuiCol_Text, GetUserStyleColorVec4(USER_STYLE::kComboBoxText));
 		PushStyleColor(ImGuiCol_PopupBg, GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
-
-		float frameH = GetFrameHeight();
 
 		ImDrawList* parentDrawList = GetWindowDrawList();
 
@@ -769,6 +789,7 @@ namespace ImGui
 		PopStyleVar(2);
 		PopStyleColor(6);
 
+		// Detect if opened Upwards
 		bool opensUp = false;
 		if (isOpen) {
 			ImGuiWindow* popupWindow = GetCurrentWindow();
@@ -781,11 +802,7 @@ namespace ImGui
 
 		bool changed = false;
 		if (isOpen) {
-			float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
-			float resScale    = Renderer::GetResolutionScale();
-			float fontSize    = std::round(GetStyle().FontSizeBase * activeScale * resScale * 2.0f) / 2.0f;
-
-			PushFont(nullptr, fontSize);
+			SetWindowFontScale(currentFontScale);
 
 			for (int i = 0; i < items_count; i++) {
 				// Push the index to guarantee unique IDs for identical labels
@@ -806,12 +823,10 @@ namespace ImGui
 
 				PopID();
 			}
-
-			PopFont();
 			EndCombo();
 		}
 		return changed;
-	}	
+	}
 
 	bool InputTextStyled(const char* label, char* buf, size_t buf_size, int flags)
 	{
