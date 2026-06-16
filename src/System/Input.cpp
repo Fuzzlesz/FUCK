@@ -712,6 +712,12 @@ namespace Input
 					RE::GFxValue root;
 					if (cursorMenu->uiMovie->GetVariable(&root, "_root")) {
 						bool hideVisual = IsInputGamepad() && !menuOpen;
+
+						// Exception: The Map Menu uses the cursor
+						if (hideVisual && ui->IsMenuOpen(RE::MapMenu::MENU_NAME)) {
+							hideVisual = false;
+						}
+
 						root.SetMember("_alpha", RE::GFxValue(hideVisual ? 0.0 : 100.0));
 					}
 				}
