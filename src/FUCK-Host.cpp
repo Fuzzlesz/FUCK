@@ -715,6 +715,28 @@ namespace FUCK::Host
 	static void TextUnformatted_Impl(const char* text, const char* text_end) { ImGui::TextUnformatted(text, text_end); }
 
 	// ==================================================
+	// Version 2
+	// ==================================================
+	static void SeparatorVertical_Impl() { ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical); }
+	static void PushItemWidth_Impl(float item_width) { ImGui::PushItemWidth(item_width); }
+	static void PopItemWidth_Impl() { ImGui::PopItemWidth(); }
+	static bool BeginTooltip_Impl() { return ImGui::BeginTooltip(); }
+	static void EndTooltip_Impl() { ImGui::EndTooltip(); }
+	static void SetScrollHereY_Impl(float center_y_ratio) { ImGui::SetScrollHereY(center_y_ratio); }
+
+	static bool InputTextMultiline_Impl(const char* label, char* buf, size_t buf_size, const ImVec2& size, int flags)
+	{
+		if (!buf || buf_size == 0)
+			return false;
+
+		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImGui::GetUserStyleColorVec4(ImGui::USER_STYLE::kComboBoxTextBox));
+		ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetUserStyleColorVec4(ImGui::USER_STYLE::kComboBoxText));
+		bool res = ImGui::InputTextMultiline(label, buf, buf_size, size, flags);
+		ImGui::PopStyleColor(2);
+		return res;
+	}
+
+	// ==================================================
 	// CreateInterface
 	// ==================================================
 	FUCK_Interface* CreateInterface()
@@ -943,7 +965,16 @@ namespace FUCK::Host
 			.Unindent               = Unindent_Impl,
 			.Text                   = Text_Impl,
 			.TextWrapped            = TextWrapped_Impl,
-			.TextUnformatted        = TextUnformatted_Impl
+			.TextUnformatted        = TextUnformatted_Impl,
+			
+			// Version 2
+			.SeparatorVertical      = SeparatorVertical_Impl,
+			.PushItemWidth          = PushItemWidth_Impl,
+			.PopItemWidth           = PopItemWidth_Impl,
+			.BeginTooltip           = BeginTooltip_Impl,
+			.EndTooltip             = EndTooltip_Impl,
+			.SetScrollHereY         = SetScrollHereY_Impl,
+			.InputTextMultiline     = InputTextMultiline_Impl
 		};
 		return &api;
 	}

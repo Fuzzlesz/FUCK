@@ -1,7 +1,7 @@
 #pragma once
 #include <imgui.h>
 
-#define FUCK_API_VERSION 1
+#define FUCK_API_VERSION 2
 
 // ==================================================
 // [ SECTION 1 ] TYPES & INTERFACES
@@ -515,6 +515,15 @@ struct FUCK_Interface
 	void (*Text)(const char*);
 	void (*TextWrapped)(const char*);
 	void (*TextUnformatted)(const char*, const char*);
+
+	// Version 2
+	void (*SeparatorVertical)();
+	void (*PushItemWidth)(float);
+	void (*PopItemWidth)();
+	bool (*BeginTooltip)();
+	void (*EndTooltip)();
+	void (*SetScrollHereY)(float);
+	bool (*InputTextMultiline)(const char*, char*, size_t, const ImVec2&, int);
 };
 #pragma pack(pop)
 
@@ -1871,6 +1880,68 @@ namespace FUCK
 		}
 		return false;
 	}
+
+	// --------------------------------------------------
+	// Version 2
+	// --------------------------------------------------
+
+	inline void SeparatorVertical()
+	{
+		if (auto i = GetInterface(); i && i->version >= 2 && i->SeparatorVertical)
+			i->SeparatorVertical();
+	}
+
+	inline void PushItemWidth(float item_width)
+	{
+		if (auto i = GetInterface(); i && i->version >= 2 && i->PushItemWidth)
+			i->PushItemWidth(item_width);
+	}
+
+	inline void PopItemWidth()
+	{
+		if (auto i = GetInterface(); i && i->version >= 2 && i->PopItemWidth)
+			i->PopItemWidth();
+	}
+
+	inline bool BeginTooltip()
+	{
+		if (auto i = GetInterface(); i && i->version >= 2 && i->BeginTooltip)
+			return i->BeginTooltip();
+		return false;
+	}
+
+	inline void EndTooltip()
+	{
+		if (auto i = GetInterface(); i && i->version >= 2 && i->EndTooltip)
+			i->EndTooltip();
+	}
+
+	inline void SetScrollHereY(float center_y_ratio = 0.5f)
+	{
+		if (auto i = GetInterface(); i && i->version >= 2 && i->SetScrollHereY)
+			i->SetScrollHereY(center_y_ratio);
+	}
+
+	inline bool InputTextMultiline(const char* label, char* buf, size_t buf_size, const ImVec2& size = ImVec2(0, 0), int flags = 0)
+	{
+		if (auto i = GetInterface(); i && i->version >= 2 && i->InputTextMultiline)
+			return i->InputTextMultiline(label, buf, buf_size, size, flags);
+		return false;
+	}
+
+	inline bool InputTextMultiline(const char* label, std::string* str, const ImVec2& size = ImVec2(0, 0), int flags = 0)
+	{
+		if (!str || !GetInterface() || GetInterface()->version < 2)
+			return false;
+
+		char buf[4096];
+		strncpy_s(buf, sizeof(buf), str->c_str(), _TRUNCATE);
+		const bool changed = InputTextMultiline(label, buf, sizeof(buf), size, flags);
+		if (changed)
+			*str = buf;
+		return changed;
+	}
+
 }  // namespace FUCK
 
 // ==================================================
