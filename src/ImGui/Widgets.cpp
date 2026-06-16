@@ -811,6 +811,42 @@ namespace ImGui
 			EndCombo();
 		}
 		return changed;
+	}	
+
+	bool InputTextStyled(const char* label, char* buf, size_t buf_size, int flags)
+	{
+		ImGuiWindow* window = GetCurrentWindow();
+		if (window->SkipItems)
+			return false;
+
+		float currentFontScale = window->FontWindowScale;
+		float scale            = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale() * currentFontScale;
+
+		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize) * currentFontScale;
+		float padX       = std::max(GetStyle().FramePadding.x, borderSize + (8.0f * scale));
+		float padY       = 7.0f * scale;
+
+		PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(padX, padY));
+		PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
+
+		std::string idStr = LeftAlignedText(label);
+
+		PushStyleColor(ImGuiCol_FrameBg,        GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
+		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
+		PushStyleColor(ImGuiCol_FrameBgActive,  GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
+		PushStyleColor(ImGuiCol_Text,           GetUserStyleColorVec4(USER_STYLE::kComboBoxText));
+
+		bool res = InputText(idStr.c_str(), buf, buf_size, flags);
+
+		ImRect bb(GetItemRectMin(), GetItemRectMax());
+		DrawWidgetBorder(GetWindowDrawList(), bb, IsItemHovered() || IsItemActive() || IsWidgetFocused(GetID(idStr.c_str())), GetStyle().FrameRounding);
+
+		PopStyleColor(4);
+		PopStyleVar(2);
+
+		if (IsItemActivated())
+			PlayAudio(Audio::kFocus);
+		return res;
 	}
 
 	void DrawTabBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered, float rounding)
@@ -1800,20 +1836,6 @@ namespace ImGui
 		if (res)
 			PlayAudio(Audio::kPrevNext);
 		else if (IsItemActivated())
-			PlayAudio(Audio::kFocus);
-		return res;
-	}
-
-	bool InputTextStyled(const char* label, char* buf, size_t buf_size, int flags)
-	{
-		bool res = OutsetFramedWidget(label, [&](const char* id) {
-			PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox));
-			PushStyleColor(ImGuiCol_Text, GetUserStyleColorU32(USER_STYLE::kComboBoxText));
-			bool internalRes = InputText(id, buf, buf_size, flags);
-			PopStyleColor(2);
-			return internalRes;
-		});
-		if (IsItemActivated())
 			PlayAudio(Audio::kFocus);
 		return res;
 	}
