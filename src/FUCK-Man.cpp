@@ -1609,13 +1609,15 @@ void FUCKMan::Draw()
 
 						// Draw Selectable (Full width background & highlight)
 						if (FUCK::Selectable(idLabel.c_str(), isSelected, ImGuiSelectableFlags_AllowOverlap, ImVec2(0, m.sidebarItemH))) {
-							if (_activeTool && _activeTool != tool) {
-								FUCK::AbortBinding();
-								_activeTool->OnClose();
+							if (_activeTool != tool) {
+								if (_activeTool) {
+									FUCK::AbortBinding();
+									_activeTool->OnClose();
+								}
+								ImGui::PlayAudio(ImGui::Audio::kOk);
+								_activeTool = tool;
+								_activeTool->OnOpen();
 							}
-							ImGui::PlayAudio(ImGui::Audio::kOk);
-							_activeTool = tool;
-							_activeTool->OnOpen();
 						}
 
 						bool itemHovered = FUCK::IsItemHovered(0);
@@ -1796,13 +1798,15 @@ void FUCKMan::Draw()
 						const auto cursorPos    = FUCK::GetCursorPos();
 
 						if (FUCK::Selectable("##SETTINGS", isSelected, 0, ImVec2(0, m.sidebarItemH))) {
-							if (_activeTool && _activeTool != settingsTool) {
-								FUCK::AbortBinding();
-								_activeTool->OnClose();
+							if (_activeTool != settingsTool) {
+								if (_activeTool) {
+									FUCK::AbortBinding();
+									_activeTool->OnClose();
+								}
+								PlayAudio(ImGui::Audio::kOk);
+								_activeTool = settingsTool;
+								_activeTool->OnOpen();
 							}
-							PlayAudio(ImGui::Audio::kOk);
-							_activeTool = settingsTool;
-							_activeTool->OnOpen();
 						}
 
 						ImVec2 endPos = FUCK::GetCursorPos();
