@@ -182,6 +182,8 @@ namespace ImGui
 			SetCursorPosY(startY);
 			ItemSize(ImVec2(0.0f, actualTargetH));
 
+			Dummy(ImVec2(0.0f, 0.0f));
+
 			PopID();
 			EndGroup();
 		}
