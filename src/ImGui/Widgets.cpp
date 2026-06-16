@@ -956,7 +956,7 @@ namespace ImGui
 		if (active) {
 			window->StateStorage.SetInt(storageKey, id);
 
-			if (!wasActive) {
+			if (!wasActive || window->Appearing) {
 				PlayAudio(Audio::kTab);
 			}
 			ActivateOnHover();
