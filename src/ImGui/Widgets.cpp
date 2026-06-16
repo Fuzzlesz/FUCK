@@ -1702,39 +1702,78 @@ namespace ImGui
 	{
 		std::string id = std::format("##{}", label);
 
-		// Creates a visual "framed" background box to encapsulate an inner widget visually
 		float scale      = Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
 		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize);
 		float rounding   = GetStyle().FrameRounding;
 
-		float padX = std::max(GetStyle().FramePadding.x, borderSize + (8.0f * scale));
-		float padY = 7.0f * scale;
+		float padX     = std::max(GetStyle().FramePadding.x, borderSize + (8.0f * scale));
+		float tallPadY = 7.0f * scale;
 
-		PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(padX, padY));
+		float tColor    = std::max(1.0f, std::floor(borderSize));
+		float innerPadY = std::max(0.0f, tallPadY - tColor);
+		float offY      = tallPadY - innerPadY;
 
+		PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(padX, tallPadY));
 		LeftAlignedTextImpl(label);
+		PopStyleVar();
 
-		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox));
-		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox));
-		PushStyleColor(ImGuiCol_FrameBgActive, GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox));
+		float widgetWidth = CalcItemWidth();
+
+		if (GImGui->NextItemData.HasFlags & ImGuiNextItemDataFlags_HasWidth) {
+			GImGui->NextItemData.HasFlags &= ~ImGuiNextItemDataFlags_HasWidth;
+		}
+
+		float fullHeight = GetFontSize() + (tallPadY * 2.0f);
+
+		ImVec2 screenPos = GetCursorScreenPos();
+		ImRect bb(screenPos, screenPos + ImVec2(widgetWidth, fullHeight));
+
+		SetNextItemAllowOverlap();
+		InvisibleButton((id + "_bg").c_str(), bb.GetSize());
+		bool bgHovered = IsItemHovered();
+		bool bgClicked = IsItemClicked();
+
+		ImVec2 nextItemCursor = GetCursorPos();
+
+		SetCursorScreenPos(screenPos + ImVec2(0.0f, offY));
+		SetNextItemWidth(widgetWidth);
+
+		PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(padX, innerPadY));
+		PushStyleColor(ImGuiCol_FrameBg, ImVec4(0, 0, 0, 0));
+		PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0, 0, 0, 0));
+		PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(0, 0, 0, 0));
 		PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
 
-		BeginGroup();
+		auto* drawList = GetWindowDrawList();
+		drawList->ChannelsSplit(2);
+		drawList->ChannelsSetCurrent(1);
+
 		bool result = drawWidget(id.c_str());
-		EndGroup();
+
+		bool hovered = bgHovered || IsItemHovered();
+		bool active  = IsItemActive();
+		bool focused = IsWidgetFocused(GetID(id.c_str()));
+
+		if (bgClicked) {
+			SetFocusID(GetID(id.c_str()), GetCurrentWindow());
+		}
+
+		drawList->ChannelsSetCurrent(0);
+
+		drawList->AddRectFilled(bb.Min, bb.Max, GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox), rounding);
+
+		if (borderSize > 0.0f) {
+			DrawWidgetBorder(drawList, bb, hovered || active || focused, rounding);
+		}
+
+		drawList->ChannelsMerge();
 
 		PopStyleVar(2);
 		PopStyleColor(3);
 
-		if (borderSize > 0.0f) {
-			ImRect bb      = GImGui->LastItemData.Rect;
-			bool   hovered = IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
-			bool   active  = IsItemActive();
-			bool   focused = IsWidgetFocused(id);
+		SetCursorPos(nextItemCursor);
 
-			DrawWidgetBorder(GetWindowDrawList(), bb, hovered || active || focused, rounding);
-		}
-		ActivateOnHover();
+		Dummy(ImVec2(0.0f, 0.0f));
 
 		return result;
 	}
