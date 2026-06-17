@@ -1858,23 +1858,9 @@ namespace FUCK
 			changed = true;
 		} else if (!outHasClamped) {
 			// Clamp to screen bounds on first load
-			float t = Scale(tolerance);
-			if (pos.x > displaySize.x - t) {
-				pos.x   = std::max(0.0f, displaySize.x - widgetSize.x);
-				changed = true;
-			} else if (pos.x + widgetSize.x < t) {
-				pos.x   = 0.0f;
+			if (ClampPosToScreen(pos, widgetSize, tolerance)) {
 				changed = true;
 			}
-
-			if (pos.y > displaySize.y - t) {
-				pos.y   = std::max(0.0f, displaySize.y - widgetSize.y);
-				changed = true;
-			} else if (pos.y + widgetSize.y < t) {
-				pos.y   = 0.0f;
-				changed = true;
-			}
-
 			outHasClamped = true;
 		}
 
