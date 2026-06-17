@@ -1,8 +1,6 @@
 {
   "name": "fuck",
-  "version-string": "1.0.0",
-  "description": "",
-  "homepage": "",
+  "version-string": "1.1.0",
   "license": "MIT",
   "dependencies": [
     "clib-util",
