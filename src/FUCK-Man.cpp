@@ -243,11 +243,11 @@ void FUCKMan::LoadWorkspace()
 						std::string key = std::format("{}|{}", pluginName, winId);
 						auto&       st  = s_windowStates[key];
 
-						if (winData.x != -1.0f && winData.y != -1.0f) {
+						if (winData.x >= 0.0f && winData.y >= 0.0f) {
 							st.pos          = { winData.x * scale, winData.y * scale };
 							st.hasLoadedPos = true;
 						}
-						if (winData.w != -1.0f && winData.h != -1.0f) {
+						if (winData.w >= 0.0f && winData.h >= 0.0f) {
 							st.size = { winData.w * scale, winData.h * scale };
 						}
 						st.isCollapsed = winData.collapsed;
@@ -316,12 +316,29 @@ void FUCKMan::SaveWorkspace()
 			std::string plugin = key.substr(0, pipe);
 			std::string winId  = key.substr(pipe + 1);
 
+			bool isCustomPos   = false;
+			bool isUndecorated = false;
+			for (auto* w : _windows) {
+				if (w->PluginName() == plugin && w->Id() == winId) {
+					if (w->GetFlags() & FUCK::WindowFlags::kCustomPosition)
+						isCustomPos = true;
+					if (w->GetFlags() & FUCK::WindowFlags::kNoDecoration)
+						isUndecorated = true;
+					break;
+				}
+			}
+
+			// Skip saving to JSON entirely for custom-positioned widgets
+			if (isCustomPos) {
+				continue;
+			}
+
 			WindowSaveData wd;
-			wd.x         = st.pos.x / scale;
-			wd.y         = st.pos.y / scale;
-			wd.w         = (st.size.x > 0.0f) ? st.size.x / scale : -1.0f;
-			wd.h         = (st.size.y > 0.0f) ? st.size.y / scale : -1.0f;
-			wd.collapsed = st.isCollapsed;
+			wd.x         = (st.pos.x  >= 0.0f) ? st.pos.x  / scale : -1.0f;
+			wd.y         = (st.pos.y  >= 0.0f) ? st.pos.y  / scale : -1.0f;
+			wd.w         = (st.size.x >= 0.0f) ? st.size.x / scale : -1.0f;
+			wd.h         = (st.size.y >= 0.0f) ? st.size.y / scale : -1.0f;
+			wd.collapsed = !isUndecorated && st.isCollapsed;
 
 			pdMap[plugin].windows[winId] = wd;
 		}
@@ -1074,18 +1091,18 @@ void FUCKMan::Draw()
 			}
 
 			// --- Position Logic ---
-			ImVec2 requestedPos;
-			if (win->GetRequestedPos(requestedPos)) {
-				ClampWindowToScreen(requestedPos, targetSize);
-				FUCK::SetNextWindowPos(requestedPos, ImGuiCond_Appearing);
-			} else if (winState.hasLoadedPos) {
-				ClampWindowToScreen(winState.pos, targetSize);
-				FUCK::SetNextWindowPos(winState.pos, ImGuiCond_FirstUseEver);  // Applies at game launch
-			} else {
-				// Default position for new windows
-				ImVec2 defPos = win->GetDefaultPos();
-				ClampWindowToScreen(defPos, targetSize);
-				FUCK::SetNextWindowPos(defPos, ImGuiCond_FirstUseEver);
+			bool isCustomPos = (userFlags & FUCK::WindowFlags::kCustomPosition);
+
+			if (!isCustomPos) {
+				if (winState.hasLoadedPos) {
+					ClampWindowToScreen(winState.pos, targetSize);
+					FUCK::SetNextWindowPos(winState.pos, ImGuiCond_FirstUseEver);  // Applies at game launch
+				} else {
+					// Default position for new windows
+					ImVec2 defPos = win->GetDefaultPos();
+					ClampWindowToScreen(defPos, targetSize);
+					FUCK::SetNextWindowPos(defPos, ImGuiCond_FirstUseEver);
+				}
 			}
 
 			// If AutoResize is active, ImGui shrinks the window dynamically. We bypass hard size forcing.
@@ -1120,15 +1137,16 @@ void FUCKMan::Draw()
 
 				// Auto-save settings on move/resize end preventing overwrite during collapse
 				if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-					bool posChanged  = std::abs(curPos.x - winState.pos.x) > 1.0f || std::abs(curPos.y - winState.pos.y) > 1.0f;
+					bool posChanged  = !isCustomPos && (std::abs(curPos.x  - winState.pos.x)  > 1.0f || std::abs(curPos.y  - winState.pos.y)  > 1.0f);
 					bool sizeChanged = !isCollapsed && (std::abs(curSize.x - winState.size.x) > 1.0f || std::abs(curSize.y - winState.size.y) > 1.0f);
 
 					if (posChanged || sizeChanged) {
-						winState.pos = curPos;
-						if (!isCollapsed) {
+						if (posChanged)
+							winState.pos = curPos;
+						if (sizeChanged)
 							winState.size = curSize;
-						}
-						winState.hasLoadedPos = true;
+						if (posChanged)
+							winState.hasLoadedPos = true;
 						SaveWorkspace();
 					}
 				}

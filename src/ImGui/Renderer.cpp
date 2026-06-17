@@ -43,7 +43,7 @@ namespace ImGui::Renderer
 		SKSE::ImGui_ImplWin32_NewFrame();
 		{
 			// trick imgui into rendering at game's real resolution (ie. if upscaled with Display Tweaks)
-			static const auto screenSize = RE::BSGraphics::Renderer::GetScreenSize();
+			const auto screenSize = RE::BSGraphics::Renderer::GetScreenSize();
 
 			auto& io         = GetIO();
 			io.DisplaySize.x = static_cast<float>(screenSize.width);

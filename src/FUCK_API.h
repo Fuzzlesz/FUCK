@@ -81,7 +81,8 @@ namespace FUCK
 		kNoResize        = 1 << 11,  // Prevents manual resizing by the user
 		kNoMove          = 1 << 12,  // Prevents manual dragging by the user
 		kAutoResize      = 1 << 13,  // Sizes automatically to contents
-		kIgnoreUserScale = 1 << 14   // Ignores global UI scaling slider
+		kIgnoreUserScale = 1 << 14,  // Ignores global UI scaling slider
+		kCustomPosition  = 1 << 15   // Opts out of Host-managed pos saving/loading
 	};
 
 	enum class TableFlags
@@ -249,10 +250,6 @@ namespace FUCK
 		virtual WindowFlags GetFlags() const { return WindowFlags::kNone; }
 		virtual ImVec2      GetDefaultSize() const { return ImVec2(400.0f, 300.0f); }
 		virtual ImVec2      GetDefaultPos() const { return ImVec2(0.0f, 0.0f); }
-
-		/// @brief Intercept the position resolution to enforce a strictly calculated anchor position.
-		/// @note Only implement this if you are actively overriding standard screen dragging (e.g. anchoring to a HUD element).
-		virtual bool GetRequestedPos(ImVec2& /*outPos*/) { return false; }
 
 		virtual bool OnAsyncInput(const void*) { return false; }
 	};
@@ -1800,6 +1797,88 @@ namespace FUCK
 			DrawLine({ anchor.x - crossSize, anchor.y }, { anchor.x + crossSize, anchor.y }, anchorV4, 2.0f);
 			DrawLine({ anchor.x, anchor.y - crossSize }, { anchor.x, anchor.y + crossSize }, anchorV4, 2.0f);
 		}
+	}
+
+	/// @brief Clamps a window or widget position to the screen bounds if it strays too far off-screen.
+	inline bool ClampPosToScreen(ImVec2& pos, const ImVec2& widgetSize, float outOfBoundsTolerance = 50.0f)
+	{
+		ImVec2 displaySize = GetDisplaySize();
+		if (displaySize.x <= 0.0f || displaySize.y <= 0.0f) {
+			return false;  // Screen size not initialized yet
+		}
+
+		bool  changed   = false;
+		float tolerance = Scale(outOfBoundsTolerance);
+
+		// Off right edge
+		if (pos.x > displaySize.x - tolerance) {
+			pos.x   = std::max(0.0f, displaySize.x - widgetSize.x);
+			changed = true;
+		}
+		// Off left edge
+		else if (pos.x + widgetSize.x < tolerance) {
+			pos.x   = 0.0f;
+			changed = true;
+		}
+
+		// Off bottom edge
+		if (pos.y > displaySize.y - tolerance) {
+			pos.y   = std::max(0.0f, displaySize.y - widgetSize.y);
+			changed = true;
+		}
+		// Off top edge
+		else if (pos.y + widgetSize.y < tolerance) {
+			pos.y   = 0.0f;
+			changed = true;
+		}
+
+		return changed;
+	}
+
+	enum class PosInitResult
+	{
+		kNotReady,
+		kUnchanged,
+		kChanged
+	};
+
+	/// @brief Handles first-frame initialization, default loading, and screen clamping for custom-positioned windows.
+	inline PosInitResult InitializeCustomPosition(ImVec2& pos, const ImVec2& defaultPos, const ImVec2& widgetSize, bool& outHasClamped, float tolerance = 50.0f)
+	{
+		ImVec2 displaySize = GetDisplaySize();
+		if (displaySize.x <= 0.0f || displaySize.y <= 0.0f) {
+			return PosInitResult::kNotReady;
+		}
+
+		bool changed = false;
+
+		// Lazy-load default position
+		if (pos.x < 0.0f || pos.y < 0.0f) {
+			pos     = defaultPos;
+			changed = true;
+		} else if (!outHasClamped) {
+			// Clamp to screen bounds on first load
+			float t = Scale(tolerance);
+			if (pos.x > displaySize.x - t) {
+				pos.x   = std::max(0.0f, displaySize.x - widgetSize.x);
+				changed = true;
+			} else if (pos.x + widgetSize.x < t) {
+				pos.x   = 0.0f;
+				changed = true;
+			}
+
+			if (pos.y > displaySize.y - t) {
+				pos.y   = std::max(0.0f, displaySize.y - widgetSize.y);
+				changed = true;
+			} else if (pos.y + widgetSize.y < t) {
+				pos.y   = 0.0f;
+				changed = true;
+			}
+
+			outHasClamped = true;
+		}
+
+		return changed ? PosInitResult::kChanged : PosInitResult::kUnchanged;
 	}
 
 	/// @brief WASD key widget nudging.
