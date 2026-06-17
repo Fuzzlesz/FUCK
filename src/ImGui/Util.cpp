@@ -230,119 +230,151 @@ namespace ImGui
 
 		const ImGuiID id = window->GetID(desc);
 
-		ImVec2 label_size = CalcTextSize("(?)", nullptr, true);
-		float  scale      = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
-		ImVec2 padding(6.0f * scale, 4.0f * scale);
-		ImVec2 size(label_size.x + padding.x * 2.0f, label_size.y + padding.y * 2.0f);
+		ImVec2 textSize = CalcTextSize("(?)", nullptr, true);
+		float  scale    = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
+
+		float padY = 7.0f * scale;
+		float padX = 8.0f * scale;
+
+		float visualH = textSize.y + (padY * 2.0f);
+		float width   = textSize.x + (padX * 2.0f);
+
+		float  actualLayoutH = std::max(GetFrameHeight(), visualH);
+		ImVec2 logical_sz    = ImVec2(width, actualLayoutH);
 
 		ImVec2 pos = window->DC.CursorPos;
-		ImRect bb(pos, ImVec2(pos.x + size.x, pos.y + size.y));
+		ImRect bb(pos, pos + logical_sz);
 
-		ItemSize(size, padding.y);
+		ItemSize(logical_sz);
 		if (!ItemAdd(bb, id)) {
 			return;
 		}
 
 		bool hovered, held;
-
 		ButtonBehavior(bb, id, &hovered, &held);
-
 		if (held && GImGui->ActiveId == id) {
 			ClearActiveID();
 		}
 
-		bool isFocused     = IsItemFocused();
+		bool isFocused     = IsWidgetFocused(id);
 		bool isGamepadUser = MANAGER(Input)->IsInputGamepad();
+		bool virtualMouse  = MANAGER(Input)->IsCursorMovedByJoystick();
 
-		ImU32 textColor = ((isFocused && isGamepadUser) || hovered) ? GetColorU32(ImGuiCol_Text) : GetColorU32(ImGuiCol_TextDisabled);
+		ImU32 textColor = ((isFocused && isGamepadUser && !virtualMouse) || hovered) ? GetColorU32(ImGuiCol_Text) : GetColorU32(ImGuiCol_TextDisabled);
 
-		window->DrawList->AddText(ImVec2(pos.x + padding.x, pos.y + padding.y), textColor, "(?)");
+		float  offY = (logical_sz.y - visualH) * 0.5f;
+		ImRect bbVisual(std::floor(pos.x), std::floor(pos.y + offY), std::floor(pos.x + width), std::floor(pos.y + offY + visualH));
 
-		if (isFocused && isGamepadUser) {
-			ImU32 navColor = GetColorU32(ImGuiCol_NavHighlight);
-			float rounding = GetStyle().FrameRounding;
-			window->DrawList->AddRect(bb.Min, bb.Max, navColor, rounding, 0, 2.0f * scale);
-		}
+		PushStyleColor(ImGuiCol_Text, textColor);
+		RenderTextClipped(bbVisual.Min, bbVisual.Max, "(?)", nullptr, &textSize, { 0.5f, 0.5f });
+		PopStyleColor();
 
-		bool showTooltip   = false;
-		bool anchorToMouse = false;
+		bool isHoveredTooltip = IsItemHovered(ImGuiHoveredFlags_ForTooltip);
+		bool showTooltip      = false;
+		bool anchorToMouse    = false;
 
-		if (IsItemHovered(ImGuiHoveredFlags_ForTooltip)) {
+		if (isHoveredTooltip && (!isGamepadUser || virtualMouse)) {
 			showTooltip   = true;
 			anchorToMouse = true;
-		} else if (isFocused && isGamepadUser) {
+		} else if (isFocused && isGamepadUser && !virtualMouse) {
 			showTooltip   = true;
 			anchorToMouse = false;
 		}
 
 		if (showTooltip) {
-			PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * scale, 12.0f * scale));
+			float tooltipPad = 12.0f * scale;
+			PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(tooltipPad, tooltipPad));
 
+			ImVec2 origMousePos = GetIO().MousePos;
 			if (anchorToMouse) {
-				ImVec2 origMousePos = GetIO().MousePos;
 				GetIO().MousePos.x += 20.0f * scale;
 				GetIO().MousePos.y += 20.0f * scale;
-
-				if (BeginTooltip()) {
-					PushTextWrapPos(GetFontSize() * 35.0f);
-					DrawFormattedText(desc);
-					PopTextWrapPos();
-					EndTooltip();
-				}
-				GetIO().MousePos = origMousePos;
 			} else {
-				SetNextWindowPos(ImVec2(bb.Min.x, bb.Max.y + 5.0f * scale));
-				if (BeginTooltip()) {
-					PushTextWrapPos(GetFontSize() * 35.0f);
-					DrawFormattedText(desc);
-					PopTextWrapPos();
-					EndTooltip();
+				float  wrap_width  = GetFontSize() * 35.0f;
+				ImVec2 textSizeEst = CalcTextSize(desc, nullptr, false, wrap_width);
+				float  expectedH   = textSizeEst.y + (tooltipPad * 2.0f);
+
+				ImVec2 screenMax = GetMainViewport()->WorkPos + GetMainViewport()->WorkSize;
+
+				GetIO().MousePos.x = bbVisual.Min.x;
+
+				if (bbVisual.Max.y + expectedH > screenMax.y) {
+					GetIO().MousePos.y = bbVisual.Min.y - (5.0f * scale);
+				} else {
+					GetIO().MousePos.y = bbVisual.Max.y;
 				}
 			}
 
+			if (BeginTooltip()) {
+				PushTextWrapPos(GetFontSize() * 35.0f);
+				DrawFormattedText(desc);
+				PopTextWrapPos();
+				EndTooltip();
+			}
+
+			GetIO().MousePos = origMousePos;
 			PopStyleVar();
 		}
 	}
 
 	void SetTooltipEx(const char* fmt)
 	{
-		bool isHovered     = IsItemHovered(ImGuiHoveredFlags_ForTooltip);
-		bool isFocused     = IsItemFocused();
-		bool isGamepadUser = MANAGER(Input)->IsInputGamepad();
+		bool isHoveredTooltip = IsItemHovered(ImGuiHoveredFlags_ForTooltip);
+		bool isFocused        = IsWidgetFocused();
+		bool isGamepadUser    = MANAGER(Input)->IsInputGamepad();
+		bool virtualMouse     = MANAGER(Input)->IsCursorMovedByJoystick();
+
+		if (!isFocused && GImGui->NavId != 0 && GImGui->NavWindow == GetCurrentWindow()) {
+			if (IsWidgetFocused(GImGui->NavId)) {
+				ImRect navRect(GImGui->NavWindow->Pos + GImGui->NavWindow->NavRectRel[GImGui->NavLayer].Min,
+					GImGui->NavWindow->Pos + GImGui->NavWindow->NavRectRel[GImGui->NavLayer].Max);
+				if (GImGui->LastItemData.Rect.Overlaps(navRect)) {
+					isFocused = true;
+				}
+			}
+		}
 
 		bool showTooltip   = false;
 		bool anchorToMouse = false;
 
-		if (isHovered) {
+		if (isHoveredTooltip && (!isGamepadUser || virtualMouse)) {
 			showTooltip   = true;
 			anchorToMouse = true;
-		} else if (isFocused && isGamepadUser) {
+		} else if (isFocused && isGamepadUser && !virtualMouse) {
 			showTooltip   = true;
 			anchorToMouse = false;
 		}
 
 		if (showTooltip) {
-			float scale = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
-			PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f * scale, 12.0f * scale));
+			float scale      = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
+			float tooltipPad = 12.0f * scale;
+			PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(tooltipPad, tooltipPad));
 
+			ImVec2 origMousePos = GetIO().MousePos;
 			if (anchorToMouse) {
-				ImVec2 origMousePos = GetIO().MousePos;
 				GetIO().MousePos.x += 20.0f * scale;
 				GetIO().MousePos.y += 20.0f * scale;
-
-				if (BeginTooltip()) {
-					DrawFormattedText(fmt);
-					EndTooltip();
-				}
-				GetIO().MousePos = origMousePos;
 			} else {
-				SetNextWindowPos(ImVec2(GImGui->LastItemData.Rect.Min.x, GImGui->LastItemData.Rect.Max.y + 5.0f * scale));
-				if (BeginTooltip()) {
-					DrawFormattedText(fmt);
-					EndTooltip();
+				ImRect itemBB      = GImGui->LastItemData.Rect;
+				ImVec2 textSizeEst = CalcTextSize(fmt, nullptr, false, -1.0f);
+				float  expectedH   = textSizeEst.y + (tooltipPad * 2.0f);
+				ImVec2 screenMax   = GetMainViewport()->WorkPos + GetMainViewport()->WorkSize;
+
+				GetIO().MousePos.x = itemBB.Min.x;
+
+				if (itemBB.Max.y + expectedH > screenMax.y) {
+					GetIO().MousePos.y = itemBB.Min.y - (5.0f * scale);
+				} else {
+					GetIO().MousePos.y = itemBB.Max.y;
 				}
 			}
 
+			if (BeginTooltip()) {
+				DrawFormattedText(fmt);
+				EndTooltip();
+			}
+
+			GetIO().MousePos = origMousePos;
 			PopStyleVar();
 		}
 	}
@@ -510,6 +542,10 @@ namespace ImGui
 
 	bool IsWidgetFocused(ImGuiID id)
 	{
+		ImGuiWindow* window = GetCurrentWindowRead();
+		if (window && (window->Flags & ImGuiWindowFlags_NoInputs))
+			return false;
+
 		if (GetFocusID() == id)
 			return true;
 
