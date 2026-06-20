@@ -665,7 +665,7 @@ namespace Input
 		const bool menuOpen     = fuck->IsOpen();
 		const bool shouldRender = fuck->ShouldRender();
 
-		bool shouldShowCursor = forceCursor || menuOpen || shouldRender;
+		bool shouldShowCursor = forceCursor || menuOpen;
 		if (!shouldShowCursor && blockInput) {
 			if (CanNavigateWithMouse() || IsInputGamepad()) {
 				shouldShowCursor = true;
