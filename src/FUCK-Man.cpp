@@ -378,7 +378,7 @@ void FUCKMan::SaveWorkspace()
 
 bool FUCKMan::ProcessAsyncInput(const RE::InputEvent* const* a_event)
 {
-	bool consumed = false;
+	bool consumed   = false;
 	bool wasBinding = MANAGER(Input)->IsBinding();
 
 	// Active Tool Input (Priority)
