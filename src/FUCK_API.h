@@ -1800,34 +1800,30 @@ namespace FUCK
 	}
 
 	/// @brief Clamps a window or widget position to the screen bounds if it strays too far off-screen.
-	inline bool ClampPosToScreen(ImVec2& pos, const ImVec2& widgetSize, float outOfBoundsTolerance = 50.0f)
+	inline bool ClampPosToScreen(ImVec2& pos, float outOfBoundsTolerance = 50.0f)
 	{
 		ImVec2 displaySize = GetDisplaySize();
 		if (displaySize.x <= 0.0f || displaySize.y <= 0.0f) {
-			return false;  // Screen size not initialized yet
+			return false;
 		}
 
 		bool  changed   = false;
 		float tolerance = Scale(outOfBoundsTolerance);
 
-		// Off right edge
+		// X Axis
 		if (pos.x > displaySize.x - tolerance) {
-			pos.x   = std::max(0.0f, displaySize.x - widgetSize.x);
+			pos.x   = std::max(0.0f, displaySize.x - tolerance);
 			changed = true;
-		}
-		// Off left edge
-		else if (pos.x + widgetSize.x < tolerance) {
+		} else if (pos.x < 0.0f) {
 			pos.x   = 0.0f;
 			changed = true;
 		}
 
-		// Off bottom edge
+		// Y Axis
 		if (pos.y > displaySize.y - tolerance) {
-			pos.y   = std::max(0.0f, displaySize.y - widgetSize.y);
+			pos.y   = std::max(0.0f, displaySize.y - tolerance);
 			changed = true;
-		}
-		// Off top edge
-		else if (pos.y + widgetSize.y < tolerance) {
+		} else if (pos.y < 0.0f) {
 			pos.y   = 0.0f;
 			changed = true;
 		}
@@ -1843,22 +1839,20 @@ namespace FUCK
 	};
 
 	/// @brief Handles first-frame initialization, default loading, and screen clamping for custom-positioned windows.
-	inline PosInitResult InitializeCustomPosition(ImVec2& pos, const ImVec2& defaultPos, const ImVec2& widgetSize, bool& outHasClamped, float tolerance = 50.0f)
+	inline PosInitResult InitializeCustomPosition(ImVec2& pos, const ImVec2& defaultPos, bool& outHasClamped, float tolerance = 50.0f)
 	{
 		ImVec2 displaySize = GetDisplaySize();
-		if (displaySize.x <= 0.0f || displaySize.y <= 0.0f) {
+		if (displaySize.x <= 100.0f || displaySize.y <= 100.0f) {
 			return PosInitResult::kNotReady;
 		}
 
 		bool changed = false;
 
-		// Lazy-load default position
 		if (pos.x < 0.0f || pos.y < 0.0f) {
 			pos     = defaultPos;
 			changed = true;
 		} else if (!outHasClamped) {
-			// Clamp to screen bounds on first load
-			if (ClampPosToScreen(pos, widgetSize, tolerance)) {
+			if (ClampPosToScreen(pos, tolerance)) {
 				changed = true;
 			}
 			outHasClamped = true;
