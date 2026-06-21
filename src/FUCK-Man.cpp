@@ -1576,7 +1576,7 @@ void FUCKMan::Draw()
 						}
 					}
 
-					auto sortTools = [&](FUCK::ITool* a, FUCK::ITool* b) {
+					auto sortToolsAlphabetically = [&](FUCK::ITool* a, FUCK::ITool* b) {
 						auto& oa = GetOverrides(a);
 						auto& ob = GetOverrides(b);
 						if (oa.sortOrder != ob.sortOrder)
@@ -1584,6 +1584,10 @@ void FUCKMan::Draw()
 						std::string na = oa.customName.empty() ? a->Name() : oa.customName;
 						std::string nb = ob.customName.empty() ? b->Name() : ob.customName;
 						return _stricmp(na.c_str(), nb.c_str()) < 0;
+					};
+
+					auto sortToolsByRegOrder = [&](FUCK::ITool* a, FUCK::ITool* b) {
+						return GetOverrides(a).sortOrder < GetOverrides(b).sortOrder;
 					};
 
 					struct SidebarEntry
@@ -1599,7 +1603,7 @@ void FUCKMan::Draw()
 					std::vector<SidebarEntry> entries;
 
 					if (!favTools.empty()) {
-						std::sort(favTools.begin(), favTools.end(), sortTools);
+						std::sort(favTools.begin(), favTools.end(), sortToolsAlphabetically);
 						if (_cfg.groupFavourites) {
 							entries.push_back({ TRANSLATE_S("$FUCK_Sidebar_FavouritesGroup"), "", true, nullptr, &favTools, -1000000 });
 						} else {
@@ -1614,7 +1618,7 @@ void FUCKMan::Draw()
 					}
 
 					for (auto& [name, tools] : toolGroups) {
-						std::sort(tools.begin(), tools.end(), sortTools);
+						std::stable_sort(tools.begin(), tools.end(), sortToolsByRegOrder);
 						auto&       gOver      = _groupOverrides[name];
 						std::string dispName   = gOver.customName.empty() ? name : gOver.customName;
 						int         groupOrder = (_cfg.showSidebarFavourites && gOver.isFavourited) ? -999999 : gOver.sortOrder;

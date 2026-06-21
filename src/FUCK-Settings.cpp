@@ -267,22 +267,24 @@ void SettingsTool::Draw()
 					groupBaseline[alphaGroups[i]] = static_cast<int>((i + 1) * 10000);
 				}
 
-				auto computeToolBaseline = [&](std::vector<FUCK::ITool*>& list) {
-					auto alphaList = list;
-					std::sort(alphaList.begin(), alphaList.end(), [&](FUCK::ITool* a, FUCK::ITool* b) {
-						auto&       oa = manager->_toolOverrides[std::format("{}|{}", a->PluginName(), a->Name())];
-						auto&       ob = manager->_toolOverrides[std::format("{}|{}", b->PluginName(), b->Name())];
-						const char* na = oa.customName.empty() ? a->Name() : oa.customName.c_str();
-						const char* nb = ob.customName.empty() ? b->Name() : ob.customName.c_str();
-						return _stricmp(na, nb) < 0;
-					});
-					for (size_t i = 0; i < alphaList.size(); ++i) {
-						toolBaseline[alphaList[i]] = static_cast<int>((i + 1) * 10000);
+				auto computeToolBaseline = [&](std::vector<FUCK::ITool*>& list, bool registrationOrder) {
+					std::vector<FUCK::ITool*> ordered = list;
+					if (!registrationOrder) {
+						std::sort(ordered.begin(), ordered.end(), [&](FUCK::ITool* a, FUCK::ITool* b) {
+							auto&       oa = manager->_toolOverrides[std::format("{}|{}", a->PluginName(), a->Name())];
+							auto&       ob = manager->_toolOverrides[std::format("{}|{}", b->PluginName(), b->Name())];
+							const char* na = oa.customName.empty() ? a->Name() : oa.customName.c_str();
+							const char* nb = ob.customName.empty() ? b->Name() : ob.customName.c_str();
+							return _stricmp(na, nb) < 0;
+						});
+					}
+					for (size_t i = 0; i < ordered.size(); ++i) {
+						toolBaseline[ordered[i]] = static_cast<int>((i + 1) * 10000);
 					}
 				};
 
-				for (auto& [grp, tools] : groupedTools) computeToolBaseline(tools);
-				computeToolBaseline(looseTools);
+				for (auto& [grp, tools] : groupedTools) computeToolBaseline(tools, true);
+				computeToolBaseline(looseTools, false);
 
 				auto getGroupEffectiveOrder = [&](const std::string& g) {
 					auto& over = manager->_groupOverrides[g];
