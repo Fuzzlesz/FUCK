@@ -1135,12 +1135,11 @@ void FUCKMan::Draw()
 
 			bool open = true;
 
-			if (!noDecoration) {
-				// Push 0 padding here because the custom chrome is drawn flush to the edges,
-				// and the inner child window handles the actual content padding.
+			if (!noDecoration || (userFlags & FUCK::WindowFlags::kNoBackground)) {
+				// Push 0 padding for decorated windows and background-less overlays
 				FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 			} else {
-				// Give standard padding to all frameless windows
+				// Give standard padding to frameless windows that still have a solid background panel
 				FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase, m.padBase));
 			}
 
