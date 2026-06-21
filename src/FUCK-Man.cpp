@@ -322,14 +322,22 @@ void FUCKMan::SaveWorkspace()
 
 			bool isCustomPos   = false;
 			bool isUndecorated = false;
+			bool isNoMove      = false;
 			for (auto* w : _windows) {
 				if (w->PluginName() == plugin && w->Id() == winId) {
 					if (w->GetFlags() & FUCK::WindowFlags::kCustomPosition)
 						isCustomPos = true;
 					if (w->GetFlags() & FUCK::WindowFlags::kNoDecoration)
 						isUndecorated = true;
+					if (w->GetFlags() & FUCK::WindowFlags::kNoMove)
+						isNoMove = true;
 					break;
 				}
+			}
+
+			// Skip saving to JSON entirely for custom-positioned or unmovable widgets
+			if (isCustomPos || isNoMove) {
+				continue;
 			}
 
 			// Skip saving to JSON entirely for custom-positioned widgets
@@ -1098,7 +1106,12 @@ void FUCKMan::Draw()
 			bool isCustomPos = (userFlags & FUCK::WindowFlags::kCustomPosition);
 
 			if (!isCustomPos) {
-				if (winState.hasLoadedPos) {
+				if (noMove) {
+					// Rigidly enforce the default position for immovable windows
+					ImVec2 defPos = win->GetDefaultPos();
+					ClampWindowToScreen(defPos, targetSize);
+					FUCK::SetNextWindowPos(defPos, ImGuiCond_Always);
+				} else if (winState.hasLoadedPos) {
 					ClampWindowToScreen(winState.pos, targetSize);
 					FUCK::SetNextWindowPos(winState.pos, ImGuiCond_FirstUseEver);  // Applies at game launch
 				} else {
@@ -1141,7 +1154,7 @@ void FUCKMan::Draw()
 
 				// Auto-save settings on move/resize end preventing overwrite during collapse
 				if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-					bool posChanged  = !isCustomPos && (std::abs(curPos.x  - winState.pos.x)  > 1.0f || std::abs(curPos.y  - winState.pos.y)  > 1.0f);
+					bool posChanged  = !isCustomPos && !noMove && (std::abs(curPos.x - winState.pos.x) > 1.0f || std::abs(curPos.y - winState.pos.y) > 1.0f);
 					bool sizeChanged = !isCollapsed && (std::abs(curSize.x - winState.size.x) > 1.0f || std::abs(curSize.y - winState.size.y) > 1.0f);
 
 					if (posChanged || sizeChanged) {
