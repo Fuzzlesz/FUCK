@@ -1592,8 +1592,8 @@ void FUCKMan::Draw()
 
 					struct SidebarEntry
 					{
-						std::string                label;
-						std::string                origGroup;
+						const char*                label;
+						const char*                origGroup;
 						bool                       isGroup   = false;
 						FUCK::ITool*               tool      = nullptr;
 						std::vector<FUCK::ITool*>* tools     = nullptr;
@@ -1605,38 +1605,41 @@ void FUCKMan::Draw()
 					if (!favTools.empty()) {
 						std::sort(favTools.begin(), favTools.end(), sortToolsAlphabetically);
 						if (_cfg.groupFavourites) {
-							entries.push_back({ TRANSLATE_S("$FUCK_Sidebar_FavouritesGroup"), "", true, nullptr, &favTools, -1000000 });
+							entries.push_back({ "$FUCK_Sidebar_FavouritesGroup"_T, "", true, nullptr, &favTools, -1000000 });
 						} else {
 							for (auto* t : favTools) {
-								entries.push_back({ GetOverrides(t).customName.empty() ? t->Name() : GetOverrides(t).customName, "", false, t, nullptr, -1000000 });
+								auto&       over = GetOverrides(t);
+								const char* name = over.customName.empty() ? t->Name() : over.customName.c_str();
+								entries.push_back({ name, "", false, t, nullptr, -1000000 });
 							}
 						}
 					}
 
 					for (auto* t : looseTools) {
-						entries.push_back({ GetOverrides(t).customName.empty() ? t->Name() : GetOverrides(t).customName, "", false, t, nullptr, GetOverrides(t).sortOrder });
+						auto&       over = GetOverrides(t);
+						const char* name = over.customName.empty() ? t->Name() : over.customName.c_str();
+						entries.push_back({ name, "", false, t, nullptr, over.sortOrder });
 					}
 
 					for (auto& [name, tools] : toolGroups) {
 						std::stable_sort(tools.begin(), tools.end(), sortToolsByRegOrder);
 						auto&       gOver      = _groupOverrides[name];
-						std::string dispName   = gOver.customName.empty() ? name : gOver.customName;
+						const char* dispName   = gOver.customName.empty() ? name.c_str() : gOver.customName.c_str();
 						int         groupOrder = (_cfg.showSidebarFavourites && gOver.isFavourited) ? -999999 : gOver.sortOrder;
-						entries.push_back({ dispName, name, true, nullptr, &tools, groupOrder });
+						entries.push_back({ dispName, name.c_str(), true, nullptr, &tools, groupOrder });
 					}
 
 					std::sort(entries.begin(), entries.end(), [](const SidebarEntry& a, const SidebarEntry& b) {
 						if (a.sortOrder != b.sortOrder)
 							return a.sortOrder < b.sortOrder;
-						return _stricmp(a.label.c_str(), b.label.c_str()) < 0;
+						return _stricmp(a.label, b.label) < 0;
 					});
 
 					auto  apRight           = chromeArrow(false, m.sidebarItemH);
 					float alignedTextOffset = (m.sidebarIndent * 0.5f) + apRight.drawSize.x + (10.0f * m.uiScale);
 
 					auto RenderSidebarItem = [&](FUCK::ITool* tool, const char* label, float extraIndent = 0.0f) {
-						std::string idLabel = std::format("##{}", label);
-						FUCK::PushID(idLabel.c_str());
+						FUCK::PushID(tool);
 
 						bool  isSelected = (_activeTool == tool);
 						auto& over       = GetOverrides(tool);
@@ -1646,7 +1649,7 @@ void FUCKMan::Draw()
 						const auto startPos       = FUCK::GetCursorPos();
 
 						// Draw Selectable (Full width background & highlight)
-						if (FUCK::Selectable(idLabel.c_str(), isSelected, ImGuiSelectableFlags_AllowOverlap, ImVec2(0, m.sidebarItemH))) {
+						if (FUCK::Selectable("##SidebarItem", isSelected, ImGuiSelectableFlags_AllowOverlap, ImVec2(0, m.sidebarItemH))) {
 							if (_activeTool != tool) {
 								if (_activeTool) {
 									FUCK::AbortBinding();
@@ -1712,14 +1715,14 @@ void FUCKMan::Draw()
 						FUCK::PopID();
 					};
 
-					auto RenderSidebarGroup = [&](const std::string& groupName, const std::string& origGroup, std::vector<FUCK::ITool*>& tools) {
+					auto RenderSidebarGroup = [&](const char* groupName, const char* origGroup, std::vector<FUCK::ITool*>& tools) {
 						// Bypassing FUCK::PushFont scaling
 						ImGui::PushFont(regularFont, m.sidebarFontSize);
 
 						// Custom TreeNode rendering
-						ImGui::PushID(groupName.c_str());
+						ImGui::PushID(groupName);
 						ImGuiWindow* window = ImGui::GetCurrentWindow();
-						ImGuiID      id     = window->GetID(groupName.c_str());
+						ImGuiID      id     = window->GetID(groupName);
 						bool         isOpen = window->DC.StateStorage->GetInt(id, 0);
 
 						ImVec2 pos = window->DC.CursorPos;
@@ -1740,7 +1743,7 @@ void FUCKMan::Draw()
 
 							// Add Gamepad 'Y' shortcut to favourite groups on the sidebar
 							if ((hovered || isFocused) && FUCK::IsKeyPressed(ImGuiKey_GamepadFaceUp, false)) {
-								if (!origGroup.empty()) {
+								if (origGroup && origGroup[0] != '\0') {
 									auto& gOver        = _groupOverrides[origGroup];
 									gOver.isFavourited = !gOver.isFavourited;
 									SaveWorkspace();
@@ -1761,13 +1764,20 @@ void FUCKMan::Draw()
 									pDown ? ImGui::IconDirection::kDown : ImGui::IconDirection::kRight);
 							}
 
-							float textY = bb.Min.y + (m.sidebarItemH - ImGui::CalcTextSize(groupName.c_str()).y) * 0.5f + textVisualOffset;
-							ImGui::RenderText({ pos.x + alignedTextOffset, textY }, groupName.c_str());
+							float textY = bb.Min.y + (m.sidebarItemH - ImGui::CalcTextSize(groupName).y) * 0.5f + textVisualOffset;
+							ImGui::RenderText({ pos.x + alignedTextOffset, textY }, groupName);
 
 							// Draw Star
-							if (!origGroup.empty()) {
-								auto& gOver = _groupOverrides[origGroup];
-								if (_cfg.showSidebarFavourites && (gOver.isFavourited || hovered)) {
+							if (origGroup && origGroup[0] != '\0') {
+								bool isFav = false;
+
+								// Transparent lookup
+								auto it = _groupOverrides.find(origGroup);
+								if (it != _groupOverrides.end()) {
+									isFav = it->second.isFavourited;
+								}
+
+								if (_cfg.showSidebarFavourites && (isFav || hovered)) {
 									const char* starIcon     = ICON_FA_STAR;
 									float       starScale    = 0.85f;
 									float       starFontSize = m.sidebarFontSize * starScale;
@@ -1786,11 +1796,12 @@ void FUCKMan::Draw()
 									bool starHovered = ImGui::IsMouseHoveringRect(starBB.Min, starBB.Max);
 
 									if (starHovered && FUCK::IsMouseClicked(0)) {
-										gOver.isFavourited = !gOver.isFavourited;
+										isFav                                   = !isFav;
+										_groupOverrides[origGroup].isFavourited = isFav;
 										SaveWorkspace();
 									}
 
-									ImU32 starCol = starHovered ? IM_COL32(255, 255, 100, 255) : (gOver.isFavourited ? IM_COL32(255, 215, 0, 255) : IM_COL32(150, 150, 150, 150));
+									ImU32 starCol = starHovered ? IM_COL32(255, 255, 100, 255) : (isFav ? IM_COL32(255, 215, 0, 255) : IM_COL32(150, 150, 150, 150));
 
 									ImGui::GetWindowDrawList()->AddText(regularFont, starFontSize,
 										ImVec2(starX, starY),
@@ -1801,7 +1812,8 @@ void FUCKMan::Draw()
 
 						if (isOpen) {
 							for (auto* tool : tools) {
-								const char* resolvedName = GetOverrides(tool).customName.empty() ? tool->Name() : GetOverrides(tool).customName.c_str();
+								auto&       over         = GetOverrides(tool);
+								const char* resolvedName = over.customName.empty() ? tool->Name() : over.customName.c_str();
 								RenderSidebarItem(tool, resolvedName, m.sidebarIndent);
 							}
 						}
@@ -1814,7 +1826,7 @@ void FUCKMan::Draw()
 						if (entry.isGroup) {
 							RenderSidebarGroup(entry.label, entry.origGroup, *entry.tools);
 						} else {
-							RenderSidebarItem(entry.tool, entry.label.c_str());
+							RenderSidebarItem(entry.tool, entry.label);
 						}
 					}
 
