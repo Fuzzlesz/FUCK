@@ -1801,7 +1801,8 @@ void FUCKMan::Draw()
 
 						if (isOpen) {
 							for (auto* tool : tools) {
-								RenderSidebarItem(tool, tool->Name(), m.sidebarIndent);
+								const char* resolvedName = GetOverrides(tool).customName.empty() ? tool->Name() : GetOverrides(tool).customName.c_str();
+								RenderSidebarItem(tool, resolvedName, m.sidebarIndent);
 							}
 						}
 
