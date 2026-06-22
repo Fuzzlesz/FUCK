@@ -2,14 +2,7 @@
 
 namespace ImGui
 {
-	int   IndexOfKey(const std::vector<std::pair<int, double>>& pair_list, int key);
-	float CalcMaxPopupHeightFromItemCount(int items_count);
-
-	void AlignForWidth(float width, float alignment = 0.5f);
-
 	void ExtendWindowPastBorder();
-	void AlignedButtonLabel(const char* label, const ImVec2& size, float alignment = 0.5f);
-
 	void SeparatorThick();
 
 	void        LeftAlignedTextImpl(const char* label);
@@ -44,8 +37,5 @@ namespace ImGui
 	void Spacing(std::uint32_t a_numSpaces);
 
 	ImVec2 GetNativeViewportSize();
-	ImVec2 GetNativeViewportPos();
-	ImVec2 GetNativeViewportCenter();
-
 	ImVec2 TranslateScaleformToScreen(float stageX, float stageY);
 }

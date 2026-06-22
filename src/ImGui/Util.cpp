@@ -9,37 +9,6 @@
 
 namespace ImGui
 {
-	int IndexOfKey(const std::vector<std::pair<int, double>>& pair_list, const int key)
-	{
-		for (size_t i = 0; i < pair_list.size(); ++i) {
-			auto& p = pair_list[i];
-			if (p.first == key) {
-				return static_cast<int>(i);
-			}
-		}
-		return -1;
-	}
-
-	// Copied from imgui_widgets.cpp
-	float CalcMaxPopupHeightFromItemCount(const int items_count)
-	{
-		ImGuiContext& g = *GImGui;
-		if (items_count <= 0)
-			return FLT_MAX;
-		return (g.FontSize + g.Style.ItemSpacing.y) * items_count - g.Style.ItemSpacing.y + (g.Style.WindowPadding.y * 2);
-	}
-
-	// https://github.com/ocornut/imgui/discussions/3862
-	void AlignForWidth(float width, float alignment)
-	{
-		float avail = GetContentRegionAvail().x;
-		float off   = (avail - width) * alignment;
-
-		if (off > 0.0f) {
-			SetCursorPosX(GetCursorPosX() + off);
-		}
-	}
-
 	void ExtendWindowPastBorder()
 	{
 		const ImGuiWindow* window     = GetCurrentWindowRead();
@@ -60,17 +29,6 @@ namespace ImGui
 			GetColorU32(ImGuiCol_WindowBg),
 			extendedRounding,
 			0, borderSize);
-	}
-
-	void AlignedButtonLabel(const char* label, const ImVec2& size, float alignment)
-	{
-		const auto  textSize = CalcTextSize(label);
-		const float offY     = (size.y - textSize.y) * alignment;
-
-		if (offY > 0.0f) {
-			SetCursorPosY(GetCursorPosY() + offY);
-		}
-		TextUnformatted(label);
 	}
 
 	void SeparatorThick()
@@ -622,22 +580,6 @@ namespace ImGui
 		for (std::uint32_t i = 0; i < a_numSpaces; i++) {
 			Spacing();
 		}
-	}
-
-	ImVec2 GetNativeViewportPos()
-	{
-		return GetMainViewport()->Pos;  // always 0, 0
-	}
-
-	ImVec2 GetNativeViewportSize()
-	{
-		return GetMainViewport()->Size;
-	}
-
-	ImVec2 GetNativeViewportCenter()
-	{
-		const auto Size = GetNativeViewportSize();
-		return { Size.x * 0.5f, Size.y * 0.5f };
 	}
 
 	ImVec2 TranslateScaleformToScreen(float stageX, float stageY)
