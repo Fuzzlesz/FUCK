@@ -94,8 +94,6 @@ namespace ImGui
 			return user.frameBG_Widget;
 		case USER_STYLE::kFrameBG_WidgetActive:
 			return user.frameBG_WidgetActive;
-		case USER_STYLE::kButtons:
-			return user.button;
 		case USER_STYLE::kTabBorder:
 			return user.tabBorder;
 		case USER_STYLE::kTabBorderActive:
@@ -132,8 +130,6 @@ namespace ImGui
 			return user.buttonBorderSize * scale;
 		case USER_STYLE::kGridLines:
 			return user.gridThickness * scale;
-		case USER_STYLE::kDisabledTextAlpha:
-			return user.textDisabled.w;
 		default:
 			return 1.0f;
 		}

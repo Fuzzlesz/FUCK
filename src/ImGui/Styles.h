@@ -7,13 +7,11 @@ namespace ImGui
 		// Colours - Global
 		kTextHovered,
 		kHeaderText,
-		kDisabledTextAlpha,
 		kNavHighlight,
 
 		// Colours - Widgets
 		kFrameBG_Widget,
 		kFrameBG_WidgetActive,
-		kButtons,
 		kSeparator,
 		kTabBorder,
 		kTabBorderActive,
