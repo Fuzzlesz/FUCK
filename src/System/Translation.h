@@ -5,9 +5,6 @@ namespace Translation
 	class Manager final : public REX::Singleton<Manager>
 	{
 	public:
-		std::set<std::string> trackedTranslations;
-		std::mutex            trackingMutex;
-
 		static std::string GetGameLanguage();
 
 		// Loads the main "FUCK" translations
