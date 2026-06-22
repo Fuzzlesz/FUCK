@@ -82,11 +82,6 @@ namespace Input
 		static bool IsUnifiedModifier(std::uint32_t a_unifiedKey);
 		bool        IsCursorMovedByJoystick() const { return _cursorMovedByJoystick; }
 
-		void PushContext(Context a_ctx);
-		void PopContext(std::string_view a_name);
-		bool IsContextActive(std::string_view a_name) const;
-		bool ShouldBlockLowerContexts() const;
-
 		const char* GetKeyName(std::uint32_t a_key) const;
 
 	private:

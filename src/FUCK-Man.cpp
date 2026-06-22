@@ -711,7 +711,6 @@ void FUCKMan::Open()
 
 	_isCollapsed = false;
 
-	Input::Manager::GetSingleton()->PushContext({ "FUCK", 100, true });
 	_forceCursor = false;
 
 	ImGui::ClearNavState();
@@ -737,7 +736,6 @@ void FUCKMan::Close()
 	if (_activeTool)
 		_activeTool->OnClose();
 
-	Input::Manager::GetSingleton()->PopContext("FUCK");
 	_forceCursor = false;
 
 	if (!IsInputBlocked()) {

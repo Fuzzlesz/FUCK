@@ -415,32 +415,6 @@ namespace Input
 	}
 
 	// ==================================================
-	// Context Management
-	// ==================================================
-
-	void Manager::PushContext(Context a_ctx)
-	{
-		_contexts.push_back(std::move(a_ctx));
-		std::sort(_contexts.begin(), _contexts.end(),
-			[](const Context& a, const Context& b) { return a.priority > b.priority; });
-	}
-
-	void Manager::PopContext(std::string_view a_name)
-	{
-		std::erase_if(_contexts, [&](const Context& c) { return c.name == a_name; });
-	}
-
-	bool Manager::IsContextActive(std::string_view a_name) const
-	{
-		return std::ranges::any_of(_contexts, [&](const Context& c) { return c.name == a_name; });
-	}
-
-	bool Manager::ShouldBlockLowerContexts() const
-	{
-		return !_contexts.empty() && _contexts.front().blocksLower;
-	}
-
-	// ==================================================
 	// Key Names
 	// ==================================================
 
