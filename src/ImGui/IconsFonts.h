@@ -49,13 +49,6 @@ namespace IconFont
 		const IconTexture* GetGamePadIcon(const GamepadIcon& a_icons) const;
 
 	private:
-		enum class BUTTON_SCHEME
-		{
-			kAutoDetect,
-			kXbox,
-			kPS4
-		};
-
 		ImFont* LoadFontIconSet(float a_fontSize, float a_iconSize, const ImVector<ImWchar>& a_ranges) const;
 		// Internal helper that actually clears the atlas
 		void RebuildFontAtlas();
@@ -65,8 +58,6 @@ namespace IconFont
 		// members
 		bool _loadedFonts{ false };
 		bool _pendingReload{ false };  // Flag for deferred reload
-
-		BUTTON_SCHEME _buttonScheme{ BUTTON_SCHEME::kAutoDetect };
 
 		std::string _fontName{ "Default" };
 
