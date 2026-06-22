@@ -4,7 +4,7 @@ set(sources ${sources}
 	src/FUCK-Settings.cpp
 	src/FUCK-Styles.cpp
 	src/ImGui/Audio.cpp
-	src/ImGui/Backend/imgui_impl_win32.cpp
+	src/ImGui/Backend/imgui_impl_skyrim.cpp
 	src/ImGui/Graphics.cpp
 	src/ImGui/IconsFonts.cpp
 	src/ImGui/Overlays.cpp

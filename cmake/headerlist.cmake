@@ -6,7 +6,7 @@ set(headers ${headers}
 	src/FUCK_API.h
 	src/ImGui/Audio.h
 	src/ImGui/Backend/imgui_default.h
-	src/ImGui/Backend/imgui_impl_win32.h
+	src/ImGui/Backend/imgui_impl_skyrim.h
 	src/ImGui/FormComboBox.h
 	src/ImGui/Graphics.h
 	src/ImGui/IconsFontAwesome6.h

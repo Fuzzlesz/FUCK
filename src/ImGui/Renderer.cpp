@@ -40,15 +40,7 @@ namespace ImGui::Renderer
 		}
 
 		ImGui_ImplDX11_NewFrame();
-		SKSE::ImGui_ImplWin32_NewFrame();
-		{
-			// trick imgui into rendering at game's real resolution (ie. if upscaled with Display Tweaks)
-			const auto screenSize = RE::BSGraphics::Renderer::GetScreenSize();
-
-			auto& io         = GetIO();
-			io.DisplaySize.x = static_cast<float>(screenSize.width);
-			io.DisplaySize.y = static_cast<float>(screenSize.height);
-		}
+		SKSE::ImGui_ImplSkyrim_NewFrame();
 		NewFrame();
 		{
 			// disable windowing
@@ -137,8 +129,8 @@ namespace ImGui::Renderer
 				io.ConfigFlags = ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad | ImGuiConfigFlags_NoMouseCursorChange;
 				io.IniFilename = nullptr;
 
-				if (!ImGui_ImplWin32_Init(desc.OutputWindow)) {
-					logger::error("ImGui initialization failed (Win32)");
+				if (!SKSE::ImGui_ImplSkyrim_Init()) {
+					logger::error("ImGui initialization failed (Skyrim platform)");
 					return;
 				}
 				if (!ImGui_ImplDX11_Init(device, context)) {

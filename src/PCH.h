@@ -33,12 +33,11 @@
 #include <srell.hpp>
 #include <xbyak/xbyak.h>
 
-#include "ImGui/Backend/imgui_impl_win32.h"
+#include "ImGui/Backend/imgui_impl_skyrim.h"
 #include "imgui_internal.h"
 #include <imgui.h>
 #include <imgui_freetype.h>
 #include <imgui_impl_dx11.h>
-#include <imgui_impl_win32.h>
 #include <imgui_stdlib.h>
 
 #define DLLEXPORT __declspec(dllexport)
