@@ -5,7 +5,8 @@
 
 class FUCKMan :
 	public REX::Singleton<FUCKMan>,
-	public RE::BSTEventSink<RE::MenuOpenCloseEvent>
+	public RE::BSTEventSink<RE::MenuOpenCloseEvent>,
+	public RE::BSTEventSink<RE::InputEvent*>
 {
 public:
 	enum class PauseType : int
@@ -134,6 +135,7 @@ public:
 
 protected:
 	EventResult ProcessEvent(const RE::MenuOpenCloseEvent* a_event, RE::BSTEventSource<RE::MenuOpenCloseEvent>*) override;
+	EventResult ProcessEvent(RE::InputEvent* const* a_events, RE::BSTEventSource<RE::InputEvent*>*) override;
 
 private:
 	void UpdateGameState();

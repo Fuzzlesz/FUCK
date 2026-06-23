@@ -34,6 +34,10 @@ void OnInit(SKSE::MessagingInterface::Message* a_msg)
 			ui->AddEventSink<RE::MenuOpenCloseEvent>(FUCKMan::GetSingleton());
 		}
 
+		if (auto idm = RE::BSInputDeviceManager::GetSingleton()) {
+			idm->AddEventSink<RE::InputEvent*>(FUCKMan::GetSingleton());
+		}
+
 		Translation::Manager::GetSingleton()->BuildTranslationMap();
 		Console::Install();
 		Compat::ImmersiveHUD::Initialize();

@@ -1159,7 +1159,7 @@ namespace ImGui
 		if (kIcon) {
 			AddIcon(kIcon);
 		} else {
-			AddText(Input::Manager::GetSingleton()->GetKeyName(key));
+			AddText(Input::Keymap::GetKeyName(key));
 		}
 
 		// 2. Mod 2 ( Grows Left )

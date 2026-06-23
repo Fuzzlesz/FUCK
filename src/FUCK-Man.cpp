@@ -753,6 +753,19 @@ void FUCKMan::Toggle()
 	_isOpen ? Close() : Open();
 }
 
+EventResult FUCKMan::ProcessEvent(RE::InputEvent* const* a_events, RE::BSTEventSource<RE::InputEvent*>*)
+{
+	MANAGER(Input)->ProcessInputEvents(a_events);
+
+	// Do not interfere if the console is open
+	if (auto ui = RE::UI::GetSingleton(); ui && ui->IsMenuOpen(RE::Console::MENU_NAME)) {
+		return EventResult::kContinue;
+	}
+
+	ProcessAsyncInput(a_events);
+	return EventResult::kContinue;
+}
+
 EventResult FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_event, RE::BSTEventSource<RE::MenuOpenCloseEvent>*)
 {
 	if (!a_event)
