@@ -287,9 +287,6 @@ namespace Hooks
 				auto*      userEvents     = RE::UserEvents::GetSingleton();
 				const bool allowGameMenus = !manager->IsOpen() && manager->HasWindowWithFlag(FUCK::WindowFlags::kCloseOnGameMenu) && !ImGui::GetIO().WantTextInput;
 
-				RE::InputEvent* newHead = nullptr;
-				RE::InputEvent* newTail = nullptr;
-
 				if (a_events && *a_events) {
 					for (auto iter = *a_events; iter; iter = iter->next) {
 						bool keep = false;
@@ -297,55 +294,43 @@ namespace Hooks
 						if (auto btn = iter->AsButtonEvent()) {
 							// Always allow Screenshot and Console through the block
 							if (userEvents && (btn->userEvent == userEvents->screenshot || btn->userEvent == userEvents->console)) {
-							keep = true;
-						}
-						// Game menu passthrough — only relevant when a kCloseOnGameMenu window is open
-						else if (allowGameMenus && userEvents) {
-							if (btn->userEvent == userEvents->tweenMenu      ||
-								btn->userEvent == userEvents->journal        ||
-								btn->userEvent == userEvents->map            ||
-								btn->userEvent == userEvents->quickMap       ||
-								btn->userEvent == userEvents->inventory      ||
-								btn->userEvent == userEvents->quickInventory ||
-								btn->userEvent == userEvents->quickMagic     ||
-								btn->userEvent == userEvents->stats          ||
-								btn->userEvent == userEvents->quickStats     ||
-								btn->userEvent == userEvents->favorites)      {
 								keep = true;
+							}
+							// Game menu passthrough — only relevant when a kCloseOnGameMenu window is open
+							else if (allowGameMenus && userEvents) {
+								if (btn->userEvent == userEvents->tweenMenu      ||
+									btn->userEvent == userEvents->journal        ||
+									btn->userEvent == userEvents->map            ||
+									btn->userEvent == userEvents->quickMap       ||
+									btn->userEvent == userEvents->inventory      ||
+									btn->userEvent == userEvents->quickInventory ||
+									btn->userEvent == userEvents->quickMagic     ||
+									btn->userEvent == userEvents->stats          ||
+									btn->userEvent == userEvents->quickStats     ||
+									btn->userEvent == userEvents->favorites)      {
+									keep = true;
+								}
 							}
 						}
 
-							// Zero-out on transition to blocked state to prevent "stuck" inputs
-							if (!keep && justBlocked) {
+						// Zero-out the event
+						if (!keep) {
+							if (auto btn = iter->AsButtonEvent()) {
 								btn->value        = 0.0f;
 								btn->heldDownSecs = 0.0f;
-								keep              = true;
-							}
-						} else if (auto idEvent = iter->AsIDEvent()) {
-							if (justBlocked) {
+							} else if (auto idEvent = iter->AsIDEvent()) {
 								if (auto thumb = idEvent->AsThumbstickEvent()) {
 									thumb->xValue = 0.0f;
 									thumb->yValue = 0.0f;
+								} else if (auto mouse = idEvent->AsMouseMoveEvent()) {
+									mouse->mouseInputX = 0;
+									mouse->mouseInputY = 0;
 								}
-								keep = true;
+							} else if (auto charEvent = iter->AsCharEvent()) {
+								charEvent->keyCode = 0;
 							}
-						}
-
-						// Rebuild the linked list with only kept (or zeroed) events
-						if (keep) {
-							if (!newHead) {
-								newHead = iter;
-							} else {
-								newTail->next = iter;
-							}
-							newTail = iter;
 						}
 					}
-				}
-
-				// Terminate the chain
-				if (newTail) {
-					newTail->next = nullptr;
 				}
 
 				// Temporarily unpause the game if a paused menu opens, to ensure our filtered events are processed and don't get "stuck"
@@ -366,13 +351,7 @@ namespace Hooks
 				}
 
 				// Dispatch the filtered/zeroed events
-				if (newHead) {
-					RE::InputEvent* const filtered[] = { newHead };
-					func(a_dispatcher, filtered);
-				} else {
-					constexpr RE::InputEvent* const dummy[] = { nullptr };
-					func(a_dispatcher, dummy);
-				}
+				func(a_dispatcher, a_events);
 
 				// Restore the pauses immediately after dispatch
 				if (justBlocked) {
