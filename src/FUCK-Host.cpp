@@ -737,6 +737,26 @@ namespace FUCK::Host
 	}
 
 	// ==================================================
+	// Version 3
+	// ==================================================
+	static void SetWindowFocus_Impl() { ImGui::SetWindowFocus(); }
+	static void CloseCurrentPopup_Impl() { ImGui::CloseCurrentPopup(); }
+	static void OpenPopup_Impl(const char* str_id, int flags) { ImGui::OpenPopup(str_id, static_cast<ImGuiPopupFlags>(flags)); }
+	static bool BeginPopup_Impl(const char* str_id, int flags) { return ImGui::BeginPopup(str_id, static_cast<ImGuiWindowFlags>(flags)); }
+	static bool BeginPopupModal_Impl(const char* name, bool* p_open, int flags) { return ImGui::BeginPopupModal(name, p_open, static_cast<ImGuiWindowFlags>(flags)); }
+	static bool IsWindowAppearing_Impl() { return ImGui::IsWindowAppearing(); }
+	static void PushTextWrapPos_Impl(float wrap_pos_x) { ImGui::PushTextWrapPos(wrap_pos_x); }
+	static void PopTextWrapPos_Impl() { ImGui::PopTextWrapPos(); }
+	static void SetNavCursorVisible_Impl(bool visible)
+	{
+		ImGuiContext& g    = *GImGui;
+		g.NavCursorVisible = visible;
+		if (visible) {
+			g.NavHighlightItemUnderNav = true;
+		}
+	}
+
+	// ==================================================
 	// CreateInterface
 	// ==================================================
 	FUCK_Interface* CreateInterface()
@@ -974,7 +994,18 @@ namespace FUCK::Host
 			.BeginTooltip           = BeginTooltip_Impl,
 			.EndTooltip             = EndTooltip_Impl,
 			.SetScrollHereY         = SetScrollHereY_Impl,
-			.InputTextMultiline     = InputTextMultiline_Impl
+			.InputTextMultiline     = InputTextMultiline_Impl,
+
+			// Version 3
+			.SetWindowFocus         = SetWindowFocus_Impl,
+			.CloseCurrentPopup      = CloseCurrentPopup_Impl,
+			.OpenPopup              = OpenPopup_Impl,
+			.BeginPopup             = BeginPopup_Impl,
+			.BeginPopupModal        = BeginPopupModal_Impl,
+			.IsWindowAppearing      = IsWindowAppearing_Impl,
+			.PushTextWrapPos        = PushTextWrapPos_Impl,
+			.PopTextWrapPos         = PopTextWrapPos_Impl,
+			.SetNavCursorVisible    = SetNavCursorVisible_Impl
 		};
 		return &api;
 	}

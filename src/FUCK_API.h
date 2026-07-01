@@ -1,7 +1,7 @@
 #pragma once
 #include <imgui.h>
 
-#define FUCK_API_VERSION 2
+#define FUCK_API_VERSION 3
 
 // ==================================================
 // [ SECTION 1 ] TYPES & INTERFACES
@@ -521,6 +521,17 @@ struct FUCK_Interface
 	void (*EndTooltip)();
 	void (*SetScrollHereY)(float);
 	bool (*InputTextMultiline)(const char*, char*, size_t, const ImVec2&, int);
+
+	// Version 3
+	void (*SetWindowFocus)();
+	void (*CloseCurrentPopup)();
+	void (*OpenPopup)(const char*, int);
+	bool (*BeginPopup)(const char*, int);
+	bool (*BeginPopupModal)(const char*, bool*, int);
+	bool (*IsWindowAppearing)();
+	void (*PushTextWrapPos)(float);
+	void (*PopTextWrapPos)();
+	void (*SetNavCursorVisible)(bool);
 };
 #pragma pack(pop)
 
@@ -2013,6 +2024,66 @@ namespace FUCK
 		return changed;
 	}
 
+	// --------------------------------------------------
+	// Version 3
+	// --------------------------------------------------
+
+	inline void SetWindowFocus()
+	{
+		if (auto i = GetInterface(); i && i->version >= 3 && i->SetWindowFocus)
+			i->SetWindowFocus();
+	}
+
+	inline void CloseCurrentPopup()
+	{
+		if (auto i = GetInterface(); i && i->version >= 3 && i->CloseCurrentPopup)
+			i->CloseCurrentPopup();
+	}
+
+	inline void OpenPopup(const char* str_id, PopupFlags flags = PopupFlags::kNone)
+	{
+		if (auto i = GetInterface(); i && i->version >= 3 && i->OpenPopup)
+			i->OpenPopup(str_id, static_cast<int>(flags));
+	}
+
+	inline bool BeginPopup(const char* str_id, WindowFlags flags = WindowFlags::kNone)
+	{
+		if (auto i = GetInterface(); i && i->version >= 3 && i->BeginPopup)
+			return i->BeginPopup(str_id, static_cast<int>(flags));
+		return false;
+	}
+
+	inline bool BeginPopupModal(const char* name, bool* p_open = nullptr, WindowFlags flags = WindowFlags::kNone)
+	{
+		if (auto i = GetInterface(); i && i->version >= 3 && i->BeginPopupModal)
+			return i->BeginPopupModal(name, p_open, static_cast<int>(flags));
+		return false;
+	}
+
+	inline bool IsWindowAppearing()
+	{
+		if (auto i = GetInterface(); i && i->version >= 3 && i->IsWindowAppearing)
+			return i->IsWindowAppearing();
+		return false;
+	}
+
+	inline void PushTextWrapPos(float wrap_local_pos_x = 0.0f)
+	{
+		if (auto i = GetInterface(); i && i->version >= 3 && i->PushTextWrapPos)
+			i->PushTextWrapPos(wrap_local_pos_x);
+	}
+
+	inline void PopTextWrapPos()
+	{
+		if (auto i = GetInterface(); i && i->version >= 3 && i->PopTextWrapPos)
+			i->PopTextWrapPos();
+	}
+
+	inline void SetNavCursorVisible(bool visible)
+	{
+		if (auto i = GetInterface(); i && i->version >= 3 && i->SetNavCursorVisible)
+			i->SetNavCursorVisible(visible);
+	}
 }  // namespace FUCK
 
 // ==================================================
