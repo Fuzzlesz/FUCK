@@ -87,6 +87,7 @@ namespace Input
 
 		bool _cursorShownByUs{ false };
 		bool _cursorMovedByJoystick{ false };
+		bool _expectingSyntheticMouseMove{ false };
 
 		mutable std::shared_mutex _dataLock;
 		Map<std::uint32_t, float> _keyStateCache;
