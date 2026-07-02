@@ -42,7 +42,6 @@ namespace Input
 	class Manager : public REX::Singleton<Manager>
 	{
 	public:
-
 		void ClearState();
 
 		DEVICE GetInputDevice() const;

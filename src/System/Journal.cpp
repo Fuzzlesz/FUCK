@@ -1,9 +1,8 @@
 #include "FUCK-Man.h"
-
 #include "ImGui/Audio.h"
 
-#include "Journal.h"
 #include "Input.h"
+#include "Journal.h"
 
 namespace Journal
 {
@@ -11,7 +10,7 @@ namespace Journal
 
 	constexpr const char* kSystemPagePath = "_root.QuestJournalFader.Menu_mc.SystemFader.Page_mc";
 
-	static void TryInjectFUCKButton(RE::GFxMovieView * a_movieView)
+	static void TryInjectFUCKButton(RE::GFxMovieView* a_movieView)
 	{
 		if (!a_movieView || s_fuckButtonInjected)
 			return;
@@ -100,7 +99,7 @@ namespace Journal
 		s_fuckButtonInjected = true;
 	}
 
-	static void TryRemoveFUCKButton(RE::GFxMovieView * a_movieView)
+	static void TryRemoveFUCKButton(RE::GFxMovieView* a_movieView)
 	{
 		if (!a_movieView || !s_fuckButtonInjected)
 			return;
@@ -156,7 +155,7 @@ namespace Journal
 	}
 
 	// Returns true if our injected entry is the currently highlighted System Menu item.
-	static bool IsFUCKEntrySelected(RE::GFxMovieView * a_movieView)
+	static bool IsFUCKEntrySelected(RE::GFxMovieView* a_movieView)
 	{
 		if (!a_movieView) {
 			return false;
