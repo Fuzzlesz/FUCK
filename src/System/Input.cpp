@@ -31,7 +31,6 @@ namespace Input
 
 	void Manager::ClearState()
 	{
-		std::unique_lock lock(_dataLock);
 		_keyStateCache.clear();
 		_rebindCtx.Reset();
 	}
@@ -83,8 +82,7 @@ namespace Input
 
 	bool Manager::IsInputDown(std::uint32_t a_unifiedKey) const
 	{
-		std::shared_lock lock(_dataLock);
-		auto             it = _keyStateCache.find(a_unifiedKey);
+		auto it    = _keyStateCache.find(a_unifiedKey);
 		return it != _keyStateCache.end() && it->second > 0.0f;
 	}
 
@@ -100,7 +98,6 @@ namespace Input
 		_rebindCtx.ignoredKeys.clear();
 
 		// Snapshot any keys currently held down so they don't instantly register as the new keybind
-		std::shared_lock lock(_dataLock);
 		for (const auto& [key, value] : _keyStateCache) {
 			if (value > 0.0f) {
 				_rebindCtx.ignoredKeys.insert(key);
@@ -373,8 +370,7 @@ namespace Input
 
 	float Manager::GetAnalogInput(std::uint32_t a_unifiedKey) const
 	{
-		std::shared_lock lock(_dataLock);
-		auto             it = _keyStateCache.find(a_unifiedKey);
+		auto it    = _keyStateCache.find(a_unifiedKey);
 		return it != _keyStateCache.end() ? it->second : 0.0f;
 	}
 
@@ -406,8 +402,6 @@ namespace Input
 
 	void Manager::CacheInputState(const RE::InputEvent* const* a_events)
 	{
-		std::unique_lock lock(_dataLock);
-
 		for (auto event = *a_events; event; event = event->next) {
 			// Only update input device for meaningful events, ignoring micro sensor drift
 			bool meaningful = false;
