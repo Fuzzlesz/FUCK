@@ -15,13 +15,6 @@ namespace Input
 		kGamepadOrbis
 	};
 
-	struct Context
-	{
-		std::string name;
-		int         priority{ 0 };
-		bool        blocksLower{ true };
-	};
-
 	struct RebindContext
 	{
 		bool   active{ false };
@@ -49,7 +42,6 @@ namespace Input
 	class Manager : public REX::Singleton<Manager>
 	{
 	public:
-		static void Register();
 
 		void ClearState();
 
@@ -59,7 +51,6 @@ namespace Input
 		bool   CanNavigateWithMouse() const;
 
 		static void ToggleCursor(bool a_enable);
-		void        ResetCursorState();
 
 		void ProcessInputEvents(RE::InputEvent* const* a_events);
 
@@ -82,11 +73,11 @@ namespace Input
 		static bool IsUnifiedModifier(std::uint32_t a_unifiedKey);
 		bool        IsCursorMovedByJoystick() const { return _cursorMovedByJoystick; }
 
-		const char* GetKeyName(std::uint32_t a_key) const;
-
 	private:
 		void UpdateInputDevice(RE::INPUT_DEVICE a_device);
 		void CacheInputState(const RE::InputEvent* const* a_events);
+		void UpdateCursorVisibility();
+		void ForwardEventsToImGui(RE::InputEvent* const* a_events);
 
 		bool CheckModifiersStrict(const std::uint32_t* mods, size_t count, std::int32_t req1, std::int32_t req2, std::uint32_t primaryKey) const;
 
@@ -95,13 +86,10 @@ namespace Input
 
 		RebindContext _rebindCtx;
 
-		std::optional<bool> _cursorInit{ std::nullopt };
-		bool                _cursorMovedByJoystick{ false };
-		bool                _expectingSyntheticMouseMove{ false };
+		bool _cursorShownByUs{ false };
+		bool _cursorMovedByJoystick{ false };
 
 		mutable std::shared_mutex _dataLock;
 		Map<std::uint32_t, float> _keyStateCache;
-
-		std::vector<Context> _contexts;
 	};
 }
