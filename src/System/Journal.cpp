@@ -200,8 +200,13 @@ namespace Journal
 			return false;
 		}
 
+		const char* textStr = textVal.GetString();
+		if (!textStr) {
+			return false;
+		}
+
 		const char* menuName = ("$FUCK_Title"_T);
-		return std::string_view(textVal.GetString()) == menuName;
+		return std::string_view(textStr) == menuName;
 	}
 
 	// Closes the Journal and opens FUCK on the next frame.
