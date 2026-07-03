@@ -639,11 +639,14 @@ namespace Input
 		const bool menuOpen     = fuck->IsOpen();
 		const bool shouldRender = fuck->ShouldRender();
 
-		bool shouldShowCursor = forceCursor || menuOpen;
-		if (!shouldShowCursor && blockInput) {
-			if (CanNavigateWithMouse() || IsInputGamepad()) {
-				shouldShowCursor = true;
-			}
+		bool shouldShowCursor = false;
+
+		// Always show cursor if the menu is open or forced
+		// otherwise restrict blockinput cursor to kbm
+		if (menuOpen || forceCursor) {
+			shouldShowCursor = true;
+		} else if (blockInput && IsInputKBM()) {
+			shouldShowCursor = true;
 		}
 
 		bool cursorCurrentlyOpen = false;
