@@ -82,7 +82,8 @@ namespace FUCK
 		kNoMove          = 1 << 12,  // Prevents manual dragging by the user
 		kAutoResize      = 1 << 13,  // Sizes automatically to contents
 		kIgnoreUserScale = 1 << 14,  // Ignores global UI scaling slider
-		kCustomPosition  = 1 << 15   // Opts out of Host-managed pos saving/loading
+		kCustomPosition  = 1 << 15,  // Opts out of Host-managed pos saving/loading
+		kRenderDuringTM  = 1 << 16   // Renders when 'tm' (Toggle Menus) is set
 	};
 
 	enum class TableFlags

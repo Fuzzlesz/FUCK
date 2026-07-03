@@ -677,6 +677,10 @@ bool FUCKMan::ShouldRender() const
 		return false;
 	if (_isOpen)
 		return true;
+
+	if (!_suspendedWindows.empty())
+		return true;
+
 	for (const auto* win : _windows) {
 		if (win->IsOpen())
 			return true;
@@ -861,6 +865,12 @@ void FUCKMan::Draw()
 		return;
 	}
 
+	// Detect if UI is hidden via 'tm'
+	bool menusHidden = false;
+	if (auto ui = RE::UI::GetSingleton()) {
+		menusHidden = !ui->IsShowingMenus();
+	}
+
 	// --- Auto-Suspend on forced camera states ---
 	if (auto camera = RE::PlayerCamera::GetSingleton(); camera && camera->currentState) {
 		auto* activeState = camera->currentState.get();
@@ -1021,17 +1031,20 @@ void FUCKMan::Draw()
 		if (ImGui::Begin("##ToolOverlayLayer", nullptr, flags)) {
 			pushContentScale(false);
 
-			if (_activeTool)
+			if (_activeTool && !menusHidden)
 				_activeTool->RenderOverlay();
 
 			for (auto* tool : _tools) {
-				if (tool != _activeTool)
+				if (tool != _activeTool && !menusHidden)
 					tool->RenderOverlay();
 			}
 
 			for (auto* win : _windows) {
-				if (win->IsOpen())
+				if (win->IsOpen()) {
+					if (menusHidden && !(win->GetFlags() & FUCK::WindowFlags::kRenderDuringTM))
+						continue;
 					win->RenderOverlay();
+				}
 			}
 
 			popContentScale();
@@ -1047,6 +1060,10 @@ void FUCKMan::Draw()
 		if (win->IsOpen()) {
 			const char*       title     = win->Title();
 			FUCK::WindowFlags userFlags = win->GetFlags();
+
+			if (menusHidden && !(userFlags & FUCK::WindowFlags::kRenderDuringTM)) {
+				continue;
+			}
 
 			// --- Setup & State ---
 			std::string key      = std::format("{}|{}", win->PluginName(), win->Id());
@@ -1334,7 +1351,7 @@ void FUCKMan::Draw()
 	// ==================================================
 	// MAIN FUCK WORKSPACE MENU RENDER PASS
 	// ==================================================
-	if (!_isOpen)
+	if (!_isOpen || menusHidden)
 		return;
 
 	ImGui::GetIO().MouseDrawCursor = false;
