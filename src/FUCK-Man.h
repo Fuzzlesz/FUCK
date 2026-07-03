@@ -136,6 +136,22 @@ protected:
 	EventResult ProcessEvent(const RE::MenuOpenCloseEvent* a_event, RE::BSTEventSource<RE::MenuOpenCloseEvent>*) override;
 
 private:
+	struct PendingCommand
+	{
+		enum class Type
+		{
+			kAddTool,
+			kAddWindow,
+			kRemoveWindow
+		} type;
+		FUCK::ITool*   tool   = nullptr;
+		FUCK::IWindow* window = nullptr;
+	};
+
+	std::mutex                  _pendingLock;
+	std::vector<PendingCommand> _pendingCommands;
+
+	void FlushPendingRegistrations();
 	void UpdateGameState();
 
 	struct MenuListenerEntry

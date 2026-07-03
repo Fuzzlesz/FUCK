@@ -118,67 +118,83 @@ FUCKMan::FUCKMan()
 
 void FUCKMan::RegisterTool(FUCK::ITool* a_tool)
 {
-	// Pointer & Null-String Check
 	if (!a_tool || !a_tool->Name() || !a_tool->PluginName()) {
 		logger::info("FUCK: Attempted to register a Tool with a null Name or PluginName.");
 		return;
 	}
-
-	if (std::find(_tools.begin(), _tools.end(), a_tool) != _tools.end()) {
-		return;
-	}
-
-	// Name Collision Check
-	auto it = std::find_if(_tools.begin(), _tools.end(), [&](FUCK::ITool* existing) {
-		return existing && (strcmp(existing->Name(), a_tool->Name()) == 0) && (strcmp(existing->PluginName(), a_tool->PluginName()) == 0);
-	});
-
-	if (it != _tools.end()) {
-		return;
-	}
-
-	_tools.push_back(a_tool);
+	std::lock_guard lock(_pendingLock);
+	_pendingCommands.push_back({ PendingCommand::Type::kAddTool, a_tool, nullptr });
 }
 
 void FUCKMan::RegisterWindow(FUCK::IWindow* a_window)
 {
-	// Pointer & Null-String Check
 	if (!a_window || !a_window->Id() || !a_window->PluginName()) {
 		logger::info("FUCK: Attempted to register a Window with a null Id or PluginName.");
 		return;
 	}
-
-	if (std::find(_windows.begin(), _windows.end(), a_window) != _windows.end())
-		return;
-
-	// Check for collisions based on PluginName + Id
-	auto it = std::find_if(_windows.begin(), _windows.end(), [&](FUCK::IWindow* existing) {
-		return existing && (strcmp(existing->Id(), a_window->Id()) == 0) && (strcmp(existing->PluginName(), a_window->PluginName()) == 0);
-	});
-
-	if (it != _windows.end())
-		return;
-
-	_windows.push_back(a_window);
+	std::lock_guard lock(_pendingLock);
+	_pendingCommands.push_back({ PendingCommand::Type::kAddWindow, nullptr, a_window });
 }
 
 void FUCKMan::UnregisterWindow(FUCK::IWindow* a_window)
 {
 	if (!a_window)
 		return;
+	std::lock_guard lock(_pendingLock);
+	_pendingCommands.push_back({ PendingCommand::Type::kRemoveWindow, nullptr, a_window });
+}
 
-	auto it = std::find(_windows.begin(), _windows.end(), a_window);
-	if (it != _windows.end()) {
-		std::string key = std::format("{}|{}", a_window->PluginName(), a_window->Id());
-		// Clean up the persistent collapse/geometry state
-		s_windowStates.erase(key);
-
-		// Remove from render list
-		_windows.erase(it);
+void FUCKMan::FlushPendingRegistrations()
+{
+	std::vector<PendingCommand> commands;
+	{
+		std::lock_guard lock(_pendingLock);
+		if (_pendingCommands.empty())
+			return;
+		commands = std::move(_pendingCommands);
+		_pendingCommands.clear();
 	}
 
-	// Clean up from suspended windows
-	std::erase(_suspendedWindows, a_window);
+	for (auto& cmd : commands) {
+		switch (cmd.type) {
+		case PendingCommand::Type::kAddTool:
+			{
+				auto* tool = cmd.tool;
+				if (std::find(_tools.begin(), _tools.end(), tool) != _tools.end())
+					break;
+				auto it = std::find_if(_tools.begin(), _tools.end(), [&](FUCK::ITool* existing) {
+					return existing && (strcmp(existing->Name(), tool->Name()) == 0) && (strcmp(existing->PluginName(), tool->PluginName()) == 0);
+				});
+				if (it == _tools.end())
+					_tools.push_back(tool);
+				break;
+			}
+		case PendingCommand::Type::kAddWindow:
+			{
+				auto* win = cmd.window;
+				if (std::find(_windows.begin(), _windows.end(), win) != _windows.end())
+					break;
+				auto it = std::find_if(_windows.begin(), _windows.end(), [&](FUCK::IWindow* existing) {
+					return existing && (strcmp(existing->Id(), win->Id()) == 0) && (strcmp(existing->PluginName(), win->PluginName()) == 0);
+				});
+				if (it == _windows.end())
+					_windows.push_back(win);
+				break;
+			}
+		case PendingCommand::Type::kRemoveWindow:
+			{
+				auto* win = cmd.window;
+				auto  it  = std::find(_windows.begin(), _windows.end(), win);
+				if (it != _windows.end()) {
+					std::string key = std::format("{}|{}", win->PluginName(), win->Id());
+					s_windowStates.erase(key);
+					_windows.erase(it);
+				}
+				std::erase(_suspendedWindows, win);
+				break;
+			}
+		}
+	}
 }
 
 // ==================================================
@@ -386,6 +402,7 @@ void FUCKMan::SaveWorkspace()
 
 bool FUCKMan::ProcessAsyncInput(const RE::InputEvent* const* a_event)
 {
+	FlushPendingRegistrations();
 	bool consumed   = false;
 	bool wasBinding = MANAGER(Input)->IsBinding();
 
@@ -814,6 +831,8 @@ EventResult FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_event, RE::BST
 
 void FUCKMan::Draw()
 {
+	FlushPendingRegistrations();
+
 	if (!_workspaceLoaded) {
 		LoadWorkspace();
 		_workspaceLoaded = true;
