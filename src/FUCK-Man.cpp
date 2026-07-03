@@ -190,7 +190,7 @@ void FUCKMan::LoadWorkspace()
 	float scale            = ImGui::Renderer::GetResolutionScale();
 	bool  mainWindowLoaded = false;
 
-	// 1. Load global Workspace settings (Main Window, Groups & Tool Order)
+	// Load global workspace settings. (Main Window, Groups & Tool Order)
 	std::string workspacePath = Settings::GetSingleton()->GetWorkspacePath();
 	if (fs::exists(workspacePath)) {
 		WorkspaceSaveData sd;
@@ -226,7 +226,7 @@ void FUCKMan::LoadWorkspace()
 		_lastSavedSize  = _cfg.windowSize;
 	}
 
-	// 2. Load per-plugin tool states and window geometries
+	// Load per-plugin tool states and window geometries.
 	std::string toolsPath = Settings::GetSingleton()->GetToolsPath();
 	if (fs::exists(toolsPath)) {
 		for (const auto& entry : fs::directory_iterator(toolsPath)) {
@@ -341,11 +341,6 @@ void FUCKMan::SaveWorkspace()
 				continue;
 			}
 
-			// Skip saving to JSON entirely for custom-positioned widgets
-			if (isCustomPos) {
-				continue;
-			}
-
 			WindowSaveData wd;
 			wd.x         = (st.pos.x  >= 0.0f) ? st.pos.x  / scale : -1.0f;
 			wd.y         = (st.pos.y  >= 0.0f) ? st.pos.y  / scale : -1.0f;
@@ -454,7 +449,7 @@ bool FUCKMan::ProcessAsyncInput(const RE::InputEvent* const* a_event)
 
 	UpdateGameState();
 
-	// 5. Block Game Input if Menu/Windows are blocking
+	// Block Game Input if Menu/Windows are blocking
 	return consumed || IsInputBlocked();
 }
 
@@ -554,7 +549,7 @@ void FUCKMan::UpdateGameState()
 	bool targetHideHUD = false;
 	bool targetVanity  = _isVanityBlocked;
 
-	// 1. Main Menu State
+	// Main Menu State
 	bool targetiHUDDisabled = _isOpen;
 
 	if (_isOpen) {
@@ -566,7 +561,7 @@ void FUCKMan::UpdateGameState()
 			targetHard = true;
 	}
 
-	// 2. Window Overrides
+	// Window Overrides
 	for (auto* win : _windows) {
 		if (win->IsOpen()) {
 			FUCK::WindowFlags f = win->GetFlags();
@@ -586,7 +581,7 @@ void FUCKMan::UpdateGameState()
 		}
 	}
 
-	// 3. Apply States
+	// Apply States
 	Compat::ImmersiveHUD::SetDisabled(targetiHUDDisabled);
 
 	// HUD

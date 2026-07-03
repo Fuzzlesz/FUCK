@@ -127,19 +127,19 @@ namespace Input
 		if (!_rebindCtx.active)
 			return FUCK::BindResult::kNone;
 
-		// 1. Poll the raw input
+		// Poll the raw input
 		std::uint32_t newKey = 0;
 		std::int32_t  newM1  = -1;
 		std::int32_t  newM2  = -1;
 
 		auto result = GetInputBind(a_event, &newKey, &newM1, &newM2);
 
-		// 2. Prevent accidental "double-click" capture
+		// Prevent accidental double-click capture. (de-bounce)
 		if (result == FUCK::BindResult::kBound && (ImGui::GetTime() - _rebindCtx.startTime) < 0.2) {
 			return FUCK::BindResult::kNone;
 		}
 
-		// 3. Handle Results
+		// Handle Results
 		if (result == FUCK::BindResult::kCancelled) {
 			// AUTOMATIC RESTORE
 			if (outKey)
