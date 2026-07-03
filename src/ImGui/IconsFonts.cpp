@@ -123,7 +123,7 @@ namespace IconFont
 
 		ImFontConfig icon_config;
 		icon_config.MergeMode   = true;
-		icon_config.PixelSnapH  = true;
+		icon_config.PixelSnapH  = false;
 		icon_config.OversampleH = icon_config.OversampleV = 1;
 
 		std::string faPath = ResolveFontPath(FONT_ICON_FILE_NAME_FAS);

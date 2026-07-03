@@ -1758,6 +1758,18 @@ namespace FUCK
 	// Overloads & Templates
 	// --------------------------------------------------
 
+	/// @brief Pushes a font scaled by a fractional multiplier. Must be paired with FUCK::PopFont().
+	inline void PushFontScaled(ImFont* font, float scale)
+	{
+		if (!font)
+			font = GetFont(Font::kRegular);
+
+		// Fallback to 30.0f (framework's base size) if font is somehow null
+		float baseSize = font ? font->LegacySize : 30.0f;
+
+		PushFont(font, baseSize * GetGlobalScale() * scale);
+	}
+
 	/// @brief Visual for UI widget editing. Handles Screen-Space and Window-Space.
 	inline void DrawEditorBounds(const ImVec2& min, const ImVec2& max, EditorBoundsState state = EditorBoundsState::kNormal, float thickness = 2.0f, bool screenSpace = false, const ImVec2* customAnchor = nullptr)
 	{
