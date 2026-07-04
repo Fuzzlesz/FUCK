@@ -12,6 +12,9 @@ https://www.nexusmods.com/skyrimspecialedition/mods/181603
 * [CommonLibSSE](https://github.com/powerof3/CommonLibSSE/tree/dev)
 	* You need to build from the powerof3/dev branch
 	* Add this as as an environment variable `CommonLibSSEPath`
+* [CommonLibVR](https://github.com/alandtse/CommonLibVR/tree/vr) (VR only)
+	* You need to build from the alandtse/vr branch
+	* Add this as as an environment variable `CommonLibVRPath`
 
 ## Register Visual Studio as a Generator
 * Open `x64 Native Tools Command Prompt`
@@ -38,5 +41,11 @@ cmake --build build --config Release
 cmake --preset vs2022-windows-vcpkg-ae
 cmake --build buildae --config Release
 ```
+### VR
+```
+cmake --preset vs2022-windows-vcpkg-vr
+cmake --build buildvr --config Release
+```
+In Skyrim VR the menu needs [ImGuiVRHelper](https://github.com/alandtse/imgui-vr-helper) installed in-game; it is mirrored into the helper's in-scene panel and driven with the wand. Without the helper the menu draws to the flat mirror window only.
 ## License
 [MIT](LICENSE)

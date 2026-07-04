@@ -402,7 +402,12 @@ namespace Hooks
 
 	void Install()
 	{
+#ifdef SKYRIMVR
+		// Same address-library ID as SE, but VR's call site sits at 0x81
+		REL::Relocation<std::uintptr_t> inputUnk(RELOCATION_ID(67315, 68617), 0x81);
+#else
 		REL::Relocation<std::uintptr_t> inputUnk(RELOCATION_ID(67315, 68617), 0x7B);
+#endif
 		stl::write_thunk_call<ProcessInputQueue>(inputUnk.address());
 
 		REL::Relocation<std::uintptr_t> journalVtbl(RE::VTABLE_JournalMenu[0]);

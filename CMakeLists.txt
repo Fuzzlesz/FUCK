@@ -142,6 +142,22 @@ find_package(unordered_dense CONFIG REQUIRED)
 find_path(SRELL_INCLUDE_DIRS "srell.hpp")
 find_path(CLIB_UTIL_INCLUDE_DIRS "ClibUtil/utils.hpp")
 
+if(BUILD_SKYRIMVR)
+	# ImGuiVRHelper client SDK: mirrors the menu into the helper's flat in-scene
+	# panel and drives it with the wand. Header-only INTERFACE target compiled
+	# into this plugin; inert at runtime when the helper DLL is absent.
+	find_package(nlohmann_json CONFIG REQUIRED)
+	include(FetchContent)
+	FetchContent_Declare(
+		ImGuiVRHelper
+		GIT_REPOSITORY https://github.com/alandtse/imgui-vr-helper.git
+		GIT_TAG        v1.5.2
+		GIT_SUBMODULES ""
+		SOURCE_SUBDIR  api
+	)
+	FetchContent_MakeAvailable(ImGuiVRHelper)
+endif()
+
 # ---- Add source files ----
 
 include(cmake/headerlist.cmake)
@@ -207,6 +223,15 @@ target_link_libraries(
 		rapidfuzz::rapidfuzz
 		unordered_dense::unordered_dense
 )
+
+if(BUILD_SKYRIMVR)
+	target_link_libraries(
+		${PROJECT_NAME}
+		PRIVATE
+			ImGuiVRHelper::api
+			nlohmann_json::nlohmann_json
+	)
+endif()
 
 target_precompile_headers(
 	${PROJECT_NAME}

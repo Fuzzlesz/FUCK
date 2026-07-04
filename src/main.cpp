@@ -29,6 +29,11 @@ extern "C" DLLEXPORT void* RequestFUCK()
 void OnInit(SKSE::MessagingInterface::Message* a_msg)
 {
 	switch (a_msg->type) {
+#ifdef SKYRIMVR
+	case SKSE::MessagingInterface::kPostPostLoad:
+		ImGui::Renderer::ConnectVRHelper();
+		break;
+#endif
 	case SKSE::MessagingInterface::kDataLoaded:
 		if (auto ui = RE::UI::GetSingleton()) {
 			ui->AddEventSink<RE::MenuOpenCloseEvent>(FUCKMan::GetSingleton());
@@ -74,7 +79,11 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a
 	}
 
 	const auto ver = a_skse->RuntimeVersion();
+#ifdef SKYRIMVR
+	if (ver < SKSE::RUNTIME_VR_1_4_15) {
+#else
 	if (ver < SKSE::RUNTIME_SSE_1_5_39) {
+#endif
 		logger::critical(FMT_STRING("Unsupported runtime version {}"), ver.string());
 		return false;
 	}

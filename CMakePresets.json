@@ -62,7 +62,8 @@
       "hidden": true,
       "binaryDir": "${sourceDir}/buildvr",
       "cacheVariables": {
-        "BUILD_SKYRIMVR": true
+        "BUILD_SKYRIMVR": true,
+        "VCPKG_MANIFEST_FEATURES": "vr"
       }
     },
     {
@@ -84,6 +85,16 @@
         "vs2022",
         "ae"
       ]
+    },
+    {
+      "name": "vs2022-windows-vcpkg-vr",
+      "inherits": [
+        "cmake-dev",
+        "vcpkg",
+        "windows",
+        "vs2022",
+        "vr"
+      ]
     }
   ],
   "buildPresets": [
@@ -95,6 +106,11 @@
     {
       "name": "vs2022-windows-vcpkg-se",
       "configurePreset": "vs2022-windows-vcpkg-se",
+      "configuration": "Release"
+    },
+    {
+      "name": "vs2022-windows-vcpkg-vr",
+      "configurePreset": "vs2022-windows-vcpkg-vr",
       "configuration": "Release"
     }
   ]

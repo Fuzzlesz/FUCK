@@ -6,8 +6,39 @@
 
 #include "System\Input.h"
 
+#ifdef SKYRIMVR
+#	include <d3d11.h>
+
+#	include "ImGuiVRHelperClientSDK.h"
+#endif
+
 namespace ImGui::Renderer
 {
+#ifdef SKYRIMVR
+	namespace
+	{
+		// VR overlay-helper client. In SkyrimVR with the helper installed, the menu
+		// is mirrored into the helper's flat in-scene panel and driven by the wand;
+		// without the helper this stays unconnected and the normal draw runs.
+		ImGuiVRHelperPluginAPI::Client g_vrHelper;
+	}
+
+	void ConnectVRHelper()
+	{
+		if (g_vrHelper.Connect(Version::PROJECT.data(), Version::NAME.data(),
+				ImGuiVRHelperPluginAPI::kClientFlag_RendersOnFocus)) {
+			logger::info("ImGuiVRHelper: connected as VR overlay client");
+		} else {
+			logger::info("ImGuiVRHelper not present; menu stays on the flat draw");
+		}
+	}
+
+	bool IsVRHelperConnected()
+	{
+		return g_vrHelper.IsConnected();
+	}
+#endif
+
 	float GetResolutionScale()
 	{
 		const auto height = RE::BSGraphics::Renderer::GetScreenSize().height;
@@ -35,6 +66,20 @@ namespace ImGui::Renderer
 
 		const auto manager = FUCKMan::GetSingleton();
 
+#ifdef SKYRIMVR
+		// Reconcile menu-open state with the helper (its open/cycle combos can
+		// open or close us) and pump the wand into ImGui before NewFrame consumes
+		// the input.
+		if (g_vrHelper.IsConnected()) {
+			bool menuOpen = manager->ShouldRender();
+			g_vrHelper.Update(menuOpen);
+			if (menuOpen != manager->ShouldRender()) {
+				menuOpen ? manager->Open() : manager->Close();
+			}
+			g_vrHelper.PumpKeyboard();
+		}
+#endif
+
 		if (!manager->ShouldRender()) {
 			return;
 		}
@@ -50,7 +95,14 @@ namespace ImGui::Renderer
 		}
 		EndFrame();
 		Render();
+#ifdef SKYRIMVR
+		// One output call: helper connected → render only to its flat panel (the
+		// helper composites it in-scene); helper absent → the normal draw. Never
+		// both, so we don't paint a second, sheared copy onto VR's curved HUD.
+		g_vrHelper.RenderFrame();
+#else
 		ImGui_ImplDX11_RenderDrawData(GetDrawData());
+#endif
 	}
 
 	// ==================================================
