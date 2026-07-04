@@ -446,7 +446,7 @@ namespace FUCK::Host
 	static void SetGameTimeFrozen_Impl(bool frozen)
 	{
 		if (auto main = RE::Main::GetSingleton())
-			main->freezeTime = frozen;
+			RUNTIME_DATA(main).freezeTime = frozen;
 	}
 	static void SetAutoVanityBlocked_Impl(bool blocked) { FUCKMan::GetSingleton()->SetVanityBlocked(blocked); }
 	static void SetHardPause_Impl(bool paused) { FUCKMan::GetSingleton()->SetManualHardPause(paused); }

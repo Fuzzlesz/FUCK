@@ -54,7 +54,9 @@ void OnInit(SKSE::MessagingInterface::Message* a_msg)
 	}
 }
 
-#ifdef SKYRIM_AE
+#if defined(SKYRIM_AE) || defined(SKYRIMVR)
+// The VR (NG) build is one DLL for SE/AE/VR: AE 1.6.629+ reads this version
+// data, while SE/VR still call SKSEPlugin_Query below.
 extern "C" DLLEXPORT constinit auto SKSEPlugin_Version = []() {
 	SKSE::PluginVersionData v;
 	v.PluginVersion(Version::MAJOR);
@@ -66,7 +68,8 @@ extern "C" DLLEXPORT constinit auto SKSEPlugin_Version = []() {
 
 	return v;
 }();
-#else
+#endif
+#ifndef SKYRIM_AE
 extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a_skse, SKSE::PluginInfo* a_info)
 {
 	a_info->infoVersion = SKSE::PluginInfo::kVersion;
@@ -80,7 +83,7 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a
 
 	const auto ver = a_skse->RuntimeVersion();
 #ifdef SKYRIMVR
-	if (ver < SKSE::RUNTIME_VR_1_4_15) {
+	if (ver < (REL::Module::IsVR() ? SKSE::RUNTIME_VR_1_4_15 : SKSE::RUNTIME_SSE_1_5_39)) {
 #else
 	if (ver < SKSE::RUNTIME_SSE_1_5_39) {
 #endif

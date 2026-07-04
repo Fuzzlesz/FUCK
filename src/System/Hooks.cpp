@@ -293,21 +293,21 @@ namespace Hooks
 
 						if (auto btn = iter->AsButtonEvent()) {
 							// Always allow Screenshot and Console through the block
-							if (userEvents && (btn->userEvent == userEvents->screenshot || btn->userEvent == userEvents->console)) {
+							if (userEvents && (btn->QUserEvent() == userEvents->screenshot || btn->QUserEvent() == userEvents->console)) {
 								keep = true;
 							}
 							// Game menu passthrough — only relevant when a kCloseOnGameMenu window is open
 							else if (allowGameMenus && userEvents) {
-								if (btn->userEvent == userEvents->tweenMenu      ||
-									btn->userEvent == userEvents->journal        ||
-									btn->userEvent == userEvents->map            ||
-									btn->userEvent == userEvents->quickMap       ||
-									btn->userEvent == userEvents->inventory      ||
-									btn->userEvent == userEvents->quickInventory ||
-									btn->userEvent == userEvents->quickMagic     ||
-									btn->userEvent == userEvents->stats          ||
-									btn->userEvent == userEvents->quickStats     ||
-									btn->userEvent == userEvents->favorites)      {
+								if (btn->QUserEvent() == userEvents->tweenMenu      ||
+									btn->QUserEvent() == userEvents->journal        ||
+									btn->QUserEvent() == userEvents->map            ||
+									btn->QUserEvent() == userEvents->quickMap       ||
+									btn->QUserEvent() == userEvents->inventory      ||
+									btn->QUserEvent() == userEvents->quickInventory ||
+									btn->QUserEvent() == userEvents->quickMagic     ||
+									btn->QUserEvent() == userEvents->stats          ||
+									btn->QUserEvent() == userEvents->quickStats     ||
+									btn->QUserEvent() == userEvents->favorites)      {
 									keep = true;
 								}
 							}
@@ -316,8 +316,8 @@ namespace Hooks
 						// Zero-out the event
 						if (!keep) {
 							if (auto btn = iter->AsButtonEvent()) {
-								btn->value        = 0.0f;
-								btn->heldDownSecs = 0.0f;
+								RUNTIME_DATA(btn).value        = 0.0f;
+								RUNTIME_DATA(btn).heldDownSecs = 0.0f;
 							} else if (auto idEvent = iter->AsIDEvent()) {
 								if (auto thumb = idEvent->AsThumbstickEvent()) {
 									thumb->xValue = 0.0f;
@@ -344,9 +344,9 @@ namespace Hooks
 						savedPauses       = ui->numPausesGame;
 						ui->numPausesGame = 0;
 					}
-					if (main && main->freezeTime) {
-						savedFreeze      = main->freezeTime;
-						main->freezeTime = false;
+					if (main && RUNTIME_DATA(main).freezeTime) {
+						savedFreeze                   = RUNTIME_DATA(main).freezeTime;
+						RUNTIME_DATA(main).freezeTime = false;
 					}
 				}
 
@@ -356,7 +356,7 @@ namespace Hooks
 				// Restore the pauses immediately after dispatch
 				if (justBlocked) {
 					if (main && savedFreeze) {
-						main->freezeTime = savedFreeze;
+						RUNTIME_DATA(main).freezeTime = savedFreeze;
 					}
 					if (ui && savedPauses > 0) {
 						ui->numPausesGame += savedPauses;
@@ -404,7 +404,7 @@ namespace Hooks
 	{
 #ifdef SKYRIMVR
 		// Same address-library ID as SE, but VR's call site sits at 0x81
-		REL::Relocation<std::uintptr_t> inputUnk(RELOCATION_ID(67315, 68617), 0x81);
+		REL::Relocation<std::uintptr_t> inputUnk(RELOCATION_ID(67315, 68617), REL::Relocate(0x7B, 0x7B, 0x81));
 #else
 		REL::Relocation<std::uintptr_t> inputUnk(RELOCATION_ID(67315, 68617), 0x7B);
 #endif

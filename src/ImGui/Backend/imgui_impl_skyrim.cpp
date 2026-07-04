@@ -32,9 +32,18 @@ namespace SKSE
 
 		float deltaTime = 1.0f / 60.0f;  // In case there is no timer for some reason, default to 60fps
 
+#	ifdef SKYRIMVR
+		// BSTimer's fields sit 4 bytes lower on VR and NG provides no accessor
+		if (auto* timer = RE::BSTimer::GetSingleton(); timer) {
+			if (const float realTimeDelta = REL::RelocateMember<float>(timer, 0x1C, 0x18); realTimeDelta > 0.0f) {
+				deltaTime = realTimeDelta;
+			}
+		}
+#	else
 		if (const auto* timer = RE::BSTimer::GetSingleton(); timer && timer->realTimeDelta > 0.0f) {
 			deltaTime = timer->realTimeDelta;
 		}
+#	endif
 		io.DeltaTime = deltaTime;
 
 		// The wand (pumped into ImGui's IO by ImGuiVRHelper before NewFrame) owns
@@ -44,7 +53,7 @@ namespace SKSE
 #	endif
 		{
 			if (const auto* menuCursor = RE::MenuCursor::GetSingleton()) {
-				io.AddMousePosEvent(menuCursor->cursorPosX, menuCursor->cursorPosY);
+				io.AddMousePosEvent(RUNTIME_DATA(menuCursor).cursorPosX, RUNTIME_DATA(menuCursor).cursorPosY);
 			}
 		}
 	}

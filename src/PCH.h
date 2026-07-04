@@ -127,17 +127,27 @@ namespace stl
 	}
 }
 
-#ifdef SKYRIM_AE
+#ifdef SKYRIMVR
+// CommonLibVR (ng, CommonLibSSE-NG based) builds one DLL for SE/AE/VR: call-site
+// offsets are selected at runtime, and runtime-divergent struct members are only
+// safe to touch through their GetRuntimeData accessors.
+#	define OFFSET(se, ae) REL::Relocate(se, ae)
+#	define RUNTIME_DATA(obj) ((obj)->GetRuntimeData())
+#	define RUNTIME_DATA2(obj) ((obj)->GetRuntimeData2())
+#	define RENDERER_DATA(renderer) ((renderer)->GetRuntimeData())
+#	define MENU_EVENT_HANDLER(menu) ((menu)->AsMenuEventHandler())
+#elif defined(SKYRIM_AE)
 #	define OFFSET(se, ae) ae
+#	define RUNTIME_DATA(obj) (*(obj))
+#	define RUNTIME_DATA2(obj) (*(obj))
+#	define RENDERER_DATA(renderer) ((renderer)->data)
+#	define MENU_EVENT_HANDLER(menu) (menu)
 #else
 #	define OFFSET(se, ae) se
-#endif
-
-#ifdef SKYRIMVR
-// CommonLibVR (CommonLibSSE-NG based) exposes runtime-divergent structs through accessors
-#	define RENDERER_DATA(renderer) ((renderer)->GetRuntimeData())
-#else
+#	define RUNTIME_DATA(obj) (*(obj))
+#	define RUNTIME_DATA2(obj) (*(obj))
 #	define RENDERER_DATA(renderer) ((renderer)->data)
+#	define MENU_EVENT_HANDLER(menu) (menu)
 #endif
 
 #include "FUCK_API.h"

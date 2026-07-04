@@ -45,11 +45,8 @@ elseif(BUILD_SKYRIMVR)
 	add_compile_definitions(SKYRIMVR)
 	add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 	set(CommonLibName "CommonLibVR")
-	# CommonLibVR's default (ng) branch is CommonLibSSE-NG-based; build it as a
-	# VR-exclusive runtime so REL::Module::IsVR() constant-folds.
-	set(ENABLE_SKYRIM_SE OFF)
-	set(ENABLE_SKYRIM_AE OFF)
-	set(ENABLE_SKYRIM_VR ON)
+	# CommonLibVR's default (ng) branch is CommonLibSSE-NG-based; leave all three
+	# runtimes enabled so this one DLL loads on SE, AE, and VR.
 	set(SKSE_SUPPORT_XBYAK ON)
 	set(BUILD_TESTS OFF)
 	set_from_environment(SkyrimVRPath)
