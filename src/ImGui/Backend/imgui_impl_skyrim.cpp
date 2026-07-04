@@ -30,11 +30,8 @@ namespace SKSE
 
 		float deltaTime = 1.0f / 60.0f;  // In case there is no timer for some reason, default to 60fps
 
-		// BSTimer's fields sit 4 bytes lower on VR and NG provides no accessor
-		if (auto* timer = RE::BSTimer::GetSingleton(); timer) {
-			if (const float realTimeDelta = REL::RelocateMember<float>(timer, 0x1C, 0x18); realTimeDelta > 0.0f) {
-				deltaTime = realTimeDelta;
-			}
+		if (auto* timer = RE::BSTimer::GetSingleton(); timer && timer->GetRuntimeData().realTimeDelta > 0.0f) {
+			deltaTime = timer->GetRuntimeData().realTimeDelta;
 		}
 		io.DeltaTime = deltaTime;
 
