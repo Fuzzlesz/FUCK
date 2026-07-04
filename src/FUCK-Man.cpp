@@ -590,7 +590,13 @@ void FUCKMan::UpdateGameState()
 
 	// HUD
 	if (targetHideHUD != _isHudHidden) {
-		targetHideHUD ? RE::SendHUDMessage::PushHUDMode("WorldMapMode") : RE::SendHUDMessage::PopHUDMode("WorldMapMode");
+		// Flat only: there the menu draws over the game HUD, so it borrows the
+		// WorldMapMode push to hide it. In VR the menu lives on ImGuiVRHelper's
+		// in-scene panel instead, and mods that watch HUD-mode messages (e.g.
+		// KillFeed) would misread the push as the world map opening.
+		if (!REL::Module::IsVR()) {
+			targetHideHUD ? RE::SendHUDMessage::PushHUDMode("WorldMapMode") : RE::SendHUDMessage::PopHUDMode("WorldMapMode");
+		}
 		_isHudHidden = targetHideHUD;
 	}
 

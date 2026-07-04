@@ -1,6 +1,7 @@
 #include "FUCK-Man.h"
 
 #include "ImGui/Audio.h"
+#include "ImGui/Renderer.h"
 #include "ImGui/Util.h"
 
 #include "Hotkeys.h"
@@ -58,6 +59,11 @@ namespace Input
 
 	bool Manager::CanNavigateWithMouse() const
 	{
+		// The VR wand is pumped straight into ImGui's IO as a mouse, without ever
+		// appearing as a keyboard/mouse RE::InputEvent or opening the CursorMenu
+		if (ImGui::Renderer::IsVRHelperConnected()) {
+			return true;
+		}
 		return IsInputKBM() || RE::UI::GetSingleton()->IsMenuOpen(RE::CursorMenu::MENU_NAME);
 	}
 
