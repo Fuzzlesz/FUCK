@@ -4,6 +4,10 @@ namespace Input::Keymap
 {
 	inline constexpr std::uint32_t kGPBase = static_cast<std::uint32_t>(SKSE::InputMap::kMacro_GamepadOffset);
 	inline constexpr std::uint32_t kMBBase = static_cast<std::uint32_t>(SKSE::InputMap::kMacro_MouseButtonOffset);
+	// VR wands get their own range: their raw ids (1-36) would otherwise alias
+	// keyboard scan codes in the unified key space (a held trigger, id 33, looked
+	// like a held "F" key). Above kMaxMacros and the custom thumbstick slots.
+	inline constexpr std::uint32_t kVRBase = 512;
 
 	static constexpr std::uint32_t kGP_A     = kGPBase + SKSE::InputMap::kGamepadButtonOffset_A;
 	static constexpr std::uint32_t kGP_L3    = kGPBase + SKSE::InputMap::kGamepadButtonOffset_LEFT_THUMB;
@@ -336,6 +340,9 @@ namespace Input::Keymap
 			return a_key + kMBBase;
 		if (a_device == RE::INPUT_DEVICE::kGamepad)
 			return SKSE::InputMap::GamepadMaskToKeycode(a_key) + kGPBase;
+		if (a_device >= RE::INPUT_DEVICE::kVivePrimary && a_device < RE::INPUT_DEVICE::kVRVirtualKeyboard)
+			return a_key + kVRBase;
+		// keyboard and the VR virtual keyboard both carry keyboard scan codes
 		return a_key;
 	}
 }
