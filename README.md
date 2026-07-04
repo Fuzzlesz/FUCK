@@ -12,8 +12,8 @@ https://www.nexusmods.com/skyrimspecialedition/mods/181603
 * [CommonLibSSE](https://github.com/powerof3/CommonLibSSE/tree/dev)
 	* You need to build from the powerof3/dev branch
 	* Add this as as an environment variable `CommonLibSSEPath`
-* [CommonLibVR](https://github.com/alandtse/CommonLibVR/tree/vr) (VR only)
-	* You need to build from the alandtse/vr branch
+* [CommonLibVR](https://github.com/alandtse/CommonLibVR) (VR only)
+	* The default (`ng`) branch; initialize its `extern/openvr` submodule
 	* Add this as as an environment variable `CommonLibVRPath`
 
 ## Register Visual Studio as a Generator

@@ -42,7 +42,7 @@ namespace ImGui
 				}
 
 				ComPtr<ID3D11Resource> pTexture{};
-				hr = DirectX::CreateTexture(reinterpret_cast<ID3D11Device*>(renderer->data.forwarder), image->GetImages(), 1, image->GetMetadata(), &pTexture);
+				hr = DirectX::CreateTexture(reinterpret_cast<ID3D11Device*>(RENDERER_DATA(renderer).forwarder), image->GetImages(), 1, image->GetMetadata(), &pTexture);
 
 				if (SUCCEEDED(hr)) {
 					D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
@@ -51,7 +51,7 @@ namespace ImGui
 					srvDesc.Texture2D.MipLevels       = 1;
 					srvDesc.Texture2D.MostDetailedMip = 0;
 
-					hr     = reinterpret_cast<ID3D11Device*>(renderer->data.forwarder)->CreateShaderResourceView(pTexture.Get(), &srvDesc, srView.ReleaseAndGetAddressOf());
+					hr     = reinterpret_cast<ID3D11Device*>(RENDERER_DATA(renderer).forwarder)->CreateShaderResourceView(pTexture.Get(), &srvDesc, srView.ReleaseAndGetAddressOf());
 					result = SUCCEEDED(hr);
 				}
 

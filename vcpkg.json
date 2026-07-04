@@ -20,8 +20,8 @@
   ],
   "features": {
     "vr": {
-      "description": "Skyrim VR (ImGuiVRHelper client SDK)",
-      "dependencies": [ "nlohmann-json" ]
+      "description": "Skyrim VR (CommonLibSSE-NG runtime + ImGuiVRHelper client SDK)",
+      "dependencies": [ "directxtk", "nlohmann-json", "rapidcsv" ]
     }
   },
   "builtin-baseline": "edffab1bcd2cb5b8c17d6ba34d5651ea0bf82979"

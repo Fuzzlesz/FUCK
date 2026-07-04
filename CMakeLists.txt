@@ -45,6 +45,13 @@ elseif(BUILD_SKYRIMVR)
 	add_compile_definitions(SKYRIMVR)
 	add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 	set(CommonLibName "CommonLibVR")
+	# CommonLibVR's default (ng) branch is CommonLibSSE-NG-based; build it as a
+	# VR-exclusive runtime so REL::Module::IsVR() constant-folds.
+	set(ENABLE_SKYRIM_SE OFF)
+	set(ENABLE_SKYRIM_AE OFF)
+	set(ENABLE_SKYRIM_VR ON)
+	set(SKSE_SUPPORT_XBYAK ON)
+	set(BUILD_TESTS OFF)
 	set_from_environment(SkyrimVRPath)
 	set(SkyrimPath ${SkyrimVRPath})
 	set(SkyrimVersion "Skyrim VR")
@@ -125,6 +132,10 @@ set(Boost_USE_STATIC_LIBS ON)
 # ---- Dependencies ----
 if (DEFINED CommonLibPath AND NOT ${CommonLibPath} STREQUAL "" AND IS_DIRECTORY ${CommonLibPath})
 	add_subdirectory(${CommonLibPath} ${CommonLibName})
+	if (BUILD_SKYRIMVR AND NOT TARGET CommonLibVR)
+		# CommonLibVR (ng branch) keeps upstream CommonLibSSE-NG's project name
+		add_library(CommonLibVR::CommonLibVR ALIAS CommonLibSSE)
+	endif()
 else ()
 	message(
 		FATAL_ERROR

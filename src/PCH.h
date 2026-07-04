@@ -133,6 +133,13 @@ namespace stl
 #	define OFFSET(se, ae) se
 #endif
 
+#ifdef SKYRIMVR
+// CommonLibVR (CommonLibSSE-NG based) exposes runtime-divergent structs through accessors
+#	define RENDERER_DATA(renderer) ((renderer)->GetRuntimeData())
+#else
+#	define RENDERER_DATA(renderer) ((renderer)->data)
+#endif
+
 #include "FUCK_API.h"
 
 #include "System/Translation.h"
