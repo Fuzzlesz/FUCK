@@ -36,6 +36,8 @@ namespace Hotkeys
 
 	private:
 		bool                enabled = false;
-		FUCK::ManagedHotkey _toggleHotkey;
+		// Seeded from _defToggle so the toggle works even when keybinds.ini is
+		// missing — LoadHotKeys only runs when an ini actually loads
+		FUCK::ManagedHotkey _toggleHotkey{ .kKey = _defToggle.kKey };
 	};
 }

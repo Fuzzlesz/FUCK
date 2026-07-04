@@ -263,10 +263,9 @@ if (COPY_BUILD)
 				POST_BUILD
 				COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> ${DeployPath}/SKSE/Plugins/
 				COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_PDB_FILE:${PROJECT_NAME}> ${DeployPath}/SKSE/Plugins/
-				# Static assets only — the data/ INIs are default templates that FUCK
-				# persists user changes into in-game, so copying them would reset users
-				COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/data/FUCKs/FUCK/fonts ${DeployPath}/FUCKs/FUCK/fonts
-				COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/data/Interface ${DeployPath}/Interface
+				# The data/ INIs are read-only default templates — user changes are
+				# persisted to *_user.ini — so the whole tree is safe to deploy
+				COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/data ${DeployPath}
 			)
 		endforeach()
 	else ()
