@@ -250,17 +250,25 @@ endif ()
 # ---- Post build ----
 
 if (COPY_BUILD)
-	if (DEFINED SkyrimPath)
-		add_custom_command(
-			TARGET ${PROJECT_NAME}
-			POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> ${SkyrimPath}/SKSE/Plugins/
-			COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_PDB_FILE:${PROJECT_NAME}> ${SkyrimPath}/SKSE/Plugins/
-		)
+	# One universal DLL: deploy to every runtime install whose path is set
+	set_from_environment(SkyrimVRPath)
+	set(DeployPaths ${SkyrimPath})
+	if (DEFINED SkyrimVRPath AND NOT "${SkyrimVRPath}" STREQUAL "" AND NOT "${SkyrimVRPath}" STREQUAL "${SkyrimPath}")
+		list(APPEND DeployPaths ${SkyrimVRPath})
+	endif ()
+	if (DeployPaths)
+		foreach(DeployPath ${DeployPaths})
+			add_custom_command(
+				TARGET ${PROJECT_NAME}
+				POST_BUILD
+				COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> ${DeployPath}/SKSE/Plugins/
+				COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_PDB_FILE:${PROJECT_NAME}> ${DeployPath}/SKSE/Plugins/
+			)
+		endforeach()
 	else ()
 		message(
 			WARNING
-			"Variable ${SkyrimPath} is not defined. Skipping post-build copy command."
+			"Variables Skyrim64Path/SkyrimVRPath are not defined. Skipping post-build copy command."
 		)
 	endif ()
 endif ()
