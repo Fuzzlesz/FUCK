@@ -1,14 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
 set(NAME "FUCK" CACHE STRING "")
 set(VERSION 1.1.4 CACHE STRING "")
-set(AE_VERSION 1)
-set(VR_VERSION 1)
 
 # ---- Options ----
 
 option(COPY_BUILD "Copy the build output to the Skyrim directory." TRUE)
-option(BUILD_SKYRIMVR "Build for Skyrim VR" OFF)
-option(BUILD_SKYRIMAE "Build for Skyrim AE" OFF)
 
 # ---- Cache build vars ----
 
@@ -33,32 +29,15 @@ macro(find_commonlib_path)
 endmacro()
 
 set_from_environment(VCPKG_ROOT)
-if(BUILD_SKYRIMAE)
-	add_compile_definitions(SKYRIM_AE)
-	add_compile_definitions(SKYRIM_SUPPORT_AE)
-	set(CommonLibName "CommonLibSSE")
-	set_from_environment(SkyrimAEPath)
-	set(SkyrimPath ${SkyrimAEPath})
-	set(SkyrimVersion "Skyrim AE")
-	set(VERSION ${VERSION}.${AE_VERSION})
-elseif(BUILD_SKYRIMVR)
-	add_compile_definitions(SKYRIMVR)
-	add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
-	set(CommonLibName "CommonLibVR")
-	# CommonLibVR's default (ng) branch is CommonLibSSE-NG-based; leave all three
-	# runtimes enabled so this one DLL loads on SE, AE, and VR.
-	set(SKSE_SUPPORT_XBYAK ON)
-	set(BUILD_TESTS OFF)
-	set_from_environment(SkyrimVRPath)
-	set(SkyrimPath ${SkyrimVRPath})
-	set(SkyrimVersion "Skyrim VR")
-	set(VERSION ${VERSION}.${VR_VERSION})
-else()
-	set(CommonLibName "CommonLibSSE")
-	set_from_environment(Skyrim64Path)
-	set(SkyrimPath ${Skyrim64Path})
-	set(SkyrimVersion "Skyrim SSE")
-endif()
+# One universal DLL: CommonLibVR's default (ng) branch is CommonLibSSE-NG-based
+# with all three runtimes enabled, so the same binary loads on SE, AE, and VR.
+add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+set(CommonLibName "CommonLibVR")
+set(SKSE_SUPPORT_XBYAK ON)
+set(BUILD_TESTS OFF)
+set_from_environment(Skyrim64Path)
+set(SkyrimPath ${Skyrim64Path})
+set(SkyrimVersion "Skyrim SSE/AE/VR")
 find_commonlib_path()
 message(
 	STATUS
@@ -129,7 +108,7 @@ set(Boost_USE_STATIC_LIBS ON)
 # ---- Dependencies ----
 if (DEFINED CommonLibPath AND NOT ${CommonLibPath} STREQUAL "" AND IS_DIRECTORY ${CommonLibPath})
 	add_subdirectory(${CommonLibPath} ${CommonLibName})
-	if (BUILD_SKYRIMVR AND NOT TARGET CommonLibVR)
+	if (NOT TARGET CommonLibVR)
 		# CommonLibVR (ng branch) keeps upstream CommonLibSSE-NG's project name
 		add_library(CommonLibVR::CommonLibVR ALIAS CommonLibSSE)
 	endif()
@@ -150,21 +129,19 @@ find_package(unordered_dense CONFIG REQUIRED)
 find_path(SRELL_INCLUDE_DIRS "srell.hpp")
 find_path(CLIB_UTIL_INCLUDE_DIRS "ClibUtil/utils.hpp")
 
-if(BUILD_SKYRIMVR)
-	# ImGuiVRHelper client SDK: mirrors the menu into the helper's flat in-scene
-	# panel and drives it with the wand. Header-only INTERFACE target compiled
-	# into this plugin; inert at runtime when the helper DLL is absent.
-	find_package(nlohmann_json CONFIG REQUIRED)
-	include(FetchContent)
-	FetchContent_Declare(
-		ImGuiVRHelper
-		GIT_REPOSITORY https://github.com/alandtse/imgui-vr-helper.git
-		GIT_TAG        v1.5.2
-		GIT_SUBMODULES ""
-		SOURCE_SUBDIR  api
-	)
-	FetchContent_MakeAvailable(ImGuiVRHelper)
-endif()
+# ImGuiVRHelper client SDK: mirrors the menu into the helper's flat in-scene
+# panel and drives it with the wand in VR. Header-only INTERFACE target compiled
+# into this plugin; inert at runtime when the helper DLL is absent (flat screen).
+find_package(nlohmann_json CONFIG REQUIRED)
+include(FetchContent)
+FetchContent_Declare(
+	ImGuiVRHelper
+	GIT_REPOSITORY https://github.com/alandtse/imgui-vr-helper.git
+	GIT_TAG        v1.5.2
+	GIT_SUBMODULES ""
+	SOURCE_SUBDIR  api
+)
+FetchContent_MakeAvailable(ImGuiVRHelper)
 
 # ---- Add source files ----
 
@@ -232,14 +209,12 @@ target_link_libraries(
 		unordered_dense::unordered_dense
 )
 
-if(BUILD_SKYRIMVR)
-	target_link_libraries(
-		${PROJECT_NAME}
-		PRIVATE
-			ImGuiVRHelper::api
-			nlohmann_json::nlohmann_json
-	)
-endif()
+target_link_libraries(
+	${PROJECT_NAME}
+	PRIVATE
+		ImGuiVRHelper::api
+		nlohmann_json::nlohmann_json
+)
 
 target_precompile_headers(
 	${PROJECT_NAME}

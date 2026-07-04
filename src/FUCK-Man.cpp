@@ -597,7 +597,7 @@ void FUCKMan::UpdateGameState()
 	// Soft Pause
 	if (targetSoft != _isGameSoftPaused) {
 		if (auto main = RE::Main::GetSingleton())
-			RUNTIME_DATA(main).freezeTime = targetSoft;
+			main->GetRuntimeData().freezeTime = targetSoft;
 		_isGameSoftPaused = targetSoft;
 	}
 
@@ -618,7 +618,7 @@ void FUCKMan::UpdateGameState()
 
 	// Vanity
 	if (targetVanity && RE::PlayerCamera::GetSingleton()) {
-		RUNTIME_DATA2(RE::PlayerCamera::GetSingleton()).idleTimer = 0.0f;
+		RE::PlayerCamera::GetSingleton()->GetRuntimeData2().idleTimer = 0.0f;
 	}
 
 	// Scaleform Movie Pausing (to prevent background hover detection)
@@ -850,12 +850,8 @@ void FUCKMan::Draw()
 	if (auto camera = RE::PlayerCamera::GetSingleton(); camera && camera->currentState) {
 		const auto activeID = camera->currentState->id;
 
-#ifdef SKYRIMVR
 		// VR inserts kVR before kThirdPerson, shifting kBleedout; kVATS/kAutoVanity are unshifted
 		const auto bleedoutID = REL::Module::IsVR() ? RE::CameraState::kVRBleedout : RE::CameraState::kBleedout;
-#else
-		const auto bleedoutID = RE::CameraState::kBleedout;
-#endif
 		bool isForcedCamera = (activeID == RE::CameraState::kVATS ||
 							   activeID == bleedoutID             ||
 							   activeID == RE::CameraState::kAutoVanity);

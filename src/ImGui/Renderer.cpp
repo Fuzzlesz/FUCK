@@ -6,15 +6,12 @@
 
 #include "System\Input.h"
 
-#ifdef SKYRIMVR
-#	include <d3d11.h>
+#include <d3d11.h>
 
-#	include "ImGuiVRHelperClientSDK.h"
-#endif
+#include "ImGuiVRHelperClientSDK.h"
 
 namespace ImGui::Renderer
 {
-#ifdef SKYRIMVR
 	namespace
 	{
 		// VR overlay-helper client. In SkyrimVR with the helper installed, the menu
@@ -37,7 +34,6 @@ namespace ImGui::Renderer
 	{
 		return g_vrHelper.IsConnected();
 	}
-#endif
 
 	float GetResolutionScale()
 	{
@@ -66,7 +62,6 @@ namespace ImGui::Renderer
 
 		const auto manager = FUCKMan::GetSingleton();
 
-#ifdef SKYRIMVR
 		// Reconcile menu-open state with the helper (its open/cycle combos can
 		// open or close us) and pump the wand into ImGui before NewFrame consumes
 		// the input.
@@ -78,7 +73,6 @@ namespace ImGui::Renderer
 			}
 			g_vrHelper.PumpKeyboard();
 		}
-#endif
 
 		if (!manager->ShouldRender()) {
 			return;
@@ -95,14 +89,10 @@ namespace ImGui::Renderer
 		}
 		EndFrame();
 		Render();
-#ifdef SKYRIMVR
-		// One output call: helper connected → render only to its flat panel (the
-		// helper composites it in-scene); helper absent → the normal draw. Never
-		// both, so we don't paint a second, sheared copy onto VR's curved HUD.
+		// One output call: helper connected (VR) → render only to its flat panel
+		// (the helper composites it in-scene); helper absent → the normal draw.
+		// Never both, so we don't paint a second, sheared copy onto VR's curved HUD.
 		g_vrHelper.RenderFrame();
-#else
-		ImGui_ImplDX11_RenderDrawData(GetDrawData());
-#endif
 	}
 
 	// ==================================================
@@ -158,7 +148,7 @@ namespace ImGui::Renderer
 			func();
 
 			if (const auto renderer = RE::BSGraphics::Renderer::GetSingleton()) {
-				const auto swapChain = reinterpret_cast<IDXGISwapChain*>(RENDERER_DATA(renderer).renderWindows[0].swapChain);
+				const auto swapChain = reinterpret_cast<IDXGISwapChain*>(renderer->GetRuntimeData().renderWindows[0].swapChain);
 				if (!swapChain) {
 					logger::error("couldn't find swapChain");
 					return;
@@ -170,8 +160,8 @@ namespace ImGui::Renderer
 					return;
 				}
 
-				const auto device  = reinterpret_cast<ID3D11Device*>(RENDERER_DATA(renderer).forwarder);
-				const auto context = reinterpret_cast<ID3D11DeviceContext*>(RENDERER_DATA(renderer).context);
+				const auto device  = reinterpret_cast<ID3D11Device*>(renderer->GetRuntimeData().forwarder);
+				const auto context = reinterpret_cast<ID3D11DeviceContext*>(renderer->GetRuntimeData().context);
 
 				logger::info("Initializing ImGui..."sv);
 
@@ -243,7 +233,7 @@ namespace ImGui::Renderer
 
 	void Install()
 	{
-		REL::Relocation<std::uintptr_t> target{ RELOCATION_ID(75595, 77226), OFFSET(0x9, 0x275) };
+		REL::Relocation<std::uintptr_t> target{ RELOCATION_ID(75595, 77226), REL::Relocate(0x9, 0x275) };
 		stl::write_thunk_call<CreateD3DAndSwapChain>(target.address());
 
 		stl::write_vfunc<RE::HUDMenu, HUDMenu_PostDisplay>();

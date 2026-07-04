@@ -29,11 +29,10 @@ extern "C" DLLEXPORT void* RequestFUCK()
 void OnInit(SKSE::MessagingInterface::Message* a_msg)
 {
 	switch (a_msg->type) {
-#ifdef SKYRIMVR
 	case SKSE::MessagingInterface::kPostPostLoad:
 		ImGui::Renderer::ConnectVRHelper();
 		break;
-#endif
+
 	case SKSE::MessagingInterface::kDataLoaded:
 		if (auto ui = RE::UI::GetSingleton()) {
 			ui->AddEventSink<RE::MenuOpenCloseEvent>(FUCKMan::GetSingleton());
@@ -54,9 +53,8 @@ void OnInit(SKSE::MessagingInterface::Message* a_msg)
 	}
 }
 
-#if defined(SKYRIM_AE) || defined(SKYRIMVR)
-// The VR (NG) build is one DLL for SE/AE/VR: AE 1.6.629+ reads this version
-// data, while SE/VR still call SKSEPlugin_Query below.
+// One DLL for SE/AE/VR: AE 1.6.629+ reads this version data, while SE and VR
+// call SKSEPlugin_Query below.
 extern "C" DLLEXPORT constinit auto SKSEPlugin_Version = []() {
 	SKSE::PluginVersionData v;
 	v.PluginVersion(Version::MAJOR);
@@ -68,8 +66,7 @@ extern "C" DLLEXPORT constinit auto SKSEPlugin_Version = []() {
 
 	return v;
 }();
-#endif
-#ifndef SKYRIM_AE
+
 extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a_skse, SKSE::PluginInfo* a_info)
 {
 	a_info->infoVersion = SKSE::PluginInfo::kVersion;
@@ -82,18 +79,13 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a
 	}
 
 	const auto ver = a_skse->RuntimeVersion();
-#ifdef SKYRIMVR
 	if (ver < (REL::Module::IsVR() ? SKSE::RUNTIME_VR_1_4_15 : SKSE::RUNTIME_SSE_1_5_39)) {
-#else
-	if (ver < SKSE::RUNTIME_SSE_1_5_39) {
-#endif
 		logger::critical(FMT_STRING("Unsupported runtime version {}"), ver.string());
 		return false;
 	}
 
 	return true;
 }
-#endif
 
 void InitializeLog()
 {

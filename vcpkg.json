@@ -5,12 +5,15 @@
   "dependencies": [
     "clib-util",
     "directxtex",
+    "directxtk",
     "freetype",
     {
       "name": "imgui",
       "features": [ "dx11-binding", "freetype", "wchar32" ]
     },
     "glaze",
+    "nlohmann-json",
+    "rapidcsv",
     "rapidfuzz",
     "rsm-binary-io",
     "spdlog",
@@ -18,11 +21,5 @@
     "unordered-dense",
     "xbyak"
   ],
-  "features": {
-    "vr": {
-      "description": "Skyrim VR (CommonLibSSE-NG runtime + ImGuiVRHelper client SDK)",
-      "dependencies": [ "directxtk", "nlohmann-json", "rapidcsv" ]
-    }
-  },
   "builtin-baseline": "edffab1bcd2cb5b8c17d6ba34d5651ea0bf82979"
 }

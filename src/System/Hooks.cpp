@@ -316,8 +316,8 @@ namespace Hooks
 						// Zero-out the event
 						if (!keep) {
 							if (auto btn = iter->AsButtonEvent()) {
-								RUNTIME_DATA(btn).value        = 0.0f;
-								RUNTIME_DATA(btn).heldDownSecs = 0.0f;
+								btn->GetRuntimeData().value        = 0.0f;
+								btn->GetRuntimeData().heldDownSecs = 0.0f;
 							} else if (auto idEvent = iter->AsIDEvent()) {
 								if (auto thumb = idEvent->AsThumbstickEvent()) {
 									thumb->xValue = 0.0f;
@@ -344,9 +344,9 @@ namespace Hooks
 						savedPauses       = ui->numPausesGame;
 						ui->numPausesGame = 0;
 					}
-					if (main && RUNTIME_DATA(main).freezeTime) {
-						savedFreeze                   = RUNTIME_DATA(main).freezeTime;
-						RUNTIME_DATA(main).freezeTime = false;
+					if (main && main->GetRuntimeData().freezeTime) {
+						savedFreeze                   = main->GetRuntimeData().freezeTime;
+						main->GetRuntimeData().freezeTime = false;
 					}
 				}
 
@@ -356,7 +356,7 @@ namespace Hooks
 				// Restore the pauses immediately after dispatch
 				if (justBlocked) {
 					if (main && savedFreeze) {
-						RUNTIME_DATA(main).freezeTime = savedFreeze;
+						main->GetRuntimeData().freezeTime = savedFreeze;
 					}
 					if (ui && savedPauses > 0) {
 						ui->numPausesGame += savedPauses;
@@ -402,12 +402,8 @@ namespace Hooks
 
 	void Install()
 	{
-#ifdef SKYRIMVR
 		// Same address-library ID as SE, but VR's call site sits at 0x81
 		REL::Relocation<std::uintptr_t> inputUnk(RELOCATION_ID(67315, 68617), REL::Relocate(0x7B, 0x7B, 0x81));
-#else
-		REL::Relocation<std::uintptr_t> inputUnk(RELOCATION_ID(67315, 68617), 0x7B);
-#endif
 		stl::write_thunk_call<ProcessInputQueue>(inputUnk.address());
 
 		REL::Relocation<std::uintptr_t> journalVtbl(RE::VTABLE_JournalMenu[0]);

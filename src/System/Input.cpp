@@ -791,7 +791,7 @@ namespace Input
 						}
 						if (cursorMenuOpen) {
 							if (auto cursorMenu = RE::UI::GetSingleton()->GetMenu<RE::CursorMenu>()) {
-								MENU_EVENT_HANDLER(cursorMenu)->ProcessMouseMove(mouseEvent);
+								cursorMenu->AsMenuEventHandler()->ProcessMouseMove(mouseEvent);
 							}
 						}
 					} else if (const auto thumbstickEvent = event->AsThumbstickEvent()) {
@@ -800,7 +800,7 @@ namespace Input
 						}
 						if (cursorMenuOpen && (fuck->IsOpen() || forceCursor)) {
 							if (auto cursorMenu = RE::UI::GetSingleton()->GetMenu<RE::CursorMenu>()) {
-								MENU_EVENT_HANDLER(cursorMenu)->ProcessThumbstick(thumbstickEvent);
+								cursorMenu->AsMenuEventHandler()->ProcessThumbstick(thumbstickEvent);
 							}
 						}
 					}
@@ -821,7 +821,7 @@ namespace Input
 			// Sync OS hardware cursor to the virtual joystick cursor
 			if (_cursorMovedByJoystick && cursorMenuOpen && passMouse) {
 				if (auto mc = RE::MenuCursor::GetSingleton()) {
-					ImVec2 clientPos = ImGui::TranslateScaleformToScreen(RUNTIME_DATA(mc).cursorPosX, RUNTIME_DATA(mc).cursorPosY);
+					ImVec2 clientPos = ImGui::TranslateScaleformToScreen(mc->GetRuntimeData().cursorPosX, mc->GetRuntimeData().cursorPosY);
 
 					static float s_lastClientX = -1.0f;
 					static float s_lastClientY = -1.0f;
