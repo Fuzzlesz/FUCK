@@ -30,8 +30,8 @@ namespace SKSE
 
 		float deltaTime = 1.0f / 60.0f;  // In case there is no timer for some reason, default to 60fps
 
-		if (auto* timer = RE::BSTimer::GetSingleton(); timer && timer->GetRuntimeData().realTimeDelta > 0.0f) {
-			deltaTime = timer->GetRuntimeData().realTimeDelta;
+		if (const auto* timer = RE::BSTimer::GetSingleton(); timer && timer->realTimeDelta > 0.0f) {
+			deltaTime = timer->realTimeDelta;
 		}
 		io.DeltaTime = deltaTime;
 
