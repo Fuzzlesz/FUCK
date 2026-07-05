@@ -1465,31 +1465,43 @@ namespace ImGui
 
 		bool active = (g.ActiveId == id);
 
+		// Calculate exact integer center for the row to guarantee pixel alignment
+		float centerY = std::floor(bb.Min.y + (bb.GetHeight() * 0.5f));
+
 		ImRect track = bb;
-		// Shrink Y-axis significantly so the track is narrow
-		float trackH = std::max(4.0f, 6.0f * Renderer::GetResolutionScale());
-		float s      = (track.GetHeight() - trackH) * 0.8f;
-		track.Min.y += s;
-		track.Max.y -= s;
+
+		// Force track height to an even number so it splits around centerY
+		float trackH = std::floor(bb.GetHeight() * 0.50f);
+		if (static_cast<int>(trackH) % 2 != 0)
+			trackH -= 1.0f;
+
+		track.Min.y = centerY - (trackH * 0.5f);
+		track.Max.y = track.Min.y + trackH;
 
 		window->DrawList->AddRectFilled(track.Min, track.Max, GetColorU32(active ? ImGuiCol_FrameBgActive : h ? ImGuiCol_FrameBgHovered :
 																												ImGuiCol_FrameBg),
-			GetStyle().FrameRounding);
-		DrawWidgetBorder(window->DrawList, track, IsWidgetFocused(id) || active || h, GetStyle().FrameRounding);
+			0.0f);
+		DrawWidgetBorder(window->DrawList, track, IsWidgetFocused(id) || active || h, 0.0f);
 
 		if (grab.Max.x > grab.Min.x) {
 			float scale     = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
-			float knobWidth = 8.0f * scale;  // Fixed slim width
-			float centerX   = grab.Min.x + (grab.Max.x - grab.Min.x) * 0.5f;
+			float knobWidth = 10.0f * scale;
 
-			centerX = ImClamp(centerX, bb.Min.x + knobWidth * 0.5f, bb.Max.x - knobWidth * 0.5f);
+			float centerX = std::floor(grab.Min.x + (grab.Max.x - grab.Min.x) * 0.5f);
+			centerX       = ImClamp(centerX, bb.Min.x + knobWidth * 0.5f, bb.Max.x - knobWidth * 0.5f);
 
-			// Span the full height of the widget, but keep width narrow
+			// Force knob height to an even number
+			float knobH = std::floor(bb.GetHeight() * 0.70f);
+			if (static_cast<int>(knobH) % 2 != 0)
+				knobH -= 1.0f;
+
+			float knobMinY = centerY - (knobH * 0.5f);
+
 			ImRect customGrab(
-				centerX - (knobWidth * 0.5f),
-				bb.Min.y,
-				centerX + (knobWidth * 0.5f),
-				bb.Max.y);
+				std::floor(centerX - (knobWidth * 0.5f)),
+				knobMinY,
+				std::floor(centerX + (knobWidth * 0.5f)),
+				knobMinY + knobH);
 
 			window->DrawList->AddRectFilled(customGrab.Min, customGrab.Max, GetColorU32(active ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab), GetStyle().GrabRounding);
 		}
