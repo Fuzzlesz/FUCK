@@ -15,7 +15,6 @@ public:
 		kHard = 2
 	};
 
-
 	enum class JournalMenuType : int
 	{
 		kUnknown = 0,
@@ -153,6 +152,7 @@ private:
 
 	void FlushPendingRegistrations();
 	void UpdateGameState();
+	bool IsWindowSuppressed(const FUCK::IWindow* win) const;
 
 	struct MenuListenerEntry
 	{
@@ -163,7 +163,6 @@ private:
 	std::vector<MenuListenerEntry> _menuListeners;
 	std::vector<FUCK::ITool*>      _tools;
 	std::vector<FUCK::IWindow*>    _windows;
-	std::vector<FUCK::IWindow*>    _suspendedWindows;
 	std::set<std::string>          _pausedMenus;
 
 	StringMap<ToolOverrideState>  _toolOverrides;

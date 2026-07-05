@@ -15,7 +15,7 @@
 #include "System/Settings.h"
 #include "System/Utils.h"
 
-struct WindowState
+	struct WindowState
 {
 	bool   isCollapsed  = false;
 	bool   wasCollapsed = false;
@@ -190,7 +190,6 @@ void FUCKMan::FlushPendingRegistrations()
 					s_windowStates.erase(key);
 					_windows.erase(it);
 				}
-				std::erase(_suspendedWindows, win);
 				break;
 			}
 		}
@@ -397,6 +396,155 @@ void FUCKMan::SaveWorkspace()
 }
 
 // ==================================================
+// Engine State Synchronization
+// ==================================================
+
+bool FUCKMan::IsWindowSuppressed(const FUCK::IWindow* win) const
+{
+	if (!win->IsOpen())
+		return true;
+
+	FUCK::WindowFlags userFlags = win->GetFlags();
+
+	// Check 'tm' console command.
+	if (!(userFlags & FUCK::WindowFlags::kRenderDuringTM)) {
+		if (auto ui = RE::UI::GetSingleton()) {
+			if (!ui->IsShowingMenus())
+				return true;
+		}
+	}
+
+	// Check game menu and camera states.
+	if (userFlags & FUCK::WindowFlags::kCloseOnGameMenu) {
+		if (auto ui = RE::UI::GetSingleton()) {
+			for (const auto& m : s_closeOnOpen) {
+				if (ui->IsMenuOpen(m)) {
+					return true;
+				}
+			}
+		}
+
+		if (auto camera = RE::PlayerCamera::GetSingleton(); camera && camera->currentState) {
+			auto* activeState = camera->currentState.get();
+			if (activeState == camera->cameraStates[RE::CameraState::kVATS].get() ||
+				activeState == camera->cameraStates[RE::CameraState::kBleedout].get() ||
+				activeState == camera->cameraStates[RE::CameraState::kAutoVanity].get()) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+void FUCKMan::UpdateGameState()
+{
+	bool targetSoft    = _apiSoftPause;
+	bool targetHard    = _apiHardPause;
+	bool targetBlur    = false;
+	bool targetHideHUD = false;
+	bool targetVanity  = _isVanityBlocked;
+
+	// Main menu state.
+	bool targetiHUDDisabled = _isOpen;
+
+	if (_isOpen) {
+		targetVanity  = true;
+		targetHideHUD = true;
+		if (_cfg.globalPauseType == PauseType::kSoft)
+			targetSoft = true;
+		if (_cfg.globalPauseType == PauseType::kHard)
+			targetHard = true;
+	}
+
+	// Window overrides (skip if suppressed by game state).
+	for (auto* win : _windows) {
+		if (!IsWindowSuppressed(win)) {
+			FUCK::WindowFlags f = win->GetFlags();
+
+			if (f & FUCK::WindowFlags::kPauseSoft)
+				targetSoft = true;
+			if (f & FUCK::WindowFlags::kPauseHard)
+				targetHard = true;
+			if (f & FUCK::WindowFlags::kBlurBackground)
+				targetBlur = true;
+			if (f & FUCK::WindowFlags::kBlockVanity)
+				targetVanity = true;
+			if (f & FUCK::WindowFlags::kHideHUD) {
+				targetHideHUD      = true;
+				targetiHUDDisabled = true;
+			}
+		}
+	}
+
+	// Apply States
+	Compat::ImmersiveHUD::SetDisabled(targetiHUDDisabled);
+
+	// HUD
+	if (targetHideHUD != _isHudHidden) {
+		targetHideHUD ? RE::SendHUDMessage::PushHUDMode("WorldMapMode") : RE::SendHUDMessage::PopHUDMode("WorldMapMode");
+		_isHudHidden = targetHideHUD;
+	}
+
+	// Soft Pause
+	if (targetSoft != _isGameSoftPaused) {
+		if (auto main = RE::Main::GetSingleton())
+			main->freezeTime = targetSoft;
+		_isGameSoftPaused = targetSoft;
+	}
+
+	// Hard Pause
+	if (targetHard != _isGameHardPaused) {
+		if (auto ui = RE::UI::GetSingleton()) {
+			targetHard ? ui->numPausesGame++ : ui->numPausesGame--;
+		}
+		_isGameHardPaused = targetHard;
+	}
+
+	// Blur
+	if (targetBlur != _isGameBlurred) {
+		auto bm = RE::UIBlurManager::GetSingleton();
+		targetBlur ? bm->IncrementBlurCount() : bm->DecrementBlurCount();
+		_isGameBlurred = targetBlur;
+	}
+
+	// Vanity
+	if (targetVanity && RE::PlayerCamera::GetSingleton()) {
+		RE::PlayerCamera::GetSingleton()->idleTimer = 0.0f;
+	}
+
+	// Scaleform Movie Pausing (to prevent background hover detection)
+	bool blockInput = IsInputBlocked();
+	if (auto ui = RE::UI::GetSingleton()) {
+		if (blockInput) {
+			for (auto& [name, entry] : ui->menuMap) {
+				if (entry.menu && entry.menu->OnStack() && entry.menu->uiMovie) {
+					if (name == RE::CursorMenu ::MENU_NAME ||
+						name == RE::Console ::MENU_NAME ||
+						name == RE::LoadingMenu::MENU_NAME ||
+						name == RE::HUDMenu ::MENU_NAME ||
+						name == RE::FaderMenu ::MENU_NAME) {
+						continue;
+					}
+					if (_pausedMenus.find(name.c_str()) == _pausedMenus.end()) {
+						entry.menu->uiMovie->SetPause(true);
+						_pausedMenus.insert(name.c_str());
+					}
+				}
+			}
+		} else {
+			for (const auto& name : _pausedMenus) {
+				auto menu = ui->GetMenu(name);
+				if (menu && menu->uiMovie) {
+					menu->uiMovie->SetPause(false);
+				}
+			}
+			_pausedMenus.clear();
+		}
+	}
+}
+
+// ==================================================
 // Input Processing
 // ==================================================
 
@@ -419,7 +567,7 @@ bool FUCKMan::ProcessAsyncInput(const RE::InputEvent* const* a_event)
 
 			// A. Close Child Windows with kCloseOnEsc flag
 			for (auto* win : _windows) {
-				if (win->IsOpen() && (win->GetFlags() & FUCK::WindowFlags::kCloseOnEsc)) {
+				if (!IsWindowSuppressed(win) && (win->GetFlags() & FUCK::WindowFlags::kCloseOnEsc)) {
 					win->SetOpen(false);
 					handled = true;
 				}
@@ -455,9 +603,9 @@ bool FUCKMan::ProcessAsyncInput(const RE::InputEvent* const* a_event)
 	}
 
 	if (!consumed) {
-		// Window Input
+		// Window input (skip suppressed windows).
 		for (auto* win : _windows) {
-			if (win->OnAsyncInput(a_event)) {
+			if (!IsWindowSuppressed(win) && win->OnAsyncInput(a_event)) {
 				consumed = true;
 				break;
 			}
@@ -558,115 +706,6 @@ void FUCKMan::SetCurrentFont(const std::string& a_font)
 	IconFont::Manager::GetSingleton()->SetFontName(a_font);
 }
 
-void FUCKMan::UpdateGameState()
-{
-	bool targetSoft    = _apiSoftPause;
-	bool targetHard    = _apiHardPause;
-	bool targetBlur    = false;
-	bool targetHideHUD = false;
-	bool targetVanity  = _isVanityBlocked;
-
-	// Main Menu State
-	bool targetiHUDDisabled = _isOpen;
-
-	if (_isOpen) {
-		targetVanity  = true;
-		targetHideHUD = true;
-		if (_cfg.globalPauseType == PauseType::kSoft)
-			targetSoft = true;
-		if (_cfg.globalPauseType == PauseType::kHard)
-			targetHard = true;
-	}
-
-	// Window Overrides
-	for (auto* win : _windows) {
-		if (win->IsOpen()) {
-			FUCK::WindowFlags f = win->GetFlags();
-
-			if (f & FUCK::WindowFlags::kPauseSoft)
-				targetSoft = true;
-			if (f & FUCK::WindowFlags::kPauseHard)
-				targetHard = true;
-			if (f & FUCK::WindowFlags::kBlurBackground)
-				targetBlur = true;
-			if (f & FUCK::WindowFlags::kBlockVanity)
-				targetVanity = true;
-			if (f & FUCK::WindowFlags::kHideHUD) {
-				targetHideHUD      = true;
-				targetiHUDDisabled = true;
-			}
-		}
-	}
-
-	// Apply States
-	Compat::ImmersiveHUD::SetDisabled(targetiHUDDisabled);
-
-	// HUD
-	if (targetHideHUD != _isHudHidden) {
-		targetHideHUD ? RE::SendHUDMessage::PushHUDMode("WorldMapMode") : RE::SendHUDMessage::PopHUDMode("WorldMapMode");
-		_isHudHidden = targetHideHUD;
-	}
-
-	// Soft Pause
-	if (targetSoft != _isGameSoftPaused) {
-		if (auto main = RE::Main::GetSingleton())
-			main->freezeTime = targetSoft;
-		_isGameSoftPaused = targetSoft;
-	}
-
-	// Hard Pause
-	if (targetHard != _isGameHardPaused) {
-		if (auto ui = RE::UI::GetSingleton()) {
-			targetHard ? ui->numPausesGame++ : ui->numPausesGame--;
-		}
-		_isGameHardPaused = targetHard;
-	}
-
-	// Blur
-	if (targetBlur != _isGameBlurred) {
-		auto bm = RE::UIBlurManager::GetSingleton();
-		targetBlur ? bm->IncrementBlurCount() : bm->DecrementBlurCount();
-		_isGameBlurred = targetBlur;
-	}
-
-	// Vanity
-	if (targetVanity && RE::PlayerCamera::GetSingleton()) {
-		RE::PlayerCamera::GetSingleton()->idleTimer = 0.0f;
-	}
-
-	// Scaleform Movie Pausing (to prevent background hover detection)
-	bool blockInput = IsInputBlocked();
-	if (auto ui = RE::UI::GetSingleton()) {
-		if (blockInput) {
-			for (auto& [name, entry] : ui->menuMap) {
-				// pause menus that are actively on the screen
-				if (entry.menu && entry.menu->OnStack() && entry.menu->uiMovie) {
-					// but not deez
-					if (name == RE::CursorMenu ::MENU_NAME ||
-						name == RE::Console    ::MENU_NAME ||
-						name == RE::LoadingMenu::MENU_NAME ||
-						name == RE::HUDMenu    ::MENU_NAME ||
-						name == RE::FaderMenu  ::MENU_NAME) {
-						continue;
-					}
-					if (_pausedMenus.find(name.c_str()) == _pausedMenus.end()) {
-						entry.menu->uiMovie->SetPause(true);
-						_pausedMenus.insert(name.c_str());
-					}
-				}
-			}
-		} else {
-			for (const auto& name : _pausedMenus) {
-				auto menu = ui->GetMenu(name);
-				if (menu && menu->uiMovie) {
-					menu->uiMovie->SetPause(false);
-				}
-			}
-			_pausedMenus.clear();
-		}
-	}
-}
-
 // ==================================================
 // Accessors & Queries
 // ==================================================
@@ -675,16 +714,17 @@ bool FUCKMan::ShouldRender() const
 {
 	if (_suspendRendering)
 		return false;
+
+	// Keep rendering if the main menu is open.
 	if (_isOpen)
 		return true;
 
-	if (!_suspendedWindows.empty())
-		return true;
-
+	// Keep render loop active for open windows to maintain ImGui context across load screens.
 	for (const auto* win : _windows) {
 		if (win->IsOpen())
 			return true;
 	}
+
 	return false;
 }
 
@@ -692,8 +732,10 @@ bool FUCKMan::IsInputBlocked() const
 {
 	if (_isOpen)
 		return true;
+
 	for (const auto* win : _windows) {
-		if (win->IsOpen() && !(win->GetFlags() & FUCK::WindowFlags::kPassInputToGame)) {
+		// Only block input if the window is visibly drawing on screen.
+		if (!IsWindowSuppressed(win) && !(win->GetFlags() & FUCK::WindowFlags::kPassInputToGame)) {
 			return true;
 		}
 	}
@@ -708,6 +750,7 @@ bool FUCKMan::IsCursorForced() const
 bool FUCKMan::HasWindowWithFlag(FUCK::WindowFlags a_flag) const
 {
 	for (const auto* win : _windows) {
+		// Deliberately skips IsWindowSuppressed. Used internally to check intended window behaviors.
 		if (win->IsOpen() && (win->GetFlags() & a_flag)) {
 			return true;
 		}
@@ -791,41 +834,13 @@ EventResult FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_event, RE::BST
 				closedSomething = true;
 			}
 
-			for (auto* win : _windows) {
-				if (win->IsOpen() && (win->GetFlags() & FUCK::WindowFlags::kCloseOnGameMenu)) {
-					win->SetOpen(false);
-					_suspendedWindows.push_back(win);  // Track the suspended window
-					closedSomething = true;
-				}
-			}
-
 			if (closedSomething) {
 				UpdateGameState();
 				ImGui::ClearNavState();
 			}
 		}
-	} else {
-		// Restore any suspended windows once all blocking game menus have closed
-		if (std::ranges::find(s_closeOnOpen, a_event->menuName.data()) != s_closeOnOpen.end()) {
-			bool anyOpen = false;
-			if (auto ui = RE::UI::GetSingleton()) {
-				for (const auto& m : s_closeOnOpen) {
-					if (ui->IsMenuOpen(m)) {
-						anyOpen = true;
-						break;
-					}
-				}
-			}
-
-			if (!anyOpen && !_suspendedWindows.empty()) {
-				for (auto* win : _suspendedWindows) {
-					win->SetOpen(true);
-				}
-				_suspendedWindows.clear();
-				UpdateGameState();
-			}
-		}
 	}
+
 	return RE::BSEventNotifyControl::kContinue;
 }
 
@@ -843,81 +858,22 @@ void FUCKMan::Draw()
 	}
 
 	if (auto ui = RE::UI::GetSingleton(); ui && ui->closingAllMenus) {
-		bool closedSomething = false;
-
 		if (_isOpen) {
 			Close();
-			closedSomething = true;
-		}
-
-		for (auto* win : _windows) {
-			if (win->IsOpen()) {
-				win->SetOpen(false);
-				closedSomething = true;
-			}
-		}
-
-		if (closedSomething) {
 			ImGui::ClearNavState();
 		}
-
-		_suspendedWindows.clear();
 		return;
 	}
 
-	// Detect if UI is hidden via 'tm'
-	bool menusHidden = false;
-	if (auto ui = RE::UI::GetSingleton()) {
-		menusHidden = !ui->IsShowingMenus();
-	}
-
-	// --- Auto-Suspend on forced camera states ---
-	if (auto camera = RE::PlayerCamera::GetSingleton(); camera && camera->currentState) {
-		auto* activeState = camera->currentState.get();
-
-		bool isForcedCamera = (activeState == camera->cameraStates[RE::CameraState::kVATS].get()      ||
-							   activeState == camera->cameraStates[RE::CameraState::kBleedout].get()  ||
-							   activeState == camera->cameraStates[RE::CameraState::kAutoVanity].get());
-
-		if (isForcedCamera) {
-			bool closedSomething = false;
-
-			if (_isOpen) {
+	// Close main menu if a forced camera state begins.
+	if (_isOpen) {
+		if (auto camera = RE::PlayerCamera::GetSingleton(); camera && camera->currentState) {
+			auto* activeState = camera->currentState.get();
+			if (activeState == camera->cameraStates[RE::CameraState::kVATS].get() ||
+				activeState == camera->cameraStates[RE::CameraState::kBleedout].get() ||
+				activeState == camera->cameraStates[RE::CameraState::kAutoVanity].get()) {
 				Close();
-				closedSomething = true;
-			}
-
-			for (auto* win : _windows) {
-				if (win->IsOpen()) {
-					win->SetOpen(false);
-					if (std::find(_suspendedWindows.begin(), _suspendedWindows.end(), win) == _suspendedWindows.end()) {
-						_suspendedWindows.push_back(win);
-					}
-					closedSomething = true;
-				}
-			}
-
-			if (closedSomething) {
 				ImGui::ClearNavState();
-			}
-		} else if (!_suspendedWindows.empty()) {
-			bool blockingMenuOpen = false;
-
-			if (auto ui = RE::UI::GetSingleton()) {
-				for (const auto& m : s_closeOnOpen) {
-					if (ui->IsMenuOpen(m)) {
-						blockingMenuOpen = true;
-						break;
-					}
-				}
-			}
-
-			if (!blockingMenuOpen) {
-				for (auto* win : _suspendedWindows) {
-					win->SetOpen(true);
-				}
-				_suspendedWindows.clear();
-				UpdateGameState();
 			}
 		}
 	}
@@ -1031,6 +987,12 @@ void FUCKMan::Draw()
 		if (ImGui::Begin("##ToolOverlayLayer", nullptr, flags)) {
 			pushContentScale(false);
 
+			// Overlay logic does a quick check for 'tm' natively
+			bool menusHidden = false;
+			if (auto ui = RE::UI::GetSingleton()) {
+				menusHidden = !ui->IsShowingMenus();
+			}
+
 			if (_activeTool && !menusHidden)
 				_activeTool->RenderOverlay();
 
@@ -1040,9 +1002,8 @@ void FUCKMan::Draw()
 			}
 
 			for (auto* win : _windows) {
-				if (win->IsOpen()) {
-					if (menusHidden && !(win->GetFlags() & FUCK::WindowFlags::kRenderDuringTM))
-						continue;
+				// Skip overlays for suppressed windows.
+				if (!IsWindowSuppressed(win)) {
 					win->RenderOverlay();
 				}
 			}
@@ -1057,293 +1018,292 @@ void FUCKMan::Draw()
 	// EXTERNAL WINDOWS RENDER PASS
 	// ==================================================
 	for (auto* win : _windows) {
-		if (win->IsOpen()) {
-			const char*       title     = win->Title();
-			FUCK::WindowFlags userFlags = win->GetFlags();
+		// Skip rendering if the game state suppresses the window.
+		if (IsWindowSuppressed(win)) {
+			continue;
+		}
 
-			if (menusHidden && !(userFlags & FUCK::WindowFlags::kRenderDuringTM)) {
-				continue;
-			}
+		const char*       title     = win->Title();
+		FUCK::WindowFlags userFlags = win->GetFlags();
 
-			// --- Setup & State ---
-			std::string key      = std::format("{}|{}", win->PluginName(), win->Id());
-			auto&       winState = s_windowStates[key];
+		// --- Setup & State ---
+		std::string key      = std::format("{}|{}", win->PluginName(), win->Id());
+		auto&       winState = s_windowStates[key];
 
-			ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+		ImGuiWindowFlags flags = ImGuiWindowFlags_None;
 
-			// --- Flags Setup ---
-			bool noDecoration    = (userFlags & FUCK::WindowFlags::kNoDecoration);
-			bool ignoreUserScale = (userFlags & FUCK::WindowFlags::kIgnoreUserScale);
-			bool noResize        = (userFlags & FUCK::WindowFlags::kNoResize);
-			bool autoResize      = (userFlags & FUCK::WindowFlags::kAutoResize);
-			bool noMove          = (userFlags & FUCK::WindowFlags::kNoMove);
+		// --- Flags Setup ---
+		bool noDecoration    = (userFlags & FUCK::WindowFlags::kNoDecoration);
+		bool ignoreUserScale = (userFlags & FUCK::WindowFlags::kIgnoreUserScale);
+		bool noResize        = (userFlags & FUCK::WindowFlags::kNoResize);
+		bool autoResize      = (userFlags & FUCK::WindowFlags::kAutoResize);
+		bool noMove          = (userFlags & FUCK::WindowFlags::kNoMove);
 
-			flags |= ImGuiWindowFlags_NoTitleBar;
-			if (noDecoration) {
-				winState.isCollapsed  = false;
-				winState.wasCollapsed = false;
-				flags |= ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar;
+		flags |= ImGuiWindowFlags_NoTitleBar;
+		if (noDecoration) {
+			winState.isCollapsed  = false;
+			winState.wasCollapsed = false;
+			flags |= ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar;
+		} else {
+			flags |= ImGuiWindowFlags_NoScrollbar;
+		}
+
+		if (noResize)
+			flags |= ImGuiWindowFlags_NoResize;
+		if (autoResize)
+			flags |= ImGuiWindowFlags_AlwaysAutoResize;
+		if (noMove)
+			flags |= ImGuiWindowFlags_NoMove;
+
+		bool poppedInvisibleBg = false;
+		if (userFlags & FUCK::WindowFlags::kNoBackground) {
+			if (!IsInputBlocked()) {
+				flags |= ImGuiWindowFlags_NoBackground;
 			} else {
-				flags |= ImGuiWindowFlags_NoScrollbar;
+				// Give kNoBackground windows a 0.1% invisible background so they can be easily dragged.
+				// We also suppress the Border, otherwise ImGui draws a 1px grey frame.
+				ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.001f));
+				ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+				poppedInvisibleBg = true;
 			}
+		}
 
-			if (noResize)
-				flags |= ImGuiWindowFlags_NoResize;
-			if (autoResize)
-				flags |= ImGuiWindowFlags_AlwaysAutoResize;
-			if (noMove)
-				flags |= ImGuiWindowFlags_NoMove;
+		if ((userFlags & FUCK::WindowFlags::kPassInputToGame) && !IsInputBlocked())
+			flags |= ImGuiWindowFlags_NoInputs;
 
-			bool poppedInvisibleBg = false;
-			if (userFlags & FUCK::WindowFlags::kNoBackground) {
-				if (!IsInputBlocked()) {
-					flags |= ImGuiWindowFlags_NoBackground;
-				} else {
-					// Give kNoBackground windows a 0.1% invisible background so they can be easily dragged.
-					// We also suppress the Border, otherwise ImGui draws a 1px grey frame.
-					ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.001f));
-					ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-					poppedInvisibleBg = true;
-				}
+		// --- Collapse Logic ---
+		bool isCollapsed      = winState.isCollapsed;
+		bool wasCollapsed     = winState.wasCollapsed;
+		winState.wasCollapsed = isCollapsed;
+
+		// Get Metrics from Interface
+		ImVec2 targetSize = win->GetDefaultSize();
+
+		// Handle collapse override
+		if (isCollapsed) {
+			float targetW = (winState.size.x > 0.0f) ? winState.size.x : (winState.preCollapseSize.x > 0.0f) ? winState.preCollapseSize.x :
+			                                                                                                   targetSize.x;
+			targetSize.x  = targetW;
+			flags |= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize;
+		} else if (wasCollapsed) {
+			// Prefer the in-session captured pre-collapse size; fall back to persisted size
+			if (winState.preCollapseSize.x > 0.0f)
+				targetSize = winState.preCollapseSize;
+			else if (winState.size.x > 0.0f)
+				targetSize = winState.size;
+		}
+
+		// --- Position Logic ---
+		bool isCustomPos = (userFlags & FUCK::WindowFlags::kCustomPosition);
+
+		if (!isCustomPos) {
+			if (noMove) {
+				// Rigidly enforce the default position for immovable windows
+				ImVec2 defPos = win->GetDefaultPos();
+				ClampWindowToScreen(defPos, targetSize);
+				FUCK::SetNextWindowPos(defPos, ImGuiCond_Always);
+			} else if (winState.hasLoadedPos) {
+				ClampWindowToScreen(winState.pos, targetSize);
+				FUCK::SetNextWindowPos(winState.pos, ImGuiCond_FirstUseEver);  // Applies at game launch
+			} else {
+				// Default position for new windows
+				ImVec2 defPos = win->GetDefaultPos();
+				ClampWindowToScreen(defPos, targetSize);
+				FUCK::SetNextWindowPos(defPos, ImGuiCond_FirstUseEver);
 			}
+		}
 
-			if ((userFlags & FUCK::WindowFlags::kPassInputToGame) && !IsInputBlocked())
-				flags |= ImGuiWindowFlags_NoInputs;
-
-			// --- Collapse Logic ---
-			bool isCollapsed      = winState.isCollapsed;
-			bool wasCollapsed     = winState.wasCollapsed;
-			winState.wasCollapsed = isCollapsed;
-
-			// Get Metrics from Interface
-			ImVec2 targetSize = win->GetDefaultSize();
-
-			// Handle collapse override
+		// If AutoResize is active, ImGui shrinks the window dynamically. We bypass hard size forcing.
+		if (!autoResize) {
 			if (isCollapsed) {
-				float targetW = (winState.size.x > 0.0f) ? winState.size.x : (winState.preCollapseSize.x > 0.0f) ? winState.preCollapseSize.x :
-				                                                                                                   targetSize.x;
-				targetSize.x  = targetW;
-				flags |= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize;
-			} else if (wasCollapsed) {
-				// Prefer the in-session captured pre-collapse size; fall back to persisted size
-				if (winState.preCollapseSize.x > 0.0f)
-					targetSize = winState.preCollapseSize;
-				else if (winState.size.x > 0.0f)
-					targetSize = winState.size;
-			}
-
-			// --- Position Logic ---
-			bool isCustomPos = (userFlags & FUCK::WindowFlags::kCustomPosition);
-
-			if (!isCustomPos) {
-				if (noMove) {
-					// Rigidly enforce the default position for immovable windows
-					ImVec2 defPos = win->GetDefaultPos();
-					ClampWindowToScreen(defPos, targetSize);
-					FUCK::SetNextWindowPos(defPos, ImGuiCond_Always);
-				} else if (winState.hasLoadedPos) {
-					ClampWindowToScreen(winState.pos, targetSize);
-					FUCK::SetNextWindowPos(winState.pos, ImGuiCond_FirstUseEver);  // Applies at game launch
-				} else {
-					// Default position for new windows
-					ImVec2 defPos = win->GetDefaultPos();
-					ClampWindowToScreen(defPos, targetSize);
-					FUCK::SetNextWindowPos(defPos, ImGuiCond_FirstUseEver);
-				}
-			}
-
-			// If AutoResize is active, ImGui shrinks the window dynamically. We bypass hard size forcing.
-			if (!autoResize) {
-				if (isCollapsed) {
-					ImGui::SetNextWindowSizeConstraints(ImVec2(targetSize.x, 0.0f), ImVec2(targetSize.x, FLT_MAX));
-				} else {
-					ImVec2    sz       = ((winState.size.x != -1.0f) ? winState.size : targetSize);
-					ImGuiCond sizeCond = (wasCollapsed || noResize) ? ImGuiCond_Always : ImGuiCond_FirstUseEver;
-					FUCK::SetNextWindowSize(sz, sizeCond);
-				}
-			}
-
-			bool open = true;
-
-			if (!noDecoration || (userFlags & FUCK::WindowFlags::kNoBackground)) {
-				// Push 0 padding for decorated windows and background-less overlays
-				FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+				ImGui::SetNextWindowSizeConstraints(ImVec2(targetSize.x, 0.0f), ImVec2(targetSize.x, FLT_MAX));
 			} else {
-				// Give standard padding to frameless windows that still have a solid background panel
-				FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase, m.padBase));
+				ImVec2    sz       = ((winState.size.x != -1.0f) ? winState.size : targetSize);
+				ImGuiCond sizeCond = (wasCollapsed || noResize) ? ImGuiCond_Always : ImGuiCond_FirstUseEver;
+				FUCK::SetNextWindowSize(sz, sizeCond);
+			}
+		}
+
+		bool open = true;
+
+		if (!noDecoration || (userFlags & FUCK::WindowFlags::kNoBackground)) {
+			// Push 0 padding for decorated windows and background-less overlays
+			FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+		} else {
+			// Give standard padding to frameless windows that still have a solid background panel
+			FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase, m.padBase));
+		}
+
+		if (FUCK::BeginWindow(title, &open, flags)) {
+			if (poppedInvisibleBg) {
+				ImGui::PopStyleColor(2);  // Clear WindowBg and Border
 			}
 
-			if (FUCK::BeginWindow(title, &open, flags)) {
-				if (poppedInvisibleBg) {
-					ImGui::PopStyleColor(2);  // Clear WindowBg and Border
+			ImVec2 curPos  = FUCK::GetWindowPos();
+			ImVec2 curSize = FUCK::GetWindowSize();
+
+			// Auto-save settings on move/resize end preventing overwrite during collapse
+			if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+				bool posChanged  = !isCustomPos && !noMove && (std::abs(curPos.x - winState.pos.x) > 1.0f || std::abs(curPos.y - winState.pos.y) > 1.0f);
+				bool sizeChanged = !isCollapsed && (std::abs(curSize.x - winState.size.x) > 1.0f || std::abs(curSize.y - winState.size.y) > 1.0f);
+
+				if (posChanged || sizeChanged) {
+					if (posChanged)
+						winState.pos = curPos;
+					if (sizeChanged)
+						winState.size = curSize;
+					if (posChanged)
+						winState.hasLoadedPos = true;
+					SaveWorkspace();
+				}
+			}
+
+			if (win->GetFlags() & FUCK::WindowFlags::kExtendBorder)
+				FUCK::ExtendWindowPastBorder();
+
+			if (!noDecoration) {
+				// --- Window Chrome Decoration (unscaled) ---
+				float winWidth = FUCK::GetWindowSize().x;
+
+				ImVec2 headerStartCursor = FUCK::GetCursorPos();
+				ImVec2 cursorScreen      = FUCK::GetCursorScreenPos();
+
+				FUCK::BeginGroup();
+
+				// 1. Collapse Icon
+				float iconW = 0.0f;
+
+				if (iconArrow) {
+					// Calculate exact physical dimensions of the arrow first
+					bool pointsDown = !isCollapsed;
+					auto ap         = chromeArrow(pointsDown, m.titleH);
+
+					// Lock horizontal container width to its maximum dimension to prevent shifting on rotation
+					float maxIconDim = std::max(ap.drawSize.x, ap.drawSize.y);
+					float btnWidth   = (m.titleIconPadX * 2.0f) + maxIconDim;
+
+					// Tightly wrap the invisible button around the graphic
+					if (ImGui::InvisibleButton("##CollapseToggle", ImVec2(btnWidth, m.titleH))) {
+						winState.isCollapsed = !isCollapsed;
+						if (!isCollapsed) {
+							// Capture the true live size before we force it to titleH next frame
+							winState.preCollapseSize = FUCK::GetWindowSize();
+							// Also persist it as the canonical size so cross-session restore works
+							winState.size = winState.preCollapseSize;
+						}
+						SaveWorkspace();
+					}
+					bool  isHovered = ImGui::IsItemHovered();
+					ImU32 iconColor = isHovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
+
+					float iconOffsetX = (maxIconDim - ap.drawSize.x) * 0.5f;
+
+					ImVec2 drawPos = cursorScreen;
+					drawPos.x += m.titleIconPadX + iconOffsetX;
+					drawPos.y += ap.offsetY + m.titleIconNudgeY;
+
+					ImGui::DrawArrowIcon(ImGui::GetWindowDrawList(), drawPos, ap.drawSize, iconColor,
+						pointsDown ? ImGui::IconDirection::kDown : ImGui::IconDirection::kRight);
+
+					// Give the title text slightly more breathing room past the exact button width
+					iconW = btnWidth + m.titleIconPadX;
 				}
 
-				ImVec2 curPos  = FUCK::GetWindowPos();
-				ImVec2 curSize = FUCK::GetWindowSize();
+				// 2. Title Text
+				ImFont* baseFont = ImGui::GetFont();
 
-				// Auto-save settings on move/resize end preventing overwrite during collapse
-				if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-					bool posChanged  = !isCustomPos && !noMove && (std::abs(curPos.x - winState.pos.x) > 1.0f || std::abs(curPos.y - winState.pos.y) > 1.0f);
-					bool sizeChanged = !isCollapsed && (std::abs(curSize.x - winState.size.x) > 1.0f || std::abs(curSize.y - winState.size.y) > 1.0f);
+				FUCK::SetCursorPos({ iconW, m.titleTextOffsetY });
+				ImGui::GetWindowDrawList()->AddText(baseFont, m.titleFontSize,
+					FUCK::GetCursorScreenPos(), ImGui::GetColorU32(ImGuiCol_Text), title);
 
-					if (posChanged || sizeChanged) {
-						if (posChanged)
-							winState.pos = curPos;
-						if (sizeChanged)
-							winState.size = curSize;
-						if (posChanged)
-							winState.hasLoadedPos = true;
+				// 3. Close Button
+				const float btnSize = m.titleH;
+				const float btnX    = winWidth - btnSize - headerPadding;
+
+				FUCK::SetCursorPos({ btnX, 0 });
+				if (ImGui::InvisibleButton("##WinClose", ImVec2(btnSize, btnSize))) {
+					open = false;
+				}
+
+				{
+					const char* xIcon      = ICON_FA_XMARK;
+					float       uiFontSize = ImGui::GetStyle().FontSizeBase * m.uiScale;
+
+					ImGui::PushFont(nullptr, uiFontSize);
+					ImVec2 textSize = ImGui::CalcTextSize(xIcon);
+					ImGui::PopFont();
+
+					ImVec2 btnScreenPos = ImGui::GetItemRectMin();
+					ImVec2 textPos      = {
+                        btnScreenPos.x + (btnSize - textSize.x) * 0.5f,
+                        btnScreenPos.y + (btnSize - textSize.y) * 0.5f + (1.0f * m.uiScale)
+					};
+
+					ImU32 xColor = ImGui::IsItemHovered() ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
+
+					ImGui::GetWindowDrawList()->AddText(
+						baseFont,
+						uiFontSize,
+						textPos,
+						xColor,
+						xIcon);
+				}
+
+				FUCK::EndGroup();
+
+				// Double Click Header Interaction
+				if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && !ImGui::IsAnyItemHovered()) {
+					if (ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly)) {
+						winState.isCollapsed = !isCollapsed;
+						if (!isCollapsed) {
+							winState.preCollapseSize = FUCK::GetWindowSize();
+							winState.size            = winState.preCollapseSize;
+						}
 						SaveWorkspace();
 					}
 				}
 
-				if (win->GetFlags() & FUCK::WindowFlags::kExtendBorder)
-					FUCK::ExtendWindowPastBorder();
+				// 4. Separator
+				FUCK::SetCursorPos({ headerStartCursor.x, m.titleH });
+				FUCK::SeparatorThick();
 
-				if (!noDecoration) {
-					// --- Window Chrome Decoration (unscaled) ---
-					float winWidth = FUCK::GetWindowSize().x;
+				// 5. Content Child (scaled)
+				if (!winState.isCollapsed && !isCollapsed) {
+					FUCK::SetCursorPosX(0.0f);
 
-					ImVec2 headerStartCursor = FUCK::GetCursorPos();
-					ImVec2 cursorScreen      = FUCK::GetCursorScreenPos();
+					FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase, m.padBase));
 
-					FUCK::BeginGroup();
+					ImGuiChildFlags  childFlags  = ImGuiChildFlags_AlwaysUseWindowPadding;
+					ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoBackground;
 
-					// 1. Collapse Icon
-					float iconW = 0.0f;
-
-					if (iconArrow) {
-						// Calculate exact physical dimensions of the arrow first
-						bool pointsDown = !isCollapsed;
-						auto ap         = chromeArrow(pointsDown, m.titleH);
-
-						// Lock horizontal container width to its maximum dimension to prevent shifting on rotation
-						float maxIconDim = std::max(ap.drawSize.x, ap.drawSize.y);
-						float btnWidth   = (m.titleIconPadX * 2.0f) + maxIconDim;
-
-						// Tightly wrap the invisible button around the graphic
-						if (ImGui::InvisibleButton("##CollapseToggle", ImVec2(btnWidth, m.titleH))) {
-							winState.isCollapsed = !isCollapsed;
-							if (!isCollapsed) {
-								// Capture the true live size before we force it to titleH next frame
-								winState.preCollapseSize = FUCK::GetWindowSize();
-								// Also persist it as the canonical size so cross-session restore works
-								winState.size = winState.preCollapseSize;
-							}
-							SaveWorkspace();
-						}
-						bool  isHovered = ImGui::IsItemHovered();
-						ImU32 iconColor = isHovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
-
-						float iconOffsetX = (maxIconDim - ap.drawSize.x) * 0.5f;
-
-						ImVec2 drawPos = cursorScreen;
-						drawPos.x += m.titleIconPadX + iconOffsetX;
-						drawPos.y += ap.offsetY + m.titleIconNudgeY;
-
-						ImGui::DrawArrowIcon(ImGui::GetWindowDrawList(), drawPos, ap.drawSize, iconColor,
-							pointsDown ? ImGui::IconDirection::kDown : ImGui::IconDirection::kRight);
-
-						// Give the title text slightly more breathing room past the exact button width
-						iconW = btnWidth + m.titleIconPadX;
+					if (ImGui::BeginChild("##Content", ImVec2(0, 0), childFlags, windowFlags)) {
+						ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
+						pushContentScale(ignoreUserScale);
+						win->Draw();
+						popContentScale();
+						ImGui::PopItemWidth();
 					}
+					ImGui::EndChild();
 
-					// 2. Title Text
-					ImFont* baseFont = ImGui::GetFont();
-
-					FUCK::SetCursorPos({ iconW, m.titleTextOffsetY });
-					ImGui::GetWindowDrawList()->AddText(baseFont, m.titleFontSize,
-						FUCK::GetCursorScreenPos(), ImGui::GetColorU32(ImGuiCol_Text), title);
-
-					// 3. Close Button
-					const float btnSize = m.titleH;
-					const float btnX    = winWidth - btnSize - headerPadding;
-
-					FUCK::SetCursorPos({ btnX, 0 });
-					if (ImGui::InvisibleButton("##WinClose", ImVec2(btnSize, btnSize))) {
-						open = false;
-					}
-
-					{
-						const char* xIcon      = ICON_FA_XMARK;
-						float       uiFontSize = ImGui::GetStyle().FontSizeBase * m.uiScale;
-
-						ImGui::PushFont(nullptr, uiFontSize);
-						ImVec2 textSize = ImGui::CalcTextSize(xIcon);
-						ImGui::PopFont();
-
-						ImVec2 btnScreenPos = ImGui::GetItemRectMin();
-						ImVec2 textPos      = {
-                            btnScreenPos.x + (btnSize - textSize.x) * 0.5f,
-                            btnScreenPos.y + (btnSize - textSize.y) * 0.5f + (1.0f * m.uiScale)
-						};
-
-						ImU32 xColor = ImGui::IsItemHovered() ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
-
-						ImGui::GetWindowDrawList()->AddText(
-							baseFont,
-							uiFontSize,
-							textPos,
-							xColor,
-							xIcon);
-					}
-
-					FUCK::EndGroup();
-
-					// Double Click Header Interaction
-					if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && !ImGui::IsAnyItemHovered()) {
-						if (ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly)) {
-							winState.isCollapsed = !isCollapsed;
-							if (!isCollapsed) {
-								winState.preCollapseSize = FUCK::GetWindowSize();
-								winState.size            = winState.preCollapseSize;
-							}
-							SaveWorkspace();
-						}
-					}
-
-					// 4. Separator
-					FUCK::SetCursorPos({ headerStartCursor.x, m.titleH });
-					FUCK::SeparatorThick();
-
-					// 5. Content Child (scaled)
-					if (!winState.isCollapsed && !isCollapsed) {
-						FUCK::SetCursorPosX(0.0f);
-
-						FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase, m.padBase));
-
-						ImGuiChildFlags  childFlags  = ImGuiChildFlags_AlwaysUseWindowPadding;
-						ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoBackground;
-
-						if (ImGui::BeginChild("##Content", ImVec2(0, 0), childFlags, windowFlags)) {
-							ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
-							pushContentScale(ignoreUserScale);
-							win->Draw();
-							popContentScale();
-							ImGui::PopItemWidth();
-						}
-						ImGui::EndChild();
-
-						FUCK::PopStyleVar();
-					}
-				} else {
-					// --- No Chrome Decoration ---
-					pushContentScale(ignoreUserScale);
-					win->Draw();
-					popContentScale();
+					FUCK::PopStyleVar();
 				}
+			} else {
+				// --- No Chrome Decoration ---
+				pushContentScale(ignoreUserScale);
+				win->Draw();
+				popContentScale();
 			}
-			FUCK::EndWindow();
+		}
+		FUCK::EndWindow();
 
-			FUCK::PopStyleVar();
+		FUCK::PopStyleVar();
 
-			if (!open) {
-				win->SetOpen(false);
-				UpdateGameState();
+		if (!open) {
+			win->SetOpen(false);
+			UpdateGameState();
 
-				if (!IsInputBlocked()) {
-					MANAGER(Input)->ClearState();
-				}
+			if (!IsInputBlocked()) {
+				MANAGER(Input)->ClearState();
 			}
 		}
 	}
@@ -1351,6 +1311,13 @@ void FUCKMan::Draw()
 	// ==================================================
 	// MAIN FUCK WORKSPACE MENU RENDER PASS
 	// ==================================================
+
+	// Check 'tm' natively for the main workspace menu.
+	bool menusHidden = false;
+	if (auto ui = RE::UI::GetSingleton()) {
+		menusHidden = !ui->IsShowingMenus();
+	}
+
 	if (!_isOpen || menusHidden)
 		return;
 
