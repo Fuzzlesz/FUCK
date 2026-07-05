@@ -137,7 +137,7 @@ include(FetchContent)
 FetchContent_Declare(
 	ImGuiVRHelper
 	GIT_REPOSITORY https://github.com/alandtse/imgui-vr-helper.git
-	GIT_TAG        v1.5.2
+	GIT_TAG        v1.5.4
 	GIT_SUBMODULES ""
 	SOURCE_SUBDIR  api
 )
