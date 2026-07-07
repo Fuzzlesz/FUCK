@@ -15,7 +15,7 @@
 #include "System/Settings.h"
 #include "System/Utils.h"
 
-	struct WindowState
+struct WindowState
 {
 	bool   isCollapsed  = false;
 	bool   wasCollapsed = false;
@@ -1133,7 +1133,11 @@ void FUCKMan::Draw()
 			FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase, m.padBase));
 		}
 
-		if (FUCK::BeginWindow(title, &open, flags)) {
+		// Combine the display title with the Host's unique tracking key
+		std::string windowLabel = std::format("{}###{}", title, key);
+
+		// Use the formatted string instead of raw title
+		if (FUCK::BeginWindow(windowLabel.c_str(), &open, flags)) {
 			if (poppedInvisibleBg) {
 				ImGui::PopStyleColor(2);  // Clear WindowBg and Border
 			}
