@@ -526,6 +526,8 @@ namespace FUCK::Host
 	// ==================================================
 	// Drawing Primitives
 	// ==================================================
+	static void DrawCircle_Impl(const ImVec2& center, float radius, const ImVec4& col, int num_segments, float thickness) { ImGui::GetWindowDrawList()->AddCircle(center, radius, ImGui::ColorConvertFloat4ToU32(col), num_segments, thickness); }
+	static void DrawCircleFilled_Impl(const ImVec2& center, float radius, const ImVec4& col, int num_segments) { ImGui::GetWindowDrawList()->AddCircleFilled(center, radius, ImGui::ColorConvertFloat4ToU32(col), num_segments); }
 	static void DrawRect_Impl(const ImVec2& min, const ImVec2& max, const ImVec4& col, float r, float t) { ImGui::GetWindowDrawList()->AddRect(min, max, ImGui::ColorConvertFloat4ToU32(col), r, 0, t); }
 	static void DrawRectFilled_Impl(const ImVec2& min, const ImVec2& max, const ImVec4& col, float r) { ImGui::GetWindowDrawList()->AddRectFilled(min, max, ImGui::ColorConvertFloat4ToU32(col), r); }
 	static void DrawLine_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec4& col, float t)
@@ -558,6 +560,8 @@ namespace FUCK::Host
 	// ==================================================
 	// Screen primitives
 	// ==================================================
+	static void DrawScreenCircle_Impl(const ImVec2& center, float radius, ImU32 col, int num_segments, float thickness) { ImGui::GetBackgroundDrawList()->AddCircle(center, radius, col, num_segments, thickness); }
+	static void DrawScreenCircleFilled_Impl(const ImVec2& center, float radius, ImU32 col, int num_segments) { ImGui::GetBackgroundDrawList()->AddCircleFilled(center, radius, col, num_segments); }
 	static void DrawScreenRect_Impl(const ImVec2& min, const ImVec2& max, ImU32 col, float rounding, float thickness) { ImGui::GetBackgroundDrawList()->AddRect(min, max, col, rounding, 0, thickness); }
 	static void DrawScreenRectFilled_Impl(const ImVec2& min, const ImVec2& max, ImU32 col, float rounding) { ImGui::GetBackgroundDrawList()->AddRectFilled(min, max, col, rounding); }
 	static void DrawScreenLine_Impl(float x1, float y1, float x2, float y2, ImU32 col, float thickness) { ImGui::GetBackgroundDrawList()->AddLine({ x1, y1 }, { x2, y2 }, col, thickness); }
@@ -879,6 +883,8 @@ namespace FUCK::Host
 			.AcceptDragDropPayload      = AcceptDragDropPayload_Impl,
 			.EndDragDropTarget          = EndDragDropTarget_Impl,
 			// Drawing Primitives
+			.DrawCircle          = DrawCircle_Impl,
+			.DrawCircleFilled    = DrawCircleFilled_Impl,
 			.DrawRect            = DrawRect_Impl,
 			.DrawRectFilled      = DrawRectFilled_Impl,
 			.DrawLine            = DrawLine_Impl,
@@ -889,9 +895,11 @@ namespace FUCK::Host
 			.DrawBackgroundLine  = DrawBackgroundLine_Impl,
 			.DrawBackgroundRect  = DrawBackgroundRect_Impl,
 			// Screen primitives
-			.DrawScreenRect       = DrawScreenRect_Impl,
-			.DrawScreenRectFilled = DrawScreenRectFilled_Impl,
-			.DrawScreenLine       = DrawScreenLine_Impl,
+			.DrawScreenCircle       = DrawScreenCircle_Impl,
+			.DrawScreenCircleFilled = DrawScreenCircleFilled_Impl,
+			.DrawScreenRect         = DrawScreenRect_Impl,
+			.DrawScreenRectFilled   = DrawScreenRectFilled_Impl,
+			.DrawScreenLine         = DrawScreenLine_Impl,
 			// Windows
 			.SetNextWindowPos       = SetNextWindowPos_Impl,
 			.SetNextWindowSize      = SetNextWindowSize_Impl,
@@ -966,15 +974,15 @@ namespace FUCK::Host
 			.Text                   = Text_Impl,
 			.TextWrapped            = TextWrapped_Impl,
 			.TextUnformatted        = TextUnformatted_Impl,
-			
+
 			// Version 2
-			.SeparatorVertical      = SeparatorVertical_Impl,
-			.PushItemWidth          = PushItemWidth_Impl,
-			.PopItemWidth           = PopItemWidth_Impl,
-			.BeginTooltip           = BeginTooltip_Impl,
-			.EndTooltip             = EndTooltip_Impl,
-			.SetScrollHereY         = SetScrollHereY_Impl,
-			.InputTextMultiline     = InputTextMultiline_Impl
+			.SeparatorVertical  = SeparatorVertical_Impl,
+			.PushItemWidth      = PushItemWidth_Impl,
+			.PopItemWidth       = PopItemWidth_Impl,
+			.BeginTooltip       = BeginTooltip_Impl,
+			.EndTooltip         = EndTooltip_Impl,
+			.SetScrollHereY     = SetScrollHereY_Impl,
+			.InputTextMultiline = InputTextMultiline_Impl
 		};
 		return &api;
 	}

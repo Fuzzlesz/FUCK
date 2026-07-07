@@ -415,6 +415,8 @@ struct FUCK_Interface
 	void (*EndDragDropTarget)();
 
 	// Drawing Primitives
+	void (*DrawCircle)(const ImVec2&, float, const ImVec4&, int, float);
+	void (*DrawCircleFilled)(const ImVec2&, float, const ImVec4&, int);
 	void (*DrawRect)(const ImVec2&, const ImVec2&, const ImVec4&, float, float);
 	void (*DrawRectFilled)(const ImVec2&, const ImVec2&, const ImVec4&, float);
 	void (*DrawLine)(const ImVec2&, const ImVec2&, const ImVec4&, float);
@@ -426,6 +428,8 @@ struct FUCK_Interface
 	void (*DrawBackgroundRect)(const ImVec2&, const ImVec2&, ImU32, float);
 
 	// Screen primitives
+	void (*DrawScreenCircle)(const ImVec2&, float, ImU32, int, float);
+	void (*DrawScreenCircleFilled)(const ImVec2&, float, ImU32, int);
 	void (*DrawScreenRect)(const ImVec2&, const ImVec2&, ImU32, float, float);
 	void (*DrawScreenRectFilled)(const ImVec2&, const ImVec2&, ImU32, float);
 	void (*DrawScreenLine)(float, float, float, float, ImU32, float);
@@ -1363,6 +1367,16 @@ namespace FUCK
 	inline void DrawGoldenGrid(float thickness = 1.0f, ImU32 color = 0, int subdivisions = 0) { DrawOverlay(Overlay::kGoldenRatio, thickness, color, static_cast<float>(subdivisions), 0.0f, 0.0f, 0.0f); }
 	inline void DrawTriangle(float thickness = 1.0f, ImU32 color = 0, bool mirror = false) { DrawOverlay(Overlay::kTriangle, thickness, color, mirror ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f); }
 
+	inline void DrawCircle(const ImVec2& center, float radius, const ImVec4& col, int num_segments = 0, float thickness = 1.0f)
+	{
+		if (auto i = GetInterface())
+			i->DrawCircle(center, radius, col, num_segments, thickness);
+	}
+	inline void DrawCircleFilled(const ImVec2& center, float radius, const ImVec4& col, int num_segments = 1)
+	{
+		if (auto i = GetInterface())
+			i->DrawCircleFilled(center, radius, col, num_segments);
+	}
 	inline void DrawRect(const ImVec2& min, const ImVec2& max, const ImVec4& col, float rounding = 0.0f, float thickness = 1.0f)
 	{
 		if (auto i = GetInterface())
@@ -1407,6 +1421,16 @@ namespace FUCK
 	{
 		if (auto i = GetInterface())
 			i->DrawBackgroundRect(min, max, col, thickness);
+	}
+	inline void DrawScreenCircle(const ImVec2& center, float radius, ImU32 col, int num_segments = 0, float thickness = 1.0f)
+	{
+		if (auto i = GetInterface())
+			i->DrawScreenCircle(center, radius, col, num_segments, thickness);
+	}
+	inline void DrawScreenCircleFilled(const ImVec2& center, float radius, ImU32 col, int num_segments = 1)
+	{
+		if (auto i = GetInterface())
+			i->DrawScreenCircleFilled(center, radius, col, num_segments);
 	}
 	inline void DrawScreenRect(const ImVec2& min, const ImVec2& max, ImU32 col, float rounding = 0.0f, float thickness = 1.0f)
 	{
@@ -1499,8 +1523,8 @@ namespace FUCK
 
 		[[nodiscard]] bool        IsLoaded() const { return _handle != nullptr; }
 		[[nodiscard]] ImTextureID GetID() const { return (ImTextureID)_handle; }
-		operator ImTextureID() const { return (ImTextureID)_handle; }
-		operator void*() const { return _handle; }
+								  operator ImTextureID() const { return (ImTextureID)_handle; }
+								  operator void*() const { return _handle; }
 
 		[[nodiscard]] float  GetWidth() const { return _width; }
 		[[nodiscard]] float  GetHeight() const { return _height; }
