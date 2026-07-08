@@ -524,6 +524,7 @@ struct FUCK_Interface
 	bool (*InputTextMultiline)(const char*, char*, size_t, const ImVec2&, int);
 
 	// Version 3
+	void (*SetHotkeyEnabled)(bool);
 	void (*SetWindowFocus)();
 	void (*CloseCurrentPopup)();
 	void (*OpenPopup)(const char*, int);
@@ -2043,6 +2044,12 @@ namespace FUCK
 	// --------------------------------------------------
 	// Version 3
 	// --------------------------------------------------
+
+	inline void SetHotkeyEnabled(bool enabled)
+	{
+		if (auto i = GetInterface(); i && i->version >= 3 && i->SetHotkeyEnabled)
+			i->SetHotkeyEnabled(enabled);
+	}
 
 	inline void SetWindowFocus()
 	{

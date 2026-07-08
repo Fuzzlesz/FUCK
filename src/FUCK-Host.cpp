@@ -10,6 +10,7 @@
 #include "ImGui/Widgets.h"
 
 #include "System/Input.h"
+#include "System/Hotkeys.h"
 #include "System/Settings.h"
 #include "System/Utils.h"
 
@@ -739,6 +740,7 @@ namespace FUCK::Host
 	// ==================================================
 	// Version 3
 	// ==================================================
+	static void SetHotkeyEnabled_Impl(bool enabled) { Hotkeys::Manager::GetSingleton()->Enable(enabled); }
 	static void SetWindowFocus_Impl() { ImGui::SetWindowFocus(); }
 	static void CloseCurrentPopup_Impl() { ImGui::CloseCurrentPopup(); }
 	static void OpenPopup_Impl(const char* str_id, int flags) { ImGui::OpenPopup(str_id, static_cast<ImGuiPopupFlags>(flags)); }
@@ -1011,6 +1013,7 @@ namespace FUCK::Host
 			.InputTextMultiline     = InputTextMultiline_Impl,
 
 			// Version 3
+			.SetHotkeyEnabled         = SetHotkeyEnabled_Impl,
 			.SetWindowFocus           = SetWindowFocus_Impl,
 			.CloseCurrentPopup        = CloseCurrentPopup_Impl,
 			.OpenPopup                = OpenPopup_Impl,
