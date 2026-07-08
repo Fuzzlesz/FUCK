@@ -760,6 +760,16 @@ namespace FUCK::Host
 	static void DrawScreenCircle_Impl(const ImVec2& center, float radius, ImU32 col, int num_segments, float thickness) { ImGui::GetBackgroundDrawList()->AddCircle(center, radius, col, num_segments, thickness); }
 	static void DrawScreenCircleFilled_Impl(const ImVec2& center, float radius, ImU32 col, int num_segments) { ImGui::GetBackgroundDrawList()->AddCircleFilled(center, radius, col, num_segments); }
 
+	static void DrawQuad_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec4& col, float t) { ImGui::GetWindowDrawList()->AddQuad(p1, p2, p3, p4, ImGui::ColorConvertFloat4ToU32(col), t); }
+	static void DrawQuadFilled_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec4& col) { ImGui::GetWindowDrawList()->AddQuadFilled(p1, p2, p3, p4, ImGui::ColorConvertFloat4ToU32(col)); }
+	static void DrawScreenQuad_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col, float t) { ImGui::GetBackgroundDrawList()->AddQuad(p1, p2, p3, p4, col, t); }
+	static void DrawScreenQuadFilled_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col) { ImGui::GetBackgroundDrawList()->AddQuadFilled(p1, p2, p3, p4, col); }
+
+	static void DrawTriangle_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec4& col, float t) { ImGui::GetWindowDrawList()->AddTriangle(p1, p2, p3, ImGui::ColorConvertFloat4ToU32(col), t); }
+	static void DrawTriangleFilled_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec4& col) { ImGui::GetWindowDrawList()->AddTriangleFilled(p1, p2, p3, ImGui::ColorConvertFloat4ToU32(col)); }
+	static void DrawScreenTriangle_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col, float t) { ImGui::GetBackgroundDrawList()->AddTriangle(p1, p2, p3, col, t); }
+	static void DrawScreenTriangleFilled_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col) { ImGui::GetBackgroundDrawList()->AddTriangleFilled(p1, p2, p3, col); }
+
 	// ==================================================
 	// CreateInterface
 	// ==================================================
@@ -1001,19 +1011,27 @@ namespace FUCK::Host
 			.InputTextMultiline     = InputTextMultiline_Impl,
 
 			// Version 3
-			.SetWindowFocus         = SetWindowFocus_Impl,
-			.CloseCurrentPopup      = CloseCurrentPopup_Impl,
-			.OpenPopup              = OpenPopup_Impl,
-			.BeginPopup             = BeginPopup_Impl,
-			.BeginPopupModal        = BeginPopupModal_Impl,
-			.IsWindowAppearing      = IsWindowAppearing_Impl,
-			.PushTextWrapPos        = PushTextWrapPos_Impl,
-			.PopTextWrapPos         = PopTextWrapPos_Impl,
-			.SetNavCursorVisible    = SetNavCursorVisible_Impl,
-			.DrawCircle             = DrawCircle_Impl,
-			.DrawCircleFilled       = DrawCircleFilled_Impl,
-			.DrawScreenCircle       = DrawScreenCircle_Impl,
-			.DrawScreenCircleFilled = DrawScreenCircleFilled_Impl
+			.SetWindowFocus           = SetWindowFocus_Impl,
+			.CloseCurrentPopup        = CloseCurrentPopup_Impl,
+			.OpenPopup                = OpenPopup_Impl,
+			.BeginPopup               = BeginPopup_Impl,
+			.BeginPopupModal          = BeginPopupModal_Impl,
+			.IsWindowAppearing        = IsWindowAppearing_Impl,
+			.PushTextWrapPos          = PushTextWrapPos_Impl,
+			.PopTextWrapPos           = PopTextWrapPos_Impl,
+			.SetNavCursorVisible      = SetNavCursorVisible_Impl,
+			.DrawCircle               = DrawCircle_Impl,
+			.DrawCircleFilled         = DrawCircleFilled_Impl,
+			.DrawScreenCircle         = DrawScreenCircle_Impl,
+			.DrawScreenCircleFilled   = DrawScreenCircleFilled_Impl,
+			.DrawQuad                 = DrawQuad_Impl,
+			.DrawQuadFilled           = DrawQuadFilled_Impl,
+			.DrawScreenQuad           = DrawScreenQuad_Impl,
+			.DrawScreenQuadFilled     = DrawScreenQuadFilled_Impl,
+			.DrawTriangle             = DrawTriangle_Impl,
+			.DrawTriangleFilled       = DrawTriangleFilled_Impl,
+			.DrawScreenTriangle       = DrawScreenTriangle_Impl,
+			.DrawScreenTriangleFilled = DrawScreenTriangleFilled_Impl
 		};
 		return &api;
 	}

@@ -533,10 +533,21 @@ struct FUCK_Interface
 	void (*PushTextWrapPos)(float);
 	void (*PopTextWrapPos)();
 	void (*SetNavCursorVisible)(bool);
+
 	void (*DrawCircle)(const ImVec2&, float, const ImVec4&, int, float);
 	void (*DrawCircleFilled)(const ImVec2&, float, const ImVec4&, int);
 	void (*DrawScreenCircle)(const ImVec2&, float, ImU32, int, float);
 	void (*DrawScreenCircleFilled)(const ImVec2&, float, ImU32, int);
+
+	void (*DrawQuad)(const ImVec2&, const ImVec2&, const ImVec2&, const ImVec2&, const ImVec4&, float);
+	void (*DrawQuadFilled)(const ImVec2&, const ImVec2&, const ImVec2&, const ImVec2&, const ImVec4&);
+	void (*DrawScreenQuad)(const ImVec2&, const ImVec2&, const ImVec2&, const ImVec2&, ImU32, float);
+	void (*DrawScreenQuadFilled)(const ImVec2&, const ImVec2&, const ImVec2&, const ImVec2&, ImU32);
+
+	void (*DrawTriangle)(const ImVec2&, const ImVec2&, const ImVec2&, const ImVec4&, float);
+	void (*DrawTriangleFilled)(const ImVec2&, const ImVec2&, const ImVec2&, const ImVec4&);
+	void (*DrawScreenTriangle)(const ImVec2&, const ImVec2&, const ImVec2&, ImU32, float);
+	void (*DrawScreenTriangleFilled)(const ImVec2&, const ImVec2&, const ImVec2&, ImU32);
 };
 #pragma pack(pop)
 
@@ -2112,6 +2123,54 @@ namespace FUCK
 	{
 		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawScreenCircleFilled)
 			i->DrawScreenCircleFilled(center, radius, color, num_segments);
+	}
+
+	inline void DrawQuad(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec4& color, float thickness = 1.0f)
+	{
+		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawQuad)
+			i->DrawQuad(p1, p2, p3, p4, color, thickness);
+	}
+
+	inline void DrawQuadFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec4& color)
+	{
+		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawQuadFilled)
+			i->DrawQuadFilled(p1, p2, p3, p4, color);
+	}
+
+	inline void DrawScreenQuad(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 color, float thickness = 1.0f)
+	{
+		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawScreenQuad)
+			i->DrawScreenQuad(p1, p2, p3, p4, color, thickness);
+	}
+
+	inline void DrawScreenQuadFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 color)
+	{
+		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawScreenQuadFilled)
+			i->DrawScreenQuadFilled(p1, p2, p3, p4, color);
+	}
+
+	inline void DrawTriangle(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec4& color, float thickness = 1.0f)
+	{
+		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawTriangle)
+			i->DrawTriangle(p1, p2, p3, color, thickness);
+	}
+
+	inline void DrawTriangleFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec4& color)
+	{
+		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawTriangleFilled)
+			i->DrawTriangleFilled(p1, p2, p3, color);
+	}
+
+	inline void DrawScreenTriangle(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 color, float thickness = 1.0f)
+	{
+		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawScreenTriangle)
+			i->DrawScreenTriangle(p1, p2, p3, color, thickness);
+	}
+
+	inline void DrawScreenTriangleFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 color)
+	{
+		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawScreenTriangleFilled)
+			i->DrawScreenTriangleFilled(p1, p2, p3, color);
 	}
 }  // namespace FUCK
 
