@@ -23,6 +23,15 @@ struct WindowState
 	ImVec2 pos{ -1.0f, -1.0f };
 	ImVec2 size{ -1.0f, -1.0f };
 	bool   hasLoadedPos = false;
+
+	// Live state tracking to prevent host chrome from losing input
+	ImVec2 livePos{ -1.0f, -1.0f };
+	ImVec2 liveSize{ -1.0f, -1.0f };
+	bool   isFocused = false;
+
+	// Chrome hit-testing
+	ImVec2 chromePos{ -1.0f, -1.0f };
+	ImVec2 chromeSize{ -1.0f, -1.0f };
 };
 static StringMap<WindowState> s_windowStates;  // Maps using "PluginName|WindowId"
 
@@ -732,9 +741,34 @@ bool FUCKMan::IsInputBlocked() const
 	if (_isOpen)
 		return true;
 
+	ImVec2 mouse = ImGui::GetMousePos();
+
 	for (const auto* win : _windows) {
-		// Only block input if the window is visibly drawing on screen.
-		if (!IsWindowSuppressed(win) && !(win->GetFlags() & FUCK::WindowFlags::kPassInputToGame)) {
+		if (IsWindowSuppressed(win)) {
+			continue;
+		}
+
+		std::string key = std::format("{}|{}", win->PluginName(), win->Id());
+		auto        it  = s_windowStates.find(key);
+		if (it != s_windowStates.end()) {
+			const auto& winState = it->second;
+
+			// Protect active interactions (dragging window or using widgets)
+			if (winState.isFocused && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+				return true;
+			}
+
+			// Protect Host Chrome
+			if (winState.chromePos.x != -1.0f) {
+				if (mouse.x >= winState.chromePos.x && mouse.x <= winState.chromePos.x + winState.chromeSize.x &&
+					mouse.y >= winState.chromePos.y && mouse.y <= winState.chromePos.y + winState.chromeSize.y) {
+					return true;
+				}
+			}
+		}
+
+		// Trust the plugin's requested flags for the content area
+		if (!(win->GetFlags() & FUCK::WindowFlags::kPassInputToGame)) {
 			return true;
 		}
 	}
@@ -1067,9 +1101,6 @@ void FUCKMan::Draw()
 			}
 		}
 
-		if ((userFlags & FUCK::WindowFlags::kPassInputToGame) && !IsInputBlocked())
-			flags |= ImGuiWindowFlags_NoInputs;
-
 		// --- Collapse Logic ---
 		bool isCollapsed      = winState.isCollapsed;
 		bool wasCollapsed     = winState.wasCollapsed;
@@ -1123,6 +1154,37 @@ void FUCKMan::Draw()
 			}
 		}
 
+		// --- Host Chrome Interaction Protection ---
+		bool mouseOverChrome = false;
+		if (!noDecoration && !isCustomPos) {
+			ImVec2 mouse      = ImGui::GetMousePos();
+			ImVec2 checkPos   = (winState.livePos.x != -1.0f) ? winState.livePos : (winState.hasLoadedPos ? winState.pos : win->GetDefaultPos());
+			float  checkWidth = (winState.liveSize.x != -1.0f) ? winState.liveSize.x : targetSize.x;
+
+			float paddingY      = (userFlags & FUCK::WindowFlags::kNoBackground) ? 0.0f : m.padBase;
+			float chromeBottomY = checkPos.y + paddingY + m.titleH + 1.0f;
+
+			// When collapsed, the entire window is basically just the chrome + padding.
+			if (winState.isCollapsed) {
+				float checkHeight = (winState.liveSize.y != -1.0f) ? winState.liveSize.y : (paddingY * 2.0f + m.titleH + 1.0f);
+				chromeBottomY     = checkPos.y + checkHeight;
+			}
+
+			winState.chromePos  = checkPos;
+			winState.chromeSize = ImVec2(checkWidth, chromeBottomY - checkPos.y);
+
+			if (mouse.x >= checkPos.x && mouse.x <= checkPos.x + checkWidth && mouse.y >= checkPos.y && mouse.y <= chromeBottomY) {
+				mouseOverChrome = true;
+			}
+		} else {
+			winState.chromePos = ImVec2(-1.0f, -1.0f);
+		}
+
+		bool isDraggingWindow = winState.isFocused && ImGui::IsMouseDown(ImGuiMouseButton_Left);
+		if ((userFlags & FUCK::WindowFlags::kPassInputToGame) && !IsInputBlocked() && !mouseOverChrome && !isDraggingWindow) {
+			flags |= ImGuiWindowFlags_NoInputs;
+		}
+
 		bool open = true;
 
 		if (!noDecoration || (userFlags & FUCK::WindowFlags::kNoBackground)) {
@@ -1144,6 +1206,11 @@ void FUCKMan::Draw()
 
 			ImVec2 curPos  = FUCK::GetWindowPos();
 			ImVec2 curSize = FUCK::GetWindowSize();
+
+			// Update live state for chrome protection
+			winState.livePos   = curPos;
+			winState.liveSize  = curSize;
+			winState.isFocused = ImGui::IsWindowFocused();
 
 			// Auto-save settings on move/resize end preventing overwrite during collapse
 			if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
