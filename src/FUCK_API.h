@@ -549,6 +549,8 @@ struct FUCK_Interface
 	void (*DrawTriangleFilled)(const ImVec2&, const ImVec2&, const ImVec2&, const ImVec4&);
 	void (*DrawScreenTriangle)(const ImVec2&, const ImVec2&, const ImVec2&, ImU32, float);
 	void (*DrawScreenTriangleFilled)(const ImVec2&, const ImVec2&, const ImVec2&, ImU32);
+
+	bool (*TreeNodeEx)(const char*, int);
 };
 #pragma pack(pop)
 
@@ -1266,7 +1268,13 @@ namespace FUCK
 		PopStyleVar(1);
 	}
 
-	inline bool TreeNode(const char* label) { return GetInterface() ? GetInterface()->TreeNode(label) : false; }
+	inline bool TreeNode(const char* label, int flags = 0)
+	{
+		if (auto i = GetInterface(); i && i->version >= 3 && i->TreeNodeEx)
+			return i->TreeNodeEx(label, flags);
+		return GetInterface() ? GetInterface()->TreeNode(label) : false;
+	}
+
 	inline void TreePop()
 	{
 		if (auto i = GetInterface())

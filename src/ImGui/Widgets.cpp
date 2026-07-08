@@ -1576,6 +1576,7 @@ namespace ImGui
 		}
 
 		bool is_open = window->DC.StateStorage->GetInt(id, (flags & ImGuiTreeNodeFlags_DefaultOpen) != 0);
+		bool is_leaf = (flags & ImGuiTreeNodeFlags_Leaf) != 0;
 
 		// Calculate total layout size using same padY as combo boxes
 		float scale       = Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
@@ -1587,26 +1588,37 @@ namespace ImGui
 
 		ItemSize(bb);
 		if (!ItemAdd(bb, id))
-			return is_open;
+			return is_open && !is_leaf;
 
 		bool h, held;
 		if (ButtonBehavior(bb, id, &h, &held)) {
-			is_open = !is_open;
-			window->DC.StateStorage->SetInt(id, is_open);
-			PlayAudio(is_open ? Audio::kFocus : Audio::kCancel);
+			if (!is_leaf) {
+				is_open = !is_open;
+				window->DC.StateStorage->SetInt(id, is_open);
+				PlayAudio(is_open ? Audio::kFocus : Audio::kCancel);
+			}
 		}
 
+		// Check selection flag
+		bool is_selected = (flags & ImGuiTreeNodeFlags_Selected) != 0;
+
 		// Draw Background
-		if (h || is_open) {
+		if (h || is_open || is_selected) {
 			ImU32 bgColor;
-			if (is_open) {
+			if (is_selected) {
+				bgColor = GetColorU32(ImGuiCol_Header);
+			} else if (is_open && !is_leaf) {
 				bgColor = GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox);
 			} else {
 				bgColor = GetColorU32(ImGuiCol_HeaderHovered);
 			}
-			window->DrawList->AddRectFilled(bb.Min, bb.Max, bgColor, GImGui->Style.FrameRounding);
 
-			if (is_open) {
+			// Only draw bg if active/hovered/selected
+			if (h || is_selected || (is_open && !is_leaf)) {
+				window->DrawList->AddRectFilled(bb.Min, bb.Max, bgColor, GImGui->Style.FrameRounding);
+			}
+
+			if (is_open && !is_leaf) {
 				DrawWidgetBorder(window->DrawList, bb, h || IsWidgetFocused(id), GImGui->Style.FrameRounding);
 			}
 		}
@@ -1620,15 +1632,17 @@ namespace ImGui
 		float maxIconDim = baseArrowSize * scale;
 		float textOff    = padX + maxIconDim + GImGui->Style.ItemInnerSpacing.x;
 
-		// Pass the unscaled base icon
-		DrawTreeIcon(window->DrawList, { bb.Min.x + padX, bb.Min.y }, frameHeight, is_open, h, baseArrowSize);
+		// Pass the unscaled base icon (only if not a leaf)
+		if (!is_leaf) {
+			DrawTreeIcon(window->DrawList, { bb.Min.x + padX, bb.Min.y }, frameHeight, is_open, h, baseArrowSize);
+		}
 
 		// Vertically centre text
 		ImVec2 textSize = CalcTextSize(label);
 		float  textY    = bb.Min.y + (frameHeight - textSize.y) * 0.5f;
 
 		RenderText({ bb.Min.x + textOff, textY }, label);
-		return is_open;
+		return is_open && !is_leaf;
 	}
 
 	bool TreeNodeIcon(const char* label, int flags)
@@ -1641,7 +1655,10 @@ namespace ImGui
 			GImGui->NextItemData.ClearFlags();
 		}
 
-		bool is_open = window->DC.StateStorage->GetInt(id, (flags & ImGuiTreeNodeFlags_DefaultOpen) != 0);
+		bool is_open     = window->DC.StateStorage->GetInt(id, (flags & ImGuiTreeNodeFlags_DefaultOpen) != 0);
+		bool is_leaf     = (flags & ImGuiTreeNodeFlags_Leaf) != 0;
+		bool no_push     = (flags & ImGuiTreeNodeFlags_NoTreePushOnOpen) != 0;
+		bool is_selected = (flags & ImGuiTreeNodeFlags_Selected) != 0;
 
 		float scale       = Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
 		float padY        = 3.0f * scale;
@@ -1661,32 +1678,42 @@ namespace ImGui
 		float textOff    = padX + maxIconDim + GImGui->Style.ItemInnerSpacing.x;
 
 		if (!ItemAdd(bb, id)) {
-			if (is_open)
+			if (is_open && !is_leaf && !no_push)
 				TreePush(label);
-			return is_open;
+			return is_open && !is_leaf;
 		}
 
 		bool h, held;
 		if (ButtonBehavior(bb, id, &h, &held, flags)) {
-			is_open = !is_open;
-			window->DC.StateStorage->SetInt(id, is_open);
-			PlayAudio(is_open ? Audio::kFocus : Audio::kCancel);
-		}
-		if (h) {
-			window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_HeaderHovered), GImGui->Style.FrameRounding);
+			if (!is_leaf) {
+				is_open = !is_open;
+				window->DC.StateStorage->SetInt(id, is_open);
+				PlayAudio(is_open ? Audio::kFocus : Audio::kCancel);
+			}
 		}
 
-		// Pass the unscaled base icon
-		DrawTreeIcon(window->DrawList, { pos.x + padX, pos.y }, frameHeight, is_open, h, baseArrowSize);
+		if (h || is_selected) {
+			ImU32 bgColor = GetColorU32(is_selected ? ImGuiCol_Header : ImGuiCol_HeaderHovered);
+			window->DrawList->AddRectFilled(bb.Min, bb.Max, bgColor, GImGui->Style.FrameRounding);
+		}
+
+		// Pass the unscaled base icon (only if not a leaf)
+		if (!is_leaf) {
+			DrawTreeIcon(window->DrawList, { pos.x + padX, pos.y }, frameHeight, is_open, h, baseArrowSize);
+		} else if (flags & ImGuiTreeNodeFlags_Bullet) {
+			// Optional: draw a small bullet point for leaves if requested
+			window->DrawList->AddCircleFilled({ pos.x + padX + (maxIconDim * 0.5f), pos.y + (frameHeight * 0.5f) }, 3.0f * scale, GetColorU32(ImGuiCol_Text));
+		}
 
 		// Align text
 		float textY = bb.Min.y + (frameHeight - CalcTextSize(label).y) * 0.5f;
 
 		RenderText({ pos.x + textOff, textY }, label);
 
-		if (is_open)
+		if (is_open && !is_leaf && !no_push)
 			TreePush(label);
-		return is_open;
+
+		return is_open && !is_leaf;
 	}
 
 	std::tuple<bool, bool, bool> CenteredTextWithArrows(const char* label, std::string_view centerText)

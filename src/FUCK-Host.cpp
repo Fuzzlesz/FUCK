@@ -772,6 +772,8 @@ namespace FUCK::Host
 	static void DrawScreenTriangle_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col, float t) { ImGui::GetForegroundDrawList()->AddTriangle(p1, p2, p3, col, t); }
 	static void DrawScreenTriangleFilled_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col) { ImGui::GetForegroundDrawList()->AddTriangleFilled(p1, p2, p3, col); }
 
+	static bool TreeNodeEx_Impl(const char* label, int flags) { return ImGui::TreeNodeIcon(label, flags); }
+
 	// ==================================================
 	// CreateInterface
 	// ==================================================
@@ -1034,7 +1036,8 @@ namespace FUCK::Host
 			.DrawTriangle             = DrawTriangle_Impl,
 			.DrawTriangleFilled       = DrawTriangleFilled_Impl,
 			.DrawScreenTriangle       = DrawScreenTriangle_Impl,
-			.DrawScreenTriangleFilled = DrawScreenTriangleFilled_Impl
+			.DrawScreenTriangleFilled = DrawScreenTriangleFilled_Impl,
+			.TreeNodeEx               = TreeNodeEx_Impl
 		};
 		return &api;
 	}
