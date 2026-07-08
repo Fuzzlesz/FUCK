@@ -533,6 +533,10 @@ struct FUCK_Interface
 	void (*PushTextWrapPos)(float);
 	void (*PopTextWrapPos)();
 	void (*SetNavCursorVisible)(bool);
+	void (*DrawCircle)(const ImVec2&, float, const ImVec4&, int, float);
+	void (*DrawCircleFilled)(const ImVec2&, float, const ImVec4&, int);
+	void (*DrawScreenCircle)(const ImVec2&, float, ImU32, int, float);
+	void (*DrawScreenCircleFilled)(const ImVec2&, float, ImU32, int);
 };
 #pragma pack(pop)
 
@@ -2084,6 +2088,30 @@ namespace FUCK
 	{
 		if (auto i = GetInterface(); i && i->version >= 3 && i->SetNavCursorVisible)
 			i->SetNavCursorVisible(visible);
+	}
+
+	inline void DrawCircle(const ImVec2& center, float radius, const ImVec4& color, int num_segments = 0, float thickness = 1.0f)
+	{
+		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawCircle)
+			i->DrawCircle(center, radius, color, num_segments, thickness);
+	}
+
+	inline void DrawCircleFilled(const ImVec2& center, float radius, const ImVec4& color, int num_segments = 0)
+	{
+		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawCircleFilled)
+			i->DrawCircleFilled(center, radius, color, num_segments);
+	}
+
+	inline void DrawScreenCircle(const ImVec2& center, float radius, ImU32 color, int num_segments = 0, float thickness = 1.0f)
+	{
+		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawScreenCircle)
+			i->DrawScreenCircle(center, radius, color, num_segments, thickness);
+	}
+
+	inline void DrawScreenCircleFilled(const ImVec2& center, float radius, ImU32 color, int num_segments = 0)
+	{
+		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawScreenCircleFilled)
+			i->DrawScreenCircleFilled(center, radius, color, num_segments);
 	}
 }  // namespace FUCK
 

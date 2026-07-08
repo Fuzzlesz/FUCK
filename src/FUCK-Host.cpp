@@ -755,6 +755,10 @@ namespace FUCK::Host
 			g.NavHighlightItemUnderNav = true;
 		}
 	}
+	static void DrawCircle_Impl(const ImVec2& center, float radius, const ImVec4& col, int num_segments, float thickness) { ImGui::GetWindowDrawList()->AddCircle(center, radius, ImGui::ColorConvertFloat4ToU32(col), num_segments, thickness); }
+	static void DrawCircleFilled_Impl(const ImVec2& center, float radius, const ImVec4& col, int num_segments) { ImGui::GetWindowDrawList()->AddCircleFilled(center, radius, ImGui::ColorConvertFloat4ToU32(col), num_segments); }
+	static void DrawScreenCircle_Impl(const ImVec2& center, float radius, ImU32 col, int num_segments, float thickness) { ImGui::GetBackgroundDrawList()->AddCircle(center, radius, col, num_segments, thickness); }
+	static void DrawScreenCircleFilled_Impl(const ImVec2& center, float radius, ImU32 col, int num_segments) { ImGui::GetBackgroundDrawList()->AddCircleFilled(center, radius, col, num_segments); }
 
 	// ==================================================
 	// CreateInterface
@@ -1005,7 +1009,11 @@ namespace FUCK::Host
 			.IsWindowAppearing      = IsWindowAppearing_Impl,
 			.PushTextWrapPos        = PushTextWrapPos_Impl,
 			.PopTextWrapPos         = PopTextWrapPos_Impl,
-			.SetNavCursorVisible    = SetNavCursorVisible_Impl
+			.SetNavCursorVisible    = SetNavCursorVisible_Impl,
+			.DrawCircle             = DrawCircle_Impl,
+			.DrawCircleFilled       = DrawCircleFilled_Impl,
+			.DrawScreenCircle       = DrawScreenCircle_Impl,
+			.DrawScreenCircleFilled = DrawScreenCircleFilled_Impl
 		};
 		return &api;
 	}
