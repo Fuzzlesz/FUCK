@@ -559,9 +559,9 @@ namespace FUCK::Host
 	// ==================================================
 	// Screen primitives
 	// ==================================================
-	static void DrawScreenRect_Impl(const ImVec2& min, const ImVec2& max, ImU32 col, float rounding, float thickness) { ImGui::GetBackgroundDrawList()->AddRect(min, max, col, rounding, 0, thickness); }
-	static void DrawScreenRectFilled_Impl(const ImVec2& min, const ImVec2& max, ImU32 col, float rounding) { ImGui::GetBackgroundDrawList()->AddRectFilled(min, max, col, rounding); }
-	static void DrawScreenLine_Impl(float x1, float y1, float x2, float y2, ImU32 col, float thickness) { ImGui::GetBackgroundDrawList()->AddLine({ x1, y1 }, { x2, y2 }, col, thickness); }
+	static void DrawScreenRect_Impl(const ImVec2& min, const ImVec2& max, ImU32 col, float rounding, float thickness) { ImGui::GetForegroundDrawList()->AddRect(min, max, col, rounding, 0, thickness); }
+	static void DrawScreenRectFilled_Impl(const ImVec2& min, const ImVec2& max, ImU32 col, float rounding) { ImGui::GetForegroundDrawList()->AddRectFilled(min, max, col, rounding); }
+	static void DrawScreenLine_Impl(float x1, float y1, float x2, float y2, ImU32 col, float thickness) { ImGui::GetForegroundDrawList()->AddLine({ x1, y1 }, { x2, y2 }, col, thickness); }
 
 	// ==================================================
 	// Windows
@@ -759,18 +759,18 @@ namespace FUCK::Host
 	}
 	static void DrawCircle_Impl(const ImVec2& center, float radius, const ImVec4& col, int num_segments, float thickness) { ImGui::GetWindowDrawList()->AddCircle(center, radius, ImGui::ColorConvertFloat4ToU32(col), num_segments, thickness); }
 	static void DrawCircleFilled_Impl(const ImVec2& center, float radius, const ImVec4& col, int num_segments) { ImGui::GetWindowDrawList()->AddCircleFilled(center, radius, ImGui::ColorConvertFloat4ToU32(col), num_segments); }
-	static void DrawScreenCircle_Impl(const ImVec2& center, float radius, ImU32 col, int num_segments, float thickness) { ImGui::GetBackgroundDrawList()->AddCircle(center, radius, col, num_segments, thickness); }
-	static void DrawScreenCircleFilled_Impl(const ImVec2& center, float radius, ImU32 col, int num_segments) { ImGui::GetBackgroundDrawList()->AddCircleFilled(center, radius, col, num_segments); }
-
+	static void DrawScreenCircle_Impl(const ImVec2& center, float radius, ImU32 col, int num_segments, float thickness) { ImGui::GetForegroundDrawList()->AddCircle(center, radius, col, num_segments, thickness); }
+	static void DrawScreenCircleFilled_Impl(const ImVec2& center, float radius, ImU32 col, int num_segments) { ImGui::GetForegroundDrawList()->AddCircleFilled(center, radius, col, num_segments); }
+	
 	static void DrawQuad_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec4& col, float t) { ImGui::GetWindowDrawList()->AddQuad(p1, p2, p3, p4, ImGui::ColorConvertFloat4ToU32(col), t); }
 	static void DrawQuadFilled_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec4& col) { ImGui::GetWindowDrawList()->AddQuadFilled(p1, p2, p3, p4, ImGui::ColorConvertFloat4ToU32(col)); }
-	static void DrawScreenQuad_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col, float t) { ImGui::GetBackgroundDrawList()->AddQuad(p1, p2, p3, p4, col, t); }
-	static void DrawScreenQuadFilled_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col) { ImGui::GetBackgroundDrawList()->AddQuadFilled(p1, p2, p3, p4, col); }
-
+	static void DrawScreenQuad_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col, float t) { ImGui::GetForegroundDrawList()->AddQuad(p1, p2, p3, p4, col, t); }
+	static void DrawScreenQuadFilled_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col) { ImGui::GetForegroundDrawList()->AddQuadFilled(p1, p2, p3, p4, col); }
+	
 	static void DrawTriangle_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec4& col, float t) { ImGui::GetWindowDrawList()->AddTriangle(p1, p2, p3, ImGui::ColorConvertFloat4ToU32(col), t); }
 	static void DrawTriangleFilled_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec4& col) { ImGui::GetWindowDrawList()->AddTriangleFilled(p1, p2, p3, ImGui::ColorConvertFloat4ToU32(col)); }
-	static void DrawScreenTriangle_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col, float t) { ImGui::GetBackgroundDrawList()->AddTriangle(p1, p2, p3, col, t); }
-	static void DrawScreenTriangleFilled_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col) { ImGui::GetBackgroundDrawList()->AddTriangleFilled(p1, p2, p3, col); }
+	static void DrawScreenTriangle_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col, float t) { ImGui::GetForegroundDrawList()->AddTriangle(p1, p2, p3, col, t); }
+	static void DrawScreenTriangleFilled_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col) { ImGui::GetForegroundDrawList()->AddTriangleFilled(p1, p2, p3, col); }
 
 	// ==================================================
 	// CreateInterface
