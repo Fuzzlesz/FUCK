@@ -2077,6 +2077,7 @@ namespace FUCK
 			i->OpenPopup(str_id, static_cast<int>(flags));
 	}
 
+	/// @param flags Currently ignored. Reserved for future updates.
 	inline bool BeginPopup(const char* str_id, WindowFlags flags = WindowFlags::kNone)
 	{
 		if (auto i = GetInterface(); i && i->version >= 3 && i->BeginPopup)
@@ -2084,6 +2085,7 @@ namespace FUCK
 		return false;
 	}
 
+	/// @param flags Currently ignored. Reserved for future updates.
 	inline bool BeginPopupModal(const char* name, bool* p_open = nullptr, WindowFlags flags = WindowFlags::kNone)
 	{
 		if (auto i = GetInterface(); i && i->version >= 3 && i->BeginPopupModal)

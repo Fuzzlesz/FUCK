@@ -744,8 +744,19 @@ namespace FUCK::Host
 	static void SetWindowFocus_Impl() { ImGui::SetWindowFocus(); }
 	static void CloseCurrentPopup_Impl() { ImGui::CloseCurrentPopup(); }
 	static void OpenPopup_Impl(const char* str_id, int flags) { ImGui::OpenPopup(str_id, static_cast<ImGuiPopupFlags>(flags)); }
-	static bool BeginPopup_Impl(const char* str_id, int flags) { return ImGui::BeginPopup(str_id, static_cast<ImGuiWindowFlags>(flags)); }
-	static bool BeginPopupModal_Impl(const char* name, bool* p_open, int flags) { return ImGui::BeginPopupModal(name, p_open, static_cast<ImGuiWindowFlags>(flags)); }
+	static bool BeginPopup_Impl(const char* str_id, int /*flags*/)
+	{
+		// "flags" is currently ignored to prevent FUCK::WindowFlags clashing with ImGuiWindowFlags.
+		// Reserved for future translation logic.
+		return ImGui::BeginPopup(str_id, ImGuiWindowFlags_None);
+	}
+
+	static bool BeginPopupModal_Impl(const char* name, bool* p_open, int /*flags*/)
+	{
+		// "flags" is currently ignored for the same reason.
+		// Enforcing NoResize globally for modals to remove grab handle that doesn't work.
+		return ImGui::BeginPopupModal(name, p_open, ImGuiWindowFlags_NoResize);
+	}
 	static bool IsWindowAppearing_Impl() { return ImGui::IsWindowAppearing(); }
 	static void PushTextWrapPos_Impl(float wrap_pos_x) { ImGui::PushTextWrapPos(wrap_pos_x); }
 	static void PopTextWrapPos_Impl() { ImGui::PopTextWrapPos(); }
