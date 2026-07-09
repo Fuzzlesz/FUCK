@@ -522,7 +522,8 @@ namespace ImGui
 		float   width     = std::round(CalcItemWidth());
 		ImGuiID id        = window->GetID(idStr.c_str());
 
-		float popupPad = std::round(std::max(0.0f, GetStyle().WindowPadding.y - (2.0f * scale)));
+		float       designPadY     = 15.0f * Renderer::GetResolutionScale();
+		float       popupPad       = std::round(std::max(0.0f, designPadY - (2.0f * scale)));
 
 		float       frameH         = GetFrameHeight();
 		ImDrawList* parentDrawList = GetWindowDrawList();
@@ -751,8 +752,7 @@ namespace ImGui
 		float  width     = std::round(CalcItemWidth());
 		float  frameH    = std::round(GetFrameHeight());
 
-		// In ComboStyled, the popup padding is native ImGui padding.
-		float popupPadY = std::round(GetStyle().WindowPadding.y);
+		float popupPadY = std::round(15.0f * Renderer::GetResolutionScale());
 
 		// Compute an exact popup height so ImGui never allocates outer scrollbar space.
 		float maxPopupH = std::round((popupPadY * 2.0f) + CalcListHeight(std::min(items_count, popup_max_height_in_items)) + (GetStyle().PopupBorderSize * 2.0f));
