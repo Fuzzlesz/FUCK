@@ -70,19 +70,33 @@ void SettingsTool::Draw()
 			FUCK::Header("$FUCK_Settings_Controller"_T);
 			FUCK::Spacing(2);
 
+			FUCK::Header("$FUCK_Settings_Controller"_T);
+			FUCK::Spacing(2);
+
 			if (FUCK::Checkbox("$FUCK_Settings_InjectSystemMenu"_T, &manager->_cfg.injectSystemMenu, true, true))
 				manager->Save();
 			FUCK::SetTooltip("$FUCK_Settings_InjectSystemMenuTT"_T);
 
+			FUCK::BeginDisabled(!manager->_cfg.injectSystemMenu);
+
 			if (manager->GetJournalMenuType() != FUCKMan::JournalMenuType::kSafe) {
-				FUCK::BeginDisabled(!manager->_cfg.injectSystemMenu);
-				if (FUCK::Checkbox("$FUCK_Settings_ReplaceHelpMenu"_T, &manager->_cfg.replaceHelpMenu, true, true))
+				if (FUCK::Checkbox("$FUCK_Settings_ReplaceHelpMenu"_T, &manager->_cfg.replaceHelpMenu, true, true)) {
+					if (manager->_cfg.replaceHelpMenu) {
+						manager->_cfg.injectSettingsSubmenu = false;
+					}
 					manager->Save();
+				}
 				FUCK::SetTooltip("$FUCK_Settings_ReplaceHelpMenuTT"_T);
-				FUCK::EndDisabled();
 			}
 
-			FUCK::BeginDisabled(!manager->_cfg.injectSystemMenu);
+			if (FUCK::Checkbox("$FUCK_Settings_InjectSettingsSubmenu"_T, &manager->_cfg.injectSettingsSubmenu, true, true)) {
+				if (manager->_cfg.injectSettingsSubmenu) {
+					manager->_cfg.replaceHelpMenu = false;
+				}
+				manager->Save();
+			}
+			FUCK::SetTooltip("$FUCK_Settings_InjectSettingsSubmenuTT"_T);
+
 			FUCK::InputText("$FUCK_Settings_SystemMenuName"_T, &manager->_cfg.customSystemMenuName);
 			if (FUCK::IsItemDeactivatedAfterEdit())
 				manager->Save();

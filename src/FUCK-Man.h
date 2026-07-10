@@ -31,6 +31,7 @@ public:
 		bool        sidebarOnRight{ false };
 		bool        injectSystemMenu{ true };
 		bool        replaceHelpMenu{ false };
+		bool        injectSettingsSubmenu{ false };
 		bool        showSidebarFilter{ true };
 		bool        showSidebarFavourites{ true };
 		bool        groupFavourites{ true };
@@ -100,6 +101,7 @@ public:
 
 	bool            GetInjectSystemMenu() const { return _cfg.injectSystemMenu; }
 	bool            GetReplaceHelpMenu() const { return _cfg.replaceHelpMenu; }
+	bool            GetInjectSettingsSubmenu() const { return _cfg.injectSettingsSubmenu; }
 	const char*     GetSystemMenuName() const { return _cfg.customSystemMenuName.c_str(); }
 	JournalMenuType GetJournalMenuType() const { return _journalMenuType; }
 	void            SetJournalMenuType(JournalMenuType type) { _journalMenuType = type; }
