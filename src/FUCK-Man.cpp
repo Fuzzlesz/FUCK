@@ -675,6 +675,8 @@ void FUCKMan::LoadSettings(const CSimpleIniA& a_ini)
 	_cfg.showSidebarFavourites = FUCK::INI::LoadBool(a_ini, "Settings", "bShowSidebarFavourites", _def.showSidebarFavourites);
 	_cfg.groupFavourites       = FUCK::INI::LoadBool(a_ini, "Settings", "bGroupFavourites", _def.groupFavourites);
 	_cfg.muteAudio             = FUCK::INI::LoadBool(a_ini, "Settings", "bMuteAudio", _def.muteAudio);
+
+	_cfg.customSystemMenuName  = a_ini.GetValue("Settings", "sSystemMenuName", _def.customSystemMenuName.c_str());
 }
 
 void FUCKMan::SaveSettings(CSimpleIniA& a_ini)
@@ -690,6 +692,8 @@ void FUCKMan::SaveSettings(CSimpleIniA& a_ini)
 	FUCK::INI::SaveBool(a_ini, "Settings", "bShowSidebarFavourites", _cfg.showSidebarFavourites, _def.showSidebarFavourites);
 	FUCK::INI::SaveBool(a_ini, "Settings", "bGroupFavourites", _cfg.groupFavourites, _def.groupFavourites);
 	FUCK::INI::SaveBool(a_ini, "Settings", "bMuteAudio", _cfg.muteAudio, _def.muteAudio);
+
+	FUCK::INI::SaveString(a_ini, "Settings", "sSystemMenuName", _cfg.customSystemMenuName.c_str(), _def.customSystemMenuName.c_str());
 }
 
 void FUCKMan::Save()

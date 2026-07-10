@@ -82,6 +82,13 @@ void SettingsTool::Draw()
 				FUCK::EndDisabled();
 			}
 
+			FUCK::BeginDisabled(!manager->_cfg.injectSystemMenu);
+			FUCK::InputText("$FUCK_Settings_SystemMenuName"_T, &manager->_cfg.customSystemMenuName);
+			if (FUCK::IsItemDeactivatedAfterEdit())
+				manager->Save();
+			FUCK::SetTooltip("$FUCK_Settings_SystemMenuNameTT"_T);
+			FUCK::EndDisabled();
+
 			FUCK::Header("$FUCK_Settings_Appearance"_T);
 			FUCK::Spacing(2);
 

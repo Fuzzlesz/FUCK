@@ -7,7 +7,8 @@
 
 namespace Hooks
 {
-	static bool s_fuckButtonInjected = false;
+	static bool        s_fuckButtonInjected = false;
+	static std::string s_injectedMenuName   = "";
 
 	constexpr const char* kSystemPagePath = "_root.QuestJournalFader.Menu_mc.SystemFader.Page_mc";
 
@@ -30,7 +31,8 @@ namespace Hooks
 		if (arraySize == 0)
 			return;
 
-		const char* menuName = ("$FUCK_Title"_T);
+		const char* menuName = FUCK::Translate(manager->GetSystemMenuName());
+		s_injectedMenuName   = menuName;
 
 		// Determine menu version
 		bool isSafeMenu = page.HasMember("UpdateIndices");
@@ -118,7 +120,7 @@ namespace Hooks
 		if (arraySize == 0)
 			return;
 
-		const char* menuName   = ("$FUCK_Title"_T);
+		const char* menuName   = s_injectedMenuName.empty() ? FUCK::Translate(manager->GetSystemMenuName()) : s_injectedMenuName.c_str();
 		bool        isSafeMenu = page.HasMember("UpdateIndices");
 		bool        removed    = false;
 
@@ -222,7 +224,7 @@ namespace Hooks
 			return false;
 		}
 
-		const char* menuName = ("$FUCK_Title"_T);
+		const char* menuName = s_injectedMenuName.empty() ? FUCK::Translate(FUCKMan::GetSingleton()->GetSystemMenuName()) : s_injectedMenuName.c_str();
 		if (std::string_view(textVal.GetString()) != menuName) {
 			return false;
 		}

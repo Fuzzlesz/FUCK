@@ -36,6 +36,7 @@ public:
 		bool        groupFavourites{ true };
 		bool        muteAudio{ false };
 		std::string currentFont{ "Default" };
+		std::string customSystemMenuName{ "$FUCK_Title" };
 	};
 
 	struct ToolOverrideState
@@ -99,6 +100,7 @@ public:
 
 	bool            GetInjectSystemMenu() const { return _cfg.injectSystemMenu; }
 	bool            GetReplaceHelpMenu() const { return _cfg.replaceHelpMenu; }
+	const char*     GetSystemMenuName() const { return _cfg.customSystemMenuName.c_str(); }
 	JournalMenuType GetJournalMenuType() const { return _journalMenuType; }
 	void            SetJournalMenuType(JournalMenuType type) { _journalMenuType = type; }
 
