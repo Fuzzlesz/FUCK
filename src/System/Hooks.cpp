@@ -393,9 +393,7 @@ namespace Hooks
 				auto* manager = FUCKMan::GetSingleton();
 
 				if (!manager->GetInjectSystemMenu()) {
-					if (s_fuckButtonInjected) {
-						TryRemoveFUCKButton(a_this->uiMovie.get());
-					}
+					TryRemoveFUCKButton(a_this->uiMovie.get());
 					return result;
 				}
 
