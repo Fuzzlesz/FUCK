@@ -376,24 +376,61 @@ namespace Hooks
 
 	struct JournalMenu_ProcessMessage
 	{
+		static inline bool   s_journalMenuOpen    = false;
+		static inline bool   s_lockedGamepadState = false;
+		static inline int    s_deviceChangeTicks  = 0;
+		static constexpr int kHysteresisThreshold = 10;  // Frames required to lock-in a device change
+
 		static RE::UI_MESSAGE_RESULTS thunk(RE::JournalMenu* a_this, RE::UIMessage& a_message)
 		{
-			// Reset tracking when the journal menu closes
 			if (a_message.type == RE::UI_MESSAGE_TYPE::kHide) {
 				s_fuckButtonInjected = false;
+				s_journalMenuOpen    = false;
+				s_deviceChangeTicks  = 0;
 				return func(a_this, a_message);
 			}
 
 			auto result = func(a_this, a_message);
 
 			if (a_message.type == RE::UI_MESSAGE_TYPE::kUpdate && a_this->uiMovie) {
-				auto* manager      = FUCKMan::GetSingleton();
-				bool  shouldInject = manager->GetInjectSystemMenu() && MANAGER(Input)->IsInputGamepad();
+				auto* manager = FUCKMan::GetSingleton();
 
-				if (shouldInject && !s_fuckButtonInjected) {
-					TryInjectFUCKButton(a_this->uiMovie.get());
-				} else if (!shouldInject && s_fuckButtonInjected) {
-					TryRemoveFUCKButton(a_this->uiMovie.get());
+				if (!manager->GetInjectSystemMenu()) {
+					if (s_fuckButtonInjected) {
+						TryRemoveFUCKButton(a_this->uiMovie.get());
+					}
+					return result;
+				}
+
+				bool currentIsGamepad = MANAGER(Input)->IsInputGamepad();
+
+				if (!s_journalMenuOpen) {
+					s_journalMenuOpen    = true;
+					s_lockedGamepadState = currentIsGamepad;
+					s_deviceChangeTicks  = 0;
+
+					if (s_lockedGamepadState && !s_fuckButtonInjected) {
+						TryInjectFUCKButton(a_this->uiMovie.get());
+					} else if (!s_lockedGamepadState && s_fuckButtonInjected) {
+						TryRemoveFUCKButton(a_this->uiMovie.get());
+					}
+				} else {
+					if (currentIsGamepad != s_lockedGamepadState) {
+						s_deviceChangeTicks++;
+						if (s_deviceChangeTicks >= kHysteresisThreshold) {
+							s_lockedGamepadState = currentIsGamepad;
+							s_deviceChangeTicks  = 0;
+
+							if (s_lockedGamepadState && !s_fuckButtonInjected) {
+								TryInjectFUCKButton(a_this->uiMovie.get());
+							} else if (!s_lockedGamepadState && s_fuckButtonInjected) {
+								TryRemoveFUCKButton(a_this->uiMovie.get());
+							}
+						}
+					} else {
+						// State returned to normal before threshold was met, drop the buffer
+						s_deviceChangeTicks = 0;
+					}
 				}
 			}
 
