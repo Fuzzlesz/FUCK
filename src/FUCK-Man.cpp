@@ -570,7 +570,7 @@ bool FUCKMan::ProcessAsyncInput(const RE::InputEvent* const* a_event)
 	// Make sure we skip the global Escape-to-Close override if rebinding
 	if (!consumed && !wasBinding && (_isOpen || IsInputBlocked())) {
 		// ESC / Close Logic (Priority over Global Hotkeys)
-		if (MANAGER(Input)->IsInputPressed(a_event, Hotkeys::Manager::EscapeKey())) {
+		if (MANAGER(Input)->IsInputReleased(a_event, Hotkeys::Manager::EscapeKey())) {
 			bool handled = false;
 
 			// A. Close Child Windows with kCloseOnEsc flag

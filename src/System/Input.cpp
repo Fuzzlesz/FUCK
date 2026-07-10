@@ -95,6 +95,27 @@ namespace Input
 		return false;
 	}
 
+	bool Manager::IsInputReleased(const RE::InputEvent* const* a_event, std::uint32_t a_unifiedKey)
+	{
+		if (!a_event) {
+			return false;
+		}
+
+		for (auto event = *a_event; event; event = event->next) {
+			const auto button = event->AsButtonEvent();
+
+			if (!button || !button->HasIDCode() || !button->IsUp())
+				continue;
+
+			auto     key        = button->GetIDCode();
+			uint32_t unifiedKey = Keymap::GetUnifiedKey(button->GetDevice(), key);
+
+			if (unifiedKey == a_unifiedKey)
+				return true;
+		}
+		return false;
+	}
+
 	bool Manager::IsInputDown(std::uint32_t a_unifiedKey) const
 	{
 		std::shared_lock lock(_dataLock);
