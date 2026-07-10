@@ -229,9 +229,6 @@ namespace Hooks
 			return false;
 		}
 
-		// It's go time
-		ImGui::PlayAudio(ImGui::Audio::kOk);
-
 		// Close the Journal menu natively so the game state clears
 		if (auto queue = RE::UIMessageQueue::GetSingleton()) {
 			queue->AddMessage(RE::JournalMenu::MENU_NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
