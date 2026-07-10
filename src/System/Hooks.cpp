@@ -14,7 +14,7 @@ namespace Hooks
 
 	static void TryInjectFUCKButton(RE::GFxMovieView* a_movieView)
 	{
-		if (!a_movieView || s_fuckButtonInjected)
+		if (!a_movieView)
 			return;
 
 		auto* manager = FUCKMan::GetSingleton();
@@ -405,29 +405,23 @@ namespace Hooks
 					s_journalMenuOpen    = true;
 					s_lockedGamepadState = currentIsGamepad;
 					s_deviceChangeTicks  = 0;
-
-					if (s_lockedGamepadState && !s_fuckButtonInjected) {
-						TryInjectFUCKButton(a_this->uiMovie.get());
-					} else if (!s_lockedGamepadState && s_fuckButtonInjected) {
-						TryRemoveFUCKButton(a_this->uiMovie.get());
-					}
 				} else {
 					if (currentIsGamepad != s_lockedGamepadState) {
 						s_deviceChangeTicks++;
 						if (s_deviceChangeTicks >= kHysteresisThreshold) {
 							s_lockedGamepadState = currentIsGamepad;
 							s_deviceChangeTicks  = 0;
-
-							if (s_lockedGamepadState && !s_fuckButtonInjected) {
-								TryInjectFUCKButton(a_this->uiMovie.get());
-							} else if (!s_lockedGamepadState && s_fuckButtonInjected) {
-								TryRemoveFUCKButton(a_this->uiMovie.get());
-							}
 						}
 					} else {
 						// State returned to normal before threshold was met, drop the buffer
 						s_deviceChangeTicks = 0;
 					}
+				}
+
+				if (s_lockedGamepadState) {
+					TryInjectFUCKButton(a_this->uiMovie.get());
+				} else {
+					TryRemoveFUCKButton(a_this->uiMovie.get());
 				}
 			}
 
