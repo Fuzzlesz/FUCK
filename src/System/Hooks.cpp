@@ -11,7 +11,7 @@ namespace Hooks
 
 	constexpr const char* kSystemPagePath = "_root.QuestJournalFader.Menu_mc.SystemFader.Page_mc";
 
-	static void TryInjectFUCKButton(RE::GFxMovieView * a_movieView)
+	static void TryInjectFUCKButton(RE::GFxMovieView* a_movieView)
 	{
 		if (!a_movieView || s_fuckButtonInjected)
 			return;
@@ -100,7 +100,7 @@ namespace Hooks
 		s_fuckButtonInjected = true;
 	}
 
-	static void TryRemoveFUCKButton(RE::GFxMovieView * a_movieView)
+	static void TryRemoveFUCKButton(RE::GFxMovieView* a_movieView)
 	{
 		if (!a_movieView || !s_fuckButtonInjected)
 			return;
