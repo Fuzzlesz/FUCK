@@ -414,8 +414,9 @@ bool FUCKMan::IsWindowSuppressed(const FUCK::IWindow* win) const
 
 	FUCK::WindowFlags userFlags = win->GetFlags();
 
-	// Check 'tm' console command.
-	if (!(userFlags & FUCK::WindowFlags::kRenderDuringTM)) {
+	// Check 'tm' console command. Flat only: see the same VR gate in
+	// Draw()'s main workspace menu render pass.
+	if (!REL::Module::IsVR() && !(userFlags & FUCK::WindowFlags::kRenderDuringTM)) {
 		if (auto ui = RE::UI::GetSingleton()) {
 			if (!ui->IsShowingMenus())
 				return true;
@@ -1398,10 +1399,14 @@ void FUCKMan::Draw()
 	// MAIN FUCK WORKSPACE MENU RENDER PASS
 	// ==================================================
 
-	// Check 'tm' natively for the main workspace menu.
+	// Check 'tm' natively for the main workspace menu. Flat only: FUCK draws
+	// over the native HUD/menu stack there, so it respects 'tm'. IsShowingMenus()
+	// doesn't track the VR helper's own focus, so this would kill every VR open.
 	bool menusHidden = false;
-	if (auto ui = RE::UI::GetSingleton()) {
-		menusHidden = !ui->IsShowingMenus();
+	if (!REL::Module::IsVR()) {
+		if (auto ui = RE::UI::GetSingleton()) {
+			menusHidden = !ui->IsShowingMenus();
+		}
 	}
 
 	if (!_isOpen || menusHidden)
