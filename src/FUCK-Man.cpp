@@ -751,6 +751,37 @@ bool FUCKMan::ShouldRender() const
 	return false;
 }
 
+bool FUCKMan::ShouldRenderExclusive() const
+{
+	if (_suspendRendering)
+		return false;
+
+	if (_isOpen)
+		return true;
+
+	for (const auto* win : _windows) {
+		if (win->IsOpen() && !(win->GetFlags() & FUCK::WindowFlags::kPassInputToGame))
+			return true;
+	}
+
+	return false;
+}
+
+bool FUCKMan::ShouldRenderPassthrough() const
+{
+	// Independent of _isOpen: these live on their own always-on HUD panel in
+	// VR, so they render whether or not the main menu happens to be open too.
+	if (_suspendRendering)
+		return false;
+
+	for (const auto* win : _windows) {
+		if (win->IsOpen() && (win->GetFlags() & FUCK::WindowFlags::kPassInputToGame))
+			return true;
+	}
+
+	return false;
+}
+
 bool FUCKMan::IsInputBlocked() const
 {
 	if (_isOpen)
@@ -896,7 +927,7 @@ EventResult FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_event, RE::BST
 // CORE RENDER LOOP
 // ==================================================
 
-void FUCKMan::Draw()
+void FUCKMan::Draw(bool a_passthroughOnly)
 {
 	FlushPendingRegistrations();
 
@@ -1022,7 +1053,8 @@ void FUCKMan::Draw()
 	// ==================================================
 	// OVERLAY RENDER PASS (Fullscreen Transparent Layer)
 	// ==================================================
-	if (_activeTool || ShouldRender()) {
+	// Belongs on the exclusive-focus panel only.
+	if (!a_passthroughOnly && (_activeTool || ShouldRender())) {
 		ImGui::SetNextWindowPos(ImGui::GetMainViewport()->Pos);
 		ImGui::SetNextWindowSize(ImGui::GetMainViewport()->Size);
 
@@ -1073,6 +1105,16 @@ void FUCKMan::Draw()
 	for (auto* win : _windows) {
 		// Skip rendering if the game state suppresses the window.
 		if (IsWindowSuppressed(win)) {
+			continue;
+		}
+
+		// In VR, kPassInputToGame windows always render on the separate,
+		// always-on HUD pass instead (see ImGui::Renderer::DrawHud) — split
+		// by which pass this call is for. Flat has no separate pass, so they
+		// stay in the single normal draw there (a_passthroughOnly is always
+		// false on flat; see ImGui::Renderer::Draw).
+		bool isPassthroughWindow = (win->GetFlags() & FUCK::WindowFlags::kPassInputToGame) != 0;
+		if (a_passthroughOnly ? !isPassthroughWindow : (isPassthroughWindow && REL::Module::IsVR())) {
 			continue;
 		}
 
@@ -1412,7 +1454,7 @@ void FUCKMan::Draw()
 		}
 	}
 
-	if (!_isOpen || menusHidden)
+	if (a_passthroughOnly || !_isOpen || menusHidden)
 		return;
 
 	ImGui::GetIO().MouseDrawCursor = false;

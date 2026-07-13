@@ -68,7 +68,17 @@ public:
 
 	// --- Rendering & Input ---
 	bool ShouldRender() const;
-	void Draw();
+	// True when something needs the VR helper's exclusive-focus panel: the
+	// main menu, or any open window that isn't kPassInputToGame.
+	bool ShouldRenderExclusive() const;
+	// True when any kPassInputToGame window is open — these render on their
+	// own always-on VR HUD panel, independent of whether the main menu or
+	// other windows are also open (see ShouldRenderExclusive).
+	bool ShouldRenderPassthrough() const;
+	// a_passthroughOnly draws just the open kPassInputToGame windows (used for
+	// the VR HUD panel); the main menu, tool overlays, and other windows are
+	// skipped since they belong on the exclusive-focus panel instead.
+	void Draw(bool a_passthroughOnly = false);
 	bool ProcessAsyncInput(const RE::InputEvent* const* a_event);
 
 	// --- State Queries ---
