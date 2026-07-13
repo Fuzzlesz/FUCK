@@ -1037,10 +1037,13 @@ void FUCKMan::Draw()
 		if (ImGui::Begin("##ToolOverlayLayer", nullptr, flags)) {
 			pushContentScale(false);
 
-			// Overlay logic does a quick check for 'tm' natively
+			// Overlay logic does a quick check for 'tm' natively. Flat only: see
+			// the same VR gate on the main workspace menu render pass.
 			bool menusHidden = false;
-			if (auto ui = RE::UI::GetSingleton()) {
-				menusHidden = !ui->IsShowingMenus();
+			if (!REL::Module::IsVR()) {
+				if (auto ui = RE::UI::GetSingleton()) {
+					menusHidden = !ui->IsShowingMenus();
+				}
 			}
 
 			if (_activeTool && !menusHidden)
