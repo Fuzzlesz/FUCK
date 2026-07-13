@@ -64,6 +64,7 @@ namespace Input
 		void ProcessInputEvents(RE::InputEvent* const* a_events);
 
 		bool IsInputPressed(const RE::InputEvent* const* a_event, std::uint32_t a_unifiedKey);
+		bool IsInputReleased(const RE::InputEvent* const* a_event, std::uint32_t a_unifiedKey);
 
 		// --- Rebinding API ---
 		void             StartBinding(std::uint32_t a_currentKey, std::int32_t a_currentMod1, std::int32_t a_currentMod2, bool a_disallowModifiers = false);

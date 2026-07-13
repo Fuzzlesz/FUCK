@@ -101,6 +101,27 @@ namespace Input
 		return false;
 	}
 
+	bool Manager::IsInputReleased(const RE::InputEvent* const* a_event, std::uint32_t a_unifiedKey)
+	{
+		if (!a_event) {
+			return false;
+		}
+
+		for (auto event = *a_event; event; event = event->next) {
+			const auto button = event->AsButtonEvent();
+
+			if (!button || !button->HasIDCode() || !button->IsUp())
+				continue;
+
+			auto     key        = button->GetIDCode();
+			uint32_t unifiedKey = Keymap::GetUnifiedKey(button->GetDevice(), key);
+
+			if (unifiedKey == a_unifiedKey)
+				return true;
+		}
+		return false;
+	}
+
 	bool Manager::IsInputDown(std::uint32_t a_unifiedKey) const
 	{
 		std::shared_lock lock(_dataLock);
@@ -133,19 +154,19 @@ namespace Input
 		if (!_rebindCtx.active)
 			return FUCK::BindResult::kNone;
 
-		// 1. Poll the raw input
+		// Poll the raw input
 		std::uint32_t newKey = 0;
 		std::int32_t  newM1  = -1;
 		std::int32_t  newM2  = -1;
 
 		auto result = GetInputBind(a_event, &newKey, &newM1, &newM2);
 
-		// 2. Prevent accidental "double-click" capture
+		// Prevent accidental double-click capture. (de-bounce)
 		if (result == FUCK::BindResult::kBound && (ImGui::GetTime() - _rebindCtx.startTime) < 0.2) {
 			return FUCK::BindResult::kNone;
 		}
 
-		// 3. Handle Results
+		// Handle Results
 		if (result == FUCK::BindResult::kCancelled) {
 			// AUTOMATIC RESTORE
 			if (outKey)
@@ -645,11 +666,14 @@ namespace Input
 		const bool menuOpen     = fuck->IsOpen();
 		const bool shouldRender = fuck->ShouldRender();
 
-		bool shouldShowCursor = forceCursor || menuOpen;
-		if (!shouldShowCursor && blockInput) {
-			if (CanNavigateWithMouse() || IsInputGamepad()) {
-				shouldShowCursor = true;
-			}
+		bool shouldShowCursor = false;
+
+		// Always show cursor if the menu is open or forced
+		// otherwise restrict blockinput cursor to kbm
+		if (menuOpen || forceCursor) {
+			shouldShowCursor = true;
+		} else if (blockInput && IsInputKBM()) {
+			shouldShowCursor = true;
 		}
 
 		bool cursorCurrentlyOpen = false;

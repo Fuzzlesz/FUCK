@@ -522,7 +522,8 @@ namespace ImGui
 		float   width     = std::round(CalcItemWidth());
 		ImGuiID id        = window->GetID(idStr.c_str());
 
-		float popupPad = std::round(std::max(0.0f, GetStyle().WindowPadding.y - (2.0f * scale)));
+		float       designPadY     = 15.0f * Renderer::GetResolutionScale();
+		float       popupPad       = std::round(std::max(0.0f, designPadY - (2.0f * scale)));
 
 		float       frameH         = GetFrameHeight();
 		ImDrawList* parentDrawList = GetWindowDrawList();
@@ -751,8 +752,7 @@ namespace ImGui
 		float  width     = std::round(CalcItemWidth());
 		float  frameH    = std::round(GetFrameHeight());
 
-		// In ComboStyled, the popup padding is native ImGui padding.
-		float popupPadY = std::round(GetStyle().WindowPadding.y);
+		float popupPadY = std::round(15.0f * Renderer::GetResolutionScale());
 
 		// Compute an exact popup height so ImGui never allocates outer scrollbar space.
 		float maxPopupH = std::round((popupPadY * 2.0f) + CalcListHeight(std::min(items_count, popup_max_height_in_items)) + (GetStyle().PopupBorderSize * 2.0f));
@@ -1465,31 +1465,43 @@ namespace ImGui
 
 		bool active = (g.ActiveId == id);
 
+		// Calculate exact integer center for the row to guarantee pixel alignment
+		float centerY = std::floor(bb.Min.y + (bb.GetHeight() * 0.5f));
+
 		ImRect track = bb;
-		// Shrink Y-axis significantly so the track is narrow
-		float trackH = std::max(4.0f, 6.0f * Renderer::GetResolutionScale());
-		float s      = (track.GetHeight() - trackH) * 0.8f;
-		track.Min.y += s;
-		track.Max.y -= s;
+
+		// Force track height to an even number so it splits around centerY
+		float trackH = std::floor(bb.GetHeight() * 0.50f);
+		if (static_cast<int>(trackH) % 2 != 0)
+			trackH -= 1.0f;
+
+		track.Min.y = centerY - (trackH * 0.5f);
+		track.Max.y = track.Min.y + trackH;
 
 		window->DrawList->AddRectFilled(track.Min, track.Max, GetColorU32(active ? ImGuiCol_FrameBgActive : h ? ImGuiCol_FrameBgHovered :
 																												ImGuiCol_FrameBg),
-			GetStyle().FrameRounding);
-		DrawWidgetBorder(window->DrawList, track, IsWidgetFocused(id) || active || h, GetStyle().FrameRounding);
+			0.0f);
+		DrawWidgetBorder(window->DrawList, track, IsWidgetFocused(id) || active || h, 0.0f);
 
 		if (grab.Max.x > grab.Min.x) {
 			float scale     = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
-			float knobWidth = 8.0f * scale;  // Fixed slim width
-			float centerX   = grab.Min.x + (grab.Max.x - grab.Min.x) * 0.5f;
+			float knobWidth = 10.0f * scale;
 
-			centerX = ImClamp(centerX, bb.Min.x + knobWidth * 0.5f, bb.Max.x - knobWidth * 0.5f);
+			float centerX = std::floor(grab.Min.x + (grab.Max.x - grab.Min.x) * 0.5f);
+			centerX       = ImClamp(centerX, bb.Min.x + knobWidth * 0.5f, bb.Max.x - knobWidth * 0.5f);
 
-			// Span the full height of the widget, but keep width narrow
+			// Force knob height to an even number
+			float knobH = std::floor(bb.GetHeight() * 0.70f);
+			if (static_cast<int>(knobH) % 2 != 0)
+				knobH -= 1.0f;
+
+			float knobMinY = centerY - (knobH * 0.5f);
+
 			ImRect customGrab(
-				centerX - (knobWidth * 0.5f),
-				bb.Min.y,
-				centerX + (knobWidth * 0.5f),
-				bb.Max.y);
+				std::floor(centerX - (knobWidth * 0.5f)),
+				knobMinY,
+				std::floor(centerX + (knobWidth * 0.5f)),
+				knobMinY + knobH);
 
 			window->DrawList->AddRectFilled(customGrab.Min, customGrab.Max, GetColorU32(active ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab), GetStyle().GrabRounding);
 		}
@@ -1564,6 +1576,7 @@ namespace ImGui
 		}
 
 		bool is_open = window->DC.StateStorage->GetInt(id, (flags & ImGuiTreeNodeFlags_DefaultOpen) != 0);
+		bool is_leaf = (flags & ImGuiTreeNodeFlags_Leaf) != 0;
 
 		// Calculate total layout size using same padY as combo boxes
 		float scale       = Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
@@ -1575,26 +1588,37 @@ namespace ImGui
 
 		ItemSize(bb);
 		if (!ItemAdd(bb, id))
-			return is_open;
+			return is_open && !is_leaf;
 
 		bool h, held;
 		if (ButtonBehavior(bb, id, &h, &held)) {
-			is_open = !is_open;
-			window->DC.StateStorage->SetInt(id, is_open);
-			PlayAudio(is_open ? Audio::kFocus : Audio::kCancel);
+			if (!is_leaf) {
+				is_open = !is_open;
+				window->DC.StateStorage->SetInt(id, is_open);
+				PlayAudio(is_open ? Audio::kFocus : Audio::kCancel);
+			}
 		}
 
+		// Check selection flag
+		bool is_selected = (flags & ImGuiTreeNodeFlags_Selected) != 0;
+
 		// Draw Background
-		if (h || is_open) {
+		if (h || is_open || is_selected) {
 			ImU32 bgColor;
-			if (is_open) {
+			if (is_selected) {
+				bgColor = GetColorU32(ImGuiCol_Header);
+			} else if (is_open && !is_leaf) {
 				bgColor = GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox);
 			} else {
 				bgColor = GetColorU32(ImGuiCol_HeaderHovered);
 			}
-			window->DrawList->AddRectFilled(bb.Min, bb.Max, bgColor, GImGui->Style.FrameRounding);
 
-			if (is_open) {
+			// Only draw bg if active/hovered/selected
+			if (h || is_selected || (is_open && !is_leaf)) {
+				window->DrawList->AddRectFilled(bb.Min, bb.Max, bgColor, GImGui->Style.FrameRounding);
+			}
+
+			if (is_open && !is_leaf) {
 				DrawWidgetBorder(window->DrawList, bb, h || IsWidgetFocused(id), GImGui->Style.FrameRounding);
 			}
 		}
@@ -1608,15 +1632,17 @@ namespace ImGui
 		float maxIconDim = baseArrowSize * scale;
 		float textOff    = padX + maxIconDim + GImGui->Style.ItemInnerSpacing.x;
 
-		// Pass the unscaled base icon
-		DrawTreeIcon(window->DrawList, { bb.Min.x + padX, bb.Min.y }, frameHeight, is_open, h, baseArrowSize);
+		// Pass the unscaled base icon (only if not a leaf)
+		if (!is_leaf) {
+			DrawTreeIcon(window->DrawList, { bb.Min.x + padX, bb.Min.y }, frameHeight, is_open, h, baseArrowSize);
+		}
 
 		// Vertically centre text
 		ImVec2 textSize = CalcTextSize(label);
 		float  textY    = bb.Min.y + (frameHeight - textSize.y) * 0.5f;
 
 		RenderText({ bb.Min.x + textOff, textY }, label);
-		return is_open;
+		return is_open && !is_leaf;
 	}
 
 	bool TreeNodeIcon(const char* label, int flags)
@@ -1629,7 +1655,10 @@ namespace ImGui
 			GImGui->NextItemData.ClearFlags();
 		}
 
-		bool is_open = window->DC.StateStorage->GetInt(id, (flags & ImGuiTreeNodeFlags_DefaultOpen) != 0);
+		bool is_open     = window->DC.StateStorage->GetInt(id, (flags & ImGuiTreeNodeFlags_DefaultOpen) != 0);
+		bool is_leaf     = (flags & ImGuiTreeNodeFlags_Leaf) != 0;
+		bool no_push     = (flags & ImGuiTreeNodeFlags_NoTreePushOnOpen) != 0;
+		bool is_selected = (flags & ImGuiTreeNodeFlags_Selected) != 0;
 
 		float scale       = Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
 		float padY        = 3.0f * scale;
@@ -1649,32 +1678,42 @@ namespace ImGui
 		float textOff    = padX + maxIconDim + GImGui->Style.ItemInnerSpacing.x;
 
 		if (!ItemAdd(bb, id)) {
-			if (is_open)
+			if (is_open && !is_leaf && !no_push)
 				TreePush(label);
-			return is_open;
+			return is_open && !is_leaf;
 		}
 
 		bool h, held;
 		if (ButtonBehavior(bb, id, &h, &held, flags)) {
-			is_open = !is_open;
-			window->DC.StateStorage->SetInt(id, is_open);
-			PlayAudio(is_open ? Audio::kFocus : Audio::kCancel);
-		}
-		if (h) {
-			window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_HeaderHovered), GImGui->Style.FrameRounding);
+			if (!is_leaf) {
+				is_open = !is_open;
+				window->DC.StateStorage->SetInt(id, is_open);
+				PlayAudio(is_open ? Audio::kFocus : Audio::kCancel);
+			}
 		}
 
-		// Pass the unscaled base icon
-		DrawTreeIcon(window->DrawList, { pos.x + padX, pos.y }, frameHeight, is_open, h, baseArrowSize);
+		if (h || is_selected) {
+			ImU32 bgColor = GetColorU32(is_selected ? ImGuiCol_Header : ImGuiCol_HeaderHovered);
+			window->DrawList->AddRectFilled(bb.Min, bb.Max, bgColor, GImGui->Style.FrameRounding);
+		}
+
+		// Pass the unscaled base icon (only if not a leaf)
+		if (!is_leaf) {
+			DrawTreeIcon(window->DrawList, { pos.x + padX, pos.y }, frameHeight, is_open, h, baseArrowSize);
+		} else if (flags & ImGuiTreeNodeFlags_Bullet) {
+			// Optional: draw a small bullet point for leaves if requested
+			window->DrawList->AddCircleFilled({ pos.x + padX + (maxIconDim * 0.5f), pos.y + (frameHeight * 0.5f) }, 3.0f * scale, GetColorU32(ImGuiCol_Text));
+		}
 
 		// Align text
 		float textY = bb.Min.y + (frameHeight - CalcTextSize(label).y) * 0.5f;
 
 		RenderText({ pos.x + textOff, textY }, label);
 
-		if (is_open)
+		if (is_open && !is_leaf && !no_push)
 			TreePush(label);
-		return is_open;
+
+		return is_open && !is_leaf;
 	}
 
 	std::tuple<bool, bool, bool> CenteredTextWithArrows(const char* label, std::string_view centerText)

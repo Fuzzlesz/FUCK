@@ -15,7 +15,6 @@ public:
 		kHard = 2
 	};
 
-
 	enum class JournalMenuType : int
 	{
 		kUnknown = 0,
@@ -32,11 +31,13 @@ public:
 		bool        sidebarOnRight{ false };
 		bool        injectSystemMenu{ true };
 		bool        replaceHelpMenu{ false };
+		bool        injectSettingsSubmenu{ false };
 		bool        showSidebarFilter{ true };
 		bool        showSidebarFavourites{ true };
 		bool        groupFavourites{ true };
 		bool        muteAudio{ false };
 		std::string currentFont{ "Default" };
+		std::string customSystemMenuName{ "$FUCK_Title" };
 	};
 
 	struct ToolOverrideState
@@ -100,6 +101,8 @@ public:
 
 	bool            GetInjectSystemMenu() const { return _cfg.injectSystemMenu; }
 	bool            GetReplaceHelpMenu() const { return _cfg.replaceHelpMenu; }
+	bool            GetInjectSettingsSubmenu() const { return _cfg.injectSettingsSubmenu; }
+	const char*     GetSystemMenuName() const { return _cfg.customSystemMenuName.c_str(); }
 	JournalMenuType GetJournalMenuType() const { return _journalMenuType; }
 	void            SetJournalMenuType(JournalMenuType type) { _journalMenuType = type; }
 
@@ -136,7 +139,24 @@ protected:
 	EventResult ProcessEvent(const RE::MenuOpenCloseEvent* a_event, RE::BSTEventSource<RE::MenuOpenCloseEvent>*) override;
 
 private:
+	struct PendingCommand
+	{
+		enum class Type
+		{
+			kAddTool,
+			kAddWindow,
+			kRemoveWindow
+		} type;
+		FUCK::ITool*   tool   = nullptr;
+		FUCK::IWindow* window = nullptr;
+	};
+
+	std::mutex                  _pendingLock;
+	std::vector<PendingCommand> _pendingCommands;
+
+	void FlushPendingRegistrations();
 	void UpdateGameState();
+	bool IsWindowSuppressed(const FUCK::IWindow* win) const;
 
 	struct MenuListenerEntry
 	{
@@ -147,7 +167,6 @@ private:
 	std::vector<MenuListenerEntry> _menuListeners;
 	std::vector<FUCK::ITool*>      _tools;
 	std::vector<FUCK::IWindow*>    _windows;
-	std::vector<FUCK::IWindow*>    _suspendedWindows;
 	std::set<std::string>          _pausedMenus;
 
 	StringMap<ToolOverrideState>  _toolOverrides;

@@ -18,6 +18,7 @@ set(sources ${sources}
 	src/System/Hooks.cpp
 	src/System/Hotkeys.cpp
 	src/System/Input.cpp
+	src/System/Journal.cpp
 	src/System/Papyrus.cpp
 	src/System/Settings.cpp
 	src/System/Translation.cpp

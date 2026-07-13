@@ -511,6 +511,10 @@ namespace ImGui
 		colors[ImGuiCol_ChildBg]  = user.childBG;
 		colors[ImGuiCol_PopupBg]  = user.background;
 
+		colors[ImGuiCol_TitleBg]          = user.background;
+		colors[ImGuiCol_TitleBgActive]    = user.background;
+		colors[ImGuiCol_TitleBgCollapsed] = user.background;
+
 		colors[ImGuiCol_Text]         = user.text;
 		colors[ImGuiCol_TextDisabled] = user.textDisabled;
 

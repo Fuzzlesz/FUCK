@@ -10,6 +10,7 @@
 #include "ImGui/Widgets.h"
 
 #include "System/Input.h"
+#include "System/Hotkeys.h"
 #include "System/Settings.h"
 #include "System/Utils.h"
 
@@ -558,9 +559,9 @@ namespace FUCK::Host
 	// ==================================================
 	// Screen primitives
 	// ==================================================
-	static void DrawScreenRect_Impl(const ImVec2& min, const ImVec2& max, ImU32 col, float rounding, float thickness) { ImGui::GetBackgroundDrawList()->AddRect(min, max, col, rounding, 0, thickness); }
-	static void DrawScreenRectFilled_Impl(const ImVec2& min, const ImVec2& max, ImU32 col, float rounding) { ImGui::GetBackgroundDrawList()->AddRectFilled(min, max, col, rounding); }
-	static void DrawScreenLine_Impl(float x1, float y1, float x2, float y2, ImU32 col, float thickness) { ImGui::GetBackgroundDrawList()->AddLine({ x1, y1 }, { x2, y2 }, col, thickness); }
+	static void DrawScreenRect_Impl(const ImVec2& min, const ImVec2& max, ImU32 col, float rounding, float thickness) { ImGui::GetForegroundDrawList()->AddRect(min, max, col, rounding, 0, thickness); }
+	static void DrawScreenRectFilled_Impl(const ImVec2& min, const ImVec2& max, ImU32 col, float rounding) { ImGui::GetForegroundDrawList()->AddRectFilled(min, max, col, rounding); }
+	static void DrawScreenLine_Impl(float x1, float y1, float x2, float y2, ImU32 col, float thickness) { ImGui::GetForegroundDrawList()->AddLine({ x1, y1 }, { x2, y2 }, col, thickness); }
 
 	// ==================================================
 	// Windows
@@ -735,6 +736,54 @@ namespace FUCK::Host
 		ImGui::PopStyleColor(2);
 		return res;
 	}
+
+	// ==================================================
+	// Version 3
+	// ==================================================
+	static void SetHotkeyEnabled_Impl(bool enabled) { Hotkeys::Manager::GetSingleton()->Enable(enabled); }
+	static void SetWindowFocus_Impl() { ImGui::SetWindowFocus(); }
+	static void CloseCurrentPopup_Impl() { ImGui::CloseCurrentPopup(); }
+	static void OpenPopup_Impl(const char* str_id, int flags) { ImGui::OpenPopup(str_id, static_cast<ImGuiPopupFlags>(flags)); }
+	static bool BeginPopup_Impl(const char* str_id, int /*flags*/)
+	{
+		// "flags" is currently ignored to prevent FUCK::WindowFlags clashing with ImGuiWindowFlags.
+		// Reserved for future translation logic.
+		return ImGui::BeginPopup(str_id, ImGuiWindowFlags_None);
+	}
+
+	static bool BeginPopupModal_Impl(const char* name, bool* p_open, int /*flags*/)
+	{
+		// "flags" is currently ignored for the same reason.
+		// Enforcing NoResize globally for modals to remove grab handle that doesn't work.
+		return ImGui::BeginPopupModal(name, p_open, ImGuiWindowFlags_NoResize);
+	}
+	static bool IsWindowAppearing_Impl() { return ImGui::IsWindowAppearing(); }
+	static void PushTextWrapPos_Impl(float wrap_pos_x) { ImGui::PushTextWrapPos(wrap_pos_x); }
+	static void PopTextWrapPos_Impl() { ImGui::PopTextWrapPos(); }
+	static void SetNavCursorVisible_Impl(bool visible)
+	{
+		ImGuiContext& g    = *GImGui;
+		g.NavCursorVisible = visible;
+		if (visible) {
+			g.NavHighlightItemUnderNav = true;
+		}
+	}
+	static void DrawCircle_Impl(const ImVec2& center, float radius, const ImVec4& col, int num_segments, float thickness) { ImGui::GetWindowDrawList()->AddCircle(center, radius, ImGui::ColorConvertFloat4ToU32(col), num_segments, thickness); }
+	static void DrawCircleFilled_Impl(const ImVec2& center, float radius, const ImVec4& col, int num_segments) { ImGui::GetWindowDrawList()->AddCircleFilled(center, radius, ImGui::ColorConvertFloat4ToU32(col), num_segments); }
+	static void DrawScreenCircle_Impl(const ImVec2& center, float radius, ImU32 col, int num_segments, float thickness) { ImGui::GetForegroundDrawList()->AddCircle(center, radius, col, num_segments, thickness); }
+	static void DrawScreenCircleFilled_Impl(const ImVec2& center, float radius, ImU32 col, int num_segments) { ImGui::GetForegroundDrawList()->AddCircleFilled(center, radius, col, num_segments); }
+	
+	static void DrawQuad_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec4& col, float t) { ImGui::GetWindowDrawList()->AddQuad(p1, p2, p3, p4, ImGui::ColorConvertFloat4ToU32(col), t); }
+	static void DrawQuadFilled_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec4& col) { ImGui::GetWindowDrawList()->AddQuadFilled(p1, p2, p3, p4, ImGui::ColorConvertFloat4ToU32(col)); }
+	static void DrawScreenQuad_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col, float t) { ImGui::GetForegroundDrawList()->AddQuad(p1, p2, p3, p4, col, t); }
+	static void DrawScreenQuadFilled_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col) { ImGui::GetForegroundDrawList()->AddQuadFilled(p1, p2, p3, p4, col); }
+	
+	static void DrawTriangle_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec4& col, float t) { ImGui::GetWindowDrawList()->AddTriangle(p1, p2, p3, ImGui::ColorConvertFloat4ToU32(col), t); }
+	static void DrawTriangleFilled_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec4& col) { ImGui::GetWindowDrawList()->AddTriangleFilled(p1, p2, p3, ImGui::ColorConvertFloat4ToU32(col)); }
+	static void DrawScreenTriangle_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col, float t) { ImGui::GetForegroundDrawList()->AddTriangle(p1, p2, p3, col, t); }
+	static void DrawScreenTriangleFilled_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col) { ImGui::GetForegroundDrawList()->AddTriangleFilled(p1, p2, p3, col); }
+
+	static bool TreeNodeEx_Impl(const char* label, int flags) { return ImGui::TreeNodeIcon(label, flags); }
 
 	// ==================================================
 	// CreateInterface
@@ -974,7 +1023,32 @@ namespace FUCK::Host
 			.BeginTooltip           = BeginTooltip_Impl,
 			.EndTooltip             = EndTooltip_Impl,
 			.SetScrollHereY         = SetScrollHereY_Impl,
-			.InputTextMultiline     = InputTextMultiline_Impl
+			.InputTextMultiline     = InputTextMultiline_Impl,
+
+			// Version 3
+			.SetHotkeyEnabled         = SetHotkeyEnabled_Impl,
+			.SetWindowFocus           = SetWindowFocus_Impl,
+			.CloseCurrentPopup        = CloseCurrentPopup_Impl,
+			.OpenPopup                = OpenPopup_Impl,
+			.BeginPopup               = BeginPopup_Impl,
+			.BeginPopupModal          = BeginPopupModal_Impl,
+			.IsWindowAppearing        = IsWindowAppearing_Impl,
+			.PushTextWrapPos          = PushTextWrapPos_Impl,
+			.PopTextWrapPos           = PopTextWrapPos_Impl,
+			.SetNavCursorVisible      = SetNavCursorVisible_Impl,
+			.DrawCircle               = DrawCircle_Impl,
+			.DrawCircleFilled         = DrawCircleFilled_Impl,
+			.DrawScreenCircle         = DrawScreenCircle_Impl,
+			.DrawScreenCircleFilled   = DrawScreenCircleFilled_Impl,
+			.DrawQuad                 = DrawQuad_Impl,
+			.DrawQuadFilled           = DrawQuadFilled_Impl,
+			.DrawScreenQuad           = DrawScreenQuad_Impl,
+			.DrawScreenQuadFilled     = DrawScreenQuadFilled_Impl,
+			.DrawTriangle             = DrawTriangle_Impl,
+			.DrawTriangleFilled       = DrawTriangleFilled_Impl,
+			.DrawScreenTriangle       = DrawScreenTriangle_Impl,
+			.DrawScreenTriangleFilled = DrawScreenTriangleFilled_Impl,
+			.TreeNodeEx               = TreeNodeEx_Impl
 		};
 		return &api;
 	}

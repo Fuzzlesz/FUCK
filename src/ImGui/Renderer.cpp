@@ -20,6 +20,9 @@ namespace ImGui::Renderer
 		ImGuiVRHelperPluginAPI::Client g_vrHelper;
 	}
 
+	static std::atomic<bool>       s_renderedThisFrame{ false };
+	static ID3D11RenderTargetView* g_mainRenderTargetView = nullptr;
+
 	void ConnectVRHelper()
 	{
 		if (g_vrHelper.Connect(Version::PROJECT.data(), Version::NAME.data(),
@@ -74,10 +77,6 @@ namespace ImGui::Renderer
 			g_vrHelper.PumpKeyboard();
 		}
 
-		if (!manager->ShouldRender()) {
-			return;
-		}
-
 		ImGui_ImplDX11_NewFrame();
 		SKSE::ImGui_ImplSkyrim_NewFrame();
 		// When presenting to the helper's VR panel, the canvas must equal the
@@ -99,7 +98,9 @@ namespace ImGui::Renderer
 			// disable windowing
 			GImGui->NavWindowingTarget = nullptr;
 
-			manager->Draw();
+			if (manager->ShouldRender()) {
+				manager->Draw();
+			}
 		}
 		EndFrame();
 		Render();
@@ -155,6 +156,64 @@ namespace ImGui::Renderer
 		static inline WNDPROC func;
 	};
 
+	using  Present_t                 = HRESULT(WINAPI*)(IDXGISwapChain*, UINT, UINT);
+	static Present_t OriginalPresent = nullptr;
+
+	HRESULT WINAPI Present_Hook(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags)
+	{
+		// Fallback rendering pass for unhandled frames. (e.g. when 'tm' used to hide menus)
+		if (!s_renderedThisFrame.exchange(false)) {
+			const auto renderer = RE::BSGraphics::Renderer::GetSingleton();
+			auto       device   = reinterpret_cast<ID3D11Device*>(renderer->GetRuntimeData().forwarder);
+			auto       context  = reinterpret_cast<ID3D11DeviceContext*>(renderer->GetRuntimeData().context);
+
+			// Cache render target view.
+			if (!g_mainRenderTargetView) {
+				ID3D11Texture2D* pBackBuffer = nullptr;
+				if (SUCCEEDED(pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<LPVOID*>(&pBackBuffer)))) {
+					device->CreateRenderTargetView(pBackBuffer, nullptr, &g_mainRenderTargetView);
+					pBackBuffer->Release();
+				}
+			}
+
+			if (g_mainRenderTargetView) {
+				// Save pipeline state.
+				ID3D11RenderTargetView* pOldRTV = nullptr;
+				ID3D11DepthStencilView* pOldDSV = nullptr;
+				context->OMGetRenderTargets(1, &pOldRTV, &pOldDSV);
+
+				// Bind backbuffer.
+				context->OMSetRenderTargets(1, &g_mainRenderTargetView, nullptr);
+
+				Draw();
+
+				// Restore pipeline state.
+				context->OMSetRenderTargets(1, &pOldRTV, pOldDSV);
+				if (pOldRTV) {
+					pOldRTV->Release();
+				}
+				if (pOldDSV) {
+					pOldDSV->Release();
+				}
+			}
+		}
+
+		return OriginalPresent(pSwapChain, SyncInterval, Flags);
+	}
+
+	using  ResizeBuffers_t                       = HRESULT(WINAPI*)(IDXGISwapChain*, UINT, UINT, UINT, DXGI_FORMAT, UINT);
+	static ResizeBuffers_t OriginalResizeBuffers = nullptr;
+
+	HRESULT WINAPI ResizeBuffers_Hook(IDXGISwapChain* pSwapChain, UINT BufferCount, UINT Width, UINT Height, DXGI_FORMAT NewFormat, UINT SwapChainFlags)
+	{
+		// Release cached RTV to allow swap chain resizing.
+		if (g_mainRenderTargetView) {
+			g_mainRenderTargetView->Release();
+			g_mainRenderTargetView = nullptr;
+		}
+		return OriginalResizeBuffers(pSwapChain, BufferCount, Width, Height, NewFormat, SwapChainFlags);
+	}
+
 	struct CreateD3DAndSwapChain
 	{
 		static void thunk()
@@ -164,7 +223,7 @@ namespace ImGui::Renderer
 			if (const auto renderer = RE::BSGraphics::Renderer::GetSingleton()) {
 				const auto swapChain = reinterpret_cast<IDXGISwapChain*>(renderer->GetRuntimeData().renderWindows[0].swapChain);
 				if (!swapChain) {
-					logger::error("couldn't find swapChain");
+					logger::error("Failed to find SwapChain.");
 					return;
 				}
 
@@ -186,11 +245,11 @@ namespace ImGui::Renderer
 				io.IniFilename = nullptr;
 
 				if (!SKSE::ImGui_ImplSkyrim_Init()) {
-					logger::error("ImGui initialization failed (Skyrim platform)");
+					logger::error("ImGui initialization failed (Skyrim platform).");
 					return;
 				}
 				if (!ImGui_ImplDX11_Init(device, context)) {
-					logger::error("ImGui initialization failed (DX11)"sv);
+					logger::error("ImGui initialization failed (DX11)."sv);
 					return;
 				}
 
@@ -199,6 +258,20 @@ namespace ImGui::Renderer
 
 				auto styles = Styles::GetSingleton();
 				styles->LoadStyles();
+
+				auto* vtable          = *reinterpret_cast<std::uintptr_t**>(swapChain);
+				OriginalPresent       = reinterpret_cast<Present_t>(vtable[8]);
+				OriginalResizeBuffers = reinterpret_cast<ResizeBuffers_t>(vtable[13]);
+
+				DWORD oldProtect;
+
+				VirtualProtect(&vtable[8], sizeof(std::uintptr_t), PAGE_EXECUTE_READWRITE, &oldProtect);
+				vtable[8] = reinterpret_cast<std::uintptr_t>(Present_Hook);
+				VirtualProtect(&vtable[8], sizeof(std::uintptr_t), oldProtect, &oldProtect);
+
+				VirtualProtect(&vtable[13], sizeof(std::uintptr_t), PAGE_EXECUTE_READWRITE, &oldProtect);
+				vtable[13] = reinterpret_cast<std::uintptr_t>(ResizeBuffers_Hook);
+				VirtualProtect(&vtable[13], sizeof(std::uintptr_t), oldProtect, &oldProtect);
 
 				logger::info("ImGui initialized.");
 
@@ -210,24 +283,26 @@ namespace ImGui::Renderer
 						GWLP_WNDPROC,
 						reinterpret_cast<LONG_PTR>(WndProc::thunk)));
 				if (!WndProc::func) {
-					logger::error("SetWindowLongPtrA failed!");
+					logger::error("SetWindowLongPtrA failed.");
 				}
 			}
 		}
 		static inline REL::Relocation<decltype(thunk)> func;
 	};
 
+	// --- Render Hooks ---
+
 	// IMenu::PostDisplay (HUDMenu)
 	struct HUDMenu_PostDisplay
 	{
 		static void thunk(RE::IMenu* a_menu)
 		{
-			auto ui = RE::UI::GetSingleton();
 			// Only draw ImGui on the HUDMenu if the CursorMenu isn't going to do it for us
-			if (!ui || !ui->IsMenuOpen(RE::CursorMenu::MENU_NAME)) {
+			if (!s_renderedThisFrame.exchange(true)) {
 				Draw();
 			}
-			return func(a_menu);
+
+			func(a_menu);
 		}
 		static inline REL::Relocation<decltype(thunk)> func;
 		static inline std::size_t                      idx{ 0x6 };
@@ -238,8 +313,12 @@ namespace ImGui::Renderer
 	{
 		static void thunk(RE::IMenu* a_menu)
 		{
-			Draw();
-			return func(a_menu);
+			// Render beneath the software cursor during menu navigation.
+			if (!s_renderedThisFrame.exchange(true)) {
+				Draw();
+			}
+
+			func(a_menu);
 		}
 		static inline REL::Relocation<decltype(thunk)> func;
 		static inline std::size_t                      idx{ 0x6 };
