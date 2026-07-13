@@ -40,6 +40,14 @@ namespace ImGui::Renderer
 
 	float GetResolutionScale()
 	{
+		// The helper's panel is a fixed logical canvas (io.DisplaySize, set by
+		// ApplyPanelDisplaySize), unrelated to the HMD's native per-eye render
+		// resolution — scaling off GetScreenSize() here inflated every UI metric,
+		// pushing edge chrome (e.g. the close button) outside the panel's
+		// interactive bounds.
+		if (g_vrHelper.IsConnected()) {
+			return 1.0f;
+		}
 		const auto height = RE::BSGraphics::Renderer::GetScreenSize().height;
 		return DisplayTweaks::borderlessUpscale ? DisplayTweaks::resolutionScale : static_cast<float>(height) / 1080.0f;
 	}
