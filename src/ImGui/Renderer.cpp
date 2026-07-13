@@ -67,31 +67,23 @@ namespace ImGui::Renderer
 
 		// Reconcile menu-open state with the helper (its open/cycle combos can
 		// open or close us) and pump the wand into ImGui before NewFrame consumes
-		// the input.
+		// the input. Update() also pumps the VR keyboard as of client SDK 1.6+.
 		if (g_vrHelper.IsConnected()) {
 			bool menuOpen = manager->ShouldRender();
 			g_vrHelper.Update(menuOpen);
 			if (menuOpen != manager->ShouldRender()) {
 				menuOpen ? manager->Open() : manager->Close();
 			}
-			g_vrHelper.PumpKeyboard();
 		}
 
 		ImGui_ImplDX11_NewFrame();
 		SKSE::ImGui_ImplSkyrim_NewFrame();
 		// When presenting to the helper's VR panel, the canvas must equal the
-		// panel's exact pixel size: the stock DX11 backend renders draw data into
-		// a DisplaySize-sized viewport anchored at the panel's top-left while the
-		// helper's wand hit-test UV spans the full panel, so the game-resolution
-		// canvas the Skyrim backend just set skews clicks toward bottom-right by
-		// the size ratio. Re-query each frame; the panel can be resized.
+		// panel's exact pixel size (see ApplyPanelDisplaySize's doc comment for
+		// why 1:1, not just aspect-matched). Re-query each frame; the panel can
+		// be resized.
 		if (g_vrHelper.IsConnected()) {
-			ImGuiVRHelperPluginAPI::PanelHandle panel{};
-			if (g_vrHelper.Helper()->GetPanel(g_vrHelper.Id(), &panel) && panel.width && panel.height) {
-				auto& io = ImGui::GetIO();
-				io.DisplaySize = ImVec2(static_cast<float>(panel.width), static_cast<float>(panel.height));
-				io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
-			}
+			g_vrHelper.ApplyPanelDisplaySize();
 		}
 		NewFrame();
 		{
