@@ -848,8 +848,10 @@ namespace Input
 				io.AddKeyEvent(ImGuiMod_Super, superDown);
 			}
 
-			// Sync OS hardware cursor to the virtual joystick cursor
-			if (_cursorMovedByJoystick && cursorMenuOpen && passMouse) {
+			// Sync OS hardware cursor to the virtual joystick cursor. Flat only:
+			// there's no meaningful OS cursor in a headset, and warping it here
+			// would fight the wand's own AddMousePosEvent pump.
+			if (!ImGui::Renderer::IsVRHelperConnected() && _cursorMovedByJoystick && cursorMenuOpen && passMouse) {
 				if (auto mc = RE::MenuCursor::GetSingleton()) {
 					ImVec2 clientPos = ImGui::TranslateScaleformToScreen(mc->GetRuntimeData().cursorPosX, mc->GetRuntimeData().cursorPosY);
 
