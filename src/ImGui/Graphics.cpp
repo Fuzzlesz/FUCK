@@ -1,5 +1,7 @@
 #include "Graphics.h"
 
+#include "Renderer.h"
+
 namespace ImGui
 {
 	Texture::Texture(std::wstring_view a_path) :
@@ -31,7 +33,14 @@ namespace ImGui
 		if (SUCCEEDED(hr)) {
 			if (auto renderer = RE::BSGraphics::Renderer::GetSingleton()) {
 				if (a_resizeToScreenRes) {
-					static auto screenSize = RE::BSGraphics::Renderer::GetScreenSize();
+					// The helper panel is a fixed logical canvas, unrelated to the
+					// HMD's native per-eye render resolution (see GetResolutionScale).
+					auto screenSize = RE::BSGraphics::Renderer::GetScreenSize();
+					if (ImGui::Renderer::IsVRHelperConnected()) {
+						const auto& displaySize = ImGui::GetIO().DisplaySize;
+						screenSize.width         = static_cast<std::uint32_t>(displaySize.x);
+						screenSize.height        = static_cast<std::uint32_t>(displaySize.y);
+					}
 					if (screenSize.height != image->GetMetadata().height && screenSize.width != image->GetMetadata().width) {
 						DirectX::ScratchImage tmpImage;
 						DirectX::Resize(*image->GetImage(0, 0, 0), screenSize.width, screenSize.height, DirectX::TEX_FILTER_CUBIC, tmpImage);
