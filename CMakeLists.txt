@@ -31,8 +31,10 @@ endmacro()
 set_from_environment(VCPKG_ROOT)
 # One universal DLL: CommonLibVR's default (ng) branch is CommonLibSSE-NG-based
 # with all three runtimes enabled, so the same binary loads on SE, AE, and VR.
+# It keeps upstream CommonLibSSE-NG's own project/target name, so CommonLibName
+# is "CommonLibSSE" here (not "CommonLibVR") to link against it directly.
 add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
-set(CommonLibName "CommonLibVR")
+set(CommonLibName "CommonLibSSE")
 set(SKSE_SUPPORT_XBYAK ON)
 set(BUILD_TESTS OFF)
 set_from_environment(Skyrim64Path)
@@ -108,10 +110,6 @@ set(Boost_USE_STATIC_LIBS ON)
 # ---- Dependencies ----
 if (DEFINED CommonLibPath AND NOT ${CommonLibPath} STREQUAL "" AND IS_DIRECTORY ${CommonLibPath})
 	add_subdirectory(${CommonLibPath} ${CommonLibName})
-	if (NOT TARGET CommonLibVR)
-		# CommonLibVR (ng branch) keeps upstream CommonLibSSE-NG's project name
-		add_library(CommonLibVR::CommonLibVR ALIAS CommonLibSSE)
-	endif()
 else ()
 	message(
 		FATAL_ERROR

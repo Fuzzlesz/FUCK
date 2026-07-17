@@ -9,9 +9,11 @@ https://www.nexusmods.com/skyrimspecialedition/mods/181603
 	* Add the environment variable `VCPKG_ROOT` with the value as the path to the folder containing vcpkg
 * [Visual Studio Community 2022](https://visualstudio.microsoft.com/)
 	* Desktop development with C++
-* [CommonLibVR](https://github.com/alandtse/CommonLibVR)
-	* The default (`ng`, CommonLibSSE-NG based) branch; initialize its `extern/openvr` submodule
-	* Add this as as an environment variable `CommonLibVRPath`
+* [CommonLibVR](https://github.com/alandtse/CommonLibVR) (`ng`, CommonLibSSE-NG based)
+	* Checked in as the `extern/CommonLibSSE` submodule (that's CommonLibVR's own project/target
+	  name, kept from upstream CommonLibSSE-NG) — `git submodule update --init --recursive` pulls
+	  it and its nested `extern/openvr` submodule
+	* To build against a different checkout instead, set the environment variable `CommonLibSSEPath`
 
 ## Register Visual Studio as a Generator
 * Open `x64 Native Tools Command Prompt`
