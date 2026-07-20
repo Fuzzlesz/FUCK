@@ -29,6 +29,10 @@ extern "C" DLLEXPORT void* RequestFUCK()
 void OnInit(SKSE::MessagingInterface::Message* a_msg)
 {
 	switch (a_msg->type) {
+	case SKSE::MessagingInterface::kPostPostLoad:
+		ImGui::Renderer::ConnectVRHelper();
+		break;
+
 	case SKSE::MessagingInterface::kDataLoaded:
 		if (auto ui = RE::UI::GetSingleton()) {
 			ui->AddEventSink<RE::MenuOpenCloseEvent>(FUCKMan::GetSingleton());
@@ -49,7 +53,8 @@ void OnInit(SKSE::MessagingInterface::Message* a_msg)
 	}
 }
 
-#ifdef SKYRIM_AE
+// One DLL for SE/AE/VR: AE 1.6.629+ reads this version data, while SE and VR
+// call SKSEPlugin_Query below.
 extern "C" DLLEXPORT constinit auto SKSEPlugin_Version = []() {
 	SKSE::PluginVersionData v;
 	v.PluginVersion(Version::MAJOR);
@@ -61,7 +66,7 @@ extern "C" DLLEXPORT constinit auto SKSEPlugin_Version = []() {
 
 	return v;
 }();
-#else
+
 extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a_skse, SKSE::PluginInfo* a_info)
 {
 	a_info->infoVersion = SKSE::PluginInfo::kVersion;
@@ -74,14 +79,13 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a
 	}
 
 	const auto ver = a_skse->RuntimeVersion();
-	if (ver < SKSE::RUNTIME_SSE_1_5_39) {
+	if (ver < (REL::Module::IsVR() ? SKSE::RUNTIME_VR_1_4_15 : SKSE::RUNTIME_SSE_1_5_39)) {
 		logger::critical(FMT_STRING("Unsupported runtime version {}"), ver.string());
 		return false;
 	}
 
 	return true;
 }
-#endif
 
 void InitializeLog()
 {

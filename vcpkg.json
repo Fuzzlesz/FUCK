@@ -5,12 +5,15 @@
   "dependencies": [
     "clib-util",
     "directxtex",
+    "directxtk",
     "freetype",
     {
       "name": "imgui",
       "features": [ "dx11-binding", "freetype", "wchar32" ]
     },
     "glaze",
+    "nlohmann-json",
+    "rapidcsv",
     "rapidfuzz",
     "rsm-binary-io",
     "spdlog",

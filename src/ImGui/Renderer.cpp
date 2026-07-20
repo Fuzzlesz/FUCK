@@ -6,13 +6,69 @@
 
 #include "System\Input.h"
 
+#include <d3d11.h>
+
+#include "ImGuiVRHelperClientSDK.h"
+
 namespace ImGui::Renderer
 {
+	namespace
+	{
+		// VR overlay-helper clients. In SkyrimVR with the helper installed,
+		// FUCK's content is mirrored into one of two flat in-scene panels:
+		//  - g_vrHelper: exclusive focus for the main menu and regular
+		//    windows — the helper swallows all wand/controller input while
+		//    it's shown, and the panel is only composited while focused.
+		//  - g_vrHelperHud: an always-on HUD-mode layer for kPassInputToGame
+		//    windows — never focused, never swallows input, coexists with
+		//    whatever else is happening (matches how a HUD element behaves
+		//    on flat screen, and matches consumers like KillFeed that
+		//    register their own VR presence this way today).
+		// Without the helper both stay unconnected and the normal draw runs.
+		ImGuiVRHelperPluginAPI::Client g_vrHelper;
+		ImGuiVRHelperPluginAPI::Client g_vrHelperHud;
+	}
+
 	static std::atomic<bool>       s_renderedThisFrame{ false };
 	static ID3D11RenderTargetView* g_mainRenderTargetView = nullptr;
 
+	void ConnectVRHelper()
+	{
+		if (g_vrHelper.Connect(Version::PROJECT.data(), Version::NAME.data(),
+				ImGuiVRHelperPluginAPI::kClientFlag_RendersOnFocus)) {
+			logger::info("ImGuiVRHelper: connected as VR overlay client");
+		} else {
+			logger::info("ImGuiVRHelper not present; menu stays on the flat draw");
+		}
+
+		// Loads FUCK's own fonts/icons/style into RenderHud's private context,
+		// same as CreateD3DAndSwapChain does for the main one, so passthrough
+		// windows look the same on either panel.
+		g_vrHelperHud.SetHudStyleCallback([]() {
+			MANAGER(IconFont)->LoadIcons();
+			MANAGER(IconFont)->ReloadFonts();
+			Styles::GetSingleton()->LoadStyles();
+		});
+		if (g_vrHelperHud.Connect("FUCK-HUD", Version::NAME.data(), ImGuiVRHelperPluginAPI::kClientFlag_HUDMode)) {
+			logger::info("ImGuiVRHelper: connected as VR HUD client");
+		}
+	}
+
+	bool IsVRHelperConnected()
+	{
+		return g_vrHelper.IsConnected();
+	}
+
 	float GetResolutionScale()
 	{
+		// The helper's panel is a fixed logical canvas (io.DisplaySize, set by
+		// ApplyPanelDisplaySize), unrelated to the HMD's native per-eye render
+		// resolution — scaling off GetScreenSize() here inflated every UI metric,
+		// pushing edge chrome (e.g. the close button) outside the panel's
+		// interactive bounds.
+		if (g_vrHelper.IsConnected()) {
+			return 1.0f;
+		}
 		const auto height = RE::BSGraphics::Renderer::GetScreenSize().height;
 		return DisplayTweaks::borderlessUpscale ? DisplayTweaks::resolutionScale : static_cast<float>(height) / 1080.0f;
 	}
@@ -27,6 +83,10 @@ namespace ImGui::Renderer
 	// HELPER
 	// ==================================================
 
+	// Draws kPassInputToGame windows to the always-on VR HUD panel; a no-op
+	// off VR (flat draws them as part of the normal Draw() pass instead).
+	void DrawHud();
+
 	void Draw()
 	{
 		if (!initialized.load()) {
@@ -38,20 +98,73 @@ namespace ImGui::Renderer
 
 		const auto manager = FUCKMan::GetSingleton();
 
+		// Reconcile menu-open state with the helper (its open/cycle combos can
+		// open or close us) and pump the wand into ImGui before NewFrame consumes
+		// the input. Update() also pumps the VR keyboard as of client SDK 1.6+.
+		// Only the main menu / non-passthrough windows go through this
+		// exclusive-focus client now — kPassInputToGame windows always render
+		// on the independent HUD-mode pass below instead, VR or not.
+		if (g_vrHelper.IsConnected()) {
+			bool menuOpen = manager->ShouldRenderExclusive();
+			g_vrHelper.Update(menuOpen);
+			if (menuOpen != manager->ShouldRenderExclusive()) {
+				menuOpen ? manager->Open() : manager->Close();
+			}
+		}
+
 		ImGui_ImplDX11_NewFrame();
 		SKSE::ImGui_ImplSkyrim_NewFrame();
+		// When presenting to the helper's VR panel, the canvas must equal the
+		// panel's exact pixel size (see ApplyPanelDisplaySize's doc comment for
+		// why 1:1, not just aspect-matched). Re-query each frame; the panel can
+		// be resized.
+		if (g_vrHelper.IsConnected()) {
+			g_vrHelper.ApplyPanelDisplaySize();
+		}
 		NewFrame();
 		{
 			// disable windowing
 			GImGui->NavWindowingTarget = nullptr;
 
-			if (manager->ShouldRender()) {
-				manager->Draw();
+			// Flat screen has no panel split — draw everything together
+			// (kPassInputToGame windows included), same as always.
+			if (!g_vrHelper.IsConnected() ? manager->ShouldRender() : manager->ShouldRenderExclusive()) {
+				manager->Draw(false);
 			}
 		}
 		EndFrame();
 		Render();
-		ImGui_ImplDX11_RenderDrawData(GetDrawData());
+		// One output call: helper connected (VR) → render only to its flat panel
+		// (the helper composites it in-scene); helper absent → the normal draw.
+		// Never both, so we don't paint a second, sheared copy onto VR's curved HUD.
+		g_vrHelper.RenderFrame();
+
+		DrawHud();
+	}
+
+	void DrawHud()
+	{
+		if (!g_vrHelperHud.IsConnected()) {
+			return;
+		}
+
+		const auto renderer = RE::BSGraphics::Renderer::GetSingleton();
+		if (!renderer) {
+			return;
+		}
+
+		const auto manager = FUCKMan::GetSingleton();
+		auto*      device  = reinterpret_cast<ID3D11Device*>(renderer->GetRuntimeData().forwarder);
+		auto*      context = reinterpret_cast<ID3D11DeviceContext*>(renderer->GetRuntimeData().context);
+
+		// RenderHud owns its own private context + DX11 backend and clears the
+		// panel on its own once nothing is drawn, so it's safe to call every
+		// frame regardless of whether any passthrough window is currently open.
+		g_vrHelperHud.RenderHud(device, context, ImVec2(1920.0f, 1080.0f), [manager]() {
+			if (manager->ShouldRenderPassthrough()) {
+				manager->Draw(true);
+			}
+		});
 	}
 
 	// ==================================================
@@ -108,8 +221,8 @@ namespace ImGui::Renderer
 		// Fallback rendering pass for unhandled frames. (e.g. when 'tm' used to hide menus)
 		if (!s_renderedThisFrame.exchange(false)) {
 			const auto renderer = RE::BSGraphics::Renderer::GetSingleton();
-			auto       device   = reinterpret_cast<ID3D11Device*>(renderer->data.forwarder);
-			auto       context  = reinterpret_cast<ID3D11DeviceContext*>(renderer->data.context);
+			auto       device   = reinterpret_cast<ID3D11Device*>(renderer->GetRuntimeData().forwarder);
+			auto       context  = reinterpret_cast<ID3D11DeviceContext*>(renderer->GetRuntimeData().context);
 
 			// Cache render target view.
 			if (!g_mainRenderTargetView) {
@@ -165,7 +278,7 @@ namespace ImGui::Renderer
 			func();
 
 			if (const auto renderer = RE::BSGraphics::Renderer::GetSingleton()) {
-				const auto swapChain = reinterpret_cast<IDXGISwapChain*>(renderer->data.renderWindows[0].swapChain);
+				const auto swapChain = reinterpret_cast<IDXGISwapChain*>(renderer->GetRuntimeData().renderWindows[0].swapChain);
 				if (!swapChain) {
 					logger::error("Failed to find SwapChain.");
 					return;
@@ -177,8 +290,8 @@ namespace ImGui::Renderer
 					return;
 				}
 
-				const auto device  = reinterpret_cast<ID3D11Device*>(renderer->data.forwarder);
-				const auto context = reinterpret_cast<ID3D11DeviceContext*>(renderer->data.context);
+				const auto device  = reinterpret_cast<ID3D11Device*>(renderer->GetRuntimeData().forwarder);
+				const auto context = reinterpret_cast<ID3D11DeviceContext*>(renderer->GetRuntimeData().context);
 
 				logger::info("Initializing ImGui..."sv);
 
@@ -270,7 +383,7 @@ namespace ImGui::Renderer
 
 	void Install()
 	{
-		REL::Relocation<std::uintptr_t> target{ RELOCATION_ID(75595, 77226), OFFSET(0x9, 0x275) };
+		REL::Relocation<std::uintptr_t> target{ RELOCATION_ID(75595, 77226), REL::Relocate(0x9, 0x275) };
 		stl::write_thunk_call<CreateD3DAndSwapChain>(target.address());
 
 		stl::write_vfunc<RE::HUDMenu, HUDMenu_PostDisplay>();

@@ -1,4 +1,5 @@
 #include "Graphics.h"
+#include "Renderer.h"
 
 namespace ImGui
 {
@@ -31,7 +32,14 @@ namespace ImGui
 		if (SUCCEEDED(hr)) {
 			if (auto renderer = RE::BSGraphics::Renderer::GetSingleton()) {
 				if (a_resizeToScreenRes) {
-					static auto screenSize = RE::BSGraphics::Renderer::GetScreenSize();
+					// The helper panel is a fixed logical canvas, unrelated to the
+					// HMD's native per-eye render resolution (see GetResolutionScale).
+					auto screenSize = RE::BSGraphics::Renderer::GetScreenSize();
+					if (ImGui::Renderer::IsVRHelperConnected()) {
+						const auto& displaySize = ImGui::GetIO().DisplaySize;
+						screenSize.width         = static_cast<std::uint32_t>(displaySize.x);
+						screenSize.height        = static_cast<std::uint32_t>(displaySize.y);
+					}
 					if (screenSize.height != image->GetMetadata().height && screenSize.width != image->GetMetadata().width) {
 						DirectX::ScratchImage tmpImage;
 						DirectX::Resize(*image->GetImage(0, 0, 0), screenSize.width, screenSize.height, DirectX::TEX_FILTER_CUBIC, tmpImage);
@@ -42,7 +50,7 @@ namespace ImGui
 				}
 
 				ComPtr<ID3D11Resource> pTexture{};
-				hr = DirectX::CreateTexture(reinterpret_cast<ID3D11Device*>(renderer->data.forwarder), image->GetImages(), 1, image->GetMetadata(), &pTexture);
+				hr = DirectX::CreateTexture(reinterpret_cast<ID3D11Device*>(renderer->GetRuntimeData().forwarder), image->GetImages(), 1, image->GetMetadata(), &pTexture);
 
 				if (SUCCEEDED(hr)) {
 					D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
@@ -51,7 +59,7 @@ namespace ImGui
 					srvDesc.Texture2D.MipLevels       = 1;
 					srvDesc.Texture2D.MostDetailedMip = 0;
 
-					hr     = reinterpret_cast<ID3D11Device*>(renderer->data.forwarder)->CreateShaderResourceView(pTexture.Get(), &srvDesc, srView.ReleaseAndGetAddressOf());
+					hr     = reinterpret_cast<ID3D11Device*>(renderer->GetRuntimeData().forwarder)->CreateShaderResourceView(pTexture.Get(), &srvDesc, srView.ReleaseAndGetAddressOf());
 					result = SUCCEEDED(hr);
 				}
 

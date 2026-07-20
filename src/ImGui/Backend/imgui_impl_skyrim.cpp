@@ -3,6 +3,8 @@
 
 #	include "imgui_impl_skyrim.h"
 
+#	include "ImGui/Renderer.h"
+
 namespace SKSE
 {
 	bool ImGui_ImplSkyrim_Init()
@@ -33,8 +35,12 @@ namespace SKSE
 		}
 		io.DeltaTime = deltaTime;
 
-		if (const auto* menuCursor = RE::MenuCursor::GetSingleton()) {
-			io.AddMousePosEvent(menuCursor->cursorPosX, menuCursor->cursorPosY);
+		// The wand (pumped into ImGui's IO by ImGuiVRHelper before NewFrame) owns
+		// the cursor; MenuCursor doesn't track it and would snap the position back.
+		if (!ImGui::Renderer::IsVRHelperConnected()) {
+			if (const auto* menuCursor = RE::MenuCursor::GetSingleton()) {
+				io.AddMousePosEvent(menuCursor->GetRuntimeData().cursorPosX, menuCursor->GetRuntimeData().cursorPosY);
+			}
 		}
 	}
 }

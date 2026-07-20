@@ -1,6 +1,7 @@
 #include "FUCK-Man.h"
 
 #include "ImGui/Audio.h"
+#include "ImGui/Renderer.h"
 #include "ImGui/Util.h"
 
 #include "Hotkeys.h"
@@ -58,6 +59,11 @@ namespace Input
 
 	bool Manager::CanNavigateWithMouse() const
 	{
+		// The VR wand is pumped straight into ImGui's IO as a mouse, without ever
+		// appearing as a keyboard/mouse RE::InputEvent or opening the CursorMenu
+		if (ImGui::Renderer::IsVRHelperConnected()) {
+			return true;
+		}
 		return IsInputKBM() || RE::UI::GetSingleton()->IsMenuOpen(RE::CursorMenu::MENU_NAME);
 	}
 
@@ -815,7 +821,7 @@ namespace Input
 						}
 						if (cursorMenuOpen) {
 							if (auto cursorMenu = RE::UI::GetSingleton()->GetMenu<RE::CursorMenu>()) {
-								cursorMenu->ProcessMouseMove(mouseEvent);
+								cursorMenu->AsMenuEventHandler()->ProcessMouseMove(mouseEvent);
 							}
 						}
 					} else if (const auto thumbstickEvent = event->AsThumbstickEvent()) {
@@ -824,7 +830,7 @@ namespace Input
 						}
 						if (cursorMenuOpen && (fuck->IsOpen() || forceCursor)) {
 							if (auto cursorMenu = RE::UI::GetSingleton()->GetMenu<RE::CursorMenu>()) {
-								cursorMenu->ProcessThumbstick(thumbstickEvent);
+								cursorMenu->AsMenuEventHandler()->ProcessThumbstick(thumbstickEvent);
 							}
 						}
 					}
@@ -842,10 +848,12 @@ namespace Input
 				io.AddKeyEvent(ImGuiMod_Super, superDown);
 			}
 
-			// Sync OS hardware cursor to the virtual joystick cursor
-			if (_cursorMovedByJoystick && cursorMenuOpen && passMouse) {
+			// Sync OS hardware cursor to the virtual joystick cursor. Flat only:
+			// there's no meaningful OS cursor in a headset, and warping it here
+			// would fight the wand's own AddMousePosEvent pump.
+			if (!ImGui::Renderer::IsVRHelperConnected() && _cursorMovedByJoystick && cursorMenuOpen && passMouse) {
 				if (auto mc = RE::MenuCursor::GetSingleton()) {
-					ImVec2 clientPos = ImGui::TranslateScaleformToScreen(mc->cursorPosX, mc->cursorPosY);
+					ImVec2 clientPos = ImGui::TranslateScaleformToScreen(mc->GetRuntimeData().cursorPosX, mc->GetRuntimeData().cursorPosY);
 
 					static float s_lastClientX = -1.0f;
 					static float s_lastClientY = -1.0f;
