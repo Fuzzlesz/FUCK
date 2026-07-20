@@ -36,6 +36,6 @@ namespace Hotkeys
 
 	private:
 		bool                enabled = false;
-		FUCK::ManagedHotkey _toggleHotkey;
+		FUCK::ManagedHotkey _toggleHotkey{ .kKey = _defToggle.kKey };
 	};
 }
