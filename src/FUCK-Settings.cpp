@@ -70,9 +70,6 @@ void SettingsTool::Draw()
 			FUCK::Header("$FUCK_Settings_Controller"_T);
 			FUCK::Spacing(2);
 
-			FUCK::Header("$FUCK_Settings_Controller"_T);
-			FUCK::Spacing(2);
-
 			if (FUCK::Checkbox("$FUCK_Settings_InjectSystemMenu"_T, &manager->_cfg.injectSystemMenu, true, true))
 				manager->Save();
 			FUCK::SetTooltip("$FUCK_Settings_InjectSystemMenuTT"_T);
