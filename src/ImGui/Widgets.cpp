@@ -627,8 +627,8 @@ namespace ImGui
 			static std::string lowerItemBuffer;
 
 			for (int i = 0; i < static_cast<int>(items.size()); i++) {
-				// Exclude items marked with ##NOFILTER from search results
-				if (items[i].find("##NOFILTER") != std::string::npos) {
+				// Exclude items marked with ##NOFILTER and headers from search results
+				if (items[i].find("##NOFILTER") != std::string::npos || items[i].starts_with("##HEADER:")) {
 					continue;
 				}
 
@@ -688,22 +688,34 @@ namespace ImGui
 				// Push the index to guarantee unique IDs for identical labels
 				PushID(idx);
 
-				if (navigateToItems) {
-					if (i == 0 || *current_item == idx) {
-						SetKeyboardFocusHere(0);
+				std::string_view itemStr(items[idx]);
+				if (!filtering && itemStr.starts_with("##HEADER:")) {
+					PushStyleColor(ImGuiCol_Text, GetUserStyleColorVec4(USER_STYLE::kWidgetFlash));
+					if (i > 0)
+						Dummy(ImVec2(0, 4.0f * scale));
+					SetCursorPosX(GetCursorPosX() + padX);
+					TextUnformatted(itemStr.data() + 9, itemStr.data() + itemStr.size());
+					if (i < show_count - 1)
+						Dummy(ImVec2(0, 2.0f * scale));
+					PopStyleColor();
+				} else {
+					if (navigateToItems) {
+						if (i == 0 || *current_item == idx) {
+							SetKeyboardFocusHere(0);
+						}
 					}
-				}
 
-				bool isSelected = (*current_item == idx);
-				if (Selectable(items[idx].c_str(), isSelected)) {
-					*current_item = idx;
-					changed       = true;
-					CloseCurrentPopup();
-					PlayAudio(Audio::kFocus);
-				}
+					bool isSelected = (*current_item == idx);
+					if (Selectable(items[idx].c_str(), isSelected)) {
+						*current_item = idx;
+						changed       = true;
+						CloseCurrentPopup();
+						PlayAudio(Audio::kFocus);
+					}
 
-				if (isSelected && IsWindowAppearing())
-					SetScrollHereY();
+					if (isSelected && IsWindowAppearing())
+						SetScrollHereY();
+				}
 
 				PopID();
 			}
@@ -808,16 +820,28 @@ namespace ImGui
 				// Push the index to guarantee unique IDs for identical labels
 				PushID(i);
 
-				bool isSelected = (*current_item == i);
-				if (Selectable(items[i], isSelected)) {
-					*current_item = i;
-					changed       = true;
-					PlayAudio(Audio::kFocus);
-				}
+				std::string_view itemStr(items[i]);
+				if (itemStr.starts_with("##HEADER:")) {
+					PushStyleColor(ImGuiCol_Text, GetUserStyleColorVec4(USER_STYLE::kWidgetFlash));
+					if (i > 0)
+						Dummy(ImVec2(0, 4.0f * scale));
+					SetCursorPosX(GetCursorPosX() + padX);
+					TextUnformatted(itemStr.data() + 9, itemStr.data() + itemStr.size());
+					if (i < items_count - 1)
+						Dummy(ImVec2(0, 2.0f * scale));
+					PopStyleColor();
+				} else {
+					bool isSelected = (*current_item == i);
+					if (Selectable(items[i], isSelected)) {
+						*current_item = i;
+						changed       = true;
+						PlayAudio(Audio::kFocus);
+					}
 
-				if (IsWindowAppearing()) {
-					if (isSelected || (*current_item < 0 && i == 0)) {
-						SetKeyboardFocusHere(-1);
+					if (IsWindowAppearing()) {
+						if (isSelected || (*current_item < 0 && i == 0)) {
+							SetKeyboardFocusHere(-1);
+						}
 					}
 				}
 

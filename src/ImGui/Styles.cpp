@@ -1,5 +1,6 @@
 #include "FUCK-Man.h"
 
+#include "IconsFontAwesome6.h"
 #include "IconsFonts.h"
 #include "Renderer.h"
 #include "Styles.h"
@@ -152,18 +153,47 @@ namespace ImGui
 		auto gameOtf   = Utils::GetDirectoryFiles(settings->GetLegacyFontsPath(), ".otf", true, false);
 		auto csOtf     = Utils::GetDirectoryFiles(settings->GetCSFontsPath(),     ".otf", true, false);
 
-		userFonts.insert(userFonts.end(), gameFonts.begin(), gameFonts.end());
-		userFonts.insert(userFonts.end(),   csFonts.begin(),   csFonts.end());
+		auto appendAndUnique = [](std::vector<std::string>& list, const std::vector<std::string>& ttf, const std::vector<std::string>& otf) {
+			list.insert(list.end(), ttf.begin(), ttf.end());
+			list.insert(list.end(), otf.begin(), otf.end());
+			std::sort(list.begin(), list.end());
+			list.erase(std::unique(list.begin(), list.end()), list.end());
+		};
 
-		userFonts.insert(userFonts.end(), userOtf.begin(), userOtf.end());
-		userFonts.insert(userFonts.end(), gameOtf.begin(), gameOtf.end());
-		userFonts.insert(userFonts.end(),   csOtf.begin(),   csOtf.end());
+		std::vector<std::string> userAll, gameAll, csAll;
+		appendAndUnique(userAll, userFonts, userOtf);
+		appendAndUnique(gameAll, gameFonts, gameOtf);
+		appendAndUnique(csAll, csFonts, csOtf);
 
-		std::sort(userFonts.begin(), userFonts.end());
-		userFonts.erase(std::unique(userFonts.begin(), userFonts.end()), userFonts.end());
+		// Deduplicate across directories to match resolution priority (User > Game > CS)
+		auto removeDuplicates = [](std::vector<std::string>& target, const std::vector<std::string>& reference) {
+			target.erase(std::remove_if(target.begin(), target.end(), [&](const std::string& font) {
+				return std::find(reference.begin(), reference.end(), font) != reference.end();
+			}),
+				target.end());
+		};
 
-		userFonts.insert(userFonts.begin(), "Default");
-		return userFonts;
+		removeDuplicates(gameAll, userAll);
+		removeDuplicates(csAll, userAll);
+		removeDuplicates(csAll, gameAll);
+
+		std::vector<std::string> allFonts;
+		allFonts.push_back("Default");
+
+		if (!userAll.empty()) {
+			allFonts.push_back("##HEADER:" ICON_FA_FOLDER_OPEN "  " + settings->GetUserFontsPath());
+			allFonts.insert(allFonts.end(), userAll.begin(), userAll.end());
+		}
+		if (!gameAll.empty()) {
+			allFonts.push_back("##HEADER:" ICON_FA_FOLDER_OPEN "  " + std::string(settings->GetLegacyFontsPath()));
+			allFonts.insert(allFonts.end(), gameAll.begin(), gameAll.end());
+		}
+		if (!csAll.empty()) {
+			allFonts.push_back("##HEADER:" ICON_FA_FOLDER_OPEN "  " + std::string(settings->GetCSFontsPath()));
+			allFonts.insert(allFonts.end(), csAll.begin(), csAll.end());
+		}
+
+		return allFonts;
 	}
 
 	const std::vector<std::string>& Styles::GetPresets()
