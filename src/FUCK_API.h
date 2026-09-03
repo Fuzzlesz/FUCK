@@ -16,7 +16,6 @@
 //
 // ==================================================
 
-
 #ifndef FUCK_API_ENABLE_SIMPLEINI
 struct FUCK_SimpleIni_Opaque;
 #	define FUCK_SIMPLEINI_TYPE FUCK_SimpleIni_Opaque
