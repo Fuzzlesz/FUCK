@@ -1,7 +1,7 @@
 #pragma once
 #include <imgui.h>
 
-#define FUCK_API_VERSION 3
+#define FUCK_API_VERSION 4
 
 // ==================================================
 // [ OPTIONAL ] SIMPLEINI HELPERS
@@ -572,6 +572,9 @@ struct FUCK_Interface
 	void (*DrawScreenTriangleFilled)(const ImVec2&, const ImVec2&, const ImVec2&, ImU32);
 
 	bool (*TreeNodeEx)(const char*, int);
+
+	// Version 4
+	bool (*WorldToScreenLoc)(const float[3], float*, float*);
 };
 #pragma pack(pop)
 
@@ -2212,6 +2215,26 @@ namespace FUCK
 	{
 		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawScreenTriangleFilled)
 			i->DrawScreenTriangleFilled(p1, p2, p3, color);
+	}
+
+	// --------------------------------------------------
+	// Version 4
+	// --------------------------------------------------
+
+	inline bool WorldToScreenLoc(const float worldPos[3], ImVec2& screenLocOut)
+	{
+		if (auto i = GetInterface(); i && i->version >= 4 && i->WorldToScreenLoc)
+			return i->WorldToScreenLoc(worldPos, &screenLocOut.x, &screenLocOut.y);
+		return false;
+	}
+
+	/// @brief Converts a 3D world coordinate to 2D screen coordinates.
+	/// Returns false if the coordinate is behind the camera.
+	template <typename NiPoint3Like>
+	inline bool WorldToScreenLoc(const NiPoint3Like& worldLoc, ImVec2& screenLocOut)
+	{
+		float pos[3] = { worldLoc.x, worldLoc.y, worldLoc.z };
+		return WorldToScreenLoc(pos, screenLocOut);
 	}
 }  // namespace FUCK
 

@@ -786,6 +786,35 @@ namespace FUCK::Host
 	static bool TreeNodeEx_Impl(const char* label, int flags) { return ImGui::TreeNodeIcon(label, flags); }
 
 	// ==================================================
+	// Version 4
+	// ==================================================
+	static bool WorldToScreenLoc_Impl(const float pos_in[3], float* pos_out_x, float* pos_out_y)
+	{
+		if (!pos_in || !pos_out_x || !pos_out_y)
+			return false;
+
+		RE::NiPoint3 worldLoc(pos_in[0], pos_in[1], pos_in[2]);
+		float        zVal;
+
+		auto camera = RE::Main::WorldRootCamera();
+		if (!camera)
+			return false;
+
+		camera->WorldPtToScreenPt3(worldLoc, *pos_out_x, *pos_out_y, zVal, 1e-5f);
+		if (zVal <= 0.0f) {
+			return false;
+		}
+
+		float resX, resY;
+		GetDisplaySize_Impl(&resX, &resY);
+
+		*pos_out_x = resX * (*pos_out_x);
+		*pos_out_y = resY * (1.0f - *pos_out_y);
+
+		return true;
+	}
+
+	// ==================================================
 	// CreateInterface
 	// ==================================================
 	FUCK_Interface* CreateInterface()
@@ -1048,7 +1077,10 @@ namespace FUCK::Host
 			.DrawTriangleFilled       = DrawTriangleFilled_Impl,
 			.DrawScreenTriangle       = DrawScreenTriangle_Impl,
 			.DrawScreenTriangleFilled = DrawScreenTriangleFilled_Impl,
-			.TreeNodeEx               = TreeNodeEx_Impl
+			.TreeNodeEx               = TreeNodeEx_Impl,
+
+			// Version 4
+			.WorldToScreenLoc = WorldToScreenLoc_Impl
 		};
 		return &api;
 	}
