@@ -944,21 +944,6 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 		return;
 	}
 
-	// Close main menu if a forced camera state begins.
-	if (_isOpen) {
-		if (auto camera = RE::PlayerCamera::GetSingleton(); camera && camera->currentState) {
-			const auto activeID = camera->currentState->id;
-			// VR inserts kVR before kThirdPerson, shifting kBleedout; kVATS/kAutoVanity are unshifted
-			const auto bleedoutID = REL::Module::IsVR() ? RE::CameraState::kVRBleedout : RE::CameraState::kBleedout;
-			if (activeID == RE::CameraState::kVATS ||
-				activeID == bleedoutID             ||
-				activeID == RE::CameraState::kAutoVanity) {
-				Close();
-				ImGui::ClearNavState();
-			}
-		}
-	}
-
 	UpdateGameState();
 
 	// ==================================================
