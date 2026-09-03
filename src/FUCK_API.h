@@ -4,6 +4,27 @@
 #define FUCK_API_VERSION 3
 
 // ==================================================
+// [ OPTIONAL ] SIMPLEINI HELPERS
+// ==================================================
+//
+// To use the FUCK::PluginSettings and FUCK::INI helpers,
+// #include SimpleIni (via clibutil or vcpkg) and add the
+// enabler macro before including this header:
+//
+// #define FUCK_API_ENABLE_SIMPLEINI
+// #include "FUCK_API.h"
+//
+// ==================================================
+
+
+#ifndef FUCK_API_ENABLE_SIMPLEINI
+struct FUCK_SimpleIni_Opaque;
+#	define FUCK_SIMPLEINI_TYPE FUCK_SimpleIni_Opaque
+#else
+#	define FUCK_SIMPLEINI_TYPE CSimpleIniA
+#endif
+
+// ==================================================
 // [ SECTION 1 ] TYPES & INTERFACES
 // ==================================================
 
@@ -334,12 +355,12 @@ struct FUCK_Interface
 	const char* (*GetTranslation)(const char*);
 	void (*SanitizePath)(char*, const char*, size_t);
 	void (*GetPluginConfigPath)(const char*, char*, size_t);
-	void (*LoadPluginINI)(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*));
-	void (*SavePluginINI)(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*));
-	void (*LoadPluginINIDefaults)(const char*, void*, void (*)(CSimpleIniA&, void*));
-	void (*LoadPluginKeybinds)(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*));
-	void (*SavePluginKeybinds)(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*));
-	void (*LoadPluginKeybindsDefaults)(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*));
+	void (*LoadPluginINI)(const char* pluginName, void* userdata, void (*callback)(FUCK_SIMPLEINI_TYPE&, void*));
+	void (*SavePluginINI)(const char* pluginName, void* userdata, void (*callback)(FUCK_SIMPLEINI_TYPE&, void*));
+	void (*LoadPluginINIDefaults)(const char*, void*, void (*)(FUCK_SIMPLEINI_TYPE&, void*));
+	void (*LoadPluginKeybinds)(const char* pluginName, void* userdata, void (*callback)(FUCK_SIMPLEINI_TYPE&, void*));
+	void (*SavePluginKeybinds)(const char* pluginName, void* userdata, void (*callback)(FUCK_SIMPLEINI_TYPE&, void*));
+	void (*LoadPluginKeybindsDefaults)(const char* pluginName, void* userdata, void (*callback)(FUCK_SIMPLEINI_TYPE&, void*));
 	void (*PushItemFlag)(FUCK::ItemFlags, bool);
 	void (*PopItemFlag)();
 	void (*HelpMarker)(const char*);
@@ -1559,6 +1580,25 @@ namespace FUCK
 		float _height = 0.0f;
 	};
 
+	/// @brief String copy utility.
+	template <size_t N>
+	inline void StringCopy(char (&dest)[N], const char* source)
+	{
+		if (!source) {
+			dest[0] = '\0';
+			return;
+		}
+		strncpy_s(dest, N, source, _TRUNCATE);
+	}
+
+	template <size_t N>
+	inline void StringCopy(char (&dest)[N], const std::string& source)
+	{
+		strncpy_s(dest, N, source.c_str(), _TRUNCATE);
+	}
+
+	#ifdef FUCK_API_ENABLE_SIMPLEINI
+
 	/// @brief Convenience wrapper for Plugin INI Loading/Saving.
 	class PluginSettings
 	{
@@ -1631,23 +1671,6 @@ namespace FUCK
 		const char* _pluginName;
 	};
 
-	/// @brief String copy utility.
-	template <size_t N>
-	inline void StringCopy(char (&dest)[N], const char* source)
-	{
-		if (!source) {
-			dest[0] = '\0';
-			return;
-		}
-		strncpy_s(dest, N, source, _TRUNCATE);
-	}
-
-	template <size_t N>
-	inline void StringCopy(char (&dest)[N], const std::string& source)
-	{
-		strncpy_s(dest, N, source.c_str(), _TRUNCATE);
-	}
-
 	/// @brief Delta save/load INI values.
 	namespace INI
 	{
@@ -1715,6 +1738,7 @@ namespace FUCK
 			strncpy_s(dest, N, val, _TRUNCATE);
 		}
 	}
+	#endif  // FUCK_API_ENABLE_SIMPLEINI
 
 	/// @brief RAII Wrapper for listening to Skyrim UI Menu events.
 	class MenuEventListener
