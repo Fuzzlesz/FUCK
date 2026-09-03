@@ -17,7 +17,7 @@
 // ==================================================
 
 #ifndef FUCK_API_ENABLE_SIMPLEINI
-struct FUCK_SimpleIni_Opaque;
+	struct FUCK_SimpleIni_Opaque;
 #	define FUCK_SIMPLEINI_TYPE FUCK_SimpleIni_Opaque
 #else
 #	define FUCK_SIMPLEINI_TYPE CSimpleIniA
@@ -595,7 +595,7 @@ namespace FUCK
 
 	/// @brief Connects to the FUCK Host Framework.
 	/// @param pluginName The exact name of your SKSE plugin. Used automatically for translations and settings directories.
-	inline bool Connect(const char* pluginName, unsigned int a_minVersion = FUCK_API_VERSION)
+	inline bool Connect(const char* pluginName)
 	{
 		if (!pluginName || pluginName[0] == '\0') {
 			SKSE::log::error("FUCK API Connection failed: You must provide a valid pluginName.");
@@ -609,8 +609,10 @@ namespace FUCK
 		if (!fetcher)
 			return false;
 		auto* iface = static_cast<FUCK_Interface*>(fetcher());
-		if (!iface || iface->version < a_minVersion) {
-			SKSE::log::error("FUCK API Version Mismatch: Expected {}, found {}", a_minVersion, iface ? iface->version : 0);
+
+		// Hard enforce that the host is at least the version this header was compiled for
+		if (!iface || iface->version < FUCK_API_VERSION) {
+			SKSE::log::error("FUCK API Version Mismatch: Expected {}, found {}", FUCK_API_VERSION, iface ? iface->version : 0);
 			return false;
 		}
 
@@ -1293,9 +1295,7 @@ namespace FUCK
 
 	inline bool TreeNode(const char* label, int flags = 0)
 	{
-		if (auto i = GetInterface(); i && i->version >= 3 && i->TreeNodeEx)
-			return i->TreeNodeEx(label, flags);
-		return GetInterface() ? GetInterface()->TreeNode(label) : false;
+		return GetInterface() ? GetInterface()->TreeNodeEx(label, flags) : false;
 	}
 
 	inline void TreePop()
@@ -1599,7 +1599,7 @@ namespace FUCK
 		strncpy_s(dest, N, source.c_str(), _TRUNCATE);
 	}
 
-	#ifdef FUCK_API_ENABLE_SIMPLEINI
+#ifdef FUCK_API_ENABLE_SIMPLEINI
 
 	/// @brief Convenience wrapper for Plugin INI Loading/Saving.
 	class PluginSettings
@@ -1740,7 +1740,7 @@ namespace FUCK
 			strncpy_s(dest, N, val, _TRUNCATE);
 		}
 	}
-	#endif  // FUCK_API_ENABLE_SIMPLEINI
+#endif  // FUCK_API_ENABLE_SIMPLEINI
 
 	/// @brief RAII Wrapper for listening to Skyrim UI Menu events.
 	class MenuEventListener
@@ -2020,51 +2020,47 @@ namespace FUCK
 
 	inline void SeparatorVertical()
 	{
-		if (auto i = GetInterface(); i && i->version >= 2 && i->SeparatorVertical)
+		if (auto i = GetInterface())
 			i->SeparatorVertical();
 	}
 
 	inline void PushItemWidth(float item_width)
 	{
-		if (auto i = GetInterface(); i && i->version >= 2 && i->PushItemWidth)
+		if (auto i = GetInterface())
 			i->PushItemWidth(item_width);
 	}
 
 	inline void PopItemWidth()
 	{
-		if (auto i = GetInterface(); i && i->version >= 2 && i->PopItemWidth)
+		if (auto i = GetInterface())
 			i->PopItemWidth();
 	}
 
 	inline bool BeginTooltip()
 	{
-		if (auto i = GetInterface(); i && i->version >= 2 && i->BeginTooltip)
-			return i->BeginTooltip();
-		return false;
+		return GetInterface() ? GetInterface()->BeginTooltip() : false;
 	}
 
 	inline void EndTooltip()
 	{
-		if (auto i = GetInterface(); i && i->version >= 2 && i->EndTooltip)
+		if (auto i = GetInterface())
 			i->EndTooltip();
 	}
 
 	inline void SetScrollHereY(float center_y_ratio = 0.5f)
 	{
-		if (auto i = GetInterface(); i && i->version >= 2 && i->SetScrollHereY)
+		if (auto i = GetInterface())
 			i->SetScrollHereY(center_y_ratio);
 	}
 
 	inline bool InputTextMultiline(const char* label, char* buf, size_t buf_size, const ImVec2& size = ImVec2(0, 0), int flags = 0)
 	{
-		if (auto i = GetInterface(); i && i->version >= 2 && i->InputTextMultiline)
-			return i->InputTextMultiline(label, buf, buf_size, size, flags);
-		return false;
+		return GetInterface() ? GetInterface()->InputTextMultiline(label, buf, buf_size, size, flags) : false;
 	}
 
 	inline bool InputTextMultiline(const char* label, std::string* str, const ImVec2& size = ImVec2(0, 0), int flags = 0)
 	{
-		if (!str || !GetInterface() || GetInterface()->version < 2)
+		if (!str || !GetInterface())
 			return false;
 
 		char buf[4096];
@@ -2081,138 +2077,132 @@ namespace FUCK
 
 	inline void SetHotkeyEnabled(bool enabled)
 	{
-		if (auto i = GetInterface(); i && i->version >= 3 && i->SetHotkeyEnabled)
+		if (auto i = GetInterface())
 			i->SetHotkeyEnabled(enabled);
 	}
 
 	inline void SetWindowFocus()
 	{
-		if (auto i = GetInterface(); i && i->version >= 3 && i->SetWindowFocus)
+		if (auto i = GetInterface())
 			i->SetWindowFocus();
 	}
 
 	inline void CloseCurrentPopup()
 	{
-		if (auto i = GetInterface(); i && i->version >= 3 && i->CloseCurrentPopup)
+		if (auto i = GetInterface())
 			i->CloseCurrentPopup();
 	}
 
 	inline void OpenPopup(const char* str_id, PopupFlags flags = PopupFlags::kNone)
 	{
-		if (auto i = GetInterface(); i && i->version >= 3 && i->OpenPopup)
+		if (auto i = GetInterface())
 			i->OpenPopup(str_id, static_cast<int>(flags));
 	}
 
 	/// @param flags Currently ignored. Reserved for future updates.
 	inline bool BeginPopup(const char* str_id, WindowFlags flags = WindowFlags::kNone)
 	{
-		if (auto i = GetInterface(); i && i->version >= 3 && i->BeginPopup)
-			return i->BeginPopup(str_id, static_cast<int>(flags));
-		return false;
+		return GetInterface() ? GetInterface()->BeginPopup(str_id, static_cast<int>(flags)) : false;
 	}
 
 	/// @param flags Currently ignored. Reserved for future updates.
 	inline bool BeginPopupModal(const char* name, bool* p_open = nullptr, WindowFlags flags = WindowFlags::kNone)
 	{
-		if (auto i = GetInterface(); i && i->version >= 3 && i->BeginPopupModal)
-			return i->BeginPopupModal(name, p_open, static_cast<int>(flags));
-		return false;
+		return GetInterface() ? GetInterface()->BeginPopupModal(name, p_open, static_cast<int>(flags)) : false;
 	}
 
 	inline bool IsWindowAppearing()
 	{
-		if (auto i = GetInterface(); i && i->version >= 3 && i->IsWindowAppearing)
-			return i->IsWindowAppearing();
-		return false;
+		return GetInterface() ? GetInterface()->IsWindowAppearing() : false;
 	}
 
 	inline void PushTextWrapPos(float wrap_local_pos_x = 0.0f)
 	{
-		if (auto i = GetInterface(); i && i->version >= 3 && i->PushTextWrapPos)
+		if (auto i = GetInterface())
 			i->PushTextWrapPos(wrap_local_pos_x);
 	}
 
 	inline void PopTextWrapPos()
 	{
-		if (auto i = GetInterface(); i && i->version >= 3 && i->PopTextWrapPos)
+		if (auto i = GetInterface())
 			i->PopTextWrapPos();
 	}
 
 	inline void SetNavCursorVisible(bool visible)
 	{
-		if (auto i = GetInterface(); i && i->version >= 3 && i->SetNavCursorVisible)
+		if (auto i = GetInterface())
 			i->SetNavCursorVisible(visible);
 	}
 
 	inline void DrawCircle(const ImVec2& center, float radius, const ImVec4& color, int num_segments = 0, float thickness = 1.0f)
 	{
-		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawCircle)
+		if (auto i = GetInterface())
 			i->DrawCircle(center, radius, color, num_segments, thickness);
 	}
 
 	inline void DrawCircleFilled(const ImVec2& center, float radius, const ImVec4& color, int num_segments = 0)
 	{
-		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawCircleFilled)
+		if (auto i = GetInterface())
 			i->DrawCircleFilled(center, radius, color, num_segments);
 	}
 
 	inline void DrawScreenCircle(const ImVec2& center, float radius, ImU32 color, int num_segments = 0, float thickness = 1.0f)
 	{
-		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawScreenCircle)
+		if (auto i = GetInterface())
 			i->DrawScreenCircle(center, radius, color, num_segments, thickness);
 	}
 
 	inline void DrawScreenCircleFilled(const ImVec2& center, float radius, ImU32 color, int num_segments = 0)
 	{
-		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawScreenCircleFilled)
+		if (auto i = GetInterface())
 			i->DrawScreenCircleFilled(center, radius, color, num_segments);
 	}
 
 	inline void DrawQuad(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec4& color, float thickness = 1.0f)
 	{
-		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawQuad)
+		if (auto i = GetInterface())
 			i->DrawQuad(p1, p2, p3, p4, color, thickness);
 	}
 
 	inline void DrawQuadFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec4& color)
 	{
-		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawQuadFilled)
+		if (auto i = GetInterface())
 			i->DrawQuadFilled(p1, p2, p3, p4, color);
 	}
 
 	inline void DrawScreenQuad(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 color, float thickness = 1.0f)
 	{
-		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawScreenQuad)
+		if (auto i = GetInterface())
 			i->DrawScreenQuad(p1, p2, p3, p4, color, thickness);
 	}
 
 	inline void DrawScreenQuadFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 color)
 	{
-		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawScreenQuadFilled)
+		if (auto i = GetInterface())
 			i->DrawScreenQuadFilled(p1, p2, p3, p4, color);
 	}
 
 	inline void DrawTriangle(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec4& color, float thickness = 1.0f)
 	{
-		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawTriangle)
+		if (auto i = GetInterface())
 			i->DrawTriangle(p1, p2, p3, color, thickness);
 	}
 
 	inline void DrawTriangleFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec4& color)
 	{
-		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawTriangleFilled)
+		if (auto i = GetInterface())
 			i->DrawTriangleFilled(p1, p2, p3, color);
 	}
 
 	inline void DrawScreenTriangle(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 color, float thickness = 1.0f)
 	{
-		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawScreenTriangle)
+		if (auto i = GetInterface())
 			i->DrawScreenTriangle(p1, p2, p3, color, thickness);
 	}
 
 	inline void DrawScreenTriangleFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 color)
 	{
-		if (auto i = GetInterface(); i && i->version >= 3 && i->DrawScreenTriangleFilled)
+		if (auto i = GetInterface())
 			i->DrawScreenTriangleFilled(p1, p2, p3, color);
 	}
 
@@ -2222,9 +2212,7 @@ namespace FUCK
 
 	inline bool WorldToScreenLoc(const float worldPos[3], ImVec2& screenLocOut)
 	{
-		if (auto i = GetInterface(); i && i->version >= 4 && i->WorldToScreenLoc)
-			return i->WorldToScreenLoc(worldPos, &screenLocOut.x, &screenLocOut.y);
-		return false;
+		return GetInterface() ? GetInterface()->WorldToScreenLoc(worldPos, &screenLocOut.x, &screenLocOut.y) : false;
 	}
 
 	/// @brief Converts a 3D world coordinate to 2D screen coordinates.
