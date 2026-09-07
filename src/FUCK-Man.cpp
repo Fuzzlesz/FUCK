@@ -131,6 +131,7 @@ void FUCKMan::RegisterTool(FUCK::ITool* a_tool)
 		logger::info("FUCK: Attempted to register a Tool with a null Name or PluginName.");
 		return;
 	}
+	logger::info("FUCK: Registering Tool '{}' for plugin '{}'", a_tool->Name(), a_tool->PluginName());
 	std::lock_guard lock(_pendingLock);
 	_pendingCommands.push_back({ PendingCommand::Type::kAddTool, a_tool, nullptr });
 }
@@ -141,6 +142,7 @@ void FUCKMan::RegisterWindow(FUCK::IWindow* a_window)
 		logger::info("FUCK: Attempted to register a Window with a null Id or PluginName.");
 		return;
 	}
+	logger::info("FUCK: Registering Window '{}' for plugin '{}'", a_window->Id(), a_window->PluginName());
 	std::lock_guard lock(_pendingLock);
 	_pendingCommands.push_back({ PendingCommand::Type::kAddWindow, nullptr, a_window });
 }
