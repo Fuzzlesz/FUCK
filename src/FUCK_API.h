@@ -605,6 +605,8 @@ struct FUCK_Interface
 	float (*GetScrollMaxY)();
 	void (*SetScrollX)(float);
 	void (*SetScrollY)(float);
+
+	bool (*SliderAngle)(const char*, float*, float, float, const char*);
 };
 #pragma pack(pop)
 
@@ -2339,6 +2341,11 @@ namespace FUCK
 	{
 		if (auto i = GetInterface())
 			i->SetScrollY(scroll_y);
+	}
+
+	inline bool SliderAngle(const char* label, float* v_rad, float v_degrees_min = -360.0f, float v_degrees_max = +360.0f, const char* format = "%.0f deg")
+	{
+		return GetInterface() ? GetInterface()->SliderAngle(label, v_rad, v_degrees_min, v_degrees_max, format) : false;
 	}
 }  // namespace FUCK
 

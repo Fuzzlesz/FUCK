@@ -1948,6 +1948,18 @@ namespace ImGui
 		return res;
 	}
 
+	bool SliderAngleStyled(const char* label, float* v_rad, float v_degrees_min, float v_degrees_max, const char* format)
+	{
+		if (!format)
+			format = "%.0f deg";
+		float v_deg         = (*v_rad) * 360.0f / (2.0f * IM_PI);
+		bool  value_changed = Slider(label, &v_deg, v_degrees_min, v_degrees_max, format, ImGuiSliderFlags_AlwaysClamp);
+		if (value_changed) {
+			*v_rad = v_deg * (2.0f * IM_PI) / 360.0f;
+		}
+		return value_changed;
+	}
+
 	void Stepper(const char* label, const char* text, bool* outLeft, bool* outRight)
 	{
 		LeftLabel(label);
