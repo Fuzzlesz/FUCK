@@ -1,7 +1,7 @@
 {
   "name": "fuck",
-  "version-string": "1.3.0",
-  "license": "MIT",
+  "version-string": "1.4.0",
+  "license": "GPL-3.0-or-later",
   "dependencies": [
     "clib-util",
     "directxtex",
