@@ -588,6 +588,10 @@ struct FUCK_Interface
 
 	// Version 4
 	bool (*WorldToScreenLoc)(const float[3], float*, float*);
+
+	void (*AddWindowListener)(void* userdata, void (*callback)(const char* pluginName, const char* windowId, bool opening, void* userdata));
+	void (*RemoveWindowListener)(void* userdata);
+	bool (*IsPluginWindowOpen)(const char* pluginName, const char* windowId);
 };
 #pragma pack(pop)
 
@@ -1235,6 +1239,13 @@ namespace FUCK
 		if (auto i = GetInterface())
 			i->ExtendWindowPastBorder();
 	}
+
+	/// @brief Checks if a specific window registered by a plugin is currently open.
+	inline bool IsPluginWindowOpen(const char* pluginName, const char* windowId)
+	{
+		return GetInterface() ? GetInterface()->IsPluginWindowOpen(pluginName, windowId) : false;
+	}
+
 	inline ImVec2 GetWindowPos()
 	{
 		if (auto i = GetInterface()) {
@@ -1795,6 +1806,56 @@ namespace FUCK
 		static void Dispatch(const char* menuName, bool opening, void* userdata)
 		{
 			static_cast<MenuEventListener*>(userdata)->_callback(menuName, opening);
+		}
+		Callback _callback;
+	};
+
+	/// @brief RAII Wrapper for listening to FUCK Window Open/Close events from any plugin.
+	class WindowEventListener
+	{
+	public:
+		using Callback = std::function<void(const char* pluginName, const char* windowId, bool opening)>;
+
+		WindowEventListener() = default;
+		explicit WindowEventListener(Callback a_cb) :
+			_callback(std::move(a_cb))
+		{
+			if (auto i = GetInterface())
+				i->AddWindowListener(this, &WindowEventListener::Dispatch);
+		}
+		~WindowEventListener()
+		{
+			if (_callback)
+				if (auto i = GetInterface())
+					i->RemoveWindowListener(this);
+		}
+
+		WindowEventListener(const WindowEventListener&)            = delete;
+		WindowEventListener& operator=(const WindowEventListener&) = delete;
+		WindowEventListener& operator=(WindowEventListener&& other) noexcept
+		{
+			if (this != &other) {
+				if (_callback)
+					if (auto i = GetInterface())
+						i->RemoveWindowListener(this);
+
+				_callback = std::move(other._callback);
+
+				if (_callback) {
+					if (auto i = GetInterface()) {
+						i->RemoveWindowListener(&other);
+						i->AddWindowListener(this, &WindowEventListener::Dispatch);
+					}
+					other._callback = nullptr;
+				}
+			}
+			return *this;
+		}
+
+	private:
+		static void Dispatch(const char* pluginName, const char* windowId, bool opening, void* userdata)
+		{
+			static_cast<WindowEventListener*>(userdata)->_callback(pluginName, windowId, opening);
 		}
 		Callback _callback;
 	};

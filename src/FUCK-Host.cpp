@@ -813,6 +813,10 @@ namespace FUCK::Host
 
 		return true;
 	}
+		
+	static void AddWindowListener_Impl(void* userdata, void (*callback)(const char*, const char*, bool, void*)) { FUCKMan::GetSingleton()->AddWindowListener(userdata, callback); }
+	static void RemoveWindowListener_Impl(void* userdata) { FUCKMan::GetSingleton()->RemoveWindowListener(userdata); }
+	static bool IsPluginWindowOpen_Impl(const char* pluginName, const char* windowId) { return FUCKMan::GetSingleton()->IsPluginWindowOpen(pluginName, windowId); }
 
 	// ==================================================
 	// CreateInterface
@@ -1080,7 +1084,10 @@ namespace FUCK::Host
 			.TreeNodeEx               = TreeNodeEx_Impl,
 
 			// Version 4
-			.WorldToScreenLoc = WorldToScreenLoc_Impl
+			.WorldToScreenLoc       = WorldToScreenLoc_Impl,
+			.AddWindowListener      = AddWindowListener_Impl,
+			.RemoveWindowListener   = RemoveWindowListener_Impl,
+			.IsPluginWindowOpen     = IsPluginWindowOpen_Impl,
 		};
 		return &api;
 	}

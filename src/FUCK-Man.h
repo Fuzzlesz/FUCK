@@ -145,6 +145,44 @@ public:
 		}
 	}
 
+	// --- Window Event Listeners ---
+	struct WindowListenerEntry
+	{
+		void* userdata;
+		void (*callback)(const char*, const char*, bool, void*);
+	};
+	std::vector<WindowListenerEntry> _windowListeners;
+
+	void AddWindowListener(void* userdata, void (*callback)(const char*, const char*, bool, void*))
+	{
+		_windowListeners.push_back({ userdata, callback });
+	}
+
+	void RemoveWindowListener(void* userdata)
+	{
+		std::erase_if(_windowListeners, [userdata](const WindowListenerEntry& e) {
+			return e.userdata == userdata;
+		});
+	}
+
+	void DispatchWindowEvent(const char* pluginName, const char* windowId, bool opening)
+	{
+		auto listenersCopy = _windowListeners;
+		for (auto& e : listenersCopy) {
+			e.callback(pluginName, windowId, opening, e.userdata);
+		}
+	}
+
+	bool IsPluginWindowOpen(const char* pluginName, const char* windowId) const
+	{
+		for (auto* win : _windows) {
+			if (strcmp(win->PluginName(), pluginName) == 0 && strcmp(win->Id(), windowId) == 0) {
+				return win->IsOpen();
+			}
+		}
+		return false;
+	}
+
 protected:
 	EventResult ProcessEvent(const RE::MenuOpenCloseEvent* a_event, RE::BSTEventSource<RE::MenuOpenCloseEvent>*) override;
 

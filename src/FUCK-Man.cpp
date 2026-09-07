@@ -17,6 +17,7 @@
 
 struct WindowState
 {
+	bool   wasOpen      = false;
 	bool   isCollapsed  = false;
 	bool   wasCollapsed = false;
 	ImVec2 preCollapseSize{};
@@ -1088,6 +1089,18 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 	// EXTERNAL WINDOWS RENDER PASS
 	// ==================================================
 	for (auto* win : _windows) {
+
+		// --- Setup & State ---
+		std::string key      = std::format("{}|{}", win->PluginName(), win->Id());
+		auto&       winState = s_windowStates[key];
+
+		// --- Trigger Event Listeners automatically if state changed! ---
+		bool currentOpen = win->IsOpen();
+		if (currentOpen != winState.wasOpen) {
+			winState.wasOpen = currentOpen;
+			DispatchWindowEvent(win->PluginName(), win->Id(), currentOpen);
+		}
+
 		// Skip rendering if the game state suppresses the window.
 		if (IsWindowSuppressed(win)) {
 			continue;
@@ -1105,10 +1118,6 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 
 		const char*       title     = win->Title();
 		FUCK::WindowFlags userFlags = win->GetFlags();
-
-		// --- Setup & State ---
-		std::string key      = std::format("{}|{}", win->PluginName(), win->Id());
-		auto&       winState = s_windowStates[key];
 
 		ImGuiWindowFlags flags = ImGuiWindowFlags_None;
 
