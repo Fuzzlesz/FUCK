@@ -832,6 +832,8 @@ namespace FUCK::Host
 	static void  SetScrollY_Impl(float scroll_y) { ImGui::SetScrollY(scroll_y); }
 
 	static bool SliderAngle_Impl(const char* label, float* v_rad, float min, float max, const char* fmt) { return ImGui::SliderAngleStyled(label, v_rad, min, max, fmt); }
+	static bool VSliderFloat_Impl(const char* label, const ImVec2& size, float* v, float min, float max, const char* fmt) { return ImGui::VSliderFloatStyled(label, size, v, min, max, fmt); }
+	static bool VSliderButton_Impl(const char* label, const ImVec2& size, float* v, float min, float max, const char* fmt, bool btn_above, bool* out_btn) { return ImGui::VSliderButtonStyled(label, size, v, min, max, fmt, btn_above, out_btn); }
 
 	// ==================================================
 	// CreateInterface
@@ -1114,7 +1116,9 @@ namespace FUCK::Host
 			.GetScrollMaxY          = GetScrollMaxY_Impl,
 			.SetScrollX             = SetScrollX_Impl,
 			.SetScrollY             = SetScrollY_Impl,
-			.SliderAngle            = SliderAngle_Impl
+			.SliderAngle            = SliderAngle_Impl,
+			.VSliderFloat           = VSliderFloat_Impl,
+			.VSliderButton          = VSliderButton_Impl
 		};
 		return &api;
 	}

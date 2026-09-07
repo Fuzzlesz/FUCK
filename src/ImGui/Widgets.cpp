@@ -1537,6 +1537,112 @@ namespace ImGui
 		return changed;
 	}
 
+	bool ThinVSliderScalar(const char* label, const ImVec2& size, ImGuiDataType type, void* data, const void* min, const void* max, const char* fmt, ImGuiSliderFlags flags)
+	{
+		ImGuiWindow* window = GetCurrentWindow();
+		ImRect       bb(window->DC.CursorPos, window->DC.CursorPos + size);
+
+		const bool temp_input_allowed = (flags & ImGuiSliderFlags_NoInput) == 0;
+		ItemSize(bb);
+		if (!ItemAdd(bb, window->GetID(label), &bb, temp_input_allowed ? ImGuiItemFlags_Inputable : 0))
+			return false;
+
+		ImGuiContext& g  = *GImGui;
+		const ImGuiID id = window->GetID(label);
+
+		bool h                    = ItemHoverable(bb, id, g.LastItemData.ItemFlags);
+		bool temp_input_is_active = temp_input_allowed && TempInputIsActive(id);
+
+		if (!temp_input_is_active) {
+			const bool mouse_clicked = h && IsMouseClicked(0, ImGuiInputFlags_None, id);
+			const bool make_active   = (mouse_clicked || g.NavActivateId == id);
+
+			if (make_active && temp_input_allowed) {
+				if ((mouse_clicked && g.IO.KeyCtrl) || (g.NavActivateId == id && (g.NavActivateFlags & ImGuiActivateFlags_PreferInput))) {
+					temp_input_is_active = true;
+				}
+			}
+
+			if (make_active && !temp_input_is_active) {
+				SetActiveID(id, window);
+				SetFocusID(id, window);
+				FocusWindow(window);
+				g.ActiveIdUsingNavDirMask = (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
+			}
+		}
+
+		if (temp_input_is_active) {
+			return TempInputScalar(bb, id, label, type, data, fmt, min, max);
+		}
+
+		bool changed = false;
+		if (h && !temp_input_is_active && MANAGER(Input)->IsInputKBM()) {
+			float inferredSpeed = 1.0f;
+			if (type == ImGuiDataType_Float && min && max) {
+				inferredSpeed = (*(const float*)max - *(const float*)min) * 0.01f;
+			} else if (type == ImGuiDataType_S32 && min && max) {
+				inferredSpeed = std::max(1.0f, (*(const int*)max - *(const int*)min) * 0.01f);
+			}
+
+			if (ApplyWASDNudge(type, data, min, max, inferredSpeed)) {
+				changed = true;
+				MarkItemEdited(id);
+			}
+		}
+
+		ImRect grab;
+		if (SliderBehavior(bb, id, type, data, min, max, fmt, flags | ImGuiSliderFlags_Vertical, &grab)) {
+			changed = true;
+		}
+		if (changed)
+			MarkItemEdited(id);
+
+		bool active = (g.ActiveId == id);
+
+		// Calculate exact integer center for the column to guarantee pixel alignment
+		float centerX = std::floor(bb.Min.x + (bb.GetWidth() * 0.5f));
+
+		ImRect track = bb;
+
+		// Force track width to an even number so it splits around centerX
+		float trackW = std::floor(bb.GetWidth() * 0.50f);
+		if (static_cast<int>(trackW) % 2 != 0)
+			trackW -= 1.0f;
+
+		track.Min.x = centerX - (trackW * 0.5f);
+		track.Max.x = track.Min.x + trackW;
+
+		window->DrawList->AddRectFilled(track.Min, track.Max, GetColorU32(active ? ImGuiCol_FrameBgActive : h ? ImGuiCol_FrameBgHovered :
+																												ImGuiCol_FrameBg),
+			0.0f);
+		DrawWidgetBorder(window->DrawList, track, IsWidgetFocused(id) || active || h, 0.0f);
+
+		if (grab.Max.y > grab.Min.y) {
+			float scale      = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
+			float knobHeight = 10.0f * scale;
+
+			float centerY = std::floor(grab.Min.y + (grab.Max.y - grab.Min.y) * 0.5f);
+			centerY       = ImClamp(centerY, bb.Min.y + knobHeight * 0.5f, bb.Max.y - knobHeight * 0.5f);
+
+			// Force knob width to an even number
+			float knobW = std::floor(bb.GetWidth() * 0.70f);
+			if (static_cast<int>(knobW) % 2 != 0)
+				knobW -= 1.0f;
+
+			float knobMinX = centerX - (knobW * 0.5f);
+
+			ImRect customGrab(
+				std::floor(knobMinX),
+				std::floor(centerY - (knobHeight * 0.5f)),
+				std::floor(knobMinX + knobW),
+				std::floor(centerY + (knobHeight * 0.5f)));
+
+			window->DrawList->AddRectFilled(customGrab.Min, customGrab.Max, GetColorU32(active ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab), GetStyle().GrabRounding);
+		}
+
+		return changed;
+	}
+
 	bool ComboForm(const char* label, RE::FormID* currentFormID, RE::FormType formType)
 	{
 		// Caches forms based on requested type to prevent continuous expensive lookups
@@ -1958,6 +2064,87 @@ namespace ImGui
 			*v_rad = v_deg * (2.0f * IM_PI) / 360.0f;
 		}
 		return value_changed;
+	}
+
+	bool VSliderFloatStyled(const char* label, const ImVec2& size, float* v, float v_min, float v_max, const char* format)
+	{
+		ImGuiWindow* window = GetCurrentWindow();
+		if (window->SkipItems)
+			return false;
+
+		float currentFontScale = window->FontWindowScale;
+		float scale            = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale() * currentFontScale;
+
+		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
+		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
+		PushStyleColor(ImGuiCol_FrameBgActive, GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
+
+		PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
+		PushStyleVar(ImGuiStyleVar_GrabMinSize, std::max(10.0f * scale, GetStyle().GrabMinSize));
+
+		bool changed = ThinVSliderScalar(label, size, ImGuiDataType_Float, v, &v_min, &v_max, format, ImGuiSliderFlags_AlwaysClamp);
+
+		PopStyleVar(2);
+		PopStyleColor(3);
+
+		if (changed)
+			PlayAudio(Audio::kPrevNext);
+
+		return changed;
+	}
+
+	bool VSliderButtonStyled(const char* label, const ImVec2& slider_size, float* v, float v_min, float v_max, const char* format, bool button_above, bool* out_button_pressed)
+	{
+		ImGuiWindow* window = GetCurrentWindow();
+		if (window->SkipItems)
+			return false;
+
+		float scale = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale() * window->FontWindowScale;
+
+		// 1. Calculate Button Width to determine the overall column center
+		ImVec2 textSize = CalcTextSize(label);
+		float  padX     = 8.0f * scale;  // Matches OutlineButton's internal padX
+		float  btnWidth = textSize.x + (padX * 2.0f);
+
+		// 2. The column is as wide as its largest element
+		float colWidth = std::max(slider_size.x, btnWidth);
+
+		BeginGroup();
+		PushID(label);
+
+		bool slider_changed = false;
+		bool btn_pressed    = false;
+
+		auto DrawSlider = [&]() {
+			float offX = (colWidth - slider_size.x) * 0.5f;
+			SetCursorPosX(GetCursorPosX() + offX);
+			slider_changed = VSliderFloatStyled("##vslider", slider_size, v, v_min, v_max, format);
+		};
+
+		auto DrawBtn = [&]() {
+			float offX = (colWidth - btnWidth) * 0.5f;
+			SetCursorPosX(GetCursorPosX() + offX);
+			btn_pressed = OutlineButton(label);
+		};
+
+		if (button_above) {
+			DrawBtn();
+			Spacing();
+			DrawSlider();
+		} else {
+			DrawSlider();
+			Spacing();
+			DrawBtn();
+		}
+
+		PopID();
+		EndGroup();
+
+		if (out_button_pressed) {
+			*out_button_pressed = btn_pressed;
+		}
+
+		return slider_changed;
 	}
 
 	void Stepper(const char* label, const char* text, bool* outLeft, bool* outRight)

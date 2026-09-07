@@ -120,6 +120,8 @@ namespace ImGui
 	bool DragFloat3Styled(const char* label, float v[3], float speed, float min, float max, const char* fmt);
 	bool DragFloat4Styled(const char* label, float v[4], float speed, float min, float max, const char* fmt);
 	bool SliderAngleStyled(const char* label, float* v_rad, float v_degrees_min = -360.0f, float v_degrees_max = +360.0f, const char* format = "%.0f deg");
+	bool VSliderFloatStyled(const char* label, const ImVec2& size, float* v, float v_min, float v_max, const char* format);
+	bool VSliderButtonStyled(const char* label, const ImVec2& slider_size, float* v, float v_min, float v_max, const char* format, bool button_above, bool* out_button_pressed);
 
 	// Navigation
 	bool BeginTabItemEx(const char* label, ImGuiTabItemFlags flags = 0);

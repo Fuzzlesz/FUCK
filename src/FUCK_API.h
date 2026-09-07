@@ -607,6 +607,8 @@ struct FUCK_Interface
 	void (*SetScrollY)(float);
 
 	bool (*SliderAngle)(const char*, float*, float, float, const char*);
+	bool (*VSliderFloat)(const char*, const ImVec2&, float*, float, float, const char*);
+	bool (*VSliderButton)(const char*, const ImVec2&, float*, float, float, const char*, bool, bool*);
 };
 #pragma pack(pop)
 
@@ -2347,7 +2349,15 @@ namespace FUCK
 	{
 		return GetInterface() ? GetInterface()->SliderAngle(label, v_rad, v_degrees_min, v_degrees_max, format) : false;
 	}
-}  // namespace FUCK
+	inline bool VSliderFloat(const char* label, const ImVec2& size, float* v, float v_min, float v_max, const char* format = "%.3f")
+	{
+		return GetInterface() ? GetInterface()->VSliderFloat(label, size, v, v_min, v_max, format) : false;
+	}
+	inline bool VSliderButton(const char* label, const ImVec2& slider_size, float* v, float v_min, float v_max, const char* format = "%.3f", bool button_above = false, bool* out_button_pressed = nullptr)
+	{
+		return GetInterface() ? GetInterface()->VSliderButton(label, slider_size, v, v_min, v_max, format, button_above, out_button_pressed) : false;
+	}
+} 
 
 // ==================================================
 // [ SECTION 5 ] GLOBAL LITERALS
