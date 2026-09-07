@@ -824,6 +824,13 @@ namespace FUCK::Host
 	static int  TableGetRowIndex_Impl() { return ImGui::TableGetRowIndex(); }
 	static int  TableGetColumnCount_Impl() { return ImGui::TableGetColumnCount(); }
 
+	static float GetScrollX_Impl() { return ImGui::GetScrollX(); }
+	static float GetScrollY_Impl() { return ImGui::GetScrollY(); }
+	static float GetScrollMaxX_Impl() { return ImGui::GetScrollMaxX(); }
+	static float GetScrollMaxY_Impl() { return ImGui::GetScrollMaxY(); }
+	static void  SetScrollX_Impl(float scroll_x) { ImGui::SetScrollX(scroll_x); }
+	static void  SetScrollY_Impl(float scroll_y) { ImGui::SetScrollY(scroll_y); }
+
 	// ==================================================
 	// CreateInterface
 	// ==================================================
@@ -1099,6 +1106,12 @@ namespace FUCK::Host
 			.TableGetColumnIndex    = TableGetColumnIndex_Impl,
 			.TableGetRowIndex       = TableGetRowIndex_Impl,
 			.TableGetColumnCount    = TableGetColumnCount_Impl,
+			.GetScrollX             = GetScrollX_Impl,
+			.GetScrollY             = GetScrollY_Impl,
+			.GetScrollMaxX          = GetScrollMaxX_Impl,
+			.GetScrollMaxY          = GetScrollMaxY_Impl,
+			.SetScrollX             = SetScrollX_Impl,
+			.SetScrollY             = SetScrollY_Impl,
 		};
 		return &api;
 	}

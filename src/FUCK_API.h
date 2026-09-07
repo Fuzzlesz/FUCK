@@ -598,6 +598,13 @@ struct FUCK_Interface
 	int (*TableGetColumnIndex)();
 	int (*TableGetRowIndex)();
 	int (*TableGetColumnCount)();
+
+	float (*GetScrollX)();
+	float (*GetScrollY)();
+	float (*GetScrollMaxX)();
+	float (*GetScrollMaxY)();
+	void (*SetScrollX)(float);
+	void (*SetScrollY)(float);
 };
 #pragma pack(pop)
 
@@ -2318,6 +2325,21 @@ namespace FUCK
 	inline int TableGetColumnIndex() { return GetInterface() ? GetInterface()->TableGetColumnIndex() : 0; }
 	inline int TableGetRowIndex() { return GetInterface() ? GetInterface()->TableGetRowIndex() : 0; }
 	inline int TableGetColumnCount() { return GetInterface() ? GetInterface()->TableGetColumnCount() : 0; }
+
+	inline float GetScrollX() { return GetInterface() ? GetInterface()->GetScrollX() : 0.0f; }
+	inline float GetScrollY() { return GetInterface() ? GetInterface()->GetScrollY() : 0.0f; }
+	inline float GetScrollMaxX() { return GetInterface() ? GetInterface()->GetScrollMaxX() : 0.0f; }
+	inline float GetScrollMaxY() { return GetInterface() ? GetInterface()->GetScrollMaxY() : 0.0f; }
+	inline void  SetScrollX(float scroll_x)
+	{
+		if (auto i = GetInterface())
+			i->SetScrollX(scroll_x);
+	}
+	inline void SetScrollY(float scroll_y)
+	{
+		if (auto i = GetInterface())
+			i->SetScrollY(scroll_y);
+	}
 }  // namespace FUCK
 
 // ==================================================
