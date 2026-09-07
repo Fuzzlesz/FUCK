@@ -184,15 +184,6 @@ namespace FUCK
 		kAnyPopup      = kAnyPopupId | kAnyPopupLevel
 	};
 
-	inline WindowFlags      operator|(WindowFlags a, WindowFlags b) { return static_cast<WindowFlags>(static_cast<int>(a) | static_cast<int>(b)); }
-	inline bool             operator&(WindowFlags a, WindowFlags b) { return (static_cast<int>(a) & static_cast<int>(b)) != 0; }
-	inline TableFlags       operator|(TableFlags a, TableFlags b) { return static_cast<TableFlags>(static_cast<int>(a) | static_cast<int>(b)); }
-	inline TableColumnFlags operator|(TableColumnFlags a, TableColumnFlags b) { return static_cast<TableColumnFlags>(static_cast<int>(a) | static_cast<int>(b)); }
-	inline DragDropFlags    operator|(DragDropFlags a, DragDropFlags b) { return static_cast<DragDropFlags>(static_cast<int>(a) | static_cast<int>(b)); }
-	inline bool             operator&(DragDropFlags a, DragDropFlags b) { return (static_cast<int>(a) & static_cast<int>(b)) != 0; }
-	inline ItemFlags        operator|(ItemFlags a, ItemFlags b) { return static_cast<ItemFlags>(static_cast<int>(a) | static_cast<int>(b)); }
-	inline bool             operator&(ItemFlags a, ItemFlags b) { return (static_cast<int>(a) & static_cast<int>(b)) != 0; }
-
 	enum class HotkeyFlags : int
 	{
 		kNone            = 0,
@@ -202,8 +193,31 @@ namespace FUCK
 		kAlwaysHighlight = 1 << 3,
 		kNoModifiers     = 1 << 4
 	};
-	inline HotkeyFlags operator|(HotkeyFlags a, HotkeyFlags b) { return static_cast<HotkeyFlags>(static_cast<int>(a) | static_cast<int>(b)); }
-	inline bool        operator&(HotkeyFlags a, HotkeyFlags b) { return (static_cast<int>(a) & static_cast<int>(b)) != 0; }
+
+// --- Bitwise Operator Macro ---
+#define FUCK_DEFINE_ENUM_BITWISE_OPERATORS(Type)                                                                    \
+	inline Type  operator|(Type a, Type b) { return static_cast<Type>(static_cast<int>(a) | static_cast<int>(b)); } \
+	inline bool  operator&(Type a, Type b) { return (static_cast<int>(a) & static_cast<int>(b)) != 0; }             \
+	inline Type& operator|=(Type& a, Type b)                                                                        \
+	{                                                                                                               \
+		a = static_cast<Type>(static_cast<int>(a) | static_cast<int>(b));                                           \
+		return a;                                                                                                   \
+	}                                                                                                               \
+	inline Type& operator&=(Type& a, Type b)                                                                        \
+	{                                                                                                               \
+		a = static_cast<Type>(static_cast<int>(a) & static_cast<int>(b));                                           \
+		return a;                                                                                                   \
+	}
+
+	FUCK_DEFINE_ENUM_BITWISE_OPERATORS(WindowFlags)
+	FUCK_DEFINE_ENUM_BITWISE_OPERATORS(TableFlags)
+	FUCK_DEFINE_ENUM_BITWISE_OPERATORS(TableColumnFlags)
+	FUCK_DEFINE_ENUM_BITWISE_OPERATORS(DragDropFlags)
+	FUCK_DEFINE_ENUM_BITWISE_OPERATORS(ItemFlags)
+	FUCK_DEFINE_ENUM_BITWISE_OPERATORS(PopupFlags)
+	FUCK_DEFINE_ENUM_BITWISE_OPERATORS(HotkeyFlags)
+
+#undef FUCK_DEFINE_ENUM_BITWISE_OPERATORS
 
 	struct ManagedHotkey
 	{
