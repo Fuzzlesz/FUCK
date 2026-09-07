@@ -608,7 +608,7 @@ struct FUCK_Interface
 
 	bool (*SliderAngle)(const char*, float*, float, float, const char*);
 	bool (*VSliderFloat)(const char*, const ImVec2&, float*, float, float, const char*);
-	bool (*VSliderButton)(const char*, const ImVec2&, float*, float, float, const char*, bool, bool*);
+	bool (*VSliderButton)(const char*, const ImVec2&, float*, float, float, const char*, bool, bool, bool*, bool*);
 };
 #pragma pack(pop)
 
@@ -2353,9 +2353,9 @@ namespace FUCK
 	{
 		return GetInterface() ? GetInterface()->VSliderFloat(label, size, v, v_min, v_max, format) : false;
 	}
-	inline bool VSliderButton(const char* label, const ImVec2& slider_size, float* v, float v_min, float v_max, const char* format = "%.3f", bool button_above = false, bool* out_button_pressed = nullptr)
+	inline bool VSliderButton(const char* label, const ImVec2& slider_size, float* v, float v_min, float v_max, const char* format = "%.3f", bool draw_top_button = false, bool draw_bottom_button = true, bool* out_top_pressed = nullptr, bool* out_bottom_pressed = nullptr)
 	{
-		return GetInterface() ? GetInterface()->VSliderButton(label, slider_size, v, v_min, v_max, format, button_above, out_button_pressed) : false;
+		return GetInterface() ? GetInterface()->VSliderButton(label, slider_size, v, v_min, v_max, format, draw_top_button, draw_bottom_button, out_top_pressed, out_bottom_pressed) : false;
 	}
 } 
 

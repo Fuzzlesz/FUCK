@@ -1640,6 +1640,10 @@ namespace ImGui
 			window->DrawList->AddRectFilled(customGrab.Min, customGrab.Max, GetColorU32(active ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab), GetStyle().GrabRounding);
 		}
 
+		char        buf[64] = "";
+		const char* buf_end = buf + DataTypeFormatString(buf, 64, type, data, fmt);
+		RenderTextClipped(bb.Min, bb.Max, buf, buf_end, NULL, { 0.5f, 0.5f });
+
 		return changed;
 	}
 
@@ -2093,7 +2097,7 @@ namespace ImGui
 		return changed;
 	}
 
-	bool VSliderButtonStyled(const char* label, const ImVec2& slider_size, float* v, float v_min, float v_max, const char* format, bool button_above, bool* out_button_pressed)
+	bool VSliderButtonStyled(const char* label, const ImVec2& slider_size, float* v, float v_min, float v_max, const char* format, bool draw_top_button, bool draw_bottom_button, bool* out_top_pressed, bool* out_bottom_pressed)
 	{
 		ImGuiWindow* window = GetCurrentWindow();
 		if (window->SkipItems)
@@ -2113,7 +2117,8 @@ namespace ImGui
 		PushID(label);
 
 		bool slider_changed = false;
-		bool btn_pressed    = false;
+		bool top_pressed    = false;
+		bool bot_pressed    = false;
 
 		auto DrawSlider = [&]() {
 			float offX = (colWidth - slider_size.x) * 0.5f;
@@ -2121,28 +2126,37 @@ namespace ImGui
 			slider_changed = VSliderFloatStyled("##vslider", slider_size, v, v_min, v_max, format);
 		};
 
-		auto DrawBtn = [&]() {
+		auto DrawBtn = [&](bool is_top) {
 			float offX = (colWidth - btnWidth) * 0.5f;
 			SetCursorPosX(GetCursorPosX() + offX);
-			btn_pressed = OutlineButton(label);
+
+			// Prevent ID collisions if drawing two identically named buttons
+			PushID(is_top ? "top_btn" : "bot_btn");
+			bool pressed = OutlineButton(label);
+			PopID();
+
+			return pressed;
 		};
 
-		if (button_above) {
-			DrawBtn();
+		if (draw_top_button) {
+			top_pressed = DrawBtn(true);
 			Spacing();
-			DrawSlider();
-		} else {
-			DrawSlider();
+		}
+
+		DrawSlider();
+
+		if (draw_bottom_button) {
 			Spacing();
-			DrawBtn();
+			bot_pressed = DrawBtn(false);
 		}
 
 		PopID();
 		EndGroup();
 
-		if (out_button_pressed) {
-			*out_button_pressed = btn_pressed;
-		}
+		if (out_top_pressed)
+			*out_top_pressed = top_pressed;
+		if (out_bottom_pressed)
+			*out_bottom_pressed = bot_pressed;
 
 		return slider_changed;
 	}
