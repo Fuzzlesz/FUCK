@@ -947,6 +947,21 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 
 	UpdateGameState();
 
+	// If the user hides menus via 'tm', the Skyrim Scaleform cursor becomes invisible.
+	// We force ImGui to draw its own cursor so KBM users aren't clicking blind. Flatrim only.
+	bool menusHidden = false;
+	if (!REL::Module::IsVR()) {
+		if (auto ui = RE::UI::GetSingleton()) {
+			menusHidden = !ui->IsShowingMenus();
+		}
+	}
+
+	if (menusHidden && IsInputBlocked() && Input::Manager::GetSingleton()->IsInputKBM()) {
+		ImGui::GetIO().MouseDrawCursor = true;
+	} else {
+		ImGui::GetIO().MouseDrawCursor = false;
+	}
+
 	// ==================================================
 	// LAYOUT METRICS SETUP (Chrome / Unscaled)
 	// ==================================================
@@ -1054,15 +1069,6 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 		if (ImGui::Begin("##ToolOverlayLayer", nullptr, flags)) {
 			pushContentScale(false);
-
-			// Overlay logic does a quick check for 'tm' natively. Flat only: see
-			// the same VR gate on the main workspace menu render pass.
-			bool menusHidden = false;
-			if (!REL::Module::IsVR()) {
-				if (auto ui = RE::UI::GetSingleton()) {
-					menusHidden = !ui->IsShowingMenus();
-				}
-			}
 
 			if (_activeTool && !menusHidden)
 				_activeTool->RenderOverlay();
@@ -1437,16 +1443,6 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 	// ==================================================
 	// MAIN FUCK WORKSPACE MENU RENDER PASS
 	// ==================================================
-
-	// Check 'tm' natively for the main workspace menu. Flat only: FUCK draws
-	// over the native HUD/menu stack there, so it respects 'tm'. IsShowingMenus()
-	// doesn't track the VR helper's own focus, so this would kill every VR open.
-	bool menusHidden = false;
-	if (!REL::Module::IsVR()) {
-		if (auto ui = RE::UI::GetSingleton()) {
-			menusHidden = !ui->IsShowingMenus();
-		}
-	}
 
 	if (a_passthroughOnly || !_isOpen || menusHidden)
 		return;
