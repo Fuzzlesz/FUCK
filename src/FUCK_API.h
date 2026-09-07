@@ -592,6 +592,12 @@ struct FUCK_Interface
 	void (*AddWindowListener)(void* userdata, void (*callback)(const char* pluginName, const char* windowId, bool opening, void* userdata));
 	void (*RemoveWindowListener)(void* userdata);
 	bool (*IsPluginWindowOpen)(const char* pluginName, const char* windowId);
+
+	void (*TableSetupScrollFreeze)(int, int);
+	void (*TableSetColumnIndex)(int);
+	int (*TableGetColumnIndex)();
+	int (*TableGetRowIndex)();
+	int (*TableGetColumnCount)();
 };
 #pragma pack(pop)
 
@@ -2298,6 +2304,20 @@ namespace FUCK
 		float pos[3] = { worldLoc.x, worldLoc.y, worldLoc.z };
 		return WorldToScreenLoc(pos, screenLocOut);
 	}
+
+	inline void TableSetupScrollFreeze(int cols, int rows)
+	{
+		if (auto i = GetInterface())
+			i->TableSetupScrollFreeze(cols, rows);
+	}
+	inline void TableSetColumnIndex(int column_n)
+	{
+		if (auto i = GetInterface())
+			i->TableSetColumnIndex(column_n);
+	}
+	inline int TableGetColumnIndex() { return GetInterface() ? GetInterface()->TableGetColumnIndex() : 0; }
+	inline int TableGetRowIndex() { return GetInterface() ? GetInterface()->TableGetRowIndex() : 0; }
+	inline int TableGetColumnCount() { return GetInterface() ? GetInterface()->TableGetColumnCount() : 0; }
 }  // namespace FUCK
 
 // ==================================================

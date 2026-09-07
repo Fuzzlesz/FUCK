@@ -818,6 +818,12 @@ namespace FUCK::Host
 	static void RemoveWindowListener_Impl(void* userdata) { FUCKMan::GetSingleton()->RemoveWindowListener(userdata); }
 	static bool IsPluginWindowOpen_Impl(const char* pluginName, const char* windowId) { return FUCKMan::GetSingleton()->IsPluginWindowOpen(pluginName, windowId); }
 
+	static void TableSetupScrollFreeze_Impl(int cols, int rows) { ImGui::TableSetupScrollFreeze(cols, rows); }
+	static void TableSetColumnIndex_Impl(int column_n) { ImGui::TableSetColumnIndex(column_n); }
+	static int  TableGetColumnIndex_Impl() { return ImGui::TableGetColumnIndex(); }
+	static int  TableGetRowIndex_Impl() { return ImGui::TableGetRowIndex(); }
+	static int  TableGetColumnCount_Impl() { return ImGui::TableGetColumnCount(); }
+
 	// ==================================================
 	// CreateInterface
 	// ==================================================
@@ -1088,6 +1094,11 @@ namespace FUCK::Host
 			.AddWindowListener      = AddWindowListener_Impl,
 			.RemoveWindowListener   = RemoveWindowListener_Impl,
 			.IsPluginWindowOpen     = IsPluginWindowOpen_Impl,
+			.TableSetupScrollFreeze = TableSetupScrollFreeze_Impl,
+			.TableSetColumnIndex    = TableSetColumnIndex_Impl,
+			.TableGetColumnIndex    = TableGetColumnIndex_Impl,
+			.TableGetRowIndex       = TableGetRowIndex_Impl,
+			.TableGetColumnCount    = TableGetColumnCount_Impl,
 		};
 		return &api;
 	}
