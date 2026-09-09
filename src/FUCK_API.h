@@ -2310,6 +2310,7 @@ namespace FUCK
 	/// @brief Converts a 3D world coordinate to 2D screen coordinates.
 	/// Returns false if the coordinate is behind the camera.
 	template <typename NiPoint3Like>
+		requires requires(const NiPoint3Like& a_p) { a_p.x; a_p.y; a_p.z; }
 	inline bool WorldToScreenLoc(const NiPoint3Like& worldLoc, ImVec2& screenLocOut)
 	{
 		float pos[3] = { worldLoc.x, worldLoc.y, worldLoc.z };
