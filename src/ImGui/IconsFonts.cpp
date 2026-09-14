@@ -126,6 +126,10 @@ namespace IconFont
 		icon_config.PixelSnapH  = false;
 		icon_config.OversampleH = icon_config.OversampleV = 1;
 
+		// Force all FontAwesome icons to be monospaced by locking their advance width
+		icon_config.GlyphMinAdvanceX = a_iconSize;
+		icon_config.GlyphMaxAdvanceX = a_iconSize;
+
 		std::string faPath = ResolveFontPath(FONT_ICON_FILE_NAME_FAS);
 		io.Fonts->AddFontFromFileTTF(faPath.c_str(), a_iconSize, &icon_config, a_ranges.Data);
 		return font;
