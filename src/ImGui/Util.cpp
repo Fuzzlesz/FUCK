@@ -191,8 +191,8 @@ namespace ImGui
 		ImVec2 textSize = CalcTextSize("(?)", nullptr, true);
 		float  scale    = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
 
-		float padY = 7.0f * scale;
-		float padX = 8.0f * scale;
+		float padY = 2.0f * scale;
+		float padX = 2.0f * scale;
 
 		float visualH = textSize.y + (padY * 2.0f);
 		float width   = textSize.x + (padX * 2.0f);
