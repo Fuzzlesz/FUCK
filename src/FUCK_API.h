@@ -2359,6 +2359,44 @@ namespace FUCK
 	{
 		return GetInterface() ? GetInterface()->VSliderButton(label, slider_size, v, v_min, v_max, format, draw_top_button, draw_bottom_button, out_top_pressed, out_bottom_pressed) : false;
 	}
+
+	// --------------------------------------------------
+	// Version 5
+	// --------------------------------------------------
+
+	/// @brief A slider that displays values scaled by a multiplier (e.g., displaying 1.5 as "150").
+	/// The underlying float value remains unchanged in memory.
+	inline bool ScaledSliderFloat(const char* label, float* v, float min, float max, float visualScaleMultiplier, const char* fmt = "%.0f")
+	{
+		float display = *v * visualScaleMultiplier;
+		if (SliderFloat(label, &display, min * visualScaleMultiplier, max * visualScaleMultiplier, fmt)) {
+			*v = display / visualScaleMultiplier;
+			return true;
+		}
+		return false;
+	}
+
+	/// @brief A vertical slider that displays values scaled by a multiplier.
+	inline bool ScaledVSliderFloat(const char* label, const ImVec2& size, float* v, float v_min, float v_max, float visualScaleMultiplier, const char* format = "%.0f")
+	{
+		float display = *v * visualScaleMultiplier;
+		if (VSliderFloat(label, size, &display, v_min * visualScaleMultiplier, v_max * visualScaleMultiplier, format)) {
+			*v = display / visualScaleMultiplier;
+			return true;
+		}
+		return false;
+	}
+
+	/// @brief A vertical slider with optional +/- buttons that displays values scaled by a multiplier.
+	inline bool ScaledVSliderButton(const char* label, const ImVec2& slider_size, float* v, float v_min, float v_max, float visualScaleMultiplier, const char* format = "%.0f", bool draw_top_button = false, bool draw_bottom_button = true, bool* out_top_pressed = nullptr, bool* out_bottom_pressed = nullptr)
+	{
+		float display = *v * visualScaleMultiplier;
+		if (VSliderButton(label, slider_size, &display, v_min * visualScaleMultiplier, v_max * visualScaleMultiplier, format, draw_top_button, draw_bottom_button, out_top_pressed, out_bottom_pressed)) {
+			*v = display / visualScaleMultiplier;
+			return true;
+		}
+		return false;
+	}
 } 
 
 // ==================================================
