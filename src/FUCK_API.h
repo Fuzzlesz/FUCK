@@ -1,7 +1,7 @@
 #pragma once
 #include <imgui.h>
 
-#define FUCK_API_VERSION 4
+#define FUCK_API_VERSION 5
 
 // ==================================================
 // [ OPTIONAL ] SIMPLEINI HELPERS
@@ -86,24 +86,25 @@ namespace FUCK
 	// --- Bitflags ---
 	enum class WindowFlags
 	{
-		kNone            = 0,
-		kPauseHard       = 1 << 0,   // Fully suspends the game engine
-		kPauseSoft       = 1 << 1,   // Freezes game time
-		kBlockVanity     = 1 << 2,   // Prevents idle vanity camera
-		kHideHUD         = 1 << 3,   // Hides the in-game HUD
-		kBlurBackground  = 1 << 4,   // Blurs the game world
-		kPassInputToGame = 1 << 5,   // Allows player control while open
-		kCloseOnEsc      = 1 << 6,   // Closes when Escape is pressed
-		kCloseOnGameMenu = 1 << 7,   // Hides when native game menus open
-		kNoDecoration    = 1 << 8,   // Removes title bar and controls
-		kNoBackground    = 1 << 9,   // Makes window background transparent
-		kExtendBorder    = 1 << 10,  // Draws border outside window bounds
-		kNoResize        = 1 << 11,  // Prevents manual resizing by the user
-		kNoMove          = 1 << 12,  // Prevents manual dragging by the user
-		kAutoResize      = 1 << 13,  // Sizes automatically to contents
-		kIgnoreUserScale = 1 << 14,  // Ignores global UI scaling slider
-		kCustomPosition  = 1 << 15,  // Opts out of Host-managed pos saving/loading
-		kRenderDuringTM  = 1 << 16   // Renders when 'tm' (Toggle Menus) is set
+		kNone                = 0,
+		kPauseHard           = 1 << 0,   // Fully suspends the game engine
+		kPauseSoft           = 1 << 1,   // Freezes game time
+		kBlockVanity         = 1 << 2,   // Prevents idle vanity camera
+		kHideHUD             = 1 << 3,   // Hides the in-game HUD
+		kBlurBackground      = 1 << 4,   // Blurs the game world
+		kPassInputToGame     = 1 << 5,   // Allows player control while open
+		kCloseOnEsc          = 1 << 6,   // Closes when Escape is pressed
+		kCloseOnGameMenu     = 1 << 7,   // Hides when native game menus open
+		kNoDecoration        = 1 << 8,   // Removes title bar and controls
+		kNoBackground        = 1 << 9,   // Makes window background transparent
+		kExtendBorder        = 1 << 10,  // Draws border outside window bounds
+		kNoResize            = 1 << 11,  // Prevents manual resizing by the user
+		kNoMove              = 1 << 12,  // Prevents manual dragging by the user
+		kAutoResize          = 1 << 13,  // Sizes automatically to contents
+		kIgnoreUserScale     = 1 << 14,  // Ignores global UI scaling slider
+		kCustomPosition      = 1 << 15,  // Opts out of Host-managed pos saving/loading
+		kRenderDuringTM      = 1 << 16,  // Renders when 'tm' (Toggle Menus) is set
+		kCloseOnClickOutside = 1 << 17   // Closes the window when the user clicks anywhere outside of its bounds
 	};
 
 	enum class TableFlags

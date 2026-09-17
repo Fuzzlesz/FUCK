@@ -964,6 +964,12 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 		ImGui::GetIO().MouseDrawCursor = false;
 	}
 
+	// Global mouse click detection for auto-closing flyout windows
+	bool        isAnyMouseDown    = MANAGER(Input)->IsInputDown(Input::Keymap::kMBBase) || MANAGER(Input)->IsInputDown(Input::Keymap::kMBBase + 1);
+	static bool s_wasAnyMouseDown = false;
+	bool        globalMouseClick  = isAnyMouseDown && !s_wasAnyMouseDown;
+	s_wasAnyMouseDown             = isAnyMouseDown;
+
 	// ==================================================
 	// LAYOUT METRICS SETUP (Chrome / Unscaled)
 	// ==================================================
@@ -1104,6 +1110,7 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 
 		// --- Trigger Event Listeners automatically if state changed! ---
 		bool currentOpen = win->IsOpen();
+		bool wasOpen     = winState.wasOpen;
 		if (currentOpen != winState.wasOpen) {
 			winState.wasOpen = currentOpen;
 			DispatchWindowEvent(win->PluginName(), win->Id(), currentOpen);
@@ -1275,6 +1282,15 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 			winState.livePos   = curPos;
 			winState.liveSize  = curSize;
 			winState.isFocused = ImGui::IsWindowFocused();
+
+			// Auto-Close on Click Outside
+			if (open && wasOpen && (userFlags & FUCK::WindowFlags::kCloseOnClickOutside)) {
+				if (globalMouseClick && !ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel)) {
+					if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem | ImGuiHoveredFlags_ChildWindows)) {
+						open = false;
+					}
+				}
+			}
 
 			// Auto-save settings on move/resize end preventing overwrite during collapse
 			if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
