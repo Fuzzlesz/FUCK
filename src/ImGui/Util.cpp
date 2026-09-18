@@ -203,6 +203,12 @@ namespace ImGui
 		ImVec2 pos = window->DC.CursorPos;
 		ImRect bb(pos, pos + logical_sz);
 
+		// Nudge the interaction/nav bounding box down slightly.
+		// To allieviate the issue of navigation prioritising poorly.
+		float navNudge = 6.0f * scale;
+		bb.Min.y += navNudge;
+		bb.Max.y += navNudge;
+
 		ItemSize(logical_sz);
 		if (!ItemAdd(bb, id)) {
 			return;
