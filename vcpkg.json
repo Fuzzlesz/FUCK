@@ -3,6 +3,7 @@
   "version-string": "1.4.0",
   "license": "GPL-3.0-or-later",
   "dependencies": [
+    "boost-regex",
     "clib-util",
     "directxtex",
     "directxtk",
@@ -17,7 +18,6 @@
     "rapidfuzz",
     "rsm-binary-io",
     "spdlog",
-    "srell",
     "unordered-dense",
     "xbyak"
   ],

@@ -11,9 +11,9 @@ namespace Utils
 
 		path = clib_util::string::tolower(path);
 
-		path = srell::regex_replace(path, srell::regex("/+|\\\\+"), "\\");
-		path = srell::regex_replace(path, srell::regex("^\\\\+"), "");
-		path = srell::regex_replace(path, srell::regex(R"(.*?[^\s]textures\\|^textures\\|.*?[^\s]meshes\\|^meshes\\)", srell::regex::icase), "");
+		path = boost::regex_replace(path, boost::regex("/+|\\\\+"), "\\");
+		path = boost::regex_replace(path, boost::regex("^\\\\+"), "");
+		path = boost::regex_replace(path, boost::regex(R"(.*?[^\s]textures\\|^textures\\|.*?[^\s]meshes\\|^meshes\\)", boost::regex::icase), "");
 
 		strncpy_s(dest, destSize, path.c_str(), _TRUNCATE);
 	}

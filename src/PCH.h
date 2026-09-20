@@ -23,6 +23,7 @@
 #include <ClibUtil/simpleINI.hpp>
 #include <ClibUtil/string.hpp>
 
+#include <boost/regex.hpp>
 #include <DirectXMath.h>
 #include <DirectXTex.h>
 #include <ankerl/unordered_dense.h>
@@ -30,7 +31,6 @@
 #include <glaze/glaze.hpp>
 #include <rapidfuzz/rapidfuzz_all.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
-#include <srell.hpp>
 #include <xbyak/xbyak.h>
 
 #include "ImGui/Backend/imgui_impl_skyrim.h"

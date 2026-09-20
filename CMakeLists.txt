@@ -117,6 +117,7 @@ else ()
 	)
 endif()
 
+find_package(boost_regex CONFIG REQUIRED)
 find_package(directxtex CONFIG REQUIRED)
 find_package(Freetype REQUIRED)
 find_package(glaze CONFIG REQUIRED)
@@ -124,7 +125,6 @@ find_package(imgui CONFIG REQUIRED)
 find_package(rapidfuzz CONFIG REQUIRED)
 find_package(unordered_dense CONFIG REQUIRED)
 
-find_path(SRELL_INCLUDE_DIRS "srell.hpp")
 find_path(CLIB_UTIL_INCLUDE_DIRS "ClibUtil/utils.hpp")
 
 # ImGuiVRHelper client SDK: mirrors the menu into the helper's flat in-scene
@@ -199,6 +199,7 @@ target_link_libraries(
 	${PROJECT_NAME}
 	PRIVATE
 		${CommonLibName}::${CommonLibName}
+		Boost::regex
 		Microsoft::DirectXTex
 		Freetype::Freetype
 		glaze::glaze

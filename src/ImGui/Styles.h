@@ -197,19 +197,19 @@ namespace ImGui
 		if constexpr (std::is_same_v<std::string, T>) {
 			return { a_str, false };
 		} else if constexpr (std::is_same_v<ImVec4, T>) {
-			static srell::regex rgb_pattern("([0-9]+),([0-9]+),([0-9]+),([0-9]+)");
-			static srell::regex hex_pattern("#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})");
+			static boost::regex rgb_pattern("([0-9]+),([0-9]+),([0-9]+),([0-9]+)");
+			static boost::regex hex_pattern("#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})");
 
-			srell::smatch rgb_matches;
-			srell::smatch hex_matches;
+			boost::smatch rgb_matches;
+			boost::smatch hex_matches;
 
-			if (srell::regex_match(a_str, rgb_matches, rgb_pattern)) {
+			if (boost::regex_match(a_str, rgb_matches, rgb_pattern)) {
 				auto red   = std::stoi(rgb_matches[1]);
 				auto green = std::stoi(rgb_matches[2]);
 				auto blue  = std::stoi(rgb_matches[3]);
 				auto alpha = std::stoi(rgb_matches[4]);
 				return { { red / 255.0f, green / 255.0f, blue / 255.0f, alpha / 255.0f }, false };
-			} else if (srell::regex_match(a_str, hex_matches, hex_pattern)) {
+			} else if (boost::regex_match(a_str, hex_matches, hex_pattern)) {
 				auto red   = std::stoi(hex_matches[1], 0, 16);
 				auto green = std::stoi(hex_matches[2], 0, 16);
 				auto blue  = std::stoi(hex_matches[3], 0, 16);
@@ -218,9 +218,9 @@ namespace ImGui
 			}
 			return { T(), false };
 		} else if constexpr (std::is_same_v<ImVec2, T>) {
-			static srell::regex vec2_pattern("([0-9\\.]+),([0-9\\.]+)");
-			srell::smatch       matches;
-			if (srell::regex_match(a_str, matches, vec2_pattern)) {
+			static boost::regex vec2_pattern("([0-9\\.]+),([0-9\\.]+)");
+			boost::smatch       matches;
+			if (boost::regex_match(a_str, matches, vec2_pattern)) {
 				auto x = std::stof(matches[1]);
 				auto y = std::stof(matches[2]);
 				return { { x, y }, false };
