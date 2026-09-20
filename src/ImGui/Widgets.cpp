@@ -2071,12 +2071,11 @@ namespace ImGui
 		if (window->SkipItems)
 			return false;
 
-		float currentFontScale = window->FontWindowScale;
 		float scale            = GetDynamicWidgetScale();
 
-		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
+		PushStyleColor(ImGuiCol_FrameBg,        GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
 		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
-		PushStyleColor(ImGuiCol_FrameBgActive, GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
+		PushStyleColor(ImGuiCol_FrameBgActive,  GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
 
 		PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
 		PushStyleVar(ImGuiStyleVar_GrabMinSize, std::max(10.0f * scale, GetStyle().GrabMinSize));
@@ -2100,12 +2099,12 @@ namespace ImGui
 
 		float scale = GetDynamicWidgetScale();
 
-		// 1. Calculate Button Width to determine the overall column center
+		// Calculate Button Width to determine the overall column center
 		ImVec2 textSize = CalcTextSize(label);
 		float  padX     = 8.0f * scale;  // Matches OutlineButton's internal padX
 		float  btnWidth = textSize.x + (padX * 2.0f);
 
-		// 2. The column is as wide as its largest element
+		// The column is as wide as its largest element
 		float colWidth = std::max(slider_size.x, btnWidth);
 
 		BeginGroup();
