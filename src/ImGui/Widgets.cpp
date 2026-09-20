@@ -20,12 +20,11 @@ namespace ImGui
 			if (!iconArrow)
 				return;
 
-			ImU32 col       = GetDynamicTextColor(isHovered);
-			float uiScale   = Renderer::GetResolutionScale();
-			float userScale = FUCKMan::GetSingleton()->GetActiveScale();
-			float aspect    = iconArrow->imageSize.y > 0.0f ? (iconArrow->imageSize.x / iconArrow->imageSize.y) : 1.0f;
+			ImU32 col    = GetDynamicTextColor(isHovered);
+			float scale  = GetDynamicWidgetScale();
+			float aspect = iconArrow->imageSize.y > 0.0f ? (iconArrow->imageSize.x / iconArrow->imageSize.y) : 1.0f;
 
-			auto ap = CalcArrowIconParams(aspect, isOpen, frameHeight, baseIconSize * uiScale, userScale);
+			auto ap = CalcArrowIconParams(aspect, isOpen, frameHeight, baseIconSize * scale, 1.0f);
 
 			// Center horizontally within its own max dimension to prevent shifting on open/close
 			float maxIconDim  = std::max(ap.drawSize.x, ap.drawSize.y);
@@ -42,12 +41,11 @@ namespace ImGui
 			if (!iconArrow)
 				return;
 
-			ImU32 col       = GetDynamicTextColor(isHovered || isOpen);
-			float uiScale   = Renderer::GetResolutionScale();
-			float userScale = FUCKMan::GetSingleton()->GetActiveScale() * GetCurrentWindow()->FontWindowScale;
-			float aspect    = iconArrow->imageSize.y > 0.0f ? (iconArrow->imageSize.x / iconArrow->imageSize.y) : 1.0f;
+			ImU32 col    = GetDynamicTextColor(isHovered || isOpen);
+			float scale  = GetDynamicWidgetScale();
+			float aspect = iconArrow->imageSize.y > 0.0f ? (iconArrow->imageSize.x / iconArrow->imageSize.y) : 1.0f;
 
-			auto ap = CalcArrowIconParams(aspect, isOpen, bSize.y, 30.0f * uiScale, userScale);
+			auto ap = CalcArrowIconParams(aspect, isOpen, bSize.y, 30.0f * scale, 1.0f);
 
 			ImVec2 iconPos = {
 				bPos.x + (bSize.x - ap.drawSize.x) * 0.5f,
@@ -307,7 +305,7 @@ namespace ImGui
 		if (borderSize <= 0.0f)
 			return;
 
-		float scale = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
+		float scale = GetDynamicWidgetScale();
 
 		// Floor thickness
 		float tColor = std::max(1.0f, std::floor(borderSize));
@@ -337,7 +335,7 @@ namespace ImGui
 		auto        iconFilled = MANAGER(IconFont)->GetCheckboxFilled();
 		std::string idStr      = std::format("##{}", label);
 
-		float scale         = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
+		float scale         = GetDynamicWidgetScale();
 		float userIconScale = FUCKMan::GetSingleton()->IsIgnoringUserScale() ? 1.0f : Styles::GetSingleton()->user.iconScale;
 
 		// Apply the iconScale setting to match Hotkey sizing
@@ -388,7 +386,7 @@ namespace ImGui
 		bool        pressed = false;
 		std::string idStr   = std::format("##{}", label);
 
-		float scale         = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
+		float scale         = GetDynamicWidgetScale();
 		float userIconScale = FUCKMan::GetSingleton()->IsIgnoringUserScale() ? 1.0f : Styles::GetSingleton()->user.iconScale;
 
 		// Apply the iconScale setting to match Hotkey sizing
@@ -489,7 +487,7 @@ namespace ImGui
 			return false;
 
 		float currentFontScale = window->FontWindowScale;
-		float scale            = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale() * currentFontScale;
+		float scale            = GetDynamicWidgetScale();
 
 		if (popup_max_height_in_items == -1)
 			popup_max_height_in_items = 8;
@@ -736,7 +734,7 @@ namespace ImGui
 			return false;
 
 		float currentFontScale = window->FontWindowScale;
-		float scale            = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale() * currentFontScale;
+		float scale            = GetDynamicWidgetScale();
 
 		if (popup_max_height_in_items == -1)
 			popup_max_height_in_items = 8;
@@ -859,7 +857,7 @@ namespace ImGui
 			return false;
 
 		float currentFontScale = window->FontWindowScale;
-		float scale            = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale() * currentFontScale;
+		float scale            = GetDynamicWidgetScale();
 
 		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize) * currentFontScale;
 		float padX       = std::max(GetStyle().FramePadding.x, borderSize + (8.0f * scale));
@@ -890,7 +888,7 @@ namespace ImGui
 
 	void DrawTabBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered, float rounding)
 	{
-		float scale      = Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
+		float scale      = GetDynamicWidgetScale();
 		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize);
 
 		if (borderSize <= 0.0f)
@@ -944,7 +942,7 @@ namespace ImGui
 		ImGuiID      lastActive = window->StateStorage.GetInt(storageKey, 0);
 
 		bool  wasActive = (lastActive == id);
-		float scale     = Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
+		float scale     = GetDynamicWidgetScale();
 
 		PushStyleColor(ImGuiCol_Tab, ImVec4(0, 0, 0, 0));
 		PushStyleColor(ImGuiCol_TabHovered, ImVec4(0, 0, 0, 0));
@@ -1047,7 +1045,7 @@ namespace ImGui
 		if (window->SkipItems)
 			return false;
 
-		float scale    = Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
+		float scale    = GetDynamicWidgetScale();
 		float rounding = GetUserStyleVar(USER_STYLE::kButtonRounding);
 
 		ImVec2 textSize = CalcTextSize(label);
@@ -1136,14 +1134,13 @@ namespace ImGui
 		std::string baseId   = std::format("##HOTKEY_{}", label);
 		auto*       iconFont = MANAGER(IconFont);
 
-		float activeScale = FUCKMan::GetSingleton()->GetActiveScale();
-		float resScale    = Renderer::GetResolutionScale();
+		float scale = GetDynamicWidgetScale();
 
 		ImGuiContext& g       = *GImGui;
 		const float   layoutH = GetFrameHeight();
 		const float   spacing = std::max(1.0f, std::floor(g.Style.ItemInnerSpacing.x * 0.5f));
 
-		const float baseFrameH = 38.0f * resScale * activeScale;
+		const float baseFrameH = 38.0f * scale;
 
 		const auto* kIcon  = iconFont->GetIcon(key);
 		const auto* m1Icon = (m1 != -1) ? iconFont->GetIcon(static_cast<uint32_t>(m1)) : nullptr;
@@ -1255,7 +1252,7 @@ namespace ImGui
 				}
 
 				float offY         = std::floor((actualLayoutH - item.size.y) * Styles::GetSingleton()->user.labelAlign.y);
-				float visualNudgeY = (item.type == RenderItem::kText) ? std::floor(1.5f * resScale) : 0.0f;
+				float visualNudgeY = (item.type == RenderItem::kText) ? std::floor(1.5f * scale) : 0.0f;
 
 				ImVec2 drawPos(std::floor(currentX), std::floor(p.y + offY + visualNudgeY));
 
@@ -1508,7 +1505,7 @@ namespace ImGui
 		DrawWidgetBorder(window->DrawList, track, IsWidgetFocused(id) || active || h, 0.0f);
 
 		if (grab.Max.x > grab.Min.x) {
-			float scale     = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
+			float scale     = GetDynamicWidgetScale();
 			float knobWidth = 10.0f * scale;
 
 			float centerX = std::floor(grab.Min.x + (grab.Max.x - grab.Min.x) * 0.5f);
@@ -1618,7 +1615,7 @@ namespace ImGui
 		DrawWidgetBorder(window->DrawList, track, IsWidgetFocused(id) || active || h, 0.0f);
 
 		if (grab.Max.y > grab.Min.y) {
-			float scale      = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
+			float scale      = GetDynamicWidgetScale();
 			float knobHeight = 10.0f * scale;
 
 			float centerY = std::floor(grab.Min.y + (grab.Max.y - grab.Min.y) * 0.5f);
@@ -1713,7 +1710,7 @@ namespace ImGui
 		bool is_leaf = (flags & ImGuiTreeNodeFlags_Leaf) != 0;
 
 		// Calculate total layout size using same padY as combo boxes
-		float scale       = Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
+		float scale       = GetDynamicWidgetScale();
 		float padY        = 7.0f * scale;
 		float frameHeight = CalcTextSize(label).y + padY * 2.0f;
 
@@ -1794,7 +1791,7 @@ namespace ImGui
 		bool no_push     = (flags & ImGuiTreeNodeFlags_NoTreePushOnOpen) != 0;
 		bool is_selected = (flags & ImGuiTreeNodeFlags_Selected) != 0;
 
-		float scale       = Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
+		float scale       = GetDynamicWidgetScale();
 		float padY        = 3.0f * scale;
 		float frameHeight = CalcTextSize(label).y + padY * 2.0f;
 
@@ -1861,11 +1858,10 @@ namespace ImGui
 			return { false, false, false };
 
 		auto  arrowIcon = MANAGER(IconFont)->GetStepperRight();
-		float uiScale   = Renderer::GetResolutionScale();
-		float userScale = FUCKMan::GetSingleton()->GetActiveScale();
+		float scale     = GetDynamicWidgetScale();
 
 		// Extract ratio (steppers always point left/right, so height is height)
-		float targetH = 30.0f * uiScale * userScale;
+		float targetH = 30.0f * scale;
 		float aspect  = (arrowIcon && arrowIcon->imageSize.y > 0.0f) ? (arrowIcon->imageSize.x / arrowIcon->imageSize.y) : 1.0f;
 		float targetW = targetH * aspect;
 
@@ -1896,8 +1892,7 @@ namespace ImGui
 		bool showNavHighlight = isFocused && (MANAGER(Input)->GetInputDevice() != Input::DEVICE::kMouse);
 
 		auto  largeFont = MANAGER(IconFont)->GetLargeFont();
-		float fontScale = FUCKMan::GetSingleton()->GetActiveScale() * Renderer::GetResolutionScale();
-		float fontSize  = (largeFont ? largeFont->LegacySize : GetStyle().FontSizeBase) * fontScale;
+		float fontSize  = (largeFont ? largeFont->LegacySize : GetStyle().FontSizeBase) * scale;
 
 		PushFont(largeFont, fontSize);
 		RenderTextClipped(widgetBounds.Min + ImVec2(arrowSize.x, 0), widgetBounds.Max - ImVec2(arrowSize.x, 0), centerText.data(), nullptr, nullptr, { 0.5f, 0.5f });
@@ -1928,7 +1923,7 @@ namespace ImGui
 	{
 		std::string id = std::format("##{}", label);
 
-		float scale      = Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
+		float scale      = GetDynamicWidgetScale();
 		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize);
 		float rounding   = GetStyle().FrameRounding;
 
@@ -2077,7 +2072,7 @@ namespace ImGui
 			return false;
 
 		float currentFontScale = window->FontWindowScale;
-		float scale            = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale() * currentFontScale;
+		float scale            = GetDynamicWidgetScale();
 
 		PushStyleColor(ImGuiCol_FrameBg, GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
 		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
@@ -2103,7 +2098,7 @@ namespace ImGui
 		if (window->SkipItems)
 			return false;
 
-		float scale = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale() * window->FontWindowScale;
+		float scale = GetDynamicWidgetScale();
 
 		// 1. Calculate Button Width to determine the overall column center
 		ImVec2 textSize = CalcTextSize(label);

@@ -123,7 +123,7 @@ namespace ImGui
 
 	void TextColoredWrapped(const ImVec4& col, std::string_view text)
 	{
-		float scale = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
+		float scale = GetDynamicWidgetScale();
 		if (GetContentRegionAvail().x < 15.0f) {
 			PushStyleColor(ImGuiCol_Text, col);
 			PushTextWrapPos(GetCursorPos().x + (350.0f * scale));
@@ -141,7 +141,7 @@ namespace ImGui
 
 	void TextWrappedEx(const char* text)
 	{
-		float scale = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
+		float scale = GetDynamicWidgetScale();
 		if (GetContentRegionAvail().x < 15.0f) {
 			PushTextWrapPos(GetCursorPos().x + (350.0f * scale));
 			TextUnformatted(text);
@@ -310,7 +310,7 @@ namespace ImGui
 		}
 
 		if (showTooltip) {
-			float scale      = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
+			float scale      = GetDynamicWidgetScale();
 			float tooltipPad = 12.0f * scale;
 			PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(tooltipPad, tooltipPad));
 
@@ -413,9 +413,8 @@ namespace ImGui
 
 	void Header(const char* label)
 	{
-		auto* manager   = FUCKMan::GetSingleton();
 		auto  largeFont = MANAGER(IconFont)->GetLargeFont();
-		float scale     = manager->GetActiveScale() * Renderer::GetResolutionScale();
+		float scale     = GetDynamicWidgetScale();
 		float size      = (largeFont ? largeFont->LegacySize : GetStyle().FontSizeBase) * scale;
 
 		Dummy(ImVec2(0.0f, 12.0f * scale));

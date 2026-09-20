@@ -140,7 +140,7 @@ namespace ImGui
 	template <class T>
 	bool DragOnHover(const char* label, T* v, float v_speed = 1.0f, T v_min = 0, T v_max = 100, const char* format = nullptr, ImGuiSliderFlags flags = ImGuiSliderFlags_AlwaysClamp)
 	{
-		float scale      = Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
+		float scale      = ImGui::GetFontSize() / 30.0f;
 		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize);
 		float padX       = std::max(GetStyle().FramePadding.x, borderSize + (8.0f * scale));
 		float padY       = 7.0f * scale;
@@ -170,7 +170,7 @@ namespace ImGui
 	template <class T>
 	bool Slider(const char* label, T* v, T v_min, T v_max, const char* format = nullptr, ImGuiSliderFlags flags = ImGuiSliderFlags_AlwaysClamp)
 	{
-		float scale      = Renderer::GetResolutionScale() * (FUCKMan::GetSingleton()->GetActiveScale());
+		float scale      = ImGui::GetFontSize() / 30.0f;
 		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize);
 		float padX       = std::max(GetStyle().FramePadding.x, borderSize + (8.0f * scale));
 		float padY       = 7.0f * scale;

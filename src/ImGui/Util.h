@@ -38,4 +38,13 @@ namespace ImGui
 
 	ImVec2 GetNativeViewportSize();
 	ImVec2 TranslateScaleformToScreen(float stageX, float stageY);
+
+	// Returns a universal scaling factor derived from the currently active Font Size.
+	// This ensures that all custom widgets, paddings, and graphic elements correctly
+	// respect ImGui::PushFont and FUCK::PushScale multipliers.
+	inline float GetDynamicWidgetScale()
+	{
+		// 30.0f is the FUCK framework's standard unscaled reference font size
+		return ImGui::GetFontSize() / 30.0f;
+	}
 }

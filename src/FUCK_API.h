@@ -2364,6 +2364,28 @@ namespace FUCK
 	// Version 5
 	// --------------------------------------------------
 
+	/// @brief Pushes a temporary scale multiplier for both Font Size and UI Padding/Spacing.
+	/// Note: Do not nest PushScale calls. Pop the previous scale before pushing a new one.
+	inline void PushScale(float scaleMultiplier, ImFont* font = nullptr)
+	{
+		PushFontScaled(font, scaleMultiplier);
+
+		ImVec2 pad        = GetStyleVarVec(ImGuiStyleVar_FramePadding);
+		ImVec2 space      = GetStyleVarVec(ImGuiStyleVar_ItemSpacing);
+		ImVec2 innerSpace = GetStyleVarVec(ImGuiStyleVar_ItemInnerSpacing);
+
+		PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(pad.x * scaleMultiplier, pad.y * scaleMultiplier));
+		PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(space.x * scaleMultiplier, space.y * scaleMultiplier));
+		PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(innerSpace.x * scaleMultiplier, innerSpace.y * scaleMultiplier));
+	}
+
+	/// @brief Pops the styling pushed by PushScale.
+	inline void PopScale()
+	{
+		PopStyleVar(3);
+		PopFont();
+	}
+
 	/// @brief A slider that displays values scaled by a multiplier (e.g., displaying 1.5 as "150").
 	/// The underlying float value remains unchanged in memory.
 	inline bool ScaledSliderFloat(const char* label, float* v, float min, float max, float visualScaleMultiplier, const char* fmt = "%.0f")
