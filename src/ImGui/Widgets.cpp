@@ -136,9 +136,13 @@ namespace ImGui
 			};
 
 			// Tighter gap globally for near-aligned widgets to closely mimic vanilla grouping
-			float nearSpacing = std::max(1.0f, std::floor(g.Style.ItemInnerSpacing.x * 0.25f));
-			// Near (Tightly Coupled) - Uses LabelAlign.X as a rigid spacer pushing the label away (Adds 0 to 50px of adjustable spacing)
-			float labelSpacer = style.labelAlign.x * 50.0f * FUCKMan::GetSingleton()->GetActiveScale() * Renderer::GetResolutionScale();
+			float scale       = GetDynamicWidgetScale();
+
+			// Give it a gap so it actually breathes,
+			float nearSpacing = std::max(8.0f * scale, g.Style.ItemInnerSpacing.x);
+
+			// Near (Tightly Coupled) - Uses LabelAlign.X as a rigid spacer pushing the label away
+			float labelSpacer = style.labelAlign.x * 50.0f * scale;
 
 			float widgetX = startX;
 			float maxX    = startX;
@@ -158,15 +162,18 @@ namespace ImGui
 				maxX = rightPaneEnd;
 			} else {
 				// Pack the widget tightly against the label
+				// Add trailing padding to the bounding box so adjacent SameLine() widgets don't blur together
+				float trailingPadding = 16.0f * scale;
+
 				if (labelLeft) {
 					DrawLabel(startX);
 					widgetX = startX + labelWidth + nearSpacing + labelSpacer;
-					maxX    = widgetX + contentWidth;
+					maxX    = widgetX + contentWidth + trailingPadding;
 				} else {
 					widgetX      = startX;
 					float labelX = startX + contentWidth + nearSpacing + labelSpacer;
 					DrawLabel(labelX);
-					maxX = labelX + labelWidth;
+					maxX = labelX + labelWidth + trailingPadding;
 				}
 			}
 
