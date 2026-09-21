@@ -13,6 +13,7 @@
 #include "System/Hotkeys.h"
 #include "System/Settings.h"
 #include "System/Utils.h"
+#include "System/Favourites.h"
 
 namespace FUCK::Host
 {
@@ -631,7 +632,23 @@ namespace FUCK::Host
 		std::vector<std::string> vecItems;
 		vecItems.reserve(items_count);
 		for (int i = 0; i < items_count; ++i) vecItems.emplace_back(items[i]);
-		return ImGui::ComboWithFilter(label, current_item, vecItems, popup_max_height);
+
+		auto        favManager = FUCK::FavouritesManager::GetSingleton();
+		std::string favToggled;
+
+		std::string pluginName = FUCKMan::GetSingleton()->GetCurrentRenderingPlugin();
+		if (pluginName.empty())
+			pluginName = "FUCK";
+
+		const auto& favourites = favManager->GetFavourites(pluginName, label);
+
+		bool result = ImGui::ComboWithFilter(label, current_item, vecItems, popup_max_height, &favourites, &favToggled);
+
+		if (!favToggled.empty()) {
+			favManager->ToggleFavourite(pluginName, label, favToggled);
+		}
+
+		return result;
 	}
 	static bool ComboForm_Impl(const char* label, std::uint32_t* id, std::uint8_t t) { return ImGui::ComboForm(label, reinterpret_cast<RE::FormID*>(id), static_cast<RE::FormType>(t)); }
 

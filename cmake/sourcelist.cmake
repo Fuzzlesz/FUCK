@@ -15,6 +15,7 @@ set(sources ${sources}
 	src/PCH.cpp
 	src/System/Compat.cpp
 	src/System/Console.cpp
+	src/System/Favourites.cpp
 	src/System/Hooks.cpp
 	src/System/Hotkeys.cpp
 	src/System/Input.cpp

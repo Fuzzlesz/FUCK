@@ -1,6 +1,7 @@
 #include "Audio.h"
 #include "FormComboBox.h"
 #include "IconsFonts.h"
+#include "IconsFontAwesome6.h"
 #include "Renderer.h"
 #include "Widgets.h"
 
@@ -486,7 +487,7 @@ namespace ImGui
 		return pressed;
 	}
 
-	bool ComboWithFilter(const char* label, int* current_item, std::span<const std::string> items, int popup_max_height_in_items)
+	bool ComboWithFilter(const char* label, int* current_item, std::span<const std::string> items, int popup_max_height_in_items, const Set<std::string>* a_favourites, std::string* a_favToggled)
 	{
 		ImGuiContext& g      = *GImGui;
 		ImGuiWindow*  window = GetCurrentWindow();
@@ -494,7 +495,7 @@ namespace ImGui
 			return false;
 
 		float currentFontScale = window->FontWindowScale;
-		float scale            = GetDynamicWidgetScale();
+		float scale            = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale() * currentFontScale;
 
 		if (popup_max_height_in_items == -1)
 			popup_max_height_in_items = 8;
@@ -527,8 +528,8 @@ namespace ImGui
 		float   width     = std::round(CalcItemWidth());
 		ImGuiID id        = window->GetID(idStr.c_str());
 
-		float       designPadY     = 15.0f * Renderer::GetResolutionScale();
-		float       popupPad       = std::round(std::max(0.0f, designPadY - (2.0f * scale)));
+		float designPadY = 15.0f * Renderer::GetResolutionScale();
+		float popupPad   = std::round(std::max(0.0f, designPadY - (2.0f * scale)));
 
 		float       frameH         = GetFrameHeight();
 		ImDrawList* parentDrawList = GetWindowDrawList();
@@ -623,21 +624,20 @@ namespace ImGui
 			}
 		}
 
-		std::vector<std::pair<int, double>> itemScoreVector;
-		bool                                filtering = s_comboFilterStates[id].pattern[0] != '\0';
-		if (filtering) {
-			std::string lowerFilter = clib_util::string::tolower(s_comboFilterStates[id].pattern);
+		std::vector<int> displayIndices;
+		bool             filtering      = s_comboFilterStates[id].pattern[0] != '\0';
+		const bool       has_favourites = a_favourites != nullptr;
 
-			// Use a static buffer to prevent thousands of memory allocations per frame
+		if (filtering) {
+			std::string        lowerFilter = clib_util::string::tolower(s_comboFilterStates[id].pattern);
 			static std::string lowerItemBuffer;
 
+			std::vector<std::pair<int, double>> scoredItems;
 			for (int i = 0; i < static_cast<int>(items.size()); i++) {
-				// Exclude items marked with ##NOFILTER and headers from search results
 				if (items[i].find("##NOFILTER") != std::string::npos || items[i].starts_with("##HEADER:")) {
 					continue;
 				}
 
-				// Copy into buffer and convert to lowercase in-place
 				lowerItemBuffer = items[i];
 				std::transform(lowerItemBuffer.begin(), lowerItemBuffer.end(), lowerItemBuffer.begin(),
 					[](unsigned char c) { return static_cast<unsigned char>(std::tolower(c)); });
@@ -645,24 +645,54 @@ namespace ImGui
 				auto score = rapidfuzz::fuzz::partial_token_ratio(lowerFilter, lowerItemBuffer);
 
 				if (score >= 65.0)
-					itemScoreVector.push_back({ i, score });
+					scoredItems.push_back({ i, score });
 			}
 
-			std::ranges::sort(itemScoreVector, [](const auto& a, const auto& b) {
-				// If the fuzzy match scores are identical, fallback to their original index (alphabetical order)
-				if (std::abs(a.second - b.second) < 0.0001)
+			std::ranges::sort(scoredItems, [&](const auto& a, const auto& b) {
+				if (std::abs(a.second - b.second) < 0.0001) {
+					if (has_favourites) {
+						bool a_fav = a_favourites->contains(items[a.first]);
+						bool b_fav = a_favourites->contains(items[b.first]);
+						if (a_fav != b_fav)
+							return a_fav > b_fav;
+					}
 					return a.first < b.first;
-
-				// Otherwise, float the best fuzzy matches to the top
+				}
 				return a.second > b.second;
 			});
+
+			displayIndices.reserve(scoredItems.size());
+			for (const auto& pair : scoredItems) {
+				displayIndices.push_back(pair.first);
+			}
+		} else {
+			displayIndices.reserve(items.size());
+			for (int i = 0; i < static_cast<int>(items.size()); i++) {
+				displayIndices.push_back(i);
+			}
+
+			if (has_favourites) {
+				std::stable_sort(displayIndices.begin(), displayIndices.end(), [&](int a, int b) {
+					bool a_noFilter = items[a].find("##NOFILTER") != std::string::npos;
+					bool b_noFilter = items[b].find("##NOFILTER") != std::string::npos;
+					if (a_noFilter != b_noFilter)
+						return a_noFilter > b_noFilter;
+
+					bool a_fav = a_favourites->contains(items[a]);
+					bool b_fav = a_favourites->contains(items[b]);
+					if (a_fav != b_fav)
+						return a_fav > b_fav;
+
+					return false;
+				});
+			}
 		}
 
 		bool changed    = false;
-		int  show_count = filtering ? static_cast<int>(itemScoreVector.size()) : static_cast<int>(items.size());
+		int  show_count = static_cast<int>(displayIndices.size());
 
 		if (enterPressed && show_count > 0) {
-			*current_item = filtering ? itemScoreVector[0].first : 0;
+			*current_item = displayIndices[0];
 			changed       = true;
 			CloseCurrentPopup();
 			PlayAudio(Audio::kFocus);
@@ -687,42 +717,124 @@ namespace ImGui
 		if (BeginChild("##List", ImVec2(0.0f, idealListH), childFlags, winFlags)) {
 			SetWindowFontScale(currentFontScale);
 
-			for (int i = 0; i < show_count; i++) {
-				int idx = filtering ? itemScoreVector[i].first : i;
+			ImGuiListClipper clipper;
+			clipper.Begin(show_count);
 
-				// Push the index to guarantee unique IDs for identical labels
-				PushID(idx);
+			// Ensure active item is always clipped in so SetScrollHereY resolves accurately
+			int focus_idx = -1;
+			if (navigateToItems && show_count > 0) {
+				focus_idx = 0;
+			} else {
+				for (int i = 0; i < show_count; ++i) {
+					if (*current_item == displayIndices[i]) {
+						focus_idx = i;
+						break;
+					}
+				}
+			}
+			if (focus_idx >= 0) {
+				clipper.IncludeItemByIndex(focus_idx);
+			}
 
-				std::string_view itemStr(items[idx]);
-				if (!filtering && itemStr.starts_with("##HEADER:")) {
-					PushStyleColor(ImGuiCol_Text, GetUserStyleColorVec4(USER_STYLE::kWidgetFlash));
-					if (i > 0)
-						Dummy(ImVec2(0, 4.0f * scale));
-					SetCursorPosX(GetCursorPosX() + padX);
-					TextUnformatted(itemStr.data() + 9, itemStr.data() + itemStr.size());
-					if (i < show_count - 1)
-						Dummy(ImVec2(0, 2.0f * scale));
-					PopStyleColor();
-				} else {
-					if (navigateToItems) {
-						if (i == 0 || *current_item == idx) {
-							SetKeyboardFocusHere(0);
+			while (clipper.Step()) {
+				for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
+					int idx = displayIndices[i];
+
+					// Push the index to guarantee unique IDs for identical labels
+					PushID(idx);
+
+					std::string_view itemStr(items[idx]);
+					if (!filtering && itemStr.starts_with("##HEADER:")) {
+						PushStyleColor(ImGuiCol_Text, GetUserStyleColorVec4(USER_STYLE::kWidgetFlash));
+						if (i > 0) {
+							Dummy(ImVec2(0, 4.0f * scale));
+						}
+						SetCursorPosX(GetCursorPosX() + padX);
+						TextUnformatted(itemStr.data() + 9, itemStr.data() + itemStr.size());
+						if (i < show_count - 1) {
+							Dummy(ImVec2(0, 2.0f * scale));
+						}
+						PopStyleColor();
+					} else {
+						if (navigateToItems) {
+							if (i == focus_idx) {
+								SetKeyboardFocusHere(0);
+							}
+						}
+
+						bool isSelected = (*current_item == idx);
+
+						ImVec2 startPos = GetCursorPos();
+						float  availW   = GetContentRegionAvail().x;
+
+						bool mainClicked = Selectable(items[idx].c_str(), isSelected, ImGuiSelectableFlags_AllowOverlap);
+						
+						bool itemHovered = IsItemHovered();
+						bool itemFocused = IsItemFocused();
+						bool starHovered = false;
+
+						// Show tooltip if the text is too wide to fit in the available combo box space
+						if (itemHovered && (CalcTextSize(items[idx].c_str()).x > availW - padX)) {
+							SetTooltipEx(items[idx].c_str());
+						}
+
+						if (has_favourites) {
+							bool isFav = a_favourites->contains(items[idx]);
+							
+							if ((itemHovered || itemFocused) && IsKeyPressed(ImGuiKey_GamepadFaceUp, false)) {
+								if (a_favToggled) {
+									*a_favToggled = items[idx];
+								}
+								PlayAudio(Audio::kFocus);
+							}
+							
+							if (isFav || itemHovered) {
+								const char* starIcon     = ICON_FA_STAR;
+								float       starScale    = 0.75f;
+								float       starFontSize = GetFontSize() * starScale;
+
+								PushFont(nullptr, starFontSize);
+								ImVec2 starSize = CalcTextSize(starIcon);
+								PopFont();
+
+								float itemH = GetItemRectSize().y;
+								float starX = GetItemRectMin().x + availW - starSize.x - padX;
+								float starY = GetItemRectMin().y + (itemH - starSize.y) * 0.5f;
+
+								// Hit-testing logic bypassing ImGui Item overlap clashing
+								ImRect starBB(
+									ImVec2(starX - (5.0f * scale), GetItemRectMin().y),
+									ImVec2(starX + starSize.x + (5.0f * scale), GetItemRectMin().y + itemH)
+								);
+								
+								starHovered = IsMouseHoveringRect(starBB.Min, starBB.Max);
+								if (starHovered && IsMouseClicked(0)) {
+									if (a_favToggled) {
+										*a_favToggled = items[idx];
+									}
+									PlayAudio(Audio::kFocus);
+								}
+								
+								ImU32 starCol = starHovered ? IM_COL32(255, 255, 100, 255) : (isFav ? IM_COL32(255, 215, 0, 255) : GetColorU32(ImGuiCol_TextDisabled));
+								GetWindowDrawList()->AddText(GetFont(), starFontSize, ImVec2(starX, starY), starCol, starIcon);
+							}
+						}
+
+						// If the user clicked the row but was hovering the star, don't trigger the item selection
+						if (mainClicked && !starHovered) {
+							*current_item = idx;
+							changed       = true;
+							CloseCurrentPopup();
+							PlayAudio(Audio::kFocus);
+						}
+
+						if (isSelected && IsWindowAppearing()) {
+							SetScrollHereY();
 						}
 					}
 
-					bool isSelected = (*current_item == idx);
-					if (Selectable(items[idx].c_str(), isSelected)) {
-						*current_item = idx;
-						changed       = true;
-						CloseCurrentPopup();
-						PlayAudio(Audio::kFocus);
-					}
-
-					if (isSelected && IsWindowAppearing())
-						SetScrollHereY();
+					PopID();
 				}
-
-				PopID();
 			}
 		}
 		EndChild();

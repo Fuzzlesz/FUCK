@@ -1078,20 +1078,27 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 		if (ImGui::Begin("##ToolOverlayLayer", nullptr, flags)) {
 			pushContentScale(false);
 
-			if (_activeTool && !menusHidden)
+			if (_activeTool && !menusHidden) {
+				_currentRenderingPlugin = _activeTool->PluginName();
 				_activeTool->RenderOverlay();
+			}
 
 			for (auto* tool : _tools) {
-				if (tool != _activeTool && !menusHidden)
+				if (tool != _activeTool && !menusHidden) {
+					_currentRenderingPlugin = tool->PluginName();
 					tool->RenderOverlay();
+				}
 			}
 
 			for (auto* win : _windows) {
 				// Skip overlays for suppressed windows.
 				if (!IsWindowSuppressed(win)) {
+					_currentRenderingPlugin = win->PluginName();
 					win->RenderOverlay();
 				}
 			}
+
+			_currentRenderingPlugin.clear();
 
 			popContentScale();
 		}
@@ -1429,7 +1436,9 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 					if (ImGui::BeginChild("##Content", ImVec2(0, 0), childFlags, windowFlags)) {
 						ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
 						pushContentScale(ignoreUserScale);
+						_currentRenderingPlugin = win->PluginName();
 						win->Draw();
+						_currentRenderingPlugin.clear();
 						popContentScale();
 						ImGui::PopItemWidth();
 					}
@@ -1440,7 +1449,9 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 			} else {
 				// --- No Chrome Decoration ---
 				pushContentScale(ignoreUserScale);
+				_currentRenderingPlugin = win->PluginName();
 				win->Draw();
+				_currentRenderingPlugin.clear();
 				popContentScale();
 			}
 		}
@@ -2029,10 +2040,13 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 				FUCK::BeginChild("Content", ImVec2(width, availHeight), true, ImGuiChildFlags_AlwaysUseWindowPadding);
 				{
 					pushContentScale(false);
-					if (_activeTool)
+					if (_activeTool) {
+						_currentRenderingPlugin = _activeTool->PluginName();
 						_activeTool->Draw();
-					else
+						_currentRenderingPlugin.clear();
+					} else {
 						FUCK::CenteredText("$FUCK_NoToolSelected"_T, true);
+					}
 
 					popContentScale();
 				}

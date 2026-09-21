@@ -183,6 +183,8 @@ public:
 		return false;
 	}
 
+	const char* GetCurrentRenderingPlugin() const { return _currentRenderingPlugin.c_str(); }
+
 protected:
 	EventResult ProcessEvent(const RE::MenuOpenCloseEvent* a_event, RE::BSTEventSource<RE::MenuOpenCloseEvent>*) override;
 
@@ -256,4 +258,6 @@ private:
 	// Built-in Tools
 	SettingsTool      _settingsTool;
 	ThemeEditorWindow _themeEditorWindow;
+
+	std::string _currentRenderingPlugin = "";
 };

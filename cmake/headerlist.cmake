@@ -19,6 +19,7 @@ set(headers ${headers}
 	src/PCH.h
 	src/System/Compat.h
 	src/System/Console.h
+	src/System/Favourites.h
 	src/System/Hooks.h
 	src/System/Hotkeys.h
 	src/System/Input.h
