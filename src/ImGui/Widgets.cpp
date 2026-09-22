@@ -609,10 +609,25 @@ namespace ImGui
 		PushItemWidth(GetContentRegionAvail().x);
 		InputText("##filter", s_comboFilterStates[id].pattern, 256, ImGuiInputTextFlags_AutoSelectAll);
 		bool isInputFocused = IsItemFocused() || IsItemActive();
+
+		// Draw Magnifying Glass inside the input box
+		const char* searchIcon     = ICON_FA_MAGNIFYING_GLASS;
+		float       searchScale    = 0.75f;
+		float       searchFontSize = GetFontSize() * searchScale;
+
+		PushFont(nullptr, searchFontSize);
+		ImVec2 searchSize = CalcTextSize(searchIcon);
+		PopFont();
+
+		float itemH   = GetItemRectSize().y;
+		float searchX = GetItemRectMax().x - searchSize.x - padX;
+		float searchY = GetItemRectMin().y + (itemH - searchSize.y) * 0.5f;
+
+		GetWindowDrawList()->AddText(GetFont(), searchFontSize, ImVec2(searchX, searchY), GetColorU32(ImGuiCol_TextDisabled), searchIcon);
+
 		PopItemWidth();
-
 		PopStyleColor(3);
-
+		
 		bool navigateToItems = false;
 		bool enterPressed    = false;
 		if (isInputFocused) {
