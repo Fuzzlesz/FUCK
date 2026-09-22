@@ -552,7 +552,7 @@ void FUCKMan::UpdateGameState()
 					}
 				}
 			}
-		} else {
+		} else if (!_pausedMenus.empty()) {
 			for (const auto& name : _pausedMenus) {
 				auto menu = ui->GetMenu(name);
 				if (menu && menu->uiMovie) {
@@ -895,10 +895,61 @@ void FUCKMan::Toggle()
 	_isOpen ? Close() : Open();
 }
 
+// Vanilla DirectionHandler repeat timings. Some weird interactions have led to keys spamming. A lot of logging and testing of input code
+// has led seemingly to the conclusion that the DirectionHandler is being zeroed out by some other code, and this is a workaround to restore it when it's caught.
+namespace DirectionRepeat
+{
+	static constexpr std::ptrdiff_t kDelayOffset    = 0x14;
+	static constexpr std::ptrdiff_t kIntervalOffset = 0x18;
+
+	static float s_delay    = 0.0f;
+	static float s_interval = 0.0f;
+
+	static RE::MenuEventHandler* GetHandler()
+	{
+		// Layout only verified on flat.
+		if (REL::Module::IsVR())
+			return nullptr;
+
+		auto mc = RE::MenuControls::GetSingleton();
+		if (!mc)
+			return nullptr;
+
+		const auto vtbl = RE::VTABLE_DirectionHandler[0].address();
+		for (auto* h : mc->handlers) {
+			if (h && *reinterpret_cast<const std::uintptr_t*>(h) == vtbl)
+				return h;
+		}
+		return nullptr;
+	}
+
+	static void Sync()
+	{
+		auto handler = GetHandler();
+		if (!handler)
+			return;
+
+		auto  base     = reinterpret_cast<std::uint8_t*>(handler);
+		auto& delay    = *reinterpret_cast<float*>(base + kDelayOffset);
+		auto& interval = *reinterpret_cast<float*>(base + kIntervalOffset);
+
+		if (delay > 0.0f && interval > 0.0f) {
+			s_delay    = delay;
+			s_interval = interval;
+		} else if (s_delay > 0.0f && s_interval > 0.0f) {
+			delay    = s_delay;
+			interval = s_interval;
+			logger::info("FUCK: Restored menu direction repeat ({}, {})", s_delay, s_interval);
+		}
+	}
+}
+
 EventResult FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_event, RE::BSTEventSource<RE::MenuOpenCloseEvent>*)
 {
 	if (!a_event)
 		return EventResult::kContinue;
+
+	DirectionRepeat::Sync();
 
 	DispatchMenuEvent(a_event->menuName.c_str(), a_event->opening);
 
