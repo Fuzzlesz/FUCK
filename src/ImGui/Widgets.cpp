@@ -696,6 +696,9 @@ namespace ImGui
 			changed       = true;
 			CloseCurrentPopup();
 			PlayAudio(Audio::kFocus);
+		} else if (IsKeyPressed(ImGuiKey_Escape, false) || IsKeyPressed(ImGuiKey_NavGamepadCancel, false)) {
+			CloseCurrentPopup();
+			PlayAudio(Audio::kCancel);
 		}
 
 		// --- Inner List Setup ---
@@ -780,8 +783,11 @@ namespace ImGui
 
 						if (has_favourites) {
 							bool isFav = a_favourites->contains(items[idx]);
-							
-							if ((itemHovered || itemFocused) && IsKeyPressed(ImGuiKey_GamepadFaceUp, false)) {
+
+							bool pressedFavGamepad  = IsKeyPressed(ImGuiKey_GamepadFaceUp, false);
+							bool pressedFavKeyboard = IsKeyPressed(ImGuiKey_F, false) && GetIO().KeyCtrl;
+
+							if ((itemHovered || itemFocused) && (pressedFavGamepad || pressedFavKeyboard)) {
 								if (a_favToggled) {
 									*a_favToggled = items[idx];
 								}
