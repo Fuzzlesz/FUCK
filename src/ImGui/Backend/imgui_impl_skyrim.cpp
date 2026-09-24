@@ -7,7 +7,7 @@
 
 namespace SKSE
 {
-	bool ImGui_ImplSkyrim_Init()
+	bool ImGui_ImplSkyrim_Init(void* hwnd)
 	{
 		ImGuiIO& io = ImGui::GetIO();
 
@@ -17,6 +17,10 @@ namespace SKSE
 		io.WantCaptureKeyboard     = false;
 		io.WantTextInput           = false;
 		io.WantSetMousePos         = false;
+
+		ImGuiViewport* viewport     = ImGui::GetMainViewport();
+		viewport->PlatformHandle    = hwnd;
+		viewport->PlatformHandleRaw = hwnd;
 
 		return true;
 	}
