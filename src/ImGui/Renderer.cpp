@@ -83,10 +83,23 @@ namespace ImGui::Renderer
 	// HELPER
 	// ==================================================
 
+	static void UpdateTextInputState()
+	{
+		static bool lastWantTextInput = false;
+
+		const bool wantTextInput = GetIO().WantTextInput;
+		if (lastWantTextInput != wantTextInput) {
+			if (const auto controlMap = RE::ControlMap::GetSingleton()) {
+				controlMap->AllowTextInput(wantTextInput);
+				lastWantTextInput = wantTextInput;
+			}
+		}
+	}
+
 	// Draws kPassInputToGame windows to the always-on VR HUD panel; a no-op
 	// off VR (flat draws them as part of the normal Draw() pass instead).
 	void DrawHud();
-
+	
 	void Draw()
 	{
 		if (!initialized.load()) {
@@ -125,6 +138,9 @@ namespace ImGui::Renderer
 		{
 			// disable windowing
 			GImGui->NavWindowingTarget = nullptr;
+
+			// Sync text input state with the game
+			UpdateTextInputState();
 
 			// Flat screen has no panel split — draw everything together
 			// (kPassInputToGame windows included), same as always.
@@ -301,7 +317,7 @@ namespace ImGui::Renderer
 				io.ConfigFlags = ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad | ImGuiConfigFlags_NoMouseCursorChange;
 				io.IniFilename = nullptr;
 
-				if (!SKSE::ImGui_ImplSkyrim_Init()) {
+				if (!SKSE::ImGui_ImplSkyrim_Init(desc.OutputWindow)) {
 					logger::error("ImGui initialization failed (Skyrim platform).");
 					return;
 				}
