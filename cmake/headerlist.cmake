@@ -1,9 +1,9 @@
 set(headers ${headers}
+	src/API/FUCK_API.h
 	src/FUCK-Host.h
 	src/FUCK-Man.h
 	src/FUCK-Settings.h
 	src/FUCK-Styles.h
-	src/FUCK_API.h
 	src/ImGui/Audio.h
 	src/ImGui/Backend/imgui_default.h
 	src/ImGui/Backend/imgui_impl_skyrim.h

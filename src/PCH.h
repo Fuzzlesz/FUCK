@@ -134,7 +134,7 @@ namespace stl
 #endif
 
 #define FUCK_API_ENABLE_SIMPLEINI
-#include "FUCK_API.h"
+#include "API/FUCK_API.h"
 
 #include "System/Translation.h"
 #include "Version.h"

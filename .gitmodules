@@ -2,3 +2,6 @@
 	path = extern/CommonLibSSE
 	url = https://github.com/alandtse/CommonLibVR.git
 	branch = ng
+[submodule "src/API"]
+	path = src/API
+	url = https://github.com/Fuzzlesz/FUCK_API
