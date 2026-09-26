@@ -1533,26 +1533,26 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 
 	if (_pendingWindowRestore) {
 		ClampWindowToScreen(_cfg.windowPos, _cfg.windowSize);
-		FUCK::SetNextWindowPos(_cfg.windowPos, ImGuiCond_Always);
+		ImGui::SetNextWindowPos(_cfg.windowPos, ImGuiCond_Always);
 		if (!_isCollapsed) {
-			FUCK::SetNextWindowSize(_cfg.windowSize, ImGuiCond_Always);
+			ImGui::SetNextWindowSize(_cfg.windowSize, ImGuiCond_Always);
 		} else {
-			FUCK::SetNextWindowSize(ImVec2(_cfg.windowSize.x, collapsedH), ImGuiCond_Always);
+			ImGui::SetNextWindowSize(ImVec2(_cfg.windowSize.x, collapsedH), ImGuiCond_Always);
 		}
 		_pendingWindowRestore = false;
 	} else {
 		if (_isCollapsed) {
-			FUCK::SetNextWindowSize(ImVec2(_cfg.windowSize.x, collapsedH));
+			ImGui::SetNextWindowSize(ImVec2(_cfg.windowSize.x, collapsedH));
 		} else if (_wasCollapsed && !_isCollapsed) {
-			FUCK::SetNextWindowSize(_cfg.windowSize);
+			ImGui::SetNextWindowSize(_cfg.windowSize);
 		} else {
-			FUCK::SetNextWindowSize(_cfg.windowSize, ImGuiCond_FirstUseEver);
+			ImGui::SetNextWindowSize(_cfg.windowSize, ImGuiCond_FirstUseEver);
 		}
 	}
 
 	_wasCollapsed = _isCollapsed;
 
-	FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 
 	std::string windowTitle = std::format("##{}", "$FUCK_Title"_T);
 	bool        wantsOpen   = true;
@@ -1561,12 +1561,12 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 	if (_isCollapsed)
 		winFlags |= ImGuiWindowFlags_NoResize;
 
-	if (FUCK::BeginWindow(windowTitle.c_str(), &wantsOpen, winFlags)) {
-		FUCK::ExtendWindowPastBorder();
+	if (ImGui::Begin(windowTitle.c_str(), &wantsOpen, winFlags)) {
+		ImGui::ExtendWindowPastBorder();
 
 		if (!_isCollapsed) {
-			_cfg.windowPos  = FUCK::GetWindowPos();
-			_cfg.windowSize = FUCK::GetWindowSize();
+			_cfg.windowPos  = ImGui::GetWindowPos();
+			_cfg.windowSize = ImGui::GetWindowSize();
 
 			// Auto-save settings on move/resize end
 			if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
@@ -1581,12 +1581,12 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 
 		// -- Custom Title Bar (unscaled) --
 		{
-			FUCK::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
-			FUCK::BeginGroup();
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
+			ImGui::BeginGroup();
 
-			float winWidth = FUCK::GetWindowSize().x;
+			float winWidth = ImGui::GetWindowSize().x;
 
-			ImVec2 cursorScreen = FUCK::GetCursorScreenPos();
+			ImVec2 cursorScreen = ImGui::GetCursorScreenPos();
 
 			// 1. Collapse Icon
 			if (iconArrow) {
@@ -1597,7 +1597,7 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 				float maxIconDim = std::max(ap.drawSize.x, ap.drawSize.y);
 				float btnWidth   = (m.titleIconPadX * 2.0f) + maxIconDim;
 
-				FUCK::SetCursorPos({ 0, 0 });
+				ImGui::SetCursorPos({ 0, 0 });
 				// Tightly wrap the invisible button around the graphic
 				if (ImGui::InvisibleButton("##CollapseToggle", ImVec2(btnWidth, m.titleH))) {
 					_isCollapsed = !_isCollapsed;
@@ -1620,8 +1620,8 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 			float btnSize = m.titleH;
 			float xPos    = winWidth - btnSize - headerPadding;
 
-			FUCK::SetCursorPos({ xPos, 0.0f });
-			ImVec2 btnCursor = FUCK::GetCursorScreenPos();
+			ImGui::SetCursorPos({ xPos, 0.0f });
+			ImVec2 btnCursor = ImGui::GetCursorScreenPos();
 
 			if (ImGui::InvisibleButton("##CloseBtn", ImVec2(btnSize, btnSize))) {
 				wantsOpen = false;
@@ -1650,13 +1650,13 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 					xIcon);
 			}
 
-			FUCK::EndGroup();
-			FUCK::PopStyleVar();
+			ImGui::EndGroup();
+			ImGui::PopStyleVar();
 
 			// Double Click Header
 			if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && !ImGui::IsAnyItemHovered()) {
 				ImVec2 mousePos = ImGui::GetMousePos();
-				ImVec2 wP       = FUCK::GetWindowPos();
+				ImVec2 wP       = ImGui::GetWindowPos();
 				if (mousePos.x >= wP.x && mousePos.x <= wP.x + winWidth &&
 					mousePos.y >= wP.y && mousePos.y <= wP.y + m.titleH) {
 					_isCollapsed = !_isCollapsed;
@@ -1667,9 +1667,9 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 		// -- Content --
 		if (!_isCollapsed && !_wasCollapsed) {
 			float contentY = m.titleH;
-			FUCK::SetCursorPos({ 0, contentY });
+			ImGui::SetCursorPos({ 0, contentY });
 
-			float availHeight = FUCK::GetContentRegionAvail().y;
+			float availHeight = ImGui::GetContentRegionAvail().y;
 
 			// -- Sidebar (unscaled) --
 			auto renderSidebar = [&]() {
@@ -1687,29 +1687,29 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 				std::vector<FUCK::ITool*>            looseTools;
 				StringMap<std::vector<FUCK::ITool*>> toolGroups;
 
-				FUCK::BeginChild("Sidebar", ImVec2(m.sidebarWidth, availHeight), true, ImGuiWindowFlags_None);
+				ImGui::BeginChild("Sidebar", ImVec2(m.sidebarWidth, availHeight), true, ImGuiWindowFlags_None);
 				{
-					FUCK::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
-					ImVec2 headerStart = FUCK::GetCursorPos();
+					ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
+					ImVec2 headerStart = ImGui::GetCursorPos();
 					headerStart.y += topPadding;
 
 					// --- HEADER: TOOLS (Centred) ---
-					FUCK::SetCursorPos(headerStart);
+					ImGui::SetCursorPos(headerStart);
 
-					// Bypassing FUCK::PushFont scaling
+					// Bypassing ImGui::PushFont scaling
 					ImGui::PushFont(regularFont, m.sidebarFontSize);
 					float       textHeightCalc = ImGui::GetTextLineHeight();
-					float       sidebarAvailW  = FUCK::GetContentRegionAvail().x;
+					float       sidebarAvailW  = ImGui::GetContentRegionAvail().x;
 					const char* headerText     = "$FUCK_Tools"_T;
 					float       headerW        = ImGui::CalcTextSize(headerText).x;
 
-					FUCK::SetCursorPosX(headerStart.x + (sidebarAvailW - headerW) * 0.5f);
-					FUCK::SetCursorPosY(headerStart.y + (m.sidebarItemH - textHeightCalc) * 0.5f + textVisualOffset);
-					FUCK::Text(headerText);
+					ImGui::SetCursorPosX(headerStart.x + (sidebarAvailW - headerW) * 0.5f);
+					ImGui::SetCursorPosY(headerStart.y + (m.sidebarItemH - textHeightCalc) * 0.5f + textVisualOffset);
+					ImGui::TextUnformatted(headerText);
 					ImGui::PopFont();
 
-					FUCK::SetCursorPos(ImVec2(headerStart.x, headerStart.y + m.sidebarItemH));
-					FUCK::SeparatorThick();
+					ImGui::SetCursorPos(ImVec2(headerStart.x, headerStart.y + m.sidebarItemH));
+					ImGui::SeparatorThick();
 
 					// --- FILTER BOX ---
 					static char filterBuf[128] = "";
@@ -1729,7 +1729,7 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 						ImGui::PopStyleVar(3);
 						ImGui::PopFont();
 
-						FUCK::Dummy(ImVec2(0.0f, 4.0f * m.uiScale));
+						ImGui::Dummy(ImVec2(0.0f, 4.0f * m.uiScale));
 					}
 
 					bool        filtering = filterBuf[0] != '\0';
@@ -1842,20 +1842,24 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 					float alignedTextOffset = (m.sidebarIndent * 0.5f) + apRight.drawSize.x + (10.0f * m.uiScale);
 
 					auto RenderSidebarItem = [&](FUCK::ITool* tool, const char* label, float extraIndent = 0.0f) {
-						FUCK::PushID(tool);
+						ImGuiWindow* window = ImGui::GetCurrentWindow();
+						if (window->SkipItems)
+							return;  // FIX: Prevents EXCEPTION_ACCESS_VIOLATION during collapse
+
+						ImGui::PushID(tool);
 
 						bool  isSelected = (_activeTool == tool);
 						auto& over       = GetOverrides(tool);
 
 						// Cache both Screen and Window positions before the Selectable moves the cursor!
-						const auto startScreenPos = FUCK::GetCursorScreenPos();
-						const auto startPos       = FUCK::GetCursorPos();
+						const auto startScreenPos = ImGui::GetCursorScreenPos();
+						const auto startPos       = ImGui::GetCursorPos();
 
 						// Draw Selectable (Full width background & highlight)
-						if (FUCK::Selectable("##SidebarItem", isSelected, ImGuiSelectableFlags_AllowOverlap, ImVec2(0, m.sidebarItemH))) {
+						if (ImGui::Selectable("##SidebarItem", isSelected, ImGuiSelectableFlags_AllowOverlap, ImVec2(0, m.sidebarItemH))) {
 							if (_activeTool != tool) {
 								if (_activeTool) {
-									FUCK::AbortBinding();
+									Input::Manager::GetSingleton()->AbortBinding();
 									_activeTool->OnClose();
 								}
 								ImGui::PlayAudio(ImGui::Audio::kOk);
@@ -1864,23 +1868,23 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 							}
 						}
 
-						bool itemHovered = FUCK::IsItemHovered(0);
-						bool itemFocused = FUCK::IsItemFocused();
+						bool itemHovered = ImGui::IsItemHovered(0);
+						bool itemFocused = ImGui::IsItemFocused();
 
 						// Add Gamepad 'Y' shortcut to favourite tools on the sidebar
-						if ((itemHovered || itemFocused) && FUCK::IsKeyPressed(ImGuiKey_GamepadFaceUp, false)) {
+						if ((itemHovered || itemFocused) && ImGui::IsKeyPressed(ImGuiKey_GamepadFaceUp, false)) {
 							over.isFavourited = !over.isFavourited;
 							SaveWorkspace();
 						}
 
-						ImVec2 endPos = FUCK::GetCursorPos();  // Save position after selectable
+						ImVec2 endPos = ImGui::GetCursorPos();  // Save position after selectable
 
-						// Bypassing FUCK::PushFont scaling
+						// Bypassing ImGui::PushFont scaling
 						ImGui::PushFont(regularFont, m.sidebarFontSize);
 						float textY = startPos.y + (m.sidebarItemH - textHeightCalc) * 0.5f + textVisualOffset;
 
-						FUCK::SetCursorPos({ startPos.x + alignedTextOffset + extraIndent, textY });
-						FUCK::Text(label);
+						ImGui::SetCursorPos({ startPos.x + alignedTextOffset + extraIndent, textY });
+						ImGui::TextUnformatted(label);
 
 						// Draw Star
 						if (_cfg.showSidebarFavourites && (over.isFavourited || itemHovered)) {
@@ -1901,7 +1905,7 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 								ImVec2(starX + starSize.x + (5.0f * m.uiScale), startScreenPos.y + m.sidebarItemH));
 							bool starHovered = ImGui::IsMouseHoveringRect(starBB.Min, starBB.Max);
 
-							if (starHovered && FUCK::IsMouseClicked(0)) {
+							if (starHovered && ImGui::IsMouseClicked(0)) {
 								over.isFavourited = !over.isFavourited;
 								SaveWorkspace();
 							}
@@ -1914,22 +1918,25 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 						}
 
 						ImGui::PopFont();
-						FUCK::SetCursorPos(endPos);  // Restore cursor to next line
-						FUCK::PopID();
+						ImGui::SetCursorPos(endPos);  // Restore cursor to next line
+						ImGui::PopID();
 					};
 
 					auto RenderSidebarGroup = [&](const char* groupName, const char* origGroup, std::vector<FUCK::ITool*>& tools) {
-						// Bypassing FUCK::PushFont scaling
+						ImGuiWindow* window = ImGui::GetCurrentWindow();
+						if (window->SkipItems)
+							return;
+
+						// Bypassing ImGui::PushFont scaling
 						ImGui::PushFont(regularFont, m.sidebarFontSize);
 
 						// Custom TreeNode rendering
 						ImGui::PushID(groupName);
-						ImGuiWindow* window = ImGui::GetCurrentWindow();
-						ImGuiID      id     = window->GetID(groupName);
-						bool         isOpen = window->DC.StateStorage->GetInt(id, 0);
+						ImGuiID id     = window->GetID(groupName);
+						bool    isOpen = window->DC.StateStorage->GetInt(id, 0);
 
 						ImVec2 pos = window->DC.CursorPos;
-						ImRect bb(pos, pos + ImVec2(FUCK::GetContentRegionAvail().x, m.sidebarItemH));
+						ImRect bb(pos, pos + ImVec2(ImGui::GetContentRegionAvail().x, m.sidebarItemH));
 
 						ImGui::ItemSize(bb);
 						if (ImGui::ItemAdd(bb, id)) {
@@ -1945,7 +1952,7 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 							bool isFocused = ImGui::IsItemFocused();
 
 							// Add Gamepad 'Y' shortcut to favourite groups on the sidebar
-							if ((hovered || isFocused) && FUCK::IsKeyPressed(ImGuiKey_GamepadFaceUp, false)) {
+							if ((hovered || isFocused) && ImGui::IsKeyPressed(ImGuiKey_GamepadFaceUp, false)) {
 								if (origGroup && origGroup[0] != '\0') {
 									auto& gOver        = _groupOverrides[origGroup];
 									gOver.isFavourited = !gOver.isFavourited;
@@ -1998,7 +2005,7 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 										ImVec2(starX + starSize.x + (5.0f * m.uiScale), bb.Min.y + m.sidebarItemH));
 									bool starHovered = ImGui::IsMouseHoveringRect(starBB.Min, starBB.Max);
 
-									if (starHovered && FUCK::IsMouseClicked(0)) {
+									if (starHovered && ImGui::IsMouseClicked(0)) {
 										isFav                                   = !isFav;
 										_groupOverrides[origGroup].isFavourited = isFav;
 										SaveWorkspace();
@@ -2034,91 +2041,88 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 					}
 
 					// --- FOOTER: SETTINGS (Centred) ---
-					float childHeight     = FUCK::GetWindowSize().y;
+					float childHeight     = ImGui::GetWindowSize().y;
 					float separatorHeight = 1.0f;
 					float settingsY       = childHeight - m.sidebarItemH - bottomPadding;
 
-					float minSettingY = FUCK::GetCursorPos().y + separatorHeight;
+					float minSettingY = ImGui::GetCursorPos().y + separatorHeight;
 					if (settingsY < minSettingY)
 						settingsY = minSettingY;
 
-					FUCK::SetCursorPosY(settingsY - separatorHeight);
-					FUCK::SeparatorThick();
+					ImGui::SetCursorPosY(settingsY - separatorHeight);
+					ImGui::SeparatorThick();
 
-					FUCK::SetCursorPosY(settingsY);
+					ImGui::SetCursorPosY(settingsY);
 					{
 						auto*      settingsTool = &_settingsTool;
 						bool       isSelected   = (_activeTool == settingsTool);
-						const auto cursorPos    = FUCK::GetCursorPos();
+						const auto cursorPos    = ImGui::GetCursorPos();
 
-						if (FUCK::Selectable("##SETTINGS", isSelected, 0, ImVec2(0, m.sidebarItemH))) {
+						if (ImGui::Selectable("##SETTINGS", isSelected, 0, ImVec2(0, m.sidebarItemH))) {
 							if (_activeTool != settingsTool) {
 								if (_activeTool) {
-									FUCK::AbortBinding();
+									Input::Manager::GetSingleton()->AbortBinding();
 									_activeTool->OnClose();
 								}
-								PlayAudio(ImGui::Audio::kOk);
+								ImGui::PlayAudio(ImGui::Audio::kOk);
 								_activeTool = settingsTool;
 								_activeTool->OnOpen();
 							}
 						}
 
-						ImVec2 endPos = FUCK::GetCursorPos();
-						FUCK::SetCursorPos(cursorPos);
+						ImVec2 endPos = ImGui::GetCursorPos();
+						ImGui::SetCursorPos(cursorPos);
 
-						// Bypassing FUCK::PushFont scaling
+						// Bypassing ImGui::PushFont scaling
 						ImGui::PushFont(regularFont, m.sidebarFontSize);
 
 						const char* settingText = "$FUCK_Settings"_T;
 						float       setW        = ImGui::CalcTextSize(settingText).x;
 
-						FUCK::SetCursorPosX(cursorPos.x + (sidebarAvailW - setW) * 0.5f);
-						FUCK::SetCursorPosY(cursorPos.y + (m.sidebarItemH - textHeightCalc) * 0.5f + textVisualOffset);
-						FUCK::Text(settingText);
+						ImGui::SetCursorPosX(cursorPos.x + (sidebarAvailW - setW) * 0.5f);
+						ImGui::SetCursorPosY(cursorPos.y + (m.sidebarItemH - textHeightCalc) * 0.5f + textVisualOffset);
+						ImGui::TextUnformatted(settingText);
 
 						ImGui::PopFont();
-						FUCK::SetCursorPos(endPos);
+						ImGui::SetCursorPos(endPos);
 					}
-					FUCK::PopStyleVar();
-					FUCK::Dummy(ImVec2(0, bottomPadding));
+					ImGui::PopStyleVar();
+					ImGui::Dummy(ImVec2(0, bottomPadding));
 				}
-				FUCK::EndChild();
+				ImGui::EndChild();
 			};
 
 			// -- Content (scaled) --
 			auto renderContent = [&](float width) {
-				FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase, m.padBase));
-				FUCK::BeginChild("Content", ImVec2(width, availHeight), true, ImGuiChildFlags_AlwaysUseWindowPadding);
+				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase, m.padBase));
+				ImGui::BeginChild("Content", ImVec2(width, availHeight), true, ImGuiChildFlags_AlwaysUseWindowPadding);
 				{
 					pushContentScale(false);
-					if (_activeTool) {
-						_currentRenderingPlugin = _activeTool->PluginName();
+					if (_activeTool)
 						_activeTool->Draw();
-						_currentRenderingPlugin.clear();
-					} else {
-						FUCK::CenteredText("$FUCK_NoToolSelected"_T, true);
-					}
+					else
+						ImGui::CenteredText("$FUCK_NoToolSelected"_T, true);
 
 					popContentScale();
 				}
-				FUCK::EndChild();
-				FUCK::PopStyleVar();
+				ImGui::EndChild();
+				ImGui::PopStyleVar();
 			};
 
 			if (_cfg.sidebarOnRight) {
-				float contentWidth = FUCK::GetContentRegionAvail().x - m.sidebarWidth - FUCK::GetStyleVarVec(ImGuiStyleVar_ItemSpacing).x;
+				float contentWidth = ImGui::GetContentRegionAvail().x - m.sidebarWidth - ImGui::GetStyle().ItemSpacing.x;
 				renderContent(contentWidth);
-				FUCK::SameLine();
+				ImGui::SameLine();
 				renderSidebar();
 			} else {
 				renderSidebar();
-				FUCK::SameLine();
+				ImGui::SameLine();
 				renderContent(0.0f);
 			}
 		}
 	}
-	FUCK::EndWindow();
-	FUCK::PopStyleVar();
+	ImGui::End();
+	ImGui::PopStyleVar();
 
 	if (!wantsOpen)
 		Close();
