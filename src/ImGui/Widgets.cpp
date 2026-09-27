@@ -818,14 +818,14 @@ namespace ImGui
 								ImVec2 starSize = CalcTextSize(starIcon);
 								PopFont();
 
-								float itemH = GetItemRectSize().y;
+								float rowH  = GetItemRectSize().y;
 								float starX = GetItemRectMin().x + availW - starSize.x - padX;
-								float starY = GetItemRectMin().y + (itemH - starSize.y) * 0.5f;
+								float starY = GetItemRectMin().y + (rowH - starSize.y) * 0.5f;
 
 								// Hit-testing logic bypassing ImGui Item overlap clashing
 								ImRect starBB(
 									ImVec2(starX - (5.0f * scale), GetItemRectMin().y),
-									ImVec2(starX + starSize.x + (5.0f * scale), GetItemRectMin().y + itemH)
+									ImVec2(starX + starSize.x + (5.0f * scale), GetItemRectMin().y + rowH)
 								);
 								
 								starHovered = IsMouseHoveringRect(starBB.Min, starBB.Max);
