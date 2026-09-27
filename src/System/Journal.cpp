@@ -386,7 +386,8 @@ namespace Hooks::Journal
 			if (a_message.type == RE::UI_MESSAGE_TYPE::kUpdate && a_this->uiMovie) {
 				auto* manager = FUCKMan::GetSingleton();
 
-				if (!manager->GetInjectSystemMenu()) {
+				auto injectType = manager->GetInjectSystemMenu();
+				if (injectType == FUCKMan::InjectSystemMenuType::kNo) {
 					TryRemoveFUCKButton(a_this->uiMovie.get());
 					return result;
 				}
@@ -410,7 +411,7 @@ namespace Hooks::Journal
 					}
 				}
 
-				if (s_lockedGamepadState) {
+				if (injectType == FUCKMan::InjectSystemMenuType::kYes || s_lockedGamepadState) {
 					TryInjectFUCKButton(a_this->uiMovie.get());
 				} else {
 					TryRemoveFUCKButton(a_this->uiMovie.get());

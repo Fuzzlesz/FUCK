@@ -67,14 +67,21 @@ void SettingsTool::Draw()
 			FUCK::Spacing();
 			FUCK::TextColoredWrapped(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "$FUCK_Settings_PauseDesc"_T);
 
-			FUCK::Header("$FUCK_Settings_Controller"_T);
+			FUCK::Header("$FUCK_Settings_SystemMenu"_T);
 			FUCK::Spacing(2);
 
-			if (FUCK::Checkbox("$FUCK_Settings_InjectSystemMenu"_T, &manager->_cfg.injectSystemMenu, true, true))
+			const char* injectTypes[]    = { "$FUCK_Settings_InjectYes"_T, "$FUCK_Settings_InjectControllerOnly"_T, "$FUCK_Settings_InjectNo"_T };
+			int         currentInjectIdx = static_cast<int>(manager->_cfg.injectSystemMenu);
+			FUCK::SetNextItemWidth(-1);
+			std::string injectLabel = std::format("{}##InjectSystemMenu", "$FUCK_Settings_InjectSystemMenu"_T);
+
+			if (FUCK::Combo(injectLabel.c_str(), &currentInjectIdx, injectTypes, IM_ARRAYSIZE(injectTypes))) {
+				manager->_cfg.injectSystemMenu = static_cast<FUCKMan::InjectSystemMenuType>(currentInjectIdx);
 				manager->Save();
+			}
 			FUCK::SetTooltip("$FUCK_Settings_InjectSystemMenuTT"_T);
 
-			FUCK::BeginDisabled(!manager->_cfg.injectSystemMenu);
+			FUCK::BeginDisabled(manager->_cfg.injectSystemMenu == FUCKMan::InjectSystemMenuType::kNo);
 
 			if (manager->GetJournalMenuType() != FUCKMan::JournalMenuType::kSafe) {
 				if (FUCK::Checkbox("$FUCK_Settings_ReplaceHelpMenu"_T, &manager->_cfg.replaceHelpMenu, true, true)) {

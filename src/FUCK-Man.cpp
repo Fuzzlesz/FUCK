@@ -680,8 +680,9 @@ void FUCKMan::LoadSettings(const CSimpleIniA& a_ini)
 
 	_cfg.globalPauseType = FUCK::INI::LoadInt(a_ini, "Settings", "iGlobalPauseType", _def.globalPauseType);
 
+	_cfg.injectSystemMenu = static_cast<InjectSystemMenuType>(FUCK::INI::LoadInt(a_ini, "Settings", "iInjectSystemMenu", static_cast<int>(_def.injectSystemMenu)));
+
 	_cfg.sidebarOnRight        = FUCK::INI::LoadBool(a_ini, "Settings", "bSidebarOnRight",        _def.sidebarOnRight);
-	_cfg.injectSystemMenu      = FUCK::INI::LoadBool(a_ini, "Settings", "bInjectSystemMenu",      _def.injectSystemMenu);
 	_cfg.replaceHelpMenu       = FUCK::INI::LoadBool(a_ini, "Settings", "bReplaceHelpMenu",       _def.replaceHelpMenu);
 	_cfg.injectSettingsSubmenu = FUCK::INI::LoadBool(a_ini, "Settings", "bInjectSettingsSubmenu", _def.injectSettingsSubmenu);
 	_cfg.showSidebarFilter     = FUCK::INI::LoadBool(a_ini, "Settings", "bShowSidebarFilter",     _def.showSidebarFilter);
@@ -696,10 +697,11 @@ void FUCKMan::SaveSettings(CSimpleIniA& a_ini)
 {
 	FUCK::INI::SaveInt(a_ini, "Settings", "iGlobalPauseType", static_cast<int>(_cfg.globalPauseType), static_cast<int>(_def.globalPauseType));
 
+	FUCK::INI::SaveInt(a_ini, "Settings", "iInjectSystemMenu", static_cast<int>(_cfg.injectSystemMenu), static_cast<int>(_def.injectSystemMenu));
+
 	FUCK::INI::SaveDouble(a_ini, "Settings", "fUserScale", _cfg.userScale, _def.userScale);
 
 	FUCK::INI::SaveBool(a_ini, "Settings", "bSidebarOnRight",        _cfg.sidebarOnRight,        _def.sidebarOnRight);
-	FUCK::INI::SaveBool(a_ini, "Settings", "bInjectSystemMenu",      _cfg.injectSystemMenu,      _def.injectSystemMenu);
 	FUCK::INI::SaveBool(a_ini, "Settings", "bReplaceHelpMenu",       _cfg.replaceHelpMenu,       _def.replaceHelpMenu);
 	FUCK::INI::SaveBool(a_ini, "Settings", "bInjectSettingsSubmenu", _cfg.injectSettingsSubmenu, _def.injectSettingsSubmenu);
 	FUCK::INI::SaveBool(a_ini, "Settings", "bShowSidebarFilter",     _cfg.showSidebarFilter,     _def.showSidebarFilter);

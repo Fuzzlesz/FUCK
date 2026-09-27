@@ -22,22 +22,29 @@ public:
 		kSafe    = 2  // covers SkyUI v6
 	};
 
+	enum class InjectSystemMenuType : int
+	{
+		kYes            = 0,
+		kControllerOnly = 1,
+		kNo             = 2
+	};
+
 	struct FUCKConfig
 	{
-		ImVec2      windowPos{ 130.0f, 75.0f };
-		ImVec2      windowSize{ 1120.0f, 800.0f };
-		PauseType   globalPauseType{ PauseType::kNone };
-		float       userScale{ 1.0f };
-		bool        sidebarOnRight{ false };
-		bool        injectSystemMenu{ true };
-		bool        replaceHelpMenu{ false };
-		bool        injectSettingsSubmenu{ false };
-		bool        showSidebarFilter{ true };
-		bool        showSidebarFavourites{ true };
-		bool        groupFavourites{ true };
-		bool        muteAudio{ false };
-		std::string currentFont{ "Default" };
-		std::string customSystemMenuName{ "$FUCK_Title" };
+		ImVec2               windowPos{ 130.0f, 75.0f };
+		ImVec2               windowSize{ 1120.0f, 800.0f };
+		PauseType            globalPauseType{ PauseType::kNone };
+		float                userScale{ 1.0f };
+		bool                 sidebarOnRight{ false };
+		InjectSystemMenuType injectSystemMenu{ InjectSystemMenuType::kControllerOnly };
+		bool                 replaceHelpMenu{ false };
+		bool                 injectSettingsSubmenu{ false };
+		bool                 showSidebarFilter{ true };
+		bool                 showSidebarFavourites{ true };
+		bool                 groupFavourites{ true };
+		bool                 muteAudio{ false };
+		std::string          currentFont{ "Default" };
+		std::string          customSystemMenuName{ "$FUCK_Title" };
 	};
 
 	struct ToolOverrideState
@@ -109,12 +116,12 @@ public:
 	float GetUserScale() const { return _cfg.userScale; }
 	void  SetCurrentFont(const std::string& a_font);
 
-	bool            GetInjectSystemMenu() const { return _cfg.injectSystemMenu; }
-	bool            GetReplaceHelpMenu() const { return _cfg.replaceHelpMenu; }
-	bool            GetInjectSettingsSubmenu() const { return _cfg.injectSettingsSubmenu; }
-	const char*     GetSystemMenuName() const { return _cfg.customSystemMenuName.c_str(); }
-	JournalMenuType GetJournalMenuType() const { return _journalMenuType; }
-	void            SetJournalMenuType(JournalMenuType type) { _journalMenuType = type; }
+	InjectSystemMenuType GetInjectSystemMenu() const { return _cfg.injectSystemMenu; }
+	bool                 GetReplaceHelpMenu() const { return _cfg.replaceHelpMenu; }
+	bool                 GetInjectSettingsSubmenu() const { return _cfg.injectSettingsSubmenu; }
+	const char*          GetSystemMenuName() const { return _cfg.customSystemMenuName.c_str(); }
+	JournalMenuType      GetJournalMenuType() const { return _journalMenuType; }
+	void                 SetJournalMenuType(JournalMenuType type) { _journalMenuType = type; }
 
 	// --- API Overrides ---
 	void SetVanityBlocked(bool blocked);
