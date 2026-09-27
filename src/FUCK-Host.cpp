@@ -789,12 +789,12 @@ namespace FUCK::Host
 	static void DrawCircleFilled_Impl(const ImVec2& center, float radius, const ImVec4& col, int num_segments) { ImGui::GetWindowDrawList()->AddCircleFilled(center, radius, ImGui::ColorConvertFloat4ToU32(col), num_segments); }
 	static void DrawScreenCircle_Impl(const ImVec2& center, float radius, ImU32 col, int num_segments, float thickness) { ImGui::GetForegroundDrawList()->AddCircle(center, radius, col, num_segments, thickness); }
 	static void DrawScreenCircleFilled_Impl(const ImVec2& center, float radius, ImU32 col, int num_segments) { ImGui::GetForegroundDrawList()->AddCircleFilled(center, radius, col, num_segments); }
-	
+
 	static void DrawQuad_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec4& col, float t) { ImGui::GetWindowDrawList()->AddQuad(p1, p2, p3, p4, ImGui::ColorConvertFloat4ToU32(col), t); }
 	static void DrawQuadFilled_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec4& col) { ImGui::GetWindowDrawList()->AddQuadFilled(p1, p2, p3, p4, ImGui::ColorConvertFloat4ToU32(col)); }
 	static void DrawScreenQuad_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col, float t) { ImGui::GetForegroundDrawList()->AddQuad(p1, p2, p3, p4, col, t); }
 	static void DrawScreenQuadFilled_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col) { ImGui::GetForegroundDrawList()->AddQuadFilled(p1, p2, p3, p4, col); }
-	
+
 	static void DrawTriangle_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec4& col, float t) { ImGui::GetWindowDrawList()->AddTriangle(p1, p2, p3, ImGui::ColorConvertFloat4ToU32(col), t); }
 	static void DrawTriangleFilled_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec4& col) { ImGui::GetWindowDrawList()->AddTriangleFilled(p1, p2, p3, ImGui::ColorConvertFloat4ToU32(col)); }
 	static void DrawScreenTriangle_Impl(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col, float t) { ImGui::GetForegroundDrawList()->AddTriangle(p1, p2, p3, col, t); }
@@ -830,7 +830,7 @@ namespace FUCK::Host
 
 		return true;
 	}
-		
+
 	static void AddWindowListener_Impl(void* userdata, void (*callback)(const char*, const char*, bool, void*)) { FUCKMan::GetSingleton()->AddWindowListener(userdata, callback); }
 	static void RemoveWindowListener_Impl(void* userdata) { FUCKMan::GetSingleton()->RemoveWindowListener(userdata); }
 	static bool IsPluginWindowOpen_Impl(const char* pluginName, const char* windowId) { return FUCKMan::GetSingleton()->IsPluginWindowOpen(pluginName, windowId); }
@@ -851,6 +851,14 @@ namespace FUCK::Host
 	static bool SliderAngle_Impl(const char* label, float* v_rad, float min, float max, const char* fmt) { return ImGui::SliderAngleStyled(label, v_rad, min, max, fmt); }
 	static bool VSliderFloat_Impl(const char* label, const ImVec2& size, float* v, float min, float max, const char* fmt) { return ImGui::VSliderFloatStyled(label, size, v, min, max, fmt); }
 	static bool VSliderButton_Impl(const char* label, const ImVec2& size, float* v, float min, float max, const char* fmt, bool draw_top, bool draw_bot, bool* out_top, bool* out_bot) { return ImGui::VSliderButtonStyled(label, size, v, min, max, fmt, draw_top, draw_bot, out_top, out_bot); }
+
+	// ==================================================
+	// Version 5
+	// ==================================================
+	static void PushGamepadTweakFastDisabled_Impl() { ImGui::PushGamepadTweakFastDisabled(); }
+	static void PopGamepadTweakFastDisabled_Impl() { ImGui::PopGamepadTweakFastDisabled(); }
+	static void PushGamepadTweakSlowDisabled_Impl() { ImGui::PushGamepadTweakSlowDisabled(); }
+	static void PopGamepadTweakSlowDisabled_Impl() { ImGui::PopGamepadTweakSlowDisabled(); }
 
 	// ==================================================
 	// CreateInterface
@@ -1135,7 +1143,13 @@ namespace FUCK::Host
 			.SetScrollY             = SetScrollY_Impl,
 			.SliderAngle            = SliderAngle_Impl,
 			.VSliderFloat           = VSliderFloat_Impl,
-			.VSliderButton          = VSliderButton_Impl
+			.VSliderButton          = VSliderButton_Impl,
+
+			// Version 5
+			.PushGamepadTweakFastDisabled = PushGamepadTweakFastDisabled_Impl,
+			.PopGamepadTweakFastDisabled  = PopGamepadTweakFastDisabled_Impl,
+			.PushGamepadTweakSlowDisabled = PushGamepadTweakSlowDisabled_Impl,
+			.PopGamepadTweakSlowDisabled  = PopGamepadTweakSlowDisabled_Impl
 		};
 		return &api;
 	}

@@ -14,6 +14,56 @@ namespace ImGui
 		// ==================================================
 		// INTERNAL HELPERS
 		// ==================================================
+
+		// Depth counters for PushGamepadTweakFastDisabled / PushGamepadTweakSlowDisabled
+		int g_gamepadTweakFastDisabled = 0;
+		int g_gamepadTweakSlowDisabled = 0;
+
+		// Masks ImGui's gamepad tweak modifiers (RB = x10 "fast", LB = x0.1 "slow") for the
+		// lifetime of the scope, but only while a plugin has pushed them disabled.
+		// Wrap only the behaviour update of a slider/drag so nothing else sees the masked state.
+		struct ScopedGamepadTweakMask
+		{
+			ScopedGamepadTweakMask()
+			{
+				if (g_gamepadTweakFastDisabled > 0)
+					Mask(_fast, ImGuiKey_NavGamepadTweakFast);
+				if (g_gamepadTweakSlowDisabled > 0)
+					Mask(_slow, ImGuiKey_NavGamepadTweakSlow);
+			}
+
+			~ScopedGamepadTweakMask()
+			{
+				Restore(_fast);
+				Restore(_slow);
+			}
+
+			ScopedGamepadTweakMask(const ScopedGamepadTweakMask&)            = delete;
+			ScopedGamepadTweakMask& operator=(const ScopedGamepadTweakMask&) = delete;
+
+		private:
+			struct SavedKey
+			{
+				ImGuiKeyData* data    = nullptr;
+				bool          wasDown = false;
+			};
+
+			static void Mask(SavedKey& a_saved, ImGuiKey a_key)
+			{
+				a_saved.data    = GetKeyData(a_key);
+				a_saved.wasDown = a_saved.data->Down;
+				a_saved.data->Down = false;
+			}
+
+			static void Restore(SavedKey& a_saved)
+			{
+				if (a_saved.data)
+					a_saved.data->Down = a_saved.wasDown;
+			}
+
+			SavedKey _fast;
+			SavedKey _slow;
+		};
 		
 		void PathInvertedCorner(ImDrawList* dl, ImVec2 center, float radius, float a_min, float a_max, int num_segments = 12)
 		{
@@ -1645,8 +1695,11 @@ namespace ImGui
 			true, GetStyle().FrameRounding);
 		DrawWidgetBorder(window->DrawList, bb, active || h || IsWidgetFocused(id), GetStyle().FrameRounding);
 
-		if (DragBehavior(id, type, data, speed, min, max, fmt, flags)) {
-			changed = true;
+		{
+			ScopedGamepadTweakMask tweakMask;
+			if (DragBehavior(id, type, data, speed, min, max, fmt, flags)) {
+				changed = true;
+			}
 		}
 		if (changed)
 			MarkItemEdited(id);
@@ -1713,8 +1766,11 @@ namespace ImGui
 		}
 
 		ImRect grab;
-		if (SliderBehavior(bb, id, type, data, min, max, fmt, flags, &grab)) {
-			changed = true;
+		{
+			ScopedGamepadTweakMask tweakMask;
+			if (SliderBehavior(bb, id, type, data, min, max, fmt, flags, &grab)) {
+				changed = true;
+			}
 		}
 		if (changed)
 			MarkItemEdited(id);
@@ -1823,8 +1879,11 @@ namespace ImGui
 		}
 
 		ImRect grab;
-		if (SliderBehavior(bb, id, type, data, min, max, fmt, flags | ImGuiSliderFlags_Vertical, &grab)) {
-			changed = true;
+		{
+			ScopedGamepadTweakMask tweakMask;
+			if (SliderBehavior(bb, id, type, data, min, max, fmt, flags | ImGuiSliderFlags_Vertical, &grab)) {
+				changed = true;
+			}
 		}
 		if (changed)
 			MarkItemEdited(id);
@@ -2261,6 +2320,7 @@ namespace ImGui
 	bool DragFloat2Styled(const char* label, float v[2], float speed, float min, float max, const char* fmt)
 	{
 		bool res = OutsetFramedWidget(label, [&](const char* id) {
+			ScopedGamepadTweakMask tweakMask;
 			return DragFloat2(id, v, speed, min, max, fmt);
 		});
 		if (res)
@@ -2271,6 +2331,7 @@ namespace ImGui
 	bool DragFloat3Styled(const char* label, float v[3], float speed, float min, float max, const char* fmt)
 	{
 		bool res = OutsetFramedWidget(label, [&](const char* id) {
+			ScopedGamepadTweakMask tweakMask;
 			return DragFloat3(id, v, speed, min, max, fmt);
 		});
 		if (res)
@@ -2281,6 +2342,7 @@ namespace ImGui
 	bool DragFloat4Styled(const char* label, float v[4], float speed, float min, float max, const char* fmt)
 	{
 		bool res = OutsetFramedWidget(label, [&](const char* id) {
+			ScopedGamepadTweakMask tweakMask;
 			return DragFloat4(id, v, speed, min, max, fmt);
 		});
 		if (res)
@@ -2408,5 +2470,27 @@ namespace ImGui
 				PlayAudio(Audio::kPrevNext);
 			}
 		}
+	}
+
+	// ==================================================
+	// GAMEPAD TWEAK MODIFIERS
+	// ==================================================
+
+	void PushGamepadTweakFastDisabled() { ++g_gamepadTweakFastDisabled; }
+
+	void PopGamepadTweakFastDisabled()
+	{
+		IM_ASSERT(g_gamepadTweakFastDisabled > 0 && "PopGamepadTweakFastDisabled() called without a matching push");
+		if (g_gamepadTweakFastDisabled > 0)
+			--g_gamepadTweakFastDisabled;
+	}
+
+	void PushGamepadTweakSlowDisabled() { ++g_gamepadTweakSlowDisabled; }
+
+	void PopGamepadTweakSlowDisabled()
+	{
+		IM_ASSERT(g_gamepadTweakSlowDisabled > 0 && "PopGamepadTweakSlowDisabled() called without a matching push");
+		if (g_gamepadTweakSlowDisabled > 0)
+			--g_gamepadTweakSlowDisabled;
 	}
 }

@@ -123,6 +123,12 @@ namespace ImGui
 	bool VSliderFloatStyled(const char* label, const ImVec2& size, float* v, float v_min, float v_max, const char* format);
 	bool VSliderButtonStyled(const char* label, const ImVec2& slider_size, float* v, float v_min, float v_max, const char* format, bool draw_top_button, bool draw_bottom_button, bool* out_top_pressed, bool* out_bottom_pressed);
 
+	// Gamepad Tweak Modifiers (RB = fast, LB = slow) for sliders and drags
+	void PushGamepadTweakFastDisabled();
+	void PopGamepadTweakFastDisabled();
+	void PushGamepadTweakSlowDisabled();
+	void PopGamepadTweakSlowDisabled();
+
 	// Navigation
 	bool BeginTabItemEx(const char* label, ImGuiTabItemFlags flags = 0);
 	bool OutlineButton(const char* label, bool* wasFocused = nullptr);
