@@ -113,6 +113,7 @@ namespace ImGui
 
 			float windowRounding{ 0.0f };
 			float frameRounding{ 0.0f };
+			bool  invertButtonCorners{ false };
 			float buttonRounding{ 6.0f };
 			float tabRounding{ 6.0f };
 			float popupRounding{ 0.0f };
@@ -196,6 +197,9 @@ namespace ImGui
 	{
 		if constexpr (std::is_same_v<std::string, T>) {
 			return { a_str, false };
+		} else if constexpr (std::is_same_v<bool, T>) {
+			bool val = (a_str == "true" || a_str == "1" || a_str == "True");
+			return { val, false };
 		} else if constexpr (std::is_same_v<ImVec4, T>) {
 			static boost::regex rgb_pattern("([0-9]+),([0-9]+),([0-9]+),([0-9]+)");
 			static boost::regex hex_pattern("#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})");
@@ -236,6 +240,8 @@ namespace ImGui
 	{
 		if constexpr (std::is_same_v<std::string, T>) {
 			return a_style;
+		} else if constexpr (std::is_same_v<bool, T>) {
+			return a_style ? "true" : "false";
 		} else if constexpr (std::is_same_v<ImVec4, T>) {
 			if (a_hex) {
 				return std::format("#{:02X}{:02X}{:02X}{:02X}",

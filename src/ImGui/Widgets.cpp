@@ -14,6 +14,55 @@ namespace ImGui
 		// ==================================================
 		// INTERNAL HELPERS
 		// ==================================================
+		
+		void PathInvertedCorner(ImDrawList* dl, ImVec2 center, float radius, float a_min, float a_max, int num_segments = 12)
+		{
+			if (radius <= 0.0f) {
+				dl->PathLineTo(center);
+				return;
+			}
+			for (int i = 0; i <= num_segments; i++) {
+				float a = a_min + ((float)i / (float)num_segments) * (a_max - a_min);
+				dl->PathLineTo(ImVec2(center.x + cosf(a) * radius, center.y + sinf(a) * radius));
+			}
+		}
+
+		void AddInvertedRectFilled(ImDrawList* dl, const ImRect& bb, ImU32 col, float rounding)
+		{
+			if (rounding <= 0.0f) {
+				dl->AddRectFilled(bb.Min, bb.Max, col, 0.0f);
+				return;
+			}
+			auto prev_flags = dl->Flags;
+			dl->Flags &= ~ImDrawListFlags_AntiAliasedFill;
+
+			dl->PathClear();
+			dl->PathLineTo(ImVec2((bb.Min.x + bb.Max.x) * 0.5f, (bb.Min.y + bb.Max.y) * 0.5f));
+			PathInvertedCorner(dl, { bb.Min.x, bb.Min.y }, rounding, IM_PI / 2, 0.0f);
+			PathInvertedCorner(dl, { bb.Max.x, bb.Min.y }, rounding, IM_PI, IM_PI / 2);
+			PathInvertedCorner(dl, { bb.Max.x, bb.Max.y }, rounding, 3.0f * IM_PI / 2, IM_PI);
+			PathInvertedCorner(dl, { bb.Min.x, bb.Max.y }, rounding, 0.0f, -IM_PI / 2);
+			dl->PathLineTo(ImVec2(bb.Min.x, bb.Min.y + rounding));
+
+			dl->AddConvexPolyFilled(dl->_Path.Data, dl->_Path.Size, col);
+			dl->PathClear();
+
+			dl->Flags = prev_flags;
+		}
+
+		void AddInvertedRect(ImDrawList* dl, const ImRect& bb, ImU32 col, float rounding, float thickness)
+		{
+			if (rounding <= 0.0f) {
+				dl->AddRect(bb.Min, bb.Max, col, 0.0f, 0, thickness);
+				return;
+			}
+			dl->PathClear();
+			PathInvertedCorner(dl, { bb.Min.x, bb.Min.y }, rounding, IM_PI / 2, 0.0f);
+			PathInvertedCorner(dl, { bb.Max.x, bb.Min.y }, rounding, IM_PI, IM_PI / 2);
+			PathInvertedCorner(dl, { bb.Max.x, bb.Max.y }, rounding, 3.0f * IM_PI / 2, IM_PI);
+			PathInvertedCorner(dl, { bb.Min.x, bb.Max.y }, rounding, 0.0f, -IM_PI / 2);
+			dl->PathStroke(col, ImDrawFlags_Closed, thickness);
+		}
 
 		void DrawTreeIcon(ImDrawList* drawList, const ImVec2& pos, float frameHeight, bool isOpen, bool isHovered, float baseIconSize = 30.0f)
 		{
@@ -313,6 +362,8 @@ namespace ImGui
 		if (borderSize <= 0.0f)
 			return;
 
+		bool inverted = Styles::GetSingleton()->user.invertButtonCorners;
+
 		float scale = GetDynamicWidgetScale();
 
 		// Floor thickness
@@ -329,11 +380,19 @@ namespace ImGui
 
 		// Outer Black: Expands strictly outwards
 		float halfB = tBlack * 0.5f;
-		drawList->AddRect(min - ImVec2(halfB, halfB), max + ImVec2(halfB, halfB), IM_COL32(0, 0, 0, 255), rounding + halfB, 0, tBlack);
-
 		// Inner Colour: Shrinks strictly inwards
 		float halfC = tColor * 0.5f;
-		drawList->AddRect(min + ImVec2(halfC, halfC), max - ImVec2(halfC, halfC), col, std::max(0.0f, rounding - halfC), 0, tColor);
+
+		if (inverted && rounding > 0.0f) {
+			ImRect outerBB(min - ImVec2(halfB, halfB), max + ImVec2(halfB, halfB));
+			AddInvertedRect(drawList, outerBB, IM_COL32(0, 0, 0, 255), rounding, tBlack);
+
+			ImRect innerBB(min + ImVec2(halfC, halfC), max - ImVec2(halfC, halfC));
+			AddInvertedRect(drawList, innerBB, col, rounding, tColor);
+		} else {
+			drawList->AddRect(min - ImVec2(halfB, halfB), max + ImVec2(halfB, halfB), IM_COL32(0, 0, 0, 255), rounding + halfB, 0, tBlack);
+			drawList->AddRect(min + ImVec2(halfC, halfC), max - ImVec2(halfC, halfC), col, std::max(0.0f, rounding - halfC), 0, tColor);
+		}
 	}
 
 	bool CheckBox(const char* label, bool* a_toggle, bool alignFar, bool labelLeft)
@@ -1053,8 +1112,15 @@ namespace ImGui
 			dl->PathLineTo({ min.x + inset, botY });
 
 			if (r > 0.0f) {
-				dl->PathArcTo({ min.x + rounding, min.y + rounding }, r, IM_PI, IM_PI * 1.5f, 24);
-				dl->PathArcTo({ max.x - rounding, min.y + rounding }, r, IM_PI * 1.5f, IM_PI * 2.0f, 24);
+				if (Styles::GetSingleton()->user.invertButtonCorners) {
+					ImVec2 centerL = { min.x + inset, min.y + inset };
+					ImVec2 centerR = { max.x - inset, min.y + inset };
+					PathInvertedCorner(dl, centerL, rounding, IM_PI / 2, 0.0f);
+					PathInvertedCorner(dl, centerR, rounding, IM_PI, IM_PI / 2);
+				} else {
+					dl->PathArcTo({ min.x + rounding, min.y + rounding }, r, IM_PI, IM_PI * 1.5f, 24);
+					dl->PathArcTo({ max.x - rounding, min.y + rounding }, r, IM_PI * 1.5f, IM_PI * 2.0f, 24);
+				}
 			} else {
 				dl->PathLineTo({ min.x + inset, min.y + inset });
 				dl->PathLineTo({ max.x - inset, min.y + inset });
@@ -1063,14 +1129,18 @@ namespace ImGui
 			dl->PathLineTo({ max.x - inset, botY });
 		};
 
+		bool  inverted = Styles::GetSingleton()->user.invertButtonCorners;
+		float rOuter   = inverted ? rounding : rounding + halfB;
+		float rInner   = inverted ? rounding : std::max(0.0f, rounding - halfC);
+
 		// Outer Black stroke (No bottom line)
 		drawList->PathClear();
-		buildPath(drawList, -halfB, rounding + halfB, max.y + halfB);  // Extend down past max.y slightly so it connects to separator cleanly
+		buildPath(drawList, -halfB, rOuter, max.y + halfB);  // Extend down past max.y slightly so it connects to separator cleanly
 		drawList->PathStroke(IM_COL32(0, 0, 0, 255), 0, tBlack);
 
 		// Inner Color stroke (No bottom line)
 		drawList->PathClear();
-		buildPath(drawList, halfC, std::max(0.0f, rounding - halfC), max.y);
+		buildPath(drawList, halfC, rInner, max.y);
 		drawList->PathStroke(col, 0, tColor);
 	}
 
@@ -1132,17 +1202,37 @@ namespace ImGui
 		rounding = std::min(rounding, drawBb.GetWidth() * 0.5f);
 		rounding = std::min(rounding, drawBb.GetHeight());
 
+		bool inverted = Styles::GetSingleton()->user.invertButtonCorners;
+
 		window->DrawList->PathClear();
-		window->DrawList->PathLineTo({ drawBb.Max.x, drawBb.Max.y });
-		window->DrawList->PathLineTo({ drawBb.Min.x, drawBb.Max.y });
-		if (rounding > 0.0f) {
-			window->DrawList->PathArcTo({ drawBb.Min.x + rounding, drawBb.Min.y + rounding }, rounding, IM_PI, IM_PI * 1.5f, 24);
-			window->DrawList->PathArcTo({ drawBb.Max.x - rounding, drawBb.Min.y + rounding }, rounding, IM_PI * 1.5f, IM_PI * 2.0f, 24);
+
+		if (inverted && rounding > 0.0f) {
+			auto prev_flags = window->DrawList->Flags;
+			window->DrawList->Flags &= ~ImDrawListFlags_AntiAliasedFill;
+
+			window->DrawList->PathLineTo(ImVec2((drawBb.Min.x + drawBb.Max.x) * 0.5f, drawBb.Max.y));
+			PathInvertedCorner(window->DrawList, { drawBb.Min.x, drawBb.Min.y }, rounding, IM_PI / 2, 0.0f);
+			PathInvertedCorner(window->DrawList, { drawBb.Max.x, drawBb.Min.y }, rounding, IM_PI, IM_PI / 2);
+			window->DrawList->PathLineTo({ drawBb.Max.x, drawBb.Max.y });
+			window->DrawList->PathLineTo({ drawBb.Min.x, drawBb.Max.y });
+			window->DrawList->PathLineTo({ drawBb.Min.x, drawBb.Min.y + rounding });
+
+			window->DrawList->AddConvexPolyFilled(window->DrawList->_Path.Data, window->DrawList->_Path.Size, GetColorU32(ImGuiCol_Button));
+			window->DrawList->PathClear();
+
+			window->DrawList->Flags = prev_flags;
 		} else {
-			window->DrawList->PathLineTo({ drawBb.Min.x, drawBb.Min.y });
-			window->DrawList->PathLineTo({ drawBb.Max.x, drawBb.Min.y });
+			window->DrawList->PathLineTo({ drawBb.Max.x, drawBb.Max.y });
+			window->DrawList->PathLineTo({ drawBb.Min.x, drawBb.Max.y });
+			if (rounding > 0.0f) {
+				window->DrawList->PathArcTo({ drawBb.Min.x + rounding, drawBb.Min.y + rounding }, rounding, IM_PI, IM_PI * 1.5f, 24);
+				window->DrawList->PathArcTo({ drawBb.Max.x - rounding, drawBb.Min.y + rounding }, rounding, IM_PI * 1.5f, IM_PI * 2.0f, 24);
+			} else {
+				window->DrawList->PathLineTo({ drawBb.Min.x, drawBb.Min.y });
+				window->DrawList->PathLineTo({ drawBb.Max.x, drawBb.Min.y });
+			}
+			window->DrawList->PathFillConvex(GetColorU32(ImGuiCol_Button));
 		}
-		window->DrawList->PathFillConvex(GetColorU32(ImGuiCol_Button));
 
 		DrawTabBorder(window->DrawList, drawBb, active || IsItemHovered(), rounding);
 
@@ -1216,7 +1306,12 @@ namespace ImGui
 		bool p = ButtonBehavior(bb, window->GetID(label), &h, &held);
 
 		// Background stays solid; hover feedback is handled by the Border
-		window->DrawList->AddRectFilled(bbVisual.Min, bbVisual.Max, GetColorU32(ImGuiCol_Button), rounding);
+		bool inverted = Styles::GetSingleton()->user.invertButtonCorners;
+		if (inverted && rounding > 0.0f) {
+			AddInvertedRectFilled(window->DrawList, bbVisual, GetColorU32(ImGuiCol_Button), rounding);
+		} else {
+			window->DrawList->AddRectFilled(bbVisual.Min, bbVisual.Max, GetColorU32(ImGuiCol_Button), rounding);
+		}
 		DrawWidgetBorder(window->DrawList, bbVisual, h || held, rounding);
 
 		RenderTextClipped(bbVisual.Min, bbVisual.Max, label, NULL, &textSize, { 0.5f, 0.5f });
