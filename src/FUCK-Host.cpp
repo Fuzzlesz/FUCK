@@ -9,11 +9,11 @@
 #include "ImGui/Util.h"
 #include "ImGui/Widgets.h"
 
-#include "System/Input.h"
+#include "System/Favourites.h"
 #include "System/Hotkeys.h"
+#include "System/Input.h"
 #include "System/Settings.h"
 #include "System/Utils.h"
-#include "System/Favourites.h"
 
 namespace FUCK::Host
 {

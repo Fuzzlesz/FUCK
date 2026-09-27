@@ -157,7 +157,7 @@ namespace ImGui
 
 		bool result = DragScalarEx(newLabel.c_str(), detail::GetDataType<T>(), v, v_speed, &v_min, &v_max, format ? format : detail::GetDefaultFormat<T>(), flags);
 		if (result)
-			PlayAudio(Audio::kPrevNext);;
+			PlayAudio(Audio::kPrevNext);
 
 		ActivateOnHover();
 		PopStyleVar(2);
@@ -187,7 +187,7 @@ namespace ImGui
 
 		bool result = ThinSliderScalar(newLabel.c_str(), detail::GetDataType<T>(), v, &v_min, &v_max, format ? format : detail::GetDefaultFormat<T>(), flags);
 		if (result)
-			PlayAudio(Audio::kPrevNext);;
+			PlayAudio(Audio::kPrevNext);
 
 		ActivateOnHover();
 		PopStyleVar(2);
