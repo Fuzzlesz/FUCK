@@ -64,7 +64,7 @@ namespace ImGui
 			SavedKey _fast;
 			SavedKey _slow;
 		};
-		
+
 		void PathInvertedCorner(ImDrawList* dl, ImVec2 center, float radius, float a_min, float a_max, int num_segments = 12)
 		{
 			if (radius <= 0.0f) {
@@ -736,7 +736,7 @@ namespace ImGui
 
 		PopItemWidth();
 		PopStyleColor(3);
-		
+
 		bool navigateToItems = false;
 		bool enterPressed    = false;
 		if (isInputFocused) {
@@ -895,7 +895,7 @@ namespace ImGui
 						float  availW   = GetContentRegionAvail().x;
 
 						bool mainClicked = Selectable(items[idx].c_str(), isSelected, ImGuiSelectableFlags_AllowOverlap);
-						
+
 						bool itemHovered = IsItemHovered();
 						bool itemFocused = IsItemFocused();
 						bool starHovered = false;
@@ -917,7 +917,7 @@ namespace ImGui
 								}
 								PlayAudio(Audio::kFocus);
 							}
-							
+
 							if (isFav || itemHovered) {
 								const char* starIcon     = ICON_FA_STAR;
 								float       starScale    = 0.75f;
@@ -944,7 +944,7 @@ namespace ImGui
 									}
 									PlayAudio(Audio::kFocus);
 								}
-								
+
 								ImU32 starCol = starHovered ? IM_COL32(255, 255, 100, 255) : (isFav ? IM_COL32(255, 215, 0, 255) : GetColorU32(ImGuiCol_TextDisabled));
 								GetWindowDrawList()->AddText(GetFont(), starFontSize, ImVec2(starX, starY), starCol, starIcon);
 							}
@@ -2213,7 +2213,7 @@ namespace ImGui
 	}
 
 	template <typename TWidgetFunc>
-	bool OutsetFramedWidget(const char* label, TWidgetFunc drawWidget)
+	bool OutsetFramedWidget(const char* label, TWidgetFunc drawWidget, bool insetSides = false, bool trailingSwatch = false)
 	{
 		std::string id = std::format("##{}", label);
 
@@ -2250,8 +2250,11 @@ namespace ImGui
 
 		ImVec2 nextItemCursor = GetCursorPos();
 
-		SetCursorScreenPos(screenPos + ImVec2(0.0f, offY));
-		SetNextItemWidth(widgetWidth);
+		// insetSides matches the top/bottom inset, for widgets that draw up to their edges
+		float offX = insetSides ? tColor : 0.0f;
+
+		SetCursorScreenPos(screenPos + ImVec2(offX, offY));
+		SetNextItemWidth(widgetWidth - offX * 2.0f);
 
 		PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(padX, innerPadY));
 		PushStyleColor(ImGuiCol_FrameBg, ImVec4(0, 0, 0, 0));
@@ -2275,7 +2278,15 @@ namespace ImGui
 
 		drawList->ChannelsSetCurrent(0);
 
-		drawList->AddRectFilled(bb.Min, bb.Max, GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox), rounding);
+		// Stops before a trailing swatch, so the background doesn't show through its transparency
+		ImRect      bgRect  = bb;
+		ImDrawFlags bgFlags = ImDrawFlags_None;
+		if (trailingSwatch) {
+			bgRect.Max.x -= offX + GetFontSize() + innerPadY * 2.0f;
+			bgFlags = ImDrawFlags_RoundCornersLeft;
+		}
+
+		drawList->AddRectFilled(bgRect.Min, bgRect.Max, GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox), rounding, bgFlags);
 
 		if (borderSize > 0.0f) {
 			DrawWidgetBorder(drawList, bb, hovered || active || focused, rounding);
@@ -2295,9 +2306,12 @@ namespace ImGui
 
 	bool ColorEdit3Styled(const char* label, float col[3], int flags)
 	{
-		bool res = OutsetFramedWidget(label, [&](const char* id) {
+		auto drawEdit = [&](const char* id) {
 			return ColorEdit3(id, col, flags | ImGuiColorEditFlags_NoLabel);
-		});
+		};
+		bool hasSwatch = !(flags & ImGuiColorEditFlags_NoSmallPreview);
+
+		bool res = OutsetFramedWidget(label, drawEdit, true, hasSwatch);
 		if (res)
 			PlayAudio(Audio::kPrevNext);
 		else if (IsItemActivated())
@@ -2307,9 +2321,12 @@ namespace ImGui
 
 	bool ColorEdit4Styled(const char* label, float col[4], int flags)
 	{
-		bool res = OutsetFramedWidget(label, [&](const char* id) {
+		auto drawEdit = [&](const char* id) {
 			return ColorEdit4(id, col, flags | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_AlphaBar);
-		});
+		};
+		bool hasSwatch = !(flags & ImGuiColorEditFlags_NoSmallPreview);
+
+		bool res = OutsetFramedWidget(label, drawEdit, true, hasSwatch);
 		if (res)
 			PlayAudio(Audio::kPrevNext);
 		else if (IsItemActivated())
