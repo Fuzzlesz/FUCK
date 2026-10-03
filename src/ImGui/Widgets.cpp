@@ -50,8 +50,8 @@ namespace ImGui
 
 			static void Mask(SavedKey& a_saved, ImGuiKey a_key)
 			{
-				a_saved.data    = GetKeyData(a_key);
-				a_saved.wasDown = a_saved.data->Down;
+				a_saved.data       = GetKeyData(a_key);
+				a_saved.wasDown    = a_saved.data->Down;
 				a_saved.data->Down = false;
 			}
 
@@ -2368,7 +2368,7 @@ namespace ImGui
 		if (window->SkipItems)
 			return false;
 
-		float scale            = GetDynamicWidgetScale();
+		float scale = GetDynamicWidgetScale();
 
 		PushStyleColor(ImGuiCol_FrameBg,        GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
 		PushStyleColor(ImGuiCol_FrameBgHovered, GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
