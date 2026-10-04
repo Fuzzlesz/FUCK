@@ -1,3 +1,4 @@
+#include "FUCK-Ass.h"
 #include "FUCK-Host.h"
 #include "FUCK-Man.h"
 
@@ -365,7 +366,7 @@ namespace FUCK::Host
 		});
 	}
 
-	static void PushItemFlag_Impl(ItemFlags flag, bool enabled) { ImGui::PushItemFlag(static_cast<ImGuiItemFlags>(flag), enabled); }
+	static void PushItemFlag_Impl(ItemFlags flag, bool enabled) { ImGui::PushItemFlag(ToImGuiItemFlags(flag), enabled); }
 	static void PopItemFlag_Impl() { ImGui::PopItemFlag(); }
 
 	static void PushID_Str_Impl(const char* str_id) { ImGui::PushID(str_id); }
