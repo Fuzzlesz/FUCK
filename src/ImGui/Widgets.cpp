@@ -2268,6 +2268,9 @@ namespace ImGui
 
 		bool result = drawWidget(id.c_str());
 
+		// Snapshot inner widget item data, as the Dummy() below would otherwise replace it as the last item
+		ImGuiLastItemData innerItem = GImGui->LastItemData;
+
 		bool hovered = bgHovered || IsItemHovered();
 		bool active  = IsItemActive();
 		bool focused = IsWidgetFocused(GetID(id.c_str()));
@@ -2300,6 +2303,10 @@ namespace ImGui
 		SetCursorPos(nextItemCursor);
 
 		Dummy(ImVec2(0.0f, 0.0f));
+
+		// Restore inner widget state, but report the framed bounds as the item rect
+		innerItem.Rect       = bb;
+		GImGui->LastItemData = innerItem;
 
 		return result;
 	}
