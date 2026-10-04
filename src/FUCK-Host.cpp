@@ -861,6 +861,14 @@ namespace FUCK::Host
 	static void PopGamepadTweakSlowDisabled_Impl() { ImGui::PopGamepadTweakSlowDisabled(); }
 
 	// ==================================================
+	// Version 6
+	// ==================================================
+	static bool ColorButton_Impl(const char* desc_id, const ImVec4& col, int flags, const ImVec2& size, bool selected) { return ImGui::ColorButtonStyled(desc_id, col, flags, size, selected); }
+	static bool ColorPicker3_Impl(const char* label, float col[3], int flags) { return ImGui::ColorPicker3Styled(label, col, flags); }
+	static bool ColorPicker4_Impl(const char* label, float col[4], int flags, const float* ref_col) { return ImGui::ColorPicker4Styled(label, col, flags, ref_col); }
+	static bool IsItemActivated_Impl() { return ImGui::IsItemActivated(); }
+
+	// ==================================================
 	// CreateInterface
 	// ==================================================
 	FUCK_Interface* CreateInterface()
@@ -1149,7 +1157,13 @@ namespace FUCK::Host
 			.PushGamepadTweakFastDisabled = PushGamepadTweakFastDisabled_Impl,
 			.PopGamepadTweakFastDisabled  = PopGamepadTweakFastDisabled_Impl,
 			.PushGamepadTweakSlowDisabled = PushGamepadTweakSlowDisabled_Impl,
-			.PopGamepadTweakSlowDisabled  = PopGamepadTweakSlowDisabled_Impl
+			.PopGamepadTweakSlowDisabled  = PopGamepadTweakSlowDisabled_Impl,
+
+			// Version 6
+			.ColorButton     = ColorButton_Impl,
+			.ColorPicker3    = ColorPicker3_Impl,
+			.ColorPicker4    = ColorPicker4_Impl,
+			.IsItemActivated = IsItemActivated_Impl
 		};
 		return &api;
 	}

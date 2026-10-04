@@ -114,6 +114,9 @@ namespace ImGui
 	bool InputTextStyled(const char* label, char* buf, size_t buf_size, int flags = 0);
 	bool ColorEdit3Styled(const char* label, float col[3], int flags = 0);
 	bool ColorEdit4Styled(const char* label, float col[4], int flags = 0);
+	bool ColorButtonStyled(const char* desc_id, const ImVec4& col, int flags = 0, const ImVec2& size = ImVec2(0, 0), bool selected = false);
+	bool ColorPicker3Styled(const char* label, float col[3], int flags = 0);
+	bool ColorPicker4Styled(const char* label, float col[4], int flags = 0, const float* ref_col = nullptr);
 	void Stepper(const char* label, const char* text, bool* outLeft, bool* outRight);
 
 	bool DragFloat2Styled(const char* label, float v[2], float speed, float min, float max, const char* fmt);
