@@ -1098,15 +1098,15 @@ namespace FUCK::Host
 			.Text                   = Text_Impl,
 			.TextWrapped            = TextWrapped_Impl,
 			.TextUnformatted        = TextUnformatted_Impl,
-			
+
 			// Version 2
-			.SeparatorVertical      = SeparatorVertical_Impl,
-			.PushItemWidth          = PushItemWidth_Impl,
-			.PopItemWidth           = PopItemWidth_Impl,
-			.BeginTooltip           = BeginTooltip_Impl,
-			.EndTooltip             = EndTooltip_Impl,
-			.SetScrollHereY         = SetScrollHereY_Impl,
-			.InputTextMultiline     = InputTextMultiline_Impl,
+			.SeparatorVertical  = SeparatorVertical_Impl,
+			.PushItemWidth      = PushItemWidth_Impl,
+			.PopItemWidth       = PopItemWidth_Impl,
+			.BeginTooltip       = BeginTooltip_Impl,
+			.EndTooltip         = EndTooltip_Impl,
+			.SetScrollHereY     = SetScrollHereY_Impl,
+			.InputTextMultiline = InputTextMultiline_Impl,
 
 			// Version 3
 			.SetHotkeyEnabled         = SetHotkeyEnabled_Impl,
