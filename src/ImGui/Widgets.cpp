@@ -2311,6 +2311,15 @@ namespace ImGui
 		return result;
 	}
 
+	// Colour edits fire every frame while dragging, so only play on grab and release (popup picker included)
+	static void PlayGrabReleaseAudio()
+	{
+		if (IsItemActivated())
+			PlayAudio(Audio::kFocus);
+		else if (IsItemDeactivatedAfterEdit())
+			PlayAudio(Audio::kPrevNext);
+	}
+
 	bool ColorEdit3Styled(const char* label, float col[3], int flags)
 	{
 		auto drawEdit = [&](const char* id) {
@@ -2319,10 +2328,7 @@ namespace ImGui
 		bool hasSwatch = !(flags & ImGuiColorEditFlags_NoSmallPreview);
 
 		bool res = OutsetFramedWidget(label, drawEdit, true, hasSwatch);
-		if (res)
-			PlayAudio(Audio::kPrevNext);
-		else if (IsItemActivated())
-			PlayAudio(Audio::kFocus);
+		PlayGrabReleaseAudio();
 		return res;
 	}
 
@@ -2334,10 +2340,7 @@ namespace ImGui
 		bool hasSwatch = !(flags & ImGuiColorEditFlags_NoSmallPreview);
 
 		bool res = OutsetFramedWidget(label, drawEdit, true, hasSwatch);
-		if (res)
-			PlayAudio(Audio::kPrevNext);
-		else if (IsItemActivated())
-			PlayAudio(Audio::kFocus);
+		PlayGrabReleaseAudio();
 		return res;
 	}
 
