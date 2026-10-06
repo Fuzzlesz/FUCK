@@ -4,6 +4,7 @@
 #include "IconsFonts.h"
 #include "Renderer.h"
 #include "Styles.h"
+#include "Util.h"
 
 #include "System/Settings.h"
 #include "System/Utils.h"
@@ -122,13 +123,16 @@ namespace ImGui
 
 	float Styles::GetVar(USER_STYLE a_style) const
 	{
-		float scale = Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
+		// Follow the current font size, so PushScale and PushFont reach button borders and rounding too
+		float scale = ImGui::GetCurrentContext() ? GetDynamicWidgetScale() : Renderer::GetResolutionScale() * FUCKMan::GetSingleton()->GetActiveScale();
 
 		switch (a_style) {
 		case USER_STYLE::kButtonRounding:
 			return user.buttonRounding * scale;
 		case USER_STYLE::kButtonBorderSize:
 			return user.buttonBorderSize * scale;
+		case USER_STYLE::kFrameRounding:
+			return user.frameRounding * scale;
 		case USER_STYLE::kGridLines:
 			return user.gridThickness * scale;
 		default:
@@ -402,7 +406,6 @@ namespace ImGui
 		SET_VALUE(frameRounding, "Widget", "fFrameRounding");
 		SET_VALUE(invertButtonCorners, "Widget", "bInvertButtonCorners");
 		SET_VALUE(buttonRounding, "Widget", "fButtonRounding");
-		SET_VALUE(tabRounding, "Widget", "fTabRounding");
 		SET_VALUE(popupRounding, "ComboBox", "fPopupRounding");
 		SET_VALUE(scrollbarRounding, "Widget", "fScrollbarRounding");
 		SET_VALUE(grabRounding, "Slider", "fGrabRounding");
@@ -481,7 +484,6 @@ namespace ImGui
 		GET_VALUE(frameRounding, "Widget", "fFrameRounding");
 		GET_VALUE(invertButtonCorners, "Widget", "bInvertButtonCorners");
 		GET_VALUE(buttonRounding, "Widget", "fButtonRounding");
-		GET_VALUE(tabRounding, "Widget", "fTabRounding");
 		GET_VALUE(popupRounding, "ComboBox", "fPopupRounding");
 		GET_VALUE(scrollbarRounding, "Widget", "fScrollbarRounding");
 		GET_VALUE(grabRounding, "Slider", "fGrabRounding");
@@ -537,7 +539,7 @@ namespace ImGui
 		style.PopupRounding     = user.popupRounding * scale;
 		style.ScrollbarRounding = user.scrollbarRounding * scale;
 		style.GrabRounding      = user.grabRounding * scale;
-		style.TabRounding       = user.tabRounding * scale;
+		style.TabRounding       = user.buttonRounding * scale;  // tabs share button rounding, as the editor labels it
 
 		colors[ImGuiCol_WindowBg] = user.background;
 		colors[ImGuiCol_ChildBg]  = user.childBG;

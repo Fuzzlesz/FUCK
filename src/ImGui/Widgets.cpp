@@ -405,6 +405,34 @@ namespace ImGui
 		}
 	}
 
+	// Round rather than floor, so scaled-down borders don't lose up to a whole pixel.
+	// The black outline is three quarters of the coloured border, matching vanilla's buttons
+	static void GetBorderThickness(float a_borderSize, float& a_colour, float& a_black)
+	{
+		constexpr float BLACK_RATIO = 0.75f;
+
+		a_colour = std::max(1.0f, std::round(a_borderSize));
+		a_black  = std::max(1.0f, std::round(a_colour * BLACK_RATIO));
+	}
+
+	// A border at least as thick as its rounding leaves the inside corner square, so keep rounding to
+	// twice the border, giving an inner curve about as wide as the border. Zero stays square
+	static float KeepInnerCurve(float a_rounding)
+	{
+		if (a_rounding <= 0.0f)
+			return a_rounding;
+
+		float tColor, tBlack;
+		GetBorderThickness(GetUserStyleVar(USER_STYLE::kButtonBorderSize), tColor, tBlack);
+		return std::max(a_rounding, tColor * 2.0f);
+	}
+
+	// Scaled the same way as button rounding, so frames meant to match buttons curve alike at any scale
+	static float GetFrameRounding()
+	{
+		return KeepInnerCurve(GetUserStyleVar(USER_STYLE::kFrameRounding));
+	}
+
 	void DrawWidgetBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered, float rounding)
 	{
 		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize);
@@ -414,11 +442,8 @@ namespace ImGui
 
 		bool inverted = Styles::GetSingleton()->user.invertButtonCorners;
 
-		float scale = GetDynamicWidgetScale();
-
-		// Floor thickness
-		float tColor = std::max(1.0f, std::floor(borderSize));
-		float tBlack = std::max(1.0f, std::floor(1.0f * scale));
+		float tColor, tBlack;
+		GetBorderThickness(borderSize, tColor, tBlack);
 
 		ImU32 col = isActiveOrHovered ?
 		                GetUserStyleColorU32(USER_STYLE::kWidgetBorderActive) :
@@ -563,7 +588,7 @@ namespace ImGui
 			ImRect visBB(std::floor(p.x), std::floor(p.y + offY), std::floor(p.x + visualW), std::floor(p.y + offY + visualH));
 
 			if (showFrame) {
-				draw_list->AddRect(visBB.Min, visBB.Max, GetColorU32(ImGuiCol_NavHighlight), GetStyle().FrameRounding, 0, 2.0f * scale);
+				draw_list->AddRect(visBB.Min, visBB.Max, GetColorU32(ImGuiCol_NavHighlight), GetFrameRounding(), 0, 2.0f * scale);
 			}
 
 			float  knobRadius = visualH * 0.28f;
@@ -577,8 +602,8 @@ namespace ImGui
 			ImVec2 railMax = { std::floor(knobMaxX), std::floor(visBB.Min.y + (visualH + railH) * 0.5f) };
 			ImRect railBB(railMin, railMax);
 
-			draw_list->AddRectFilled(railMin, railMax, col_rail_fill, GetStyle().FrameRounding);
-			DrawWidgetBorder(draw_list, railBB, hovered || isFocused, GetStyle().FrameRounding);
+			draw_list->AddRectFilled(railMin, railMax, col_rail_fill, GetFrameRounding());
+			DrawWidgetBorder(draw_list, railBB, hovered || isFocused, GetFrameRounding());
 
 			draw_list->AddCircleFilled(knobCenter, knobRadius, col_knob_fill);
 
@@ -627,6 +652,7 @@ namespace ImGui
 
 		PushStyleVar(ImGuiStyleVar_FramePadding, { padX, padY });
 		PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);  // Prevents double frame
+		PushStyleVar(ImGuiStyleVar_FrameRounding, GetFrameRounding());
 
 		const bool  isHidden = std::string_view(label).starts_with("##");
 		std::string idStr    = isHidden ? std::string(label) : std::format("##{}", label);
@@ -689,7 +715,7 @@ namespace ImGui
 
 		bool isOpen = BeginCombo(idStr.c_str(), preview, ImGuiComboFlags_NoArrowButton | ImGuiComboFlags_HeightLarge);
 
-		PopStyleVar(3);
+		PopStyleVar(4);
 		PopStyleColor(5);
 
 		// Detect if opened Upwards
@@ -701,7 +727,7 @@ namespace ImGui
 		}
 
 		DrawDropdownIcon(parentDrawList, { std::floor(widgetPos.x + width - frameH), std::floor(widgetPos.y) }, { frameH, frameH }, isOpen, opensUp, IsItemHovered());
-		DrawWidgetBorder(parentDrawList, { std::floor(widgetPos.x), std::floor(widgetPos.y), std::floor(widgetPos.x + width), std::floor(widgetPos.y + frameH) }, isOpen || IsItemHovered() || IsWidgetFocused(id), GetStyle().FrameRounding);
+		DrawWidgetBorder(parentDrawList, { std::floor(widgetPos.x), std::floor(widgetPos.y), std::floor(widgetPos.x + width), std::floor(widgetPos.y + frameH) }, isOpen || IsItemHovered() || IsWidgetFocused(id), GetFrameRounding());
 
 		if (!isOpen)
 			return false;
@@ -1003,6 +1029,7 @@ namespace ImGui
 
 		PushStyleVar(ImGuiStyleVar_FramePadding, { padX, padY });
 		PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);  // Prevents double frame
+		PushStyleVar(ImGuiStyleVar_FrameRounding, GetFrameRounding());
 
 		std::string idStr = std::format("##{}", label);
 		LeftAlignedTextImpl(label);
@@ -1041,11 +1068,11 @@ namespace ImGui
 		}
 		const char* preview = previewStr.c_str();
 
-		parentDrawList->AddRectFilled(widgetPos, widgetPos + ImVec2(width, frameH), GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox), GetStyle().FrameRounding);
+		parentDrawList->AddRectFilled(widgetPos, widgetPos + ImVec2(width, frameH), GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox), GetFrameRounding());
 
 		bool isOpen = BeginCombo(idStr.c_str(), preview, ImGuiComboFlags_NoArrowButton);
 
-		PopStyleVar(2);
+		PopStyleVar(3);
 		PopStyleColor(6);
 
 		// Detect if opened Upwards
@@ -1057,7 +1084,7 @@ namespace ImGui
 		}
 
 		DrawDropdownIcon(parentDrawList, { std::floor(widgetPos.x + width - frameH), std::floor(widgetPos.y) }, { frameH, frameH }, isOpen, opensUp, IsItemHovered());
-		DrawWidgetBorder(parentDrawList, { std::floor(widgetPos.x), std::floor(widgetPos.y), std::floor(widgetPos.x + width), std::floor(widgetPos.y + frameH) }, isOpen || IsItemHovered() || IsWidgetFocused(GetID(idStr.c_str())), GetStyle().FrameRounding);
+		DrawWidgetBorder(parentDrawList, { std::floor(widgetPos.x), std::floor(widgetPos.y), std::floor(widgetPos.x + width), std::floor(widgetPos.y + frameH) }, isOpen || IsItemHovered() || IsWidgetFocused(GetID(idStr.c_str())), GetFrameRounding());
 
 		bool changed = false;
 		if (isOpen) {
@@ -1114,6 +1141,7 @@ namespace ImGui
 
 		PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(padX, padY));
 		PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
+		PushStyleVar(ImGuiStyleVar_FrameRounding, GetFrameRounding());
 
 		std::string idStr = LeftAlignedText(label);
 
@@ -1125,10 +1153,10 @@ namespace ImGui
 		bool res = InputText(idStr.c_str(), buf, buf_size, flags);
 
 		ImRect bb(GetItemRectMin(), GetItemRectMax());
-		DrawWidgetBorder(GetWindowDrawList(), bb, IsItemHovered() || IsItemActive() || IsWidgetFocused(GetID(idStr.c_str())), GetStyle().FrameRounding);
+		DrawWidgetBorder(GetWindowDrawList(), bb, IsItemHovered() || IsItemActive() || IsWidgetFocused(GetID(idStr.c_str())), GetFrameRounding());
 
 		PopStyleColor(4);
-		PopStyleVar(2);
+		PopStyleVar(3);
 
 		if (IsItemActivated())
 			PlayAudio(Audio::kFocus);
@@ -1137,15 +1165,13 @@ namespace ImGui
 
 	void DrawTabBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered, float rounding)
 	{
-		float scale      = GetDynamicWidgetScale();
 		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize);
 
 		if (borderSize <= 0.0f)
 			return;
 
-		// Floor thickness
-		float tColor = std::max(1.0f, std::floor(borderSize));
-		float tBlack = std::max(1.0f, std::floor(1.0f * scale));
+		float tColor, tBlack;
+		GetBorderThickness(borderSize, tColor, tBlack);
 
 		ImU32 col = isActiveOrHovered ?
 		                GetUserStyleColorU32(USER_STYLE::kTabBorderActive) :
@@ -1245,8 +1271,8 @@ namespace ImGui
 		// Use std::floor to prevent subpixel geometry artifacts
 		ImRect drawBb = { std::floor(idealBb.Min.x), std::floor(idealBb.Min.y), std::floor(idealBb.Max.x), std::floor(max.y) };
 
-		// Fetch the raw user value and scale it
-		float rounding = Styles::GetSingleton()->user.tabRounding * scale;
+		// Tabs share button rounding, so they curve the same
+		float rounding = KeepInnerCurve(GetUserStyleVar(USER_STYLE::kButtonRounding));
 
 		// Clamp rounding to prevent geometry artifacting at extreme scale
 		rounding = std::min(rounding, drawBb.GetWidth() * 0.5f);
@@ -1326,7 +1352,7 @@ namespace ImGui
 			return false;
 
 		float scale    = GetDynamicWidgetScale();
-		float rounding = GetUserStyleVar(USER_STYLE::kButtonRounding);
+		float rounding = KeepInnerCurve(GetUserStyleVar(USER_STYLE::kButtonRounding));
 
 		ImVec2 textSize = CalcTextSize(label);
 
@@ -1692,8 +1718,8 @@ namespace ImGui
 		bool active = (g.ActiveId == id);
 		RenderFrame(bb.Min, bb.Max, GetColorU32(active ? ImGuiCol_FrameBgActive : h ? ImGuiCol_FrameBgHovered :
 																					  ImGuiCol_FrameBg),
-			true, GetStyle().FrameRounding);
-		DrawWidgetBorder(window->DrawList, bb, active || h || IsWidgetFocused(id), GetStyle().FrameRounding);
+			true, GetFrameRounding());
+		DrawWidgetBorder(window->DrawList, bb, active || h || IsWidgetFocused(id), GetFrameRounding());
 
 		{
 			ScopedGamepadTweakMask tweakMask;
@@ -2040,11 +2066,11 @@ namespace ImGui
 
 			// Only draw bg if active/hovered/selected
 			if (h || is_selected || (is_open && !is_leaf)) {
-				window->DrawList->AddRectFilled(bb.Min, bb.Max, bgColor, GImGui->Style.FrameRounding);
+				window->DrawList->AddRectFilled(bb.Min, bb.Max, bgColor, GetFrameRounding());
 			}
 
 			if (is_open && !is_leaf) {
-				DrawWidgetBorder(window->DrawList, bb, h || IsWidgetFocused(id), GImGui->Style.FrameRounding);
+				DrawWidgetBorder(window->DrawList, bb, h || IsWidgetFocused(id), GetFrameRounding());
 			}
 		}
 
@@ -2119,7 +2145,7 @@ namespace ImGui
 
 		if (h || is_selected) {
 			ImU32 bgColor = GetColorU32(is_selected ? ImGuiCol_Header : ImGuiCol_HeaderHovered);
-			window->DrawList->AddRectFilled(bb.Min, bb.Max, bgColor, GImGui->Style.FrameRounding);
+			window->DrawList->AddRectFilled(bb.Min, bb.Max, bgColor, GetFrameRounding());
 		}
 
 		// Pass the unscaled base icon (only if not a leaf)
@@ -2219,12 +2245,12 @@ namespace ImGui
 
 		float scale      = GetDynamicWidgetScale();
 		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize);
-		float rounding   = GetStyle().FrameRounding;
+		float rounding   = GetFrameRounding();
 
 		float padX     = std::max(GetStyle().FramePadding.x, borderSize + (8.0f * scale));
 		float tallPadY = 7.0f * scale;
 
-		float tColor    = std::max(1.0f, std::floor(borderSize));
+		float tColor    = std::max(1.0f, std::round(borderSize));
 		float innerPadY = std::max(0.0f, tallPadY - tColor);
 		float offY      = tallPadY - innerPadY;
 
@@ -2372,13 +2398,15 @@ namespace ImGui
 			SetCursorScreenPos(ImFloor(GetCursorScreenPos()));
 		}
 
+		PushStyleVar(ImGuiStyleVar_FrameRounding, GetFrameRounding());
 		bool pressed = ColorButton(desc_id, col, static_cast<ImGuiColorEditFlags>(flags), snapped);
+		PopStyleVar();
 
 		if (customBorder) {
 			PopStyleColor();
 
 			bool highlighted = selected || IsItemHovered() || IsItemActive() || IsWidgetFocused(GetItemID());
-			DrawWidgetBorder(GetWindowDrawList(), ImRect(GetItemRectMin(), GetItemRectMax()), highlighted, GetStyle().FrameRounding);
+			DrawWidgetBorder(GetWindowDrawList(), ImRect(GetItemRectMin(), GetItemRectMax()), highlighted, GetFrameRounding());
 		}
 
 		if (pressed)

@@ -34,6 +34,7 @@ namespace ImGui
 		kItemSpacing,
 		kButtonRounding,
 		kButtonBorderSize,
+		kFrameRounding,
 	};
 
 	class Styles : public REX::Singleton<Styles>
@@ -114,8 +115,7 @@ namespace ImGui
 			float windowRounding{ 0.0f };
 			float frameRounding{ 0.0f };
 			bool  invertButtonCorners{ false };
-			float buttonRounding{ 6.0f };
-			float tabRounding{ 6.0f };
+			float buttonRounding{ 9.0f };
 			float popupRounding{ 0.0f };
 			float scrollbarRounding{ 0.0f };
 			float grabRounding{ 0.0f };
