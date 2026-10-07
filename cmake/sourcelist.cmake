@@ -9,6 +9,7 @@ set(sources ${sources}
 	src/ImGui/IconsFonts.cpp
 	src/ImGui/Overlays.cpp
 	src/ImGui/Renderer.cpp
+	src/ImGui/StickyList.cpp
 	src/ImGui/Styles.cpp
 	src/ImGui/Util.cpp
 	src/ImGui/Widgets.cpp

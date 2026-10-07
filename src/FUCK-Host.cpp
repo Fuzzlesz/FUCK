@@ -6,6 +6,7 @@
 #include "ImGui/IconsFonts.h"
 #include "ImGui/Overlays.h"
 #include "ImGui/Renderer.h"
+#include "ImGui/StickyList.h"
 #include "ImGui/Styles.h"
 #include "ImGui/Util.h"
 #include "ImGui/Widgets.h"
@@ -882,10 +883,16 @@ namespace FUCK::Host
 	static bool  ColorButton_Impl(const char* desc_id, const ImVec4& col, int flags, const ImVec2& size, bool selected) { return ImGui::ColorButtonStyled(desc_id, col, flags, size, selected); }
 	static bool  ColorPicker3_Impl(const char* label, float col[3], int flags) { return ImGui::ColorPicker3Styled(label, col, flags); }
 	static bool  ColorPicker4_Impl(const char* label, float col[4], int flags, const float* ref_col) { return ImGui::ColorPicker4Styled(label, col, flags, ref_col); }
+	
 	static bool  IsItemActivated_Impl() { return ImGui::IsItemActivated(); }
 	static bool  IsHotkeyEnabled_Impl() { return Hotkeys::Manager::GetSingleton()->IsEnabled(); }
+	
 	static float GetWindowScale_Impl() { return FUCKMan::GetSingleton()->GetCurrentWindowScale(); }
 	static float GetWindowRotation_Impl() { return FUCKMan::GetSingleton()->GetCurrentWindowRotation(); }
+
+	static void BeginStickyList_Impl(const char* str_id, float w, float h, bool border) { ImGui::BeginStickyList(str_id, ImVec2(w, h), border); }
+	static void EndStickyList_Impl() { ImGui::EndStickyList(); }
+	static bool StickyHeader_Impl(const char* label, bool* open, int count, int flags) { return ImGui::StickyHeader(label, open, count, flags); }
 
 	// ==================================================
 	// CreateInterface
@@ -1185,7 +1192,10 @@ namespace FUCK::Host
 			.IsItemActivated   = IsItemActivated_Impl,
 			.IsHotkeyEnabled   = IsHotkeyEnabled_Impl,
 			.GetWindowScale    = GetWindowScale_Impl,
-			.GetWindowRotation = GetWindowRotation_Impl
+			.GetWindowRotation = GetWindowRotation_Impl,
+			.BeginStickyList   = BeginStickyList_Impl,
+			.EndStickyList     = EndStickyList_Impl,
+			.StickyHeader      = StickyHeader_Impl
 		};
 		return &api;
 	}

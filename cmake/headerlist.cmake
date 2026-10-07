@@ -15,6 +15,7 @@ set(headers ${headers}
 	src/ImGui/IconsFonts.h
 	src/ImGui/Overlays.h
 	src/ImGui/Renderer.h
+	src/ImGui/StickyList.h
 	src/ImGui/Styles.h
 	src/ImGui/Util.h
 	src/ImGui/Widgets.h
