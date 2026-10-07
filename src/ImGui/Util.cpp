@@ -425,6 +425,9 @@ namespace ImGui
 		PopStyleColor();
 		PopFont();
 		Separator();
+
+		// Half the gap above, so content doesn't sit on the line
+		Dummy(ImVec2(0.0f, 6.0f * scale));
 	}
 
 	ImU32 GetInteractiveColor(ImGuiCol base, ImGuiCol hovered, ImGuiCol active)

@@ -274,9 +274,24 @@ namespace FUCK::Host
 	static void  SetNextItemOpen_Impl(bool is_open, int cond) { ImGui::SetNextItemOpen(is_open, cond); }
 	static void  Dummy_Impl(float w, float h) { ImGui::Dummy(ImVec2(w, h)); }
 	static void  Spacing_Impl() { ImGui::Spacing(); }
-	static void  Separator_Impl() { ImGui::Separator(); }
-	static void  SeparatorThick_Impl() { ImGui::SeparatorThick(); }
-	static void  SeparatorText_Impl(const char* label) { ImGui::SeparatorText(label); }
+
+	// Consumers' separators get a little room either side for readability. FUCK's own internal ones don't
+	static void SeparatorPadding() { ImGui::Dummy(ImVec2(0.0f, 2.0f * ImGui::GetDynamicWidgetScale())); }
+
+	static void Separator_Impl()
+	{
+		SeparatorPadding();
+		ImGui::Separator();
+		SeparatorPadding();
+	}
+	static void SeparatorThick_Impl() { ImGui::SeparatorThick(); }
+	static void SeparatorText_Impl(const char* label)
+	{
+		SeparatorPadding();
+		ImGui::SeparatorText(label);
+		SeparatorPadding();
+	}
+
 	static float GetColumnWidth_Impl(int column_index) { return ImGui::GetColumnWidth(column_index); }
 
 	// ==================================================
