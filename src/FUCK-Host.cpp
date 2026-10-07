@@ -868,8 +868,8 @@ namespace FUCK::Host
 	static bool  ColorPicker3_Impl(const char* label, float col[3], int flags) { return ImGui::ColorPicker3Styled(label, col, flags); }
 	static bool  ColorPicker4_Impl(const char* label, float col[4], int flags, const float* ref_col) { return ImGui::ColorPicker4Styled(label, col, flags, ref_col); }
 	static bool  IsItemActivated_Impl() { return ImGui::IsItemActivated(); }
-	static float GetWindowScale_Impl() { return FUCKMan::GetSingleton()->GetCurrentWindowScale(); }
-	static void  LayoutResetButton_Impl() { FUCKMan::GetSingleton()->DrawLayoutResetButton(); }
+	static float GetWindowScale_Impl() { return FUCKMan::GetSingleton()->GetCurrentWindowScale(); }	
+	static float GetWindowRotation_Impl() { return FUCKMan::GetSingleton()->GetCurrentWindowRotation(); }
 
 	// ==================================================
 	// CreateInterface
@@ -1168,7 +1168,7 @@ namespace FUCK::Host
 			.ColorPicker4      = ColorPicker4_Impl,
 			.IsItemActivated   = IsItemActivated_Impl,
 			.GetWindowScale    = GetWindowScale_Impl,
-			.LayoutResetButton = LayoutResetButton_Impl
+			.GetWindowRotation = GetWindowRotation_Impl
 		};
 		return &api;
 	}

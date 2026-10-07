@@ -116,9 +116,9 @@ public:
 	bool  GetMuteAudio() const { return _cfg.muteAudio; }
 	float GetActiveScale() const { return _activeScale; }
 
-	// kEditable windows: scale of the window being drawn, and the reset button consumers place
+	// kEditable windows: scale and rotation of the window being drawn
 	float GetCurrentWindowScale() const;
-	void  DrawLayoutResetButton();
+	float GetCurrentWindowRotation() const;
 	float GetUserScale() const { return _cfg.userScale; }
 	void  SetCurrentFont(const std::string& a_font);
 
@@ -202,7 +202,9 @@ protected:
 	EventResult ProcessEvent(const RE::MenuOpenCloseEvent* a_event, RE::BSTEventSource<RE::MenuOpenCloseEvent>*) override;
 
 private:
-	void UpdateEditableWindow(WindowState& a_state, const ImVec2& a_pos, const ImVec2& a_size, float a_margin, bool a_scalable);
+	void UpdateEditableWindow(WindowState& a_state, const ImVec2& a_pos, const ImVec2& a_size, const ImVec2& a_margin, bool a_scalable, bool a_rotatable);
+	void ResetEditableLayout(WindowState& a_state);
+	bool DrawResetIcon(float a_rowHeight);
 
 	struct PendingCommand
 	{

@@ -35,24 +35,30 @@ struct WindowState
 	ImVec2 chromeSize{ -1.0f, -1.0f };
 
 	// kEditable: pos is the top-left corner, or top-right with kAnchorRight
-	float                   scale        = 1.0f;
-	float                   contentWidth = 0.0f;
-	bool                    dragging     = false;
+	float                   scale    = 1.0f;
+	float                   rotation = 0.0f;
+	ImVec2                  bodySize{};             // last frame's content size, without the edit margin
+	bool                    dragging = false;
 	FUCK::EditorResizeState resize;
 	float                   resizeStartScale = 1.0f;
 	ImVec2                  resizeStartPos{};
+	FUCK::EditorRotateState rotate;
+	float                   rotateStart = 0.0f;
+
+	bool IsLayoutModified() const { return hasLoadedPos || std::abs(scale - 1.0f) > 0.001f || std::abs(rotation) > 0.001f; }
 };
 static StringMap<WindowState> s_windowStates;  // Maps using "PluginName|WindowId"
 
 // kEditable windows, sizes at 1080p
 static constexpr float kEditMargin   = 12.0f;  // room past the outline for the corner handles
 static constexpr float kEditOutline  = 4.0f;   // outline distance from the window body
+static constexpr float kRotateReach  = 36.0f;  // rotation handle's reach past the body's top edge
 static constexpr float kMinEditScale = 0.5f;
 static constexpr float kMaxEditScale = 2.0f;
 
-// Set while a window is drawn, for GetWindowScale() and LayoutResetButton()
-static WindowState* s_editState   = nullptr;
-static float        s_windowScale = 1.0f;
+// Set while a window is drawn, for GetWindowScale() and GetWindowRotation()
+static float s_windowScale    = 1.0f;
+static float s_windowRotation = 0.0f;
 
 // Auto-Close list for Game Menus
 static constexpr std::array<std::string_view, 18> s_closeOnOpen = {
@@ -98,6 +104,7 @@ struct WindowSaveData
 	float h         = -1.0f;
 	bool  collapsed = false;
 	float scale     = 1.0f;
+	float rotation  = 0.0f;
 };
 
 struct ToolSaveData
@@ -235,55 +242,62 @@ float FUCKMan::GetCurrentWindowScale() const
 	return s_windowScale;
 }
 
-void FUCKMan::DrawLayoutResetButton()
+float FUCKMan::GetCurrentWindowRotation() const
 {
-	WindowState* st = s_editState;
-	if (!st || (!st->hasLoadedPos && std::abs(st->scale - 1.0f) < 0.001f))
-		return;
+	return s_windowRotation;
+}
 
-	constexpr float SPACING = 3.0f;  // nudged in against the previous item, at 1080p
+void FUCKMan::ResetEditableLayout(WindowState& a_state)
+{
+	a_state.pos          = { -1.0f, -1.0f };
+	a_state.hasLoadedPos = false;
+	a_state.scale        = 1.0f;
+	a_state.rotation     = 0.0f;
+	SaveWorkspace();
+}
 
-	// Text over an invisible button, centred on the previous item, so the row keeps its height
-	float rowH = ImGui::GetItemRectSize().y;
-	if (rowH <= 0.0f)
-		rowH = ImGui::GetFrameHeight();
-
+// Red reset icon at the cursor, as text over an invisible button so it takes the click. Returns true when clicked
+bool FUCKMan::DrawResetIcon(float a_rowHeight)
+{
 	ImVec2 iconSize = ImGui::CalcTextSize(ICON_FA_ARROW_ROTATE_LEFT);
-	ImGui::SameLine(0.0f, SPACING * FUCK::GetResolutionScale());
-	ImVec2 pos = ImGui::GetCursorScreenPos();
+	ImVec2 pos      = ImGui::GetCursorScreenPos();
 
-	if (ImGui::InvisibleButton("##FUCK_LayoutReset", ImVec2(iconSize.x, rowH))) {
-		st->pos          = { -1.0f, -1.0f };
-		st->hasLoadedPos = false;
-		st->scale        = 1.0f;
-		SaveWorkspace();
-	}
-
+	bool clicked = ImGui::InvisibleButton("##FUCK_LayoutReset", ImVec2(iconSize.x, a_rowHeight));
 	bool hovered = ImGui::IsItemHovered();
 	if (hovered)
 		FUCK::SetTooltip("$FUCK_LayoutReset"_T);
 
 	ImU32 col = hovered ? IM_COL32(255, 89, 89, 255) : IM_COL32(217, 51, 51, 255);
-	ImGui::GetWindowDrawList()->AddText({ pos.x, pos.y + (rowH - iconSize.y) * 0.5f }, col, ICON_FA_ARROW_ROTATE_LEFT);
+	ImGui::GetWindowDrawList()->AddText({ pos.x, pos.y + (a_rowHeight - iconSize.y) * 0.5f }, col, ICON_FA_ARROW_ROTATE_LEFT);
+	return clicked;
 }
 
-void FUCKMan::UpdateEditableWindow(WindowState& a_state, const ImVec2& a_pos, const ImVec2& a_size, float a_margin, bool a_scalable)
+void FUCKMan::UpdateEditableWindow(WindowState& a_state, const ImVec2& a_pos, const ImVec2& a_size, const ImVec2& a_margin, bool a_scalable, bool a_rotatable)
 {
-	float  res     = FUCK::GetResolutionScale();
-	float  outline = kEditOutline * res;
-	ImVec2 outMin  = { a_pos.x + a_margin - outline, a_pos.y + a_margin - outline };
-	ImVec2 outMax  = { a_pos.x + a_size.x - a_margin + outline, a_pos.y + a_size.y - a_margin + outline };
+	float  res      = FUCK::GetResolutionScale();
+	float  outline  = kEditOutline * res;
+	float  rotation = a_rotatable ? a_state.rotation : 0.0f;
+	ImVec2 outMin   = { a_pos.x + a_margin.x - outline, a_pos.y + a_margin.y - outline };
+	ImVec2 outMax   = { a_pos.x + a_size.x - a_margin.x + outline, a_pos.y + a_size.y - a_margin.y + outline };
+	ImVec2 center   = { (outMin.x + outMax.x) * 0.5f, (outMin.y + outMax.y) * 0.5f };
 
-	bool hovered = ImGui::IsWindowHovered();
+	bool hovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
 
-	auto boundsState = a_state.resize.IsActive() || a_state.dragging ? FUCK::EditorBoundsState::kSelected :
-	                   hovered                                       ? FUCK::EditorBoundsState::kHovered :
-	                                                                   FUCK::EditorBoundsState::kNormal;
-	FUCK::DrawEditorBounds(outMin, outMax, boundsState, 2.0f, true);
+	// Editor items sit in the margin, outside the content. Restored at the end so they don't count towards the
+	// auto-sized window, as each frame's outline would otherwise grow around the last frame's handles
+	ImGuiWindow* window       = ImGui::GetCurrentWindow();
+	ImVec2       contentMax   = window->DC.CursorMaxPos;
+	ImVec2       contentIdeal = window->DC.IdealMaxPos;
+
+	bool busy        = a_state.resize.IsActive() || a_state.rotate.active || a_state.dragging;
+	auto boundsState = busy    ? FUCK::EditorBoundsState::kSelected :
+	                   hovered ? FUCK::EditorBoundsState::kHovered :
+	                             FUCK::EditorBoundsState::kNormal;
+	FUCK::DrawEditorBounds(outMin, outMax, boundsState, 2.0f, true, nullptr, rotation);
 
 	if (a_scalable) {
 		ImVec2 newMin, newMax;
-		auto   result = FUCK::EditorResizeHandles(outMin, outMax, a_state.resize, newMin, newMax, hovered, true);
+		auto   result = FUCK::EditorResizeHandles(outMin, outMax, a_state.resize, newMin, newMax, hovered, true, { 50.0f, 50.0f }, { 100000.0f, 100000.0f }, rotation);
 
 		if (result == FUCK::EditorHandleResult::kStarted) {
 			a_state.resizeStartScale = a_state.scale;
@@ -303,8 +317,30 @@ void FUCKMan::UpdateEditableWindow(WindowState& a_state, const ImVec2& a_pos, co
 		}
 	}
 
-	// Drag from any empty part of the window. Items, including the handles above, keep their clicks
-	bool canDrag = hovered && !ImGui::IsAnyItemHovered() && !a_state.resize.hovered && !a_state.resize.IsActive();
+	// Reset icon above the outline's top-right, once the window has been moved, scaled or rotated
+	if (a_state.IsLayoutModified()) {
+		float  rowH     = ImGui::GetFontSize();
+		ImVec2 iconSize = ImGui::CalcTextSize(ICON_FA_ARROW_ROTATE_LEFT);
+		ImGui::SetCursorScreenPos({ outMax.x - iconSize.x, outMin.y - outline - rowH });
+		if (DrawResetIcon(rowH))
+			ResetEditableLayout(a_state);
+	}
+
+	// Drawn last, as it leaves the cursor after its handle
+	if (a_rotatable) {
+		auto result = FUCK::EditorRotateHandle(outMin, outMax, center, a_state.rotate, hovered, 15.0f, rotation);
+
+		if (result == FUCK::EditorHandleResult::kStarted)
+			a_state.rotateStart = a_state.rotation;
+		if (a_state.rotate.active)
+			a_state.rotation = std::remainder(a_state.rotateStart + a_state.rotate.angle, 360.0f);
+		if (result == FUCK::EditorHandleResult::kFinished)
+			SaveWorkspace();
+	}
+
+	// Drag from any empty part of the window. Items and handles keep their clicks
+	bool onHandle = a_state.resize.hovered || a_state.rotate.hovered;
+	bool canDrag  = hovered && !busy && !onHandle && !ImGui::IsAnyItemHovered();
 	if (canDrag && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 		a_state.dragging = true;
 
@@ -327,6 +363,9 @@ void FUCKMan::UpdateEditableWindow(WindowState& a_state, const ImVec2& a_pos, co
 		a_state.hasLoadedPos = true;
 		SaveWorkspace();
 	}
+
+	window->DC.CursorMaxPos = contentMax;
+	window->DC.IdealMaxPos  = contentIdeal;
 }
 
 // ==================================================
@@ -405,6 +444,7 @@ void FUCKMan::LoadWorkspace()
 						}
 						st.isCollapsed = winData.collapsed;
 						st.scale       = std::clamp(winData.scale, kMinEditScale, kMaxEditScale);
+						st.rotation    = winData.rotation;
 					}
 				}
 			}
@@ -490,13 +530,14 @@ void FUCKMan::SaveWorkspace()
 
 			// Editable widgets only save what the user changed, so an untouched one keeps following its default
 			if (isEditable) {
-				if (!st.hasLoadedPos && std::abs(st.scale - 1.0f) < 0.001f)
+				if (!st.IsLayoutModified())
 					continue;
 
 				WindowSaveData wd;
 				wd.x     = st.hasLoadedPos ? st.pos.x / scale : -1.0f;
 				wd.y     = st.hasLoadedPos ? st.pos.y / scale : -1.0f;
-				wd.scale = st.scale;
+				wd.scale    = st.scale;
+				wd.rotation = st.rotation;
 
 				pdMap[plugin].windows[winId] = wd;
 				continue;
@@ -1343,11 +1384,28 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 		bool autoResize      = (userFlags & FUCK::WindowFlags::kAutoResize);
 		bool noMove          = (userFlags & FUCK::WindowFlags::kNoMove);
 
-		bool  editable    = (userFlags & FUCK::WindowFlags::kEditable);
-		bool  scalable    = editable && (userFlags & FUCK::WindowFlags::kScalable);
-		bool  anchorRight = editable && (userFlags & FUCK::WindowFlags::kAnchorRight);
-		bool  isEditing   = editable && _isOpen;
-		float editMargin  = isEditing ? kEditMargin * m.uiScale : 0.0f;
+		bool editable    = (userFlags & FUCK::WindowFlags::kEditable);
+		bool scalable    = editable && (userFlags & FUCK::WindowFlags::kScalable);
+		bool rotatable   = editable && (userFlags & FUCK::WindowFlags::kRotatable);
+		bool anchorRight = editable && (userFlags & FUCK::WindowFlags::kAnchorRight);
+		bool isEditing   = editable && _isOpen;
+
+		// While editing, the margin grows the window past the outline so its handles sit over it
+		ImVec2 editMargin = { 0.0f, 0.0f };
+		if (isEditing) {
+			float margin = kEditMargin * m.uiScale;
+			editMargin   = { margin, margin };
+
+			// Room for the handles at any angle, so turning never resizes or moves the window
+			if (rotatable) {
+				ImVec2 half  = { winState.bodySize.x * 0.5f, winState.bodySize.y * 0.5f };
+				float  reach = std::max(std::sqrt(half.x * half.x + half.y * half.y) + margin, half.y + kRotateReach * m.uiScale);
+				editMargin   = { std::max(margin, reach - half.x), std::max(margin, reach - half.y) };
+			}
+
+			// Room above the outline for the reset icon, kept even while it's hidden so the window doesn't jump
+			editMargin.y = std::max(editMargin.y, margin + ImGui::GetFontSize());
+		}
 
 		flags |= ImGuiWindowFlags_NoTitleBar;
 		if (noDecoration) {
@@ -1410,8 +1468,8 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 				winState.pos = win->GetDefaultPos();
 
 			// Last frame's width places a right-anchored window. The margin keeps the content where it was
-			float  left   = anchorRight ? winState.pos.x - winState.contentWidth : winState.pos.x;
-			ImVec2 winPos = { left - editMargin, winState.pos.y - editMargin };
+			float  left   = anchorRight ? winState.pos.x - winState.bodySize.x : winState.pos.x;
+			ImVec2 winPos = { left - editMargin.x, winState.pos.y - editMargin.y };
 			FUCK::SetNextWindowPos(winPos, ImGuiCond_Always);
 		} else if (!isCustomPos) {
 			if (noMove) {
@@ -1477,10 +1535,10 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 		// While editing, the margin grows the window past the outline so the corner handles sit over it
 		if (!noDecoration || (userFlags & FUCK::WindowFlags::kNoBackground)) {
 			// Push 0 padding for decorated windows and background-less overlays
-			FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(editMargin, editMargin));
+			FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, editMargin);
 		} else {
 			// Give standard padding to frameless windows that still have a solid background panel
-			FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase + editMargin, m.padBase + editMargin));
+			FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase + editMargin.x, m.padBase + editMargin.y));
 		}
 
 		// Combine the display title with the Host's unique tracking key
@@ -1501,9 +1559,9 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 			winState.isFocused = ImGui::IsWindowFocused();
 
 			if (editable) {
-				winState.contentWidth = curSize.x - editMargin * 2.0f;
-				s_windowScale         = scalable ? winState.scale : 1.0f;
-				s_editState           = isEditing ? &winState : nullptr;
+				winState.bodySize = { curSize.x - editMargin.x * 2.0f, curSize.y - editMargin.y * 2.0f };
+				s_windowScale     = scalable ? winState.scale : 1.0f;
+				s_windowRotation  = rotatable ? winState.rotation : 0.0f;
 			}
 
 			// Auto-Close on Click Outside
@@ -1665,21 +1723,28 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 				}
 			} else {
 				// --- No Chrome Decoration ---
+				// Rotated content can reach past the window's corners, so don't clip it to the window
+				if (rotatable)
+					ImGui::PushClipRect({ 0.0f, 0.0f }, ImGui::GetIO().DisplaySize, false);
+
 				pushContentScale(ignoreUserScale);
 				_currentRenderingPlugin = win->PluginName();
 				win->Draw();
 				_currentRenderingPlugin.clear();
 				popContentScale();
+
+				if (rotatable)
+					ImGui::PopClipRect();
 			}
 
 			if (isEditing) {
-				UpdateEditableWindow(winState, curPos, curSize, editMargin, scalable);
+				UpdateEditableWindow(winState, curPos, curSize, editMargin, scalable, rotatable);
 			}
 		}
 		FUCK::EndWindow();
 
-		s_editState   = nullptr;
-		s_windowScale = 1.0f;
+		s_windowScale    = 1.0f;
+		s_windowRotation = 0.0f;
 
 		FUCK::PopStyleVar();
 
