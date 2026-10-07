@@ -883,7 +883,8 @@ namespace FUCK::Host
 	static bool  ColorPicker3_Impl(const char* label, float col[3], int flags) { return ImGui::ColorPicker3Styled(label, col, flags); }
 	static bool  ColorPicker4_Impl(const char* label, float col[4], int flags, const float* ref_col) { return ImGui::ColorPicker4Styled(label, col, flags, ref_col); }
 	static bool  IsItemActivated_Impl() { return ImGui::IsItemActivated(); }
-	static float GetWindowScale_Impl() { return FUCKMan::GetSingleton()->GetCurrentWindowScale(); }	
+	static bool  IsHotkeyEnabled_Impl() { return Hotkeys::Manager::GetSingleton()->IsEnabled(); }
+	static float GetWindowScale_Impl() { return FUCKMan::GetSingleton()->GetCurrentWindowScale(); }
 	static float GetWindowRotation_Impl() { return FUCKMan::GetSingleton()->GetCurrentWindowRotation(); }
 
 	// ==================================================
@@ -1182,6 +1183,7 @@ namespace FUCK::Host
 			.ColorPicker3      = ColorPicker3_Impl,
 			.ColorPicker4      = ColorPicker4_Impl,
 			.IsItemActivated   = IsItemActivated_Impl,
+			.IsHotkeyEnabled   = IsHotkeyEnabled_Impl,
 			.GetWindowScale    = GetWindowScale_Impl,
 			.GetWindowRotation = GetWindowRotation_Impl
 		};
