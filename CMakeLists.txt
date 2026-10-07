@@ -4,7 +4,7 @@ set(VERSION 1.5.0)
 
 # ---- Options ----
 
-option(COPY_BUILD "Copy the build output to the Skyrim directory." TRUE)
+option(COPY_BUILD "Copy the build output to the Skyrim directory." FALSE)
 
 # ---- Cache build vars ----
 
