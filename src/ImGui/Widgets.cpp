@@ -2499,24 +2499,30 @@ namespace ImGui
 		return changed;
 	}
 
-	bool VSliderButtonStyled(const char* label, const ImVec2& slider_size, float* v, float v_min, float v_max, const char* format, bool draw_top_button, bool draw_bottom_button, bool* out_top_pressed, bool* out_bottom_pressed)
+	bool VSliderButtonStyled(const char* str_id, const ImVec2& slider_size, float* v, float v_min, float v_max, const char* format, const char* top_label, const char* bottom_label, bool* out_top_pressed, bool* out_bottom_pressed)
 	{
 		ImGuiWindow* window = GetCurrentWindow();
 		if (window->SkipItems)
 			return false;
 
 		float scale = GetDynamicWidgetScale();
+		float padX  = 8.0f * scale;  // Matches OutlineButton's internal padX
+		float padY  = 7.0f * scale;  // Matches OutlineButton's internal padY
 
-		// Calculate Button Width to determine the overall column center
-		ImVec2 textSize = CalcTextSize(label);
-		float  padX     = 8.0f * scale;  // Matches OutlineButton's internal padX
-		float  btnWidth = textSize.x + (padX * 2.0f);
+		// Text after "##" isn't drawn, so isn't measured
+		auto buttonWidth = [&](const char* a_label) {
+			return a_label ? CalcTextSize(a_label, nullptr, true).x + (padX * 2.0f) : 0.0f;
+		};
+
+		float topWidth  = buttonWidth(top_label);
+		float botWidth  = buttonWidth(bottom_label);
+		float btnHeight = std::max(GetFrameHeight(), GetFontSize() + (padY * 2.0f));
 
 		// The column is as wide as its largest element
-		float colWidth = std::max(slider_size.x, btnWidth);
+		float colWidth = std::max({ slider_size.x, topWidth, botWidth });
 
 		BeginGroup();
-		PushID(label);
+		PushID(str_id);
 
 		bool slider_changed = false;
 		bool top_pressed    = false;
@@ -2528,29 +2534,30 @@ namespace ImGui
 			slider_changed = VSliderFloatStyled("##vslider", slider_size, v, v_min, v_max, format);
 		};
 
-		auto DrawBtn = [&](bool is_top) {
-			float offX = (colWidth - btnWidth) * 0.5f;
-			SetCursorPosX(GetCursorPosX() + offX);
+		// A button without a label still keeps its space, so sliders of the same size line up in a row
+		auto DrawBtn = [&](const char* a_label, float a_width, const char* a_id) {
+			if (!a_label) {
+				Dummy(ImVec2(colWidth, btnHeight));
+				return false;
+			}
 
-			// Prevent ID collisions if drawing two identically named buttons
-			PushID(is_top ? "top_btn" : "bot_btn");
-			bool pressed = OutlineButton(label);
+			SetCursorPosX(GetCursorPosX() + (colWidth - a_width) * 0.5f);
+
+			// Prevent ID collisions when both buttons share a label
+			PushID(a_id);
+			bool pressed = OutlineButton(a_label);
 			PopID();
 
 			return pressed;
 		};
 
-		if (draw_top_button) {
-			top_pressed = DrawBtn(true);
-			Spacing();
-		}
+		top_pressed = DrawBtn(top_label, topWidth, "top_btn");
+		Spacing();
 
 		DrawSlider();
 
-		if (draw_bottom_button) {
-			Spacing();
-			bot_pressed = DrawBtn(false);
-		}
+		Spacing();
+		bot_pressed = DrawBtn(bottom_label, botWidth, "bot_btn");
 
 		PopID();
 		EndGroup();

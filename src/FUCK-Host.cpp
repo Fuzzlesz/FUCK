@@ -851,7 +851,7 @@ namespace FUCK::Host
 
 	static bool SliderAngle_Impl(const char* label, float* v_rad, float min, float max, const char* fmt) { return ImGui::SliderAngleStyled(label, v_rad, min, max, fmt); }
 	static bool VSliderFloat_Impl(const char* label, const ImVec2& size, float* v, float min, float max, const char* fmt) { return ImGui::VSliderFloatStyled(label, size, v, min, max, fmt); }
-	static bool VSliderButton_Impl(const char* label, const ImVec2& size, float* v, float min, float max, const char* fmt, bool draw_top, bool draw_bot, bool* out_top, bool* out_bot) { return ImGui::VSliderButtonStyled(label, size, v, min, max, fmt, draw_top, draw_bot, out_top, out_bot); }
+	static bool VSliderButton_Impl(const char* str_id, const ImVec2& size, float* v, float min, float max, const char* fmt, const char* top_label, const char* bot_label, bool* out_top, bool* out_bot) { return ImGui::VSliderButtonStyled(str_id, size, v, min, max, fmt, top_label, bot_label, out_top, out_bot); }
 
 	// ==================================================
 	// Version 5
