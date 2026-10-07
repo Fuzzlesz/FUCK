@@ -270,10 +270,10 @@ namespace FUCK::Host
 		if (y)
 			*y = p.y;
 	}
-	static void  SetNextItemWidth_Impl(float w) { ImGui::SetNextItemWidth(w); }
-	static void  SetNextItemOpen_Impl(bool is_open, int cond) { ImGui::SetNextItemOpen(is_open, cond); }
-	static void  Dummy_Impl(float w, float h) { ImGui::Dummy(ImVec2(w, h)); }
-	static void  Spacing_Impl() { ImGui::Spacing(); }
+	static void SetNextItemWidth_Impl(float w) { ImGui::SetNextItemWidth(w); }
+	static void SetNextItemOpen_Impl(bool is_open, int cond) { ImGui::SetNextItemOpen(is_open, cond); }
+	static void Dummy_Impl(float w, float h) { ImGui::Dummy(ImVec2(w, h)); }
+	static void Spacing_Impl() { ImGui::Spacing(); }
 
 	// Consumers' separators get a little room either side for readability. FUCK's own internal ones don't
 	static void SeparatorPadding() { ImGui::Dummy(ImVec2(0.0f, 2.0f * ImGui::GetDynamicWidgetScale())); }

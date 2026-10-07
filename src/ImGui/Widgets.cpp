@@ -236,7 +236,7 @@ namespace ImGui
 			};
 
 			// Tighter gap globally for near-aligned widgets to closely mimic vanilla grouping
-			float scale       = GetDynamicWidgetScale();
+			float scale = GetDynamicWidgetScale();
 
 			// Give it a gap so it actually breathes,
 			float nearSpacing = std::max(8.0f * scale, g.Style.ItemInnerSpacing.x);
@@ -960,9 +960,8 @@ namespace ImGui
 								// Hit-testing logic bypassing ImGui Item overlap clashing
 								ImRect starBB(
 									ImVec2(starX - (5.0f * scale), GetItemRectMin().y),
-									ImVec2(starX + starSize.x + (5.0f * scale), GetItemRectMin().y + rowH)
-								);
-								
+									ImVec2(starX + starSize.x + (5.0f * scale), GetItemRectMin().y + rowH));
+
 								starHovered = IsMouseHoveringRect(starBB.Min, starBB.Max);
 								if (starHovered && IsMouseClicked(0)) {
 									if (a_favToggled) {
