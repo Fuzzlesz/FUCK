@@ -1,5 +1,7 @@
 #pragma once
 
+#include <shared_mutex>
+
 namespace Translation
 {
 	class Manager final : public REX::Singleton<Manager>
@@ -18,7 +20,8 @@ namespace Translation
 			if (!a_key)
 				return "";
 
-			if (const auto it = translationMap.find(a_key); it != translationMap.end()) {
+			std::shared_lock lock(_lock);
+			if (const auto it = _translationMap.find(std::string_view(a_key)); it != _translationMap.end()) {
 				return it->second.c_str();
 			}
 
@@ -28,7 +31,8 @@ namespace Translation
 	private:
 		bool ParseFile(const fs::path& a_path);
 
-		StringMap<std::string> translationMap{};
+		StableStringMap<std::string> _translationMap{};
+		std::shared_mutex            _lock;
 	};
 }
 

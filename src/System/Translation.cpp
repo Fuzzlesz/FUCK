@@ -63,8 +63,8 @@ namespace Translation
 		}
 
 		// Skip BOM
-		const wchar_t* wData = reinterpret_cast<const wchar_t*>(buffer.data() + 2);
-		int wLength = static_cast<int>((size - 2) / sizeof(wchar_t));
+		const wchar_t* wData   = reinterpret_cast<const wchar_t*>(buffer.data() + 2);
+		int            wLength = static_cast<int>((size - 2) / sizeof(wchar_t));
 
 		if (wLength <= 0)
 			return true;  // Empty file
@@ -77,10 +77,10 @@ namespace Translation
 		std::string utf8Content(utf8Length, '\0');
 		::WideCharToMultiByte(CP_UTF8, 0, wData, wLength, &utf8Content[0], utf8Length, nullptr, nullptr);
 
-		// Parse Line by Line
-		std::stringstream ss(utf8Content);
-		std::string line;
-		size_t count = 0;
+		// Parse Line by Line. Read into a list first, so the map is only locked for the quick part
+		std::vector<std::pair<std::string, std::string>> entries;
+		std::stringstream                                ss(utf8Content);
+		std::string                                      line;
 
 		while (std::getline(ss, line)) {
 			// Remove CR if present (Windows line ending)
@@ -92,7 +92,7 @@ namespace Translation
 				continue;
 
 			std::stringstream ls(line);
-			std::string key, value;
+			std::string       key, value;
 
 			ls >> key;
 
@@ -103,8 +103,17 @@ namespace Translation
 			std::getline(ls >> std::ws, value);
 
 			if (!key.empty() && !value.empty()) {
-				translationMap.emplace(key, value);
-				count++;
+				entries.emplace_back(std::move(key), std::move(value));
+			}
+		}
+
+		size_t count = 0;
+		{
+			std::unique_lock lock(_lock);
+			for (auto& [key, value] : entries) {
+				// Existing keys are left as they are, so a string already handed out never changes underneath anyone
+				if (_translationMap.emplace(std::move(key), std::move(value)).second)
+					count++;
 			}
 		}
 
