@@ -1272,16 +1272,16 @@ EventResult FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_event, RE::BST
 // ==================================================
 // CORE RENDER LOOP
 // ==================================================
-
+ 
 void FUCKMan::Draw(bool a_passthroughOnly)
 {
 	FlushPendingRegistrations();
-
+ 
 	if (!_workspaceLoaded) {
 		LoadWorkspace();
 		_workspaceLoaded = true;
 	}
-
+ 
 	if (auto ui = RE::UI::GetSingleton(); ui && ui->closingAllMenus) {
 		if (_isOpen) {
 			Close();
@@ -1289,13 +1289,13 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 		}
 		return;
 	}
-
+ 
 	UpdateGameState();
-
+ 
 	// Before any window is drawn, so it decides who gets the mouse this frame
 	if (_isOpen)
 		ClaimEditHandleHover();
-
+ 
 	// If the user hides menus via 'tm', the Skyrim Scaleform cursor becomes invisible.
 	// We force ImGui to draw its own cursor so KBM users aren't clicking blind. Flatrim only.
 	bool menusHidden = false;
@@ -1304,93 +1304,93 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 			menusHidden = !ui->IsShowingMenus();
 		}
 	}
-
+ 
 	if (menusHidden && IsInputBlocked() && Input::Manager::GetSingleton()->IsInputKBM()) {
 		ImGui::GetIO().MouseDrawCursor = true;
 	} else {
 		ImGui::GetIO().MouseDrawCursor = false;
 	}
-
+ 
 	// Global mouse click detection for auto-closing flyout windows
 	bool        isAnyMouseDown    = MANAGER(Input)->IsInputDown(Input::Keymap::kMBBase) || MANAGER(Input)->IsInputDown(Input::Keymap::kMBBase + 1);
 	static bool s_wasAnyMouseDown = false;
 	bool        globalMouseClick  = isAnyMouseDown && !s_wasAnyMouseDown;
 	s_wasAnyMouseDown             = isAnyMouseDown;
-
+ 
 	// ==================================================
 	// LAYOUT METRICS SETUP (Chrome / Unscaled)
 	// ==================================================
 	auto iconArrow = MANAGER(IconFont)->GetStepperRight();
-
+ 
 	struct LayoutMetrics
 	{
 		float uiScale;
 		float textH;
 		float padBase;
-
+ 
 		float iconAspect;
 		float chromeIconBaseH;  // = 16.0f * uiScale  (userScale intentionally excluded for chrome)
-
+ 
 		// Titlebar
 		float titleH;
 		float titleFontSize;
 		float titleIconPadX;
 		float titleIconNudgeY;
 		float titleTextOffsetY;
-
+ 
 		// Sidebar
 		float sidebarWidth;
 		float sidebarItemH;
 		float sidebarFontSize;
 		float sidebarIndent;
 	} m;
-
+ 
 	m.uiScale = FUCK::GetResolutionScale();
 	m.textH   = FUCK::GetTextLineHeight();
 	m.padBase = 15.0f * m.uiScale;
-
+ 
 	m.iconAspect = (iconArrow && iconArrow->imageSize.y > 0.0f) ? (iconArrow->imageSize.x / iconArrow->imageSize.y) : 1.0f;
-
+ 
 	m.chromeIconBaseH = 20.0f * m.uiScale;
-
+ 
 	float headerPadding = 3.0f * m.uiScale;
-
+ 
 	const float kChromeFontSize = 22.0f * 0.9f * m.uiScale;
-
+ 
 	m.titleH           = m.textH + (headerPadding * 2.0f);
 	m.titleFontSize    = kChromeFontSize;
 	m.titleH           = m.titleFontSize + (headerPadding * 4.0f);
 	m.titleIconPadX    = 8.0f * m.uiScale;
 	m.titleIconNudgeY  = 1.0f * m.uiScale;  // positive = down, negative = up
 	m.titleTextOffsetY = (m.titleH - m.titleFontSize) * 0.5f + (1.0f * m.uiScale);
-
+ 
 	m.sidebarWidth    = 250.0f * m.uiScale;
 	m.sidebarItemH    = 30.0f * m.uiScale;
 	m.sidebarFontSize = kChromeFontSize;
 	m.sidebarIndent   = 15.0f * m.uiScale;
-
+ 
 	auto chromeArrow = [&](bool pointsDown, float rowH) {
 		return ImGui::CalcArrowIconParams(m.iconAspect, pointsDown, rowH, m.chromeIconBaseH);
 	};
-
+ 
 	// Content scale helper — respects kIgnoreUserScale flag
 	auto pushContentScale = [&](bool ignoreUserScale = false) {
 		_isIgnoringUserScale = ignoreUserScale;
 		_activeScale         = ignoreUserScale ? 1.0f : _cfg.userScale;
-
+ 
 		float targetFontSize = ImGui::GetStyle().FontSizeBase * _activeScale * m.uiScale;
 		ImGui::PushFont(nullptr, targetFontSize);
-
+ 
 		auto styleUser = ImGui::Styles::GetSingleton()->user;
-
+ 
 		float spaceX = styleUser.itemSpacing.x * m.uiScale * _activeScale;
 		float spaceY = styleUser.itemSpacing.y * m.uiScale * _activeScale;
-
+ 
 		float innerSpaceX = 4.0f * m.uiScale * _activeScale;
 		float innerSpaceY = 4.0f * m.uiScale * _activeScale;
-
+ 
 		float indentSpacing = styleUser.indentSpacing;
-
+ 
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(6.0f * m.uiScale * _activeScale, 3.0f * m.uiScale * _activeScale));
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spaceX, spaceY));
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(innerSpaceX, innerSpaceY));
@@ -1398,14 +1398,14 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 		ImGui::PushStyleVar(ImGuiStyleVar_ScrollbarSize, 12.0f * m.uiScale);
 		ImGui::PushStyleVar(ImGuiStyleVar_GrabMinSize, 10.0f * m.uiScale);
 	};
-
+ 
 	auto popContentScale = [&]() {
 		ImGui::PopFont();
 		ImGui::PopStyleVar(6);
 		_activeScale         = _cfg.userScale;
 		_isIgnoringUserScale = false;
 	};
-
+ 
 	// ==================================================
 	// OVERLAY RENDER PASS (Fullscreen Transparent Layer)
 	// ==================================================
@@ -1413,30 +1413,30 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 	if (!a_passthroughOnly && (_activeTool || ShouldRender())) {
 		ImGui::SetNextWindowPos(ImGui::GetMainViewport()->Pos);
 		ImGui::SetNextWindowSize(ImGui::GetMainViewport()->Size);
-
+ 
 		ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration |
 		                         ImGuiWindowFlags_NoInputs |
 		                         ImGuiWindowFlags_NoBackground |
 		                         ImGuiWindowFlags_NoNav |
 		                         ImGuiWindowFlags_NoBringToFrontOnFocus |
 		                         ImGuiWindowFlags_NoFocusOnAppearing;
-
+ 
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 		if (ImGui::Begin("##ToolOverlayLayer", nullptr, flags)) {
 			pushContentScale(false);
-
+ 
 			if (_activeTool && !menusHidden) {
 				_currentRenderingPlugin = _activeTool->PluginName();
 				_activeTool->RenderOverlay();
 			}
-
+ 
 			for (auto* tool : _tools) {
 				if (tool != _activeTool && !menusHidden) {
 					_currentRenderingPlugin = tool->PluginName();
 					tool->RenderOverlay();
 				}
 			}
-
+ 
 			for (auto* win : _windows) {
 				// Skip overlays for suppressed windows.
 				if (!IsWindowSuppressed(win)) {
@@ -1444,24 +1444,24 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 					win->RenderOverlay();
 				}
 			}
-
+ 
 			_currentRenderingPlugin.clear();
-
+ 
 			popContentScale();
 		}
 		ImGui::End();
 		ImGui::PopStyleVar();
 	}
-
+ 
 	// ==================================================
 	// EXTERNAL WINDOWS RENDER PASS
 	// ==================================================
 	for (auto* win : _windows) {
-
+ 
 		// --- Setup & State ---
 		std::string key      = std::format("{}|{}", win->PluginName(), win->Id());
 		auto&       winState = s_windowStates[key];
-
+ 
 		// --- Trigger Event Listeners automatically if state changed! ---
 		bool currentOpen = win->IsOpen();
 		bool wasOpen     = winState.wasOpen;
@@ -1469,12 +1469,12 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 			winState.wasOpen = currentOpen;
 			DispatchWindowEvent(win->PluginName(), win->Id(), currentOpen);
 		}
-
+ 
 		// Skip rendering if the game state suppresses the window.
 		if (IsWindowSuppressed(win)) {
 			continue;
 		}
-
+ 
 		// In VR, kPassInputToGame windows always render on the separate,
 		// always-on HUD pass instead (see ImGui::Renderer::DrawHud) — split
 		// by which pass this call is for. Flat has no separate pass, so they
@@ -1484,33 +1484,33 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 		if (a_passthroughOnly ? !isPassthroughWindow : (isPassthroughWindow && REL::Module::IsVR())) {
 			continue;
 		}
-
+ 
 		const char*       title     = win->Title();
 		FUCK::WindowFlags userFlags = win->GetFlags();
-
+ 
 		ImGuiWindowFlags flags = ImGuiWindowFlags_None;
-
+ 
 		// --- Flags Setup ---
 		bool noDecoration    = (userFlags & FUCK::WindowFlags::kNoDecoration);
 		bool ignoreUserScale = (userFlags & FUCK::WindowFlags::kIgnoreUserScale);
 		bool noResize        = (userFlags & FUCK::WindowFlags::kNoResize);
 		bool autoResize      = (userFlags & FUCK::WindowFlags::kAutoResize);
 		bool noMove          = (userFlags & FUCK::WindowFlags::kNoMove);
-
+ 
 		bool editable    = (userFlags & FUCK::WindowFlags::kEditable);
 		bool scalable    = editable && (userFlags & FUCK::WindowFlags::kScalable);
 		bool rotatable   = editable && (userFlags & FUCK::WindowFlags::kRotatable);
 		bool anchorRight = editable && (userFlags & FUCK::WindowFlags::kAnchorRight);
 		bool isEditing   = editable && _isOpen;
-
+ 
 		winState.anchorRight = anchorRight;
-
+ 
 		// While editing, the margin grows the window past the outline so its handles sit over it
 		ImVec2 editMargin = { 0.0f, 0.0f };
 		if (isEditing) {
 			float margin = kEditMargin * m.uiScale;
 			editMargin   = { margin, margin };
-
+ 
 			// Room for the handles at any angle, so turning never resizes or moves the window.
 			// A fixed-size window's body is its default size, as its margin is added on top below
 			if (rotatable) {
@@ -1519,15 +1519,15 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 				float  reach = std::max(std::sqrt(half.x * half.x + half.y * half.y) + margin, half.y + kRotateReach * m.uiScale);
 				editMargin   = { std::max(margin, reach - half.x), std::max(margin, reach - half.y) };
 			}
-
+ 
 			// Room above the outline for the reset icon, kept even while it's hidden so the window doesn't jump
 			editMargin.y = std::max(editMargin.y, margin + ImGui::GetFontSize());
-
+ 
 			// Whole pixels. ImGui snaps the window to a pixel, so a fractional margin shifts the body by a sub-pixel
 			// amount that can change its measured size, which changes the margin again next frame and jitters
 			editMargin = { std::ceil(editMargin.x), std::ceil(editMargin.y) };
 		}
-
+ 
 		flags |= ImGuiWindowFlags_NoTitleBar;
 		if (noDecoration) {
 			winState.isCollapsed  = false;
@@ -1536,7 +1536,7 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 		} else {
 			flags |= ImGuiWindowFlags_NoScrollbar;
 		}
-
+ 
 		if (noResize)
 			flags |= ImGuiWindowFlags_NoResize;
 		if (autoResize)
@@ -1544,7 +1544,7 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 		// Editable windows are moved by the Host's own drag below, not ImGui's
 		if (noMove || editable)
 			flags |= ImGuiWindowFlags_NoMove;
-
+ 
 		bool poppedInvisibleBg = false;
 		if (userFlags & FUCK::WindowFlags::kNoBackground) {
 			if (!IsInputBlocked()) {
@@ -1557,15 +1557,15 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 				poppedInvisibleBg = true;
 			}
 		}
-
+ 
 		// --- Collapse Logic ---
 		bool isCollapsed      = winState.isCollapsed;
 		bool wasCollapsed     = winState.wasCollapsed;
 		winState.wasCollapsed = isCollapsed;
-
+ 
 		// Get Metrics from Interface
 		ImVec2 targetSize = win->GetDefaultSize();
-
+ 
 		// Handle collapse override
 		if (isCollapsed) {
 			float targetW = (winState.size.x > 0.0f) ? winState.size.x : (winState.preCollapseSize.x > 0.0f) ? winState.preCollapseSize.x :
@@ -1579,15 +1579,15 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 			else if (winState.size.x > 0.0f)
 				targetSize = winState.size;
 		}
-
+ 
 		// --- Position Logic ---
 		bool isCustomPos = (userFlags & FUCK::WindowFlags::kCustomPosition);
-
+ 
 		if (editable) {
 			// Follow the default until the user moves it, so a consumer's default can change with its size
 			if (!winState.hasLoadedPos)
 				winState.pos = win->GetDefaultPos();
-
+ 
 			// Last frame's width places a right-anchored window. The margin keeps the content where it was
 			float  left   = anchorRight ? winState.pos.x - winState.bodySize.x : winState.pos.x;
 			ImVec2 winPos = { left - editMargin.x, winState.pos.y - editMargin.y };
@@ -1608,7 +1608,7 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 				FUCK::SetNextWindowPos(defPos, ImGuiCond_FirstUseEver);
 			}
 		}
-
+ 
 		// If AutoResize is active, ImGui shrinks the window dynamically. We bypass hard size forcing.
 		if (editable && !autoResize && !isCollapsed) {
 			// The edit margin is added around the body rather than taken out of it, so the body keeps its size
@@ -1624,7 +1624,7 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 				FUCK::SetNextWindowSize(sz, sizeCond);
 			}
 		}
-
+ 
 		// --- Host Chrome Interaction Protection ---
 		// Works from the live position, so custom-positioned windows are covered too
 		bool mouseOverChrome = false;
@@ -1632,33 +1632,33 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 			ImVec2 mouse      = ImGui::GetMousePos();
 			ImVec2 checkPos   = (winState.livePos.x != -1.0f) ? winState.livePos : (winState.hasLoadedPos ? winState.pos : win->GetDefaultPos());
 			float  checkWidth = (winState.liveSize.x != -1.0f) ? winState.liveSize.x : targetSize.x;
-
+ 
 			float paddingY      = (userFlags & FUCK::WindowFlags::kNoBackground) ? 0.0f : m.padBase;
 			float chromeBottomY = checkPos.y + paddingY + m.titleH + 1.0f;
-
+ 
 			// When collapsed, the entire window is basically just the chrome + padding.
 			if (winState.isCollapsed) {
 				float checkHeight = (winState.liveSize.y != -1.0f) ? winState.liveSize.y : (paddingY * 2.0f + m.titleH + 1.0f);
 				chromeBottomY     = checkPos.y + checkHeight;
 			}
-
+ 
 			winState.chromePos  = checkPos;
 			winState.chromeSize = ImVec2(checkWidth, chromeBottomY - checkPos.y);
-
+ 
 			if (mouse.x >= checkPos.x && mouse.x <= checkPos.x + checkWidth && mouse.y >= checkPos.y && mouse.y <= chromeBottomY) {
 				mouseOverChrome = true;
 			}
 		} else {
 			winState.chromePos = ImVec2(-1.0f, -1.0f);
 		}
-
+ 
 		bool isDraggingWindow = winState.isFocused && ImGui::IsMouseDown(ImGuiMouseButton_Left);
 		if ((userFlags & FUCK::WindowFlags::kPassInputToGame) && !IsInputBlocked() && !mouseOverChrome && !isDraggingWindow) {
 			flags |= ImGuiWindowFlags_NoInputs;
 		}
-
+ 
 		bool open = true;
-
+ 
 		// While editing, the margin grows the window past the outline so the corner handles sit over it
 		if (!noDecoration || (userFlags & FUCK::WindowFlags::kNoBackground)) {
 			// Push 0 padding for decorated windows and background-less overlays
@@ -1667,39 +1667,39 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 			// Give standard padding to frameless windows that still have a solid background panel
 			FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase + editMargin.x, m.padBase + editMargin.y));
 		}
-
+ 
 		// Combine the display title with the Host's unique tracking key
 		std::string windowLabel = std::format("{}###{}", title, key);
-
+ 
 		// Use the formatted string instead of raw title
 		if (FUCK::BeginWindow(windowLabel.c_str(), &open, flags)) {
 			if (poppedInvisibleBg) {
 				ImGui::PopStyleColor(2);  // Clear WindowBg and Border
 			}
-
+ 
 			ImVec2 curPos  = FUCK::GetWindowPos();
 			ImVec2 curSize = FUCK::GetWindowSize();
-
+ 
 			// Update live state for chrome protection
 			winState.livePos   = curPos;
 			winState.liveSize  = curSize;
 			winState.isFocused = ImGui::IsWindowFocused();
-
+ 
 			// An auto-sized window is capped to the screen, so a big enough widget would read back smaller than it is.
 			// Work its size out from the content instead, which isn't capped. It's the same sum ImGui uses to fit the window
 			ImVec2 fullSize = curSize;
 			if (editable && autoResize) {
 				ImGuiWindow* window = ImGui::GetCurrentWindow();
 				fullSize            = { window->ContentSizeIdeal.x + window->WindowPadding.x * 2.0f + window->DecoOuterSizeX1 + window->DecoOuterSizeX2,
-							   window->ContentSizeIdeal.y + window->WindowPadding.y * 2.0f + window->DecoOuterSizeY1 + window->DecoOuterSizeY2 };
+				                        window->ContentSizeIdeal.y + window->WindowPadding.y * 2.0f + window->DecoOuterSizeY1 + window->DecoOuterSizeY2 };
 			}
-
+ 
 			if (editable) {
 				winState.bodySize = { fullSize.x - editMargin.x * 2.0f, fullSize.y - editMargin.y * 2.0f };
 				s_windowScale     = scalable ? winState.scale : 1.0f;
 				s_windowRotation  = rotatable ? winState.rotation : 0.0f;
 			}
-
+ 
 			// Auto-Close on Click Outside
 			if (open && wasOpen && (userFlags & FUCK::WindowFlags::kCloseOnClickOutside)) {
 				if (globalMouseClick && !ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel)) {
@@ -1708,13 +1708,13 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 					}
 				}
 			}
-
+ 
 			// Auto-save settings on move/resize end preventing overwrite during collapse.
 			// Editable windows save their own position, which isn't the window's corner
 			if (!editable && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
 				bool posChanged  = !isCustomPos && !noMove && (std::abs(curPos.x - winState.pos.x) > 1.0f || std::abs(curPos.y - winState.pos.y) > 1.0f);
 				bool sizeChanged = !isCollapsed && (std::abs(curSize.x - winState.size.x) > 1.0f || std::abs(curSize.y - winState.size.y) > 1.0f);
-
+ 
 				if (posChanged || sizeChanged) {
 					if (posChanged)
 						winState.pos = curPos;
@@ -1725,31 +1725,31 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 					SaveWorkspace();
 				}
 			}
-
+ 
 			if (win->GetFlags() & FUCK::WindowFlags::kExtendBorder)
 				FUCK::ExtendWindowPastBorder();
-
+ 
 			if (!noDecoration) {
 				// --- Window Chrome Decoration (unscaled) ---
 				float winWidth = FUCK::GetWindowSize().x;
-
+ 
 				ImVec2 headerStartCursor = FUCK::GetCursorPos();
 				ImVec2 cursorScreen      = FUCK::GetCursorScreenPos();
-
+ 
 				FUCK::BeginGroup();
-
+ 
 				// 1. Collapse Icon
 				float iconW = 0.0f;
-
+ 
 				if (iconArrow) {
 					// Calculate exact physical dimensions of the arrow first
 					bool pointsDown = !isCollapsed;
 					auto ap         = chromeArrow(pointsDown, m.titleH);
-
+ 
 					// Lock horizontal container width to its maximum dimension to prevent shifting on rotation
 					float maxIconDim = std::max(ap.drawSize.x, ap.drawSize.y);
 					float btnWidth   = (m.titleIconPadX * 2.0f) + maxIconDim;
-
+ 
 					// Tightly wrap the invisible button around the graphic
 					if (ImGui::InvisibleButton("##CollapseToggle", ImVec2(btnWidth, m.titleH))) {
 						winState.isCollapsed = !isCollapsed;
@@ -1763,52 +1763,52 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 					}
 					bool  isHovered = ImGui::IsItemHovered();
 					ImU32 iconColor = isHovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
-
+ 
 					float iconOffsetX = (maxIconDim - ap.drawSize.x) * 0.5f;
-
+ 
 					ImVec2 drawPos = cursorScreen;
 					drawPos.x += m.titleIconPadX + iconOffsetX;
 					drawPos.y += ap.offsetY + m.titleIconNudgeY;
-
+ 
 					ImGui::DrawArrowIcon(ImGui::GetWindowDrawList(), drawPos, ap.drawSize, iconColor,
 						pointsDown ? ImGui::IconDirection::kDown : ImGui::IconDirection::kRight);
-
+ 
 					// Give the title text slightly more breathing room past the exact button width
 					iconW = btnWidth + m.titleIconPadX;
 				}
-
+ 
 				// 2. Title Text
 				ImFont* baseFont = ImGui::GetFont();
-
+ 
 				FUCK::SetCursorPos({ iconW, m.titleTextOffsetY });
 				ImGui::GetWindowDrawList()->AddText(baseFont, m.titleFontSize,
 					FUCK::GetCursorScreenPos(), ImGui::GetColorU32(ImGuiCol_Text), title);
-
+ 
 				// 3. Close Button
 				const float btnSize = m.titleH;
 				const float btnX    = winWidth - btnSize - headerPadding;
-
+ 
 				FUCK::SetCursorPos({ btnX, 0 });
 				if (ImGui::InvisibleButton("##WinClose", ImVec2(btnSize, btnSize))) {
 					open = false;
 				}
-
+ 
 				{
 					const char* xIcon      = ICON_FA_XMARK;
 					float       uiFontSize = ImGui::GetStyle().FontSizeBase * m.uiScale;
-
+ 
 					ImGui::PushFont(nullptr, uiFontSize);
 					ImVec2 textSize = ImGui::CalcTextSize(xIcon);
 					ImGui::PopFont();
-
+ 
 					ImVec2 btnScreenPos = ImGui::GetItemRectMin();
 					ImVec2 textPos      = {
                         btnScreenPos.x + (btnSize - textSize.x) * 0.5f,
                         btnScreenPos.y + (btnSize - textSize.y) * 0.5f + (1.0f * m.uiScale)
 					};
-
+ 
 					ImU32 xColor = ImGui::IsItemHovered() ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
-
+ 
 					ImGui::GetWindowDrawList()->AddText(
 						baseFont,
 						uiFontSize,
@@ -1816,9 +1816,9 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 						xColor,
 						xIcon);
 				}
-
+ 
 				FUCK::EndGroup();
-
+ 
 				// Double Click Header Interaction
 				if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && !ImGui::IsAnyItemHovered()) {
 					if (ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly)) {
@@ -1830,36 +1830,37 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 						SaveWorkspace();
 					}
 				}
-
+ 
 				// 4. Separator
+				// ImGui's own, not FUCK::'s, which pads consumers' separators and would push the chrome down
 				FUCK::SetCursorPos({ headerStartCursor.x, m.titleH });
-				FUCK::SeparatorThick();
-
+				ImGui::SeparatorThick();
+ 
 				// 5. Content Child (scaled)
 				if (!winState.isCollapsed && !isCollapsed) {
 					FUCK::SetCursorPosX(0.0f);
-
+ 
 					FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase, m.padBase));
-
+ 
 					ImGuiChildFlags  childFlags  = ImGuiChildFlags_AlwaysUseWindowPadding;
 					ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoBackground;
-
+ 
 					if (ImGui::BeginChild("##Content", ImVec2(0, 0), childFlags, windowFlags)) {
 						ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
 						pushContentScale(ignoreUserScale);
 						_currentRenderingPlugin = win->PluginName();
-
+ 
 						// So SetWindowPos/Size from Draw() apply to the window, not this child
 						FUCK::Host::SetContentChild(ImGui::GetCurrentWindow());
 						win->Draw();
 						FUCK::Host::SetContentChild(nullptr);
-
+ 
 						_currentRenderingPlugin.clear();
 						popContentScale();
 						ImGui::PopItemWidth();
 					}
 					ImGui::EndChild();
-
+ 
 					FUCK::PopStyleVar();
 				}
 			} else {
@@ -1867,49 +1868,49 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 				// Rotated content can reach past the window's corners, so don't clip it to the window
 				if (rotatable)
 					ImGui::PushClipRect({ 0.0f, 0.0f }, ImGui::GetIO().DisplaySize, false);
-
+ 
 				pushContentScale(ignoreUserScale);
 				_currentRenderingPlugin = win->PluginName();
 				win->Draw();
 				_currentRenderingPlugin.clear();
 				popContentScale();
-
+ 
 				if (rotatable)
 					ImGui::PopClipRect();
 			}
-
+ 
 			if (isEditing) {
 				UpdateEditableWindow(winState, curPos, fullSize, editMargin, scalable, rotatable);
 			}
 		}
 		FUCK::EndWindow();
-
+ 
 		s_windowScale    = 1.0f;
 		s_windowRotation = 0.0f;
-
+ 
 		FUCK::PopStyleVar();
-
+ 
 		if (!open) {
 			win->SetOpen(false);
 			UpdateGameState();
-
+ 
 			if (!IsInputBlocked()) {
 				MANAGER(Input)->ClearState();
 			}
 		}
 	}
-
+ 
 	// ==================================================
 	// MAIN FUCK WORKSPACE MENU RENDER PASS
 	// ==================================================
-
+ 
 	if (a_passthroughOnly || !_isOpen || menusHidden)
 		return;
-
+ 
 	ImGui::GetIO().MouseDrawCursor = false;
-
+ 
 	const float collapsedH = m.titleH * 1.02f;
-
+ 
 	if (_pendingWindowRestore) {
 		ClampWindowToScreen(_cfg.windowPos, _cfg.windowSize);
 		ImGui::SetNextWindowPos(_cfg.windowPos, ImGuiCond_Always);
@@ -1928,25 +1929,25 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 			ImGui::SetNextWindowSize(_cfg.windowSize, ImGuiCond_FirstUseEver);
 		}
 	}
-
+ 
 	_wasCollapsed = _isCollapsed;
-
+ 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-
+ 
 	std::string windowTitle = std::format("##{}", "$FUCK_Title"_T);
 	bool        wantsOpen   = true;
-
+ 
 	ImGuiWindowFlags winFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
 	if (_isCollapsed)
 		winFlags |= ImGuiWindowFlags_NoResize;
-
+ 
 	if (ImGui::Begin(windowTitle.c_str(), &wantsOpen, winFlags)) {
 		ImGui::ExtendWindowPastBorder();
-
+ 
 		if (!_isCollapsed) {
 			_cfg.windowPos  = ImGui::GetWindowPos();
 			_cfg.windowSize = ImGui::GetWindowSize();
-
+ 
 			// Auto-save settings on move/resize end
 			if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
 				if (_cfg.windowPos.x != _lastSavedPos.x || _cfg.windowPos.y != _lastSavedPos.y ||
@@ -1957,70 +1958,70 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 				}
 			}
 		}
-
+ 
 		// -- Custom Title Bar (unscaled) --
 		{
 			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
 			ImGui::BeginGroup();
-
+ 
 			float winWidth = ImGui::GetWindowSize().x;
-
+ 
 			ImVec2 cursorScreen = ImGui::GetCursorScreenPos();
-
+ 
 			// 1. Collapse Icon
 			if (iconArrow) {
 				// Calculate exact physical dimensions of the arrow first
 				bool pointsDown = !_isCollapsed;
 				auto ap         = chromeArrow(pointsDown, m.titleH);
-
+ 
 				float maxIconDim = std::max(ap.drawSize.x, ap.drawSize.y);
 				float btnWidth   = (m.titleIconPadX * 2.0f) + maxIconDim;
-
+ 
 				ImGui::SetCursorPos({ 0, 0 });
 				// Tightly wrap the invisible button around the graphic
 				if (ImGui::InvisibleButton("##CollapseToggle", ImVec2(btnWidth, m.titleH))) {
 					_isCollapsed = !_isCollapsed;
 				}
-
+ 
 				bool  isHovered = ImGui::IsItemHovered();
 				ImU32 iconColor = isHovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
-
+ 
 				float iconOffsetX = (maxIconDim - ap.drawSize.x) * 0.5f;
-
+ 
 				ImVec2 drawPos = cursorScreen;
 				drawPos.x += m.titleIconPadX + iconOffsetX;
 				drawPos.y += ap.offsetY + m.titleIconNudgeY;
-
+ 
 				ImGui::DrawArrowIcon(ImGui::GetWindowDrawList(), drawPos, ap.drawSize, iconColor,
 					pointsDown ? ImGui::IconDirection::kDown : ImGui::IconDirection::kRight);
 			}
-
+ 
 			// 2. Close Button
 			float btnSize = m.titleH;
 			float xPos    = winWidth - btnSize - headerPadding;
-
+ 
 			ImGui::SetCursorPos({ xPos, 0.0f });
 			ImVec2 btnCursor = ImGui::GetCursorScreenPos();
-
+ 
 			if (ImGui::InvisibleButton("##CloseBtn", ImVec2(btnSize, btnSize))) {
 				wantsOpen = false;
 			}
-
+ 
 			{
 				const char* xIcon      = ICON_FA_XMARK;
 				float       uiFontSize = ImGui::GetStyle().FontSizeBase * m.uiScale;
-
+ 
 				ImGui::PushFont(nullptr, uiFontSize);
 				ImVec2 textSize = ImGui::CalcTextSize(xIcon);
 				ImGui::PopFont();
-
+ 
 				ImVec2 textPos = {
 					btnCursor.x + (btnSize - textSize.x) * 0.5f,
 					btnCursor.y + (btnSize - textSize.y) * 0.5f + (1.0f * m.uiScale)
 				};
-
+ 
 				ImU32 xColor = ImGui::IsItemHovered() ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
-
+ 
 				ImGui::GetWindowDrawList()->AddText(
 					ImGui::GetFont(),
 					uiFontSize,
@@ -2028,10 +2029,10 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 					xColor,
 					xIcon);
 			}
-
+ 
 			ImGui::EndGroup();
 			ImGui::PopStyleVar();
-
+ 
 			// Double Click Header
 			if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && !ImGui::IsAnyItemHovered()) {
 				ImVec2 mousePos = ImGui::GetMousePos();
@@ -2042,54 +2043,54 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 				}
 			}
 		}
-
+ 
 		// -- Content --
 		if (!_isCollapsed && !_wasCollapsed) {
 			float contentY = m.titleH;
 			ImGui::SetCursorPos({ 0, contentY });
-
+ 
 			float availHeight = ImGui::GetContentRegionAvail().y;
-
+ 
 			// -- Sidebar (unscaled) --
 			auto renderSidebar = [&]() {
 				const float topPadding       = 2.0f * m.uiScale;
 				const float bottomPadding    = 2.0f * m.uiScale;
 				const float textVisualOffset = 1.0f * m.uiScale;
-
+ 
 				ImFont* regularFont = MANAGER(IconFont)->GetRegularFont();
-
+ 
 				auto GetOverrides = [&](FUCK::ITool* t) -> ToolOverrideState& {
 					return _toolOverrides[std::format("{}|{}", t->PluginName(), t->Name())];
 				};
-
+ 
 				std::vector<FUCK::ITool*>            favTools;
 				std::vector<FUCK::ITool*>            looseTools;
 				StringMap<std::vector<FUCK::ITool*>> toolGroups;
-
+ 
 				ImGui::BeginChild("Sidebar", ImVec2(m.sidebarWidth, availHeight), true, ImGuiWindowFlags_None);
 				{
 					ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
 					ImVec2 headerStart = ImGui::GetCursorPos();
 					headerStart.y += topPadding;
-
+ 
 					// --- HEADER: TOOLS (Centred) ---
 					ImGui::SetCursorPos(headerStart);
-
+ 
 					// Bypassing ImGui::PushFont scaling
 					ImGui::PushFont(regularFont, m.sidebarFontSize);
 					float       textHeightCalc = ImGui::GetTextLineHeight();
 					float       sidebarAvailW  = ImGui::GetContentRegionAvail().x;
 					const char* headerText     = "$FUCK_Tools"_T;
 					float       headerW        = ImGui::CalcTextSize(headerText).x;
-
+ 
 					ImGui::SetCursorPosX(headerStart.x + (sidebarAvailW - headerW) * 0.5f);
 					ImGui::SetCursorPosY(headerStart.y + (m.sidebarItemH - textHeightCalc) * 0.5f + textVisualOffset);
 					ImGui::TextUnformatted(headerText);
 					ImGui::PopFont();
-
+ 
 					ImGui::SetCursorPos(ImVec2(headerStart.x, headerStart.y + m.sidebarItemH));
 					ImGui::SeparatorThick();
-
+ 
 					// --- FILTER BOX ---
 					static char filterBuf[128] = "";
 					if (_cfg.showSidebarFilter) {
@@ -2097,56 +2098,50 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 						ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8.0f * m.uiScale, 6.0f * m.uiScale));
 						ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f * m.uiScale);
 						ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f * m.uiScale);
-
+ 
 						// Sync background with the active theme's input box styling
 						ImGui::PushStyleColor(ImGuiCol_FrameBg, ImGui::GetUserStyleColorVec4(ImGui::USER_STYLE::kComboBoxTextBox));
-
+ 
 						ImGui::SetNextItemWidth(-1.0f);
-
-						// CTRL+F to focus the sidebar filter
-						if (ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_F, false)) {
-							ImGui::SetKeyboardFocusHere();
-						}
-
 						ImGui::InputTextWithHint("##SidebarFilter", "$FUCK_Sidebar_FilterHint"_T, filterBuf, sizeof(filterBuf));
-
+ 
 						ImGui::PopStyleColor(1);
 						ImGui::PopStyleVar(3);
 						ImGui::PopFont();
-
+ 
 						ImGui::Dummy(ImVec2(0.0f, 4.0f * m.uiScale));
 					}
-
+ 
 					bool        filtering = filterBuf[0] != '\0';
 					std::string lowerFilter;
 					if (filtering) {
 						lowerFilter = clib_util::string::tolower(filterBuf);
 					}
-
+ 
 					static std::string lowerNameBuffer;
-
+ 
 					// Evaluate and distribute tools into collections
 					for (auto* tool : _tools) {
 						if (!tool->ShowInSidebar())
 							continue;
-
+ 
 						auto& over = GetOverrides(tool);
 						if (over.isHidden)
 							continue;
-
+ 
 						std::string resolvedName = over.customName.empty() ? tool->Name() : over.customName;
-
+ 
 						if (filtering) {
 							// Copy to buffer and lower-case in-place to avoid allocations
 							lowerNameBuffer = resolvedName;
 							std::transform(lowerNameBuffer.begin(), lowerNameBuffer.end(), lowerNameBuffer.begin(),
 								[](unsigned char c) { return static_cast<unsigned char>(std::tolower(c)); });
-
+ 
 							auto score = rapidfuzz::fuzz::partial_token_ratio(lowerFilter, lowerNameBuffer);
 							if (score < 65.0)
 								continue;
 						}
-
+ 
 						if (_cfg.showSidebarFavourites && over.isFavourited) {
 							favTools.push_back(tool);
 						} else {
@@ -2156,14 +2151,14 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 								resolvedGrp = tool->Group() ? tool->Group() : "";
 							if (resolvedGrp == "##ROOT")
 								resolvedGrp = "";
-
+ 
 							if (resolvedGrp.empty())
 								looseTools.push_back(tool);
 							else
 								toolGroups[resolvedGrp].push_back(tool);
 						}
 					}
-
+ 
 					auto sortToolsAlphabetically = [&](FUCK::ITool* a, FUCK::ITool* b) {
 						auto& oa = GetOverrides(a);
 						auto& ob = GetOverrides(b);
@@ -2173,11 +2168,11 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 						std::string nb = ob.customName.empty() ? b->Name() : ob.customName;
 						return _stricmp(na.c_str(), nb.c_str()) < 0;
 					};
-
+ 
 					auto sortToolsByRegOrder = [&](FUCK::ITool* a, FUCK::ITool* b) {
 						return GetOverrides(a).sortOrder < GetOverrides(b).sortOrder;
 					};
-
+ 
 					struct SidebarEntry
 					{
 						const char*                label;
@@ -2187,9 +2182,9 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 						std::vector<FUCK::ITool*>* tools     = nullptr;
 						int                        sortOrder = 0;
 					};
-
+ 
 					std::vector<SidebarEntry> entries;
-
+ 
 					if (!favTools.empty()) {
 						std::sort(favTools.begin(), favTools.end(), sortToolsAlphabetically);
 						if (_cfg.groupFavourites) {
@@ -2202,13 +2197,13 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 							}
 						}
 					}
-
+ 
 					for (auto* t : looseTools) {
 						auto&       over = GetOverrides(t);
 						const char* name = over.customName.empty() ? t->Name() : over.customName.c_str();
 						entries.push_back({ name, "", false, t, nullptr, over.sortOrder });
 					}
-
+ 
 					for (auto& [name, tools] : toolGroups) {
 						std::stable_sort(tools.begin(), tools.end(), sortToolsByRegOrder);
 						auto&       gOver      = _groupOverrides[name];
@@ -2216,30 +2211,30 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 						int         groupOrder = (_cfg.showSidebarFavourites && gOver.isFavourited) ? -999999 : gOver.sortOrder;
 						entries.push_back({ dispName, name.c_str(), true, nullptr, &tools, groupOrder });
 					}
-
+ 
 					std::sort(entries.begin(), entries.end(), [](const SidebarEntry& a, const SidebarEntry& b) {
 						if (a.sortOrder != b.sortOrder)
 							return a.sortOrder < b.sortOrder;
 						return _stricmp(a.label, b.label) < 0;
 					});
-
+ 
 					auto  apRight           = chromeArrow(false, m.sidebarItemH);
 					float alignedTextOffset = (m.sidebarIndent * 0.5f) + apRight.drawSize.x + (10.0f * m.uiScale);
-
+ 
 					auto RenderSidebarItem = [&](FUCK::ITool* tool, const char* label, float extraIndent = 0.0f) {
 						ImGuiWindow* window = ImGui::GetCurrentWindow();
 						if (window->SkipItems)
 							return;  // FIX: Prevents EXCEPTION_ACCESS_VIOLATION during collapse
-
+ 
 						ImGui::PushID(tool);
-
+ 
 						bool  isSelected = (_activeTool == tool);
 						auto& over       = GetOverrides(tool);
-
+ 
 						// Cache both Screen and Window positions before the Selectable moves the cursor!
 						const auto startScreenPos = ImGui::GetCursorScreenPos();
 						const auto startPos       = ImGui::GetCursorPos();
-
+ 
 						// Draw Selectable (Full width background & highlight)
 						if (ImGui::Selectable("##SidebarItem", isSelected, ImGuiSelectableFlags_AllowOverlap, ImVec2(0, m.sidebarItemH))) {
 							if (_activeTool != tool) {
@@ -2252,77 +2247,77 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 								_activeTool->OnOpen();
 							}
 						}
-
+ 
 						bool itemHovered = ImGui::IsItemHovered(0);
 						bool itemFocused = ImGui::IsItemFocused();
-
+ 
 						// Add Gamepad 'Y' shortcut to favourite tools on the sidebar
 						if ((itemHovered || itemFocused) && ImGui::IsKeyPressed(ImGuiKey_GamepadFaceUp, false)) {
 							over.isFavourited = !over.isFavourited;
 							SaveWorkspace();
 						}
-
+ 
 						ImVec2 endPos = ImGui::GetCursorPos();  // Save position after selectable
-
+ 
 						// Bypassing ImGui::PushFont scaling
 						ImGui::PushFont(regularFont, m.sidebarFontSize);
 						float textY = startPos.y + (m.sidebarItemH - textHeightCalc) * 0.5f + textVisualOffset;
-
+ 
 						ImGui::SetCursorPos({ startPos.x + alignedTextOffset + extraIndent, textY });
 						ImGui::TextUnformatted(label);
-
+ 
 						// Draw Star
 						if (_cfg.showSidebarFavourites && (over.isFavourited || itemHovered)) {
 							const char* starIcon     = ICON_FA_STAR;
 							float       starScale    = 0.85f;
 							float       starFontSize = m.sidebarFontSize * starScale;
-
+ 
 							ImGui::PushFont(regularFont, starFontSize);
 							ImVec2 starSize = ImGui::CalcTextSize(starIcon);
 							ImGui::PopFont();
-
+ 
 							float starX = startScreenPos.x + sidebarAvailW - starSize.x - (15.0f * m.uiScale);
 							float starY = startScreenPos.y + (m.sidebarItemH - starFontSize) * 0.5f - (1.0f * m.uiScale);
-
+ 
 							// Hit-testing logic bypassing ImGui Item overlap clashing
 							ImRect starBB(
 								ImVec2(starX - (5.0f * m.uiScale), startScreenPos.y),
 								ImVec2(starX + starSize.x + (5.0f * m.uiScale), startScreenPos.y + m.sidebarItemH));
 							bool starHovered = ImGui::IsMouseHoveringRect(starBB.Min, starBB.Max);
-
+ 
 							if (starHovered && ImGui::IsMouseClicked(0)) {
 								over.isFavourited = !over.isFavourited;
 								SaveWorkspace();
 							}
-
+ 
 							ImU32 starCol = starHovered ? IM_COL32(255, 255, 100, 255) : (over.isFavourited ? IM_COL32(255, 215, 0, 255) : IM_COL32(150, 150, 150, 150));
-
+ 
 							ImGui::GetWindowDrawList()->AddText(regularFont, starFontSize,
 								ImVec2(starX, starY),
 								starCol, starIcon);
 						}
-
+ 
 						ImGui::PopFont();
 						ImGui::SetCursorPos(endPos);  // Restore cursor to next line
 						ImGui::PopID();
 					};
-
+ 
 					auto RenderSidebarGroup = [&](const char* groupName, const char* origGroup, std::vector<FUCK::ITool*>& tools) {
 						ImGuiWindow* window = ImGui::GetCurrentWindow();
 						if (window->SkipItems)
 							return;
-
+ 
 						// Bypassing ImGui::PushFont scaling
 						ImGui::PushFont(regularFont, m.sidebarFontSize);
-
+ 
 						// Custom TreeNode rendering
 						ImGui::PushID(groupName);
 						ImGuiID id     = window->GetID(groupName);
 						bool    isOpen = window->DC.StateStorage->GetInt(id, 0);
-
+ 
 						ImVec2 pos = window->DC.CursorPos;
 						ImRect bb(pos, pos + ImVec2(ImGui::GetContentRegionAvail().x, m.sidebarItemH));
-
+ 
 						ImGui::ItemSize(bb);
 						if (ImGui::ItemAdd(bb, id)) {
 							bool hovered, held;
@@ -2333,9 +2328,9 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 							}
 							if (hovered)
 								ImGui::RenderFrame(bb.Min, bb.Max, ImGui::GetColorU32(ImGuiCol_HeaderHovered), false);
-
+ 
 							bool isFocused = ImGui::IsItemFocused();
-
+ 
 							// Add Gamepad 'Y' shortcut to favourite groups on the sidebar
 							if ((hovered || isFocused) && ImGui::IsKeyPressed(ImGuiKey_GamepadFaceUp, false)) {
 								if (origGroup && origGroup[0] != '\0') {
@@ -2344,13 +2339,13 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 									SaveWorkspace();
 								}
 							}
-
+ 
 							// Draw chevron
 							if (iconArrow) {
 								ImU32 col   = ImGui::GetDynamicTextColor(hovered);
 								bool  pDown = isOpen;
 								auto  ap    = chromeArrow(pDown, m.sidebarItemH);
-
+ 
 								ImVec2 drawPos = {
 									pos.x + (m.sidebarIndent * 0.5f),
 									pos.y + ap.offsetY + textVisualOffset
@@ -2358,53 +2353,53 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 								ImGui::DrawArrowIcon(window->DrawList, drawPos, ap.drawSize, col,
 									pDown ? ImGui::IconDirection::kDown : ImGui::IconDirection::kRight);
 							}
-
+ 
 							float textY = bb.Min.y + (m.sidebarItemH - ImGui::CalcTextSize(groupName).y) * 0.5f + textVisualOffset;
 							ImGui::RenderText({ pos.x + alignedTextOffset, textY }, groupName);
-
+ 
 							// Draw Star
 							if (origGroup && origGroup[0] != '\0') {
 								bool isFav = false;
-
+ 
 								// Transparent lookup
 								auto it = _groupOverrides.find(origGroup);
 								if (it != _groupOverrides.end()) {
 									isFav = it->second.isFavourited;
 								}
-
+ 
 								if (_cfg.showSidebarFavourites && (isFav || hovered)) {
 									const char* starIcon     = ICON_FA_STAR;
 									float       starScale    = 0.85f;
 									float       starFontSize = m.sidebarFontSize * starScale;
-
+ 
 									ImGui::PushFont(regularFont, starFontSize);
 									ImVec2 starSize = ImGui::CalcTextSize(starIcon);
 									ImGui::PopFont();
-
+ 
 									float starX = bb.Min.x + sidebarAvailW - starSize.x - (15.0f * m.uiScale);
 									float starY = bb.Min.y + (m.sidebarItemH - starFontSize) * 0.5f - (1.0f * m.uiScale);
-
+ 
 									// Hit-testing logic bypassing ImGui Item overlap clashing
 									ImRect starBB(
 										ImVec2(starX - (5.0f * m.uiScale), bb.Min.y),
 										ImVec2(starX + starSize.x + (5.0f * m.uiScale), bb.Min.y + m.sidebarItemH));
 									bool starHovered = ImGui::IsMouseHoveringRect(starBB.Min, starBB.Max);
-
+ 
 									if (starHovered && ImGui::IsMouseClicked(0)) {
 										isFav                                   = !isFav;
 										_groupOverrides[origGroup].isFavourited = isFav;
 										SaveWorkspace();
 									}
-
+ 
 									ImU32 starCol = starHovered ? IM_COL32(255, 255, 100, 255) : (isFav ? IM_COL32(255, 215, 0, 255) : IM_COL32(150, 150, 150, 150));
-
+ 
 									ImGui::GetWindowDrawList()->AddText(regularFont, starFontSize,
 										ImVec2(starX, starY),
 										starCol, starIcon);
 								}
 							}
 						}
-
+ 
 						if (isOpen) {
 							for (auto* tool : tools) {
 								auto&       over         = GetOverrides(tool);
@@ -2412,11 +2407,11 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 								RenderSidebarItem(tool, resolvedName, m.sidebarIndent);
 							}
 						}
-
+ 
 						ImGui::PopID();
 						ImGui::PopFont();
 					};
-
+ 
 					for (auto& entry : entries) {
 						if (entry.isGroup) {
 							RenderSidebarGroup(entry.label, entry.origGroup, *entry.tools);
@@ -2424,25 +2419,25 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 							RenderSidebarItem(entry.tool, entry.label);
 						}
 					}
-
+ 
 					// --- FOOTER: SETTINGS (Centred) ---
 					float childHeight     = ImGui::GetWindowSize().y;
 					float separatorHeight = 1.0f;
 					float settingsY       = childHeight - m.sidebarItemH - bottomPadding;
-
+ 
 					float minSettingY = ImGui::GetCursorPos().y + separatorHeight;
 					if (settingsY < minSettingY)
 						settingsY = minSettingY;
-
+ 
 					ImGui::SetCursorPosY(settingsY - separatorHeight);
 					ImGui::SeparatorThick();
-
+ 
 					ImGui::SetCursorPosY(settingsY);
 					{
 						auto*      settingsTool = &_settingsTool;
 						bool       isSelected   = (_activeTool == settingsTool);
 						const auto cursorPos    = ImGui::GetCursorPos();
-
+ 
 						if (ImGui::Selectable("##SETTINGS", isSelected, 0, ImVec2(0, m.sidebarItemH))) {
 							if (_activeTool != settingsTool) {
 								if (_activeTool) {
@@ -2454,20 +2449,20 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 								_activeTool->OnOpen();
 							}
 						}
-
+ 
 						ImVec2 endPos = ImGui::GetCursorPos();
 						ImGui::SetCursorPos(cursorPos);
-
+ 
 						// Bypassing ImGui::PushFont scaling
 						ImGui::PushFont(regularFont, m.sidebarFontSize);
-
+ 
 						const char* settingText = "$FUCK_Settings"_T;
 						float       setW        = ImGui::CalcTextSize(settingText).x;
-
+ 
 						ImGui::SetCursorPosX(cursorPos.x + (sidebarAvailW - setW) * 0.5f);
 						ImGui::SetCursorPosY(cursorPos.y + (m.sidebarItemH - textHeightCalc) * 0.5f + textVisualOffset);
 						ImGui::TextUnformatted(settingText);
-
+ 
 						ImGui::PopFont();
 						ImGui::SetCursorPos(endPos);
 					}
@@ -2476,7 +2471,7 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 				}
 				ImGui::EndChild();
 			};
-
+ 
 			// -- Content (scaled) --
 			auto renderContent = [&](float width) {
 				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase, m.padBase));
@@ -2487,13 +2482,13 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 						_activeTool->Draw();
 					else
 						ImGui::CenteredText("$FUCK_NoToolSelected"_T, true);
-
+ 
 					popContentScale();
 				}
 				ImGui::EndChild();
 				ImGui::PopStyleVar();
 			};
-
+ 
 			if (_cfg.sidebarOnRight) {
 				float contentWidth = ImGui::GetContentRegionAvail().x - m.sidebarWidth - ImGui::GetStyle().ItemSpacing.x;
 				renderContent(contentWidth);
@@ -2508,7 +2503,7 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 	}
 	ImGui::End();
 	ImGui::PopStyleVar();
-
+ 
 	if (!wantsOpen)
 		Close();
 }
