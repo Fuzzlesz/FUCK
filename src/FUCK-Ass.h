@@ -86,19 +86,4 @@ namespace FUCK::Host
 	FUCK_ASS_FLAG(ColorEditFlags::kInputHSV,         ImGuiColorEditFlags_InputHSV);
 
 #undef FUCK_ASS_FLAG
-
-	// ItemFlags use pre-1.91 values, so convert
-	inline ImGuiItemFlags ToImGuiItemFlags(ItemFlags flags)
-	{
-		ImGuiItemFlags out = ImGuiItemFlags_None;
-		if (flags & ItemFlags::kNoTabStop)
-			out |= ImGuiItemFlags_NoTabStop;
-		if (flags & ItemFlags::kButtonRepeat)
-			out |= ImGuiItemFlags_ButtonRepeat;
-		if (flags & ItemFlags::kDisabled)
-			out |= ImGuiItemFlags_Disabled;
-		if (flags & ItemFlags::kNoNav)
-			out |= ImGuiItemFlags_NoNav;
-		return out;
-	}
 }

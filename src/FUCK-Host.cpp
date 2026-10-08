@@ -1,4 +1,3 @@
-#include "FUCK-Ass.h"
 #include "FUCK-Host.h"
 #include "FUCK-Man.h"
 
@@ -376,7 +375,7 @@ namespace FUCK::Host
 		Settings::GetSingleton()->LoadINI(userPath.c_str(), [userdata, callback](CSimpleIniA& ini) { callback(ini, userdata); }, true);
 	}
 
-	static void LoadPluginKeybindsDefaults_Impl(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*))
+		static void LoadPluginKeybindsDefaults_Impl(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*))
 	{
 		if (!callback || !pluginName)
 			return;
@@ -387,7 +386,20 @@ namespace FUCK::Host
 		});
 	}
 
-	static void PushItemFlag_Impl(ItemFlags flag, bool enabled) { ImGui::PushItemFlag(ToImGuiItemFlags(flag), enabled); }
+	// FUCK's ItemFlags use pre-1.91 values, so convert
+	static void PushItemFlag_Impl(FUCK::ItemFlags flag, bool enabled)
+	{
+		ImGuiItemFlags out = ImGuiItemFlags_None;
+		if (flag & FUCK::ItemFlags::kNoTabStop)
+			out |= ImGuiItemFlags_NoTabStop;
+		if (flag & FUCK::ItemFlags::kButtonRepeat)
+			out |= ImGuiItemFlags_ButtonRepeat;
+		if (flag & FUCK::ItemFlags::kDisabled)
+			out |= ImGuiItemFlags_Disabled;
+		if (flag & FUCK::ItemFlags::kNoNav)
+			out |= ImGuiItemFlags_NoNav;
+		ImGui::PushItemFlag(out, enabled);
+	}
 	static void PopItemFlag_Impl() { ImGui::PopItemFlag(); }
 
 	static void PushID_Str_Impl(const char* str_id) { ImGui::PushID(str_id); }
