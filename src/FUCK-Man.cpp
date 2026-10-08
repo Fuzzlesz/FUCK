@@ -70,7 +70,7 @@ static constexpr float kEditMargin   = 12.0f;  // room past the outline for the 
 static constexpr float kEditOutline  = 4.0f;   // outline distance from the window body
 static constexpr float kRotateReach  = 36.0f;  // rotation handle's reach past the body's top edge
 static constexpr float kMinEditScale = 0.5f;
-static constexpr float kMaxEditScale = 2.0f;
+static constexpr float kMaxEditScale = 10.0f;
 
 // Set while a window is drawn, for GetWindowScale() and GetWindowRotation()
 static float s_windowScale    = 1.0f;
