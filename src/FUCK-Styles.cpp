@@ -185,6 +185,9 @@ void ThemeEditorWindow::Draw()
 		if (FUCK::DragFloat2("$FUCK_Styles_LabelAlign"_T, &style->user.labelAlign.x, 0.01f, 0.0f, 1.0f, "%.2f"))
 			style->RefreshStyle();
 
+		// Read live by the buttons and tabs, so needs no refresh
+		FUCK::DragFloat2("$FUCK_Styles_ButtonTextOffset"_T, &style->user.buttonTextOffset.x, 0.1f, -10.0f, 10.0f, "%.1f");
+
 		FUCK::Header("$FUCK_Styles_Borders"_T);
 		if (FUCK::SliderFloat("$FUCK_Styles_WindowBorderSize"_T,    &style->user.borderSize, 0.0f, 5.0f))
 			style->RefreshStyle();

@@ -433,6 +433,15 @@ namespace ImGui
 		return KeepInnerCurve(GetUserStyleVar(USER_STYLE::kFrameRounding));
 	}
 
+	// The theme's nudge for button and tab labels, scaled like the rest of the widget.
+	// Whole pixels, so the text stays crisp
+	static ImVec2 GetButtonTextOffset()
+	{
+		const ImVec2& offset = Styles::GetSingleton()->user.buttonTextOffset;
+		const float   scale  = GetDynamicWidgetScale();
+		return { std::round(offset.x * scale), std::round(offset.y * scale) };
+	}
+
 	void DrawWidgetBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered, float rounding)
 	{
 		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize);
@@ -1330,8 +1339,9 @@ namespace ImGui
 
 		PushStyleColor(ImGuiCol_Text, textColor);
 
-		// Mathematically center the text inside the IDEAL un-chopped box, locking it to the OutlineButton baseline
-		RenderTextClipped(idealBb.Min, idealBb.Max, label, NULL, &textSize, { 0.5f, 0.5f });
+		// Centred inside the un-chopped box, locking it to the OutlineButton baseline, then nudged by the theme
+		ImVec2 textOff = GetButtonTextOffset();
+		RenderTextClipped(idealBb.Min + textOff, idealBb.Max + textOff, label, NULL, &textSize, { 0.5f, 0.5f });
 
 		PopStyleColor();
 
@@ -1394,7 +1404,9 @@ namespace ImGui
 		}
 		DrawWidgetBorder(window->DrawList, bbVisual, h || held, rounding);
 
-		RenderTextClipped(bbVisual.Min, bbVisual.Max, label, NULL, &textSize, { 0.5f, 0.5f });
+		// Centred, then nudged by the theme
+		ImVec2 textOff = GetButtonTextOffset();
+		RenderTextClipped(bbVisual.Min + textOff, bbVisual.Max + textOff, label, NULL, &textSize, { 0.5f, 0.5f });
 
 		if (p)
 			PlayAudio(Audio::kOk);

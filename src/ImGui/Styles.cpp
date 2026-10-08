@@ -398,6 +398,7 @@ namespace ImGui
 		SET_VALUE(indentSpacing, "Widget", "fIndentSpacing");
 		SET_VALUE(widgetSplit, "Widget", "fWidgetSplit");
 		SET_VALUE(labelAlign, "Widget", "vLabelAlign");
+		SET_VALUE(buttonTextOffset, "Widget", "vButtonTextOffset");
 		SET_VALUE(borderSize, "Window", "fBorderSize");
 		SET_VALUE(buttonBorderSize, "Widget", "fButtonBorderSize");
 		SET_VALUE(gridThickness, "Widget", "fGridThickness");
@@ -476,6 +477,7 @@ namespace ImGui
 		GET_VALUE(indentSpacing, "Widget", "fIndentSpacing");
 		GET_VALUE(widgetSplit, "Widget", "fWidgetSplit");
 		GET_VALUE(labelAlign, "Widget", "vLabelAlign");
+		GET_VALUE(buttonTextOffset, "Widget", "vButtonTextOffset");
 		GET_VALUE(borderSize, "Window", "fBorderSize");
 		GET_VALUE(buttonBorderSize, "Widget", "fButtonBorderSize");
 		GET_VALUE(gridThickness, "Widget", "fGridThickness");

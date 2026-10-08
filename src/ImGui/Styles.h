@@ -99,12 +99,13 @@ namespace ImGui
 			// --------------------------------------------------
 			// Layout & Geometry
 			// --------------------------------------------------
-			ImVec2 windowPadding{ 8.0f, 8.0f };
+			ImVec2 windowPadding{ 15.0f, 15.0f };
 			ImVec2 itemSpacing{ 8.0f, 4.0f };
 			float  indentSpacing{ 25.0f };
 
 			float  widgetSplit{ 0.5f };
 			ImVec2 labelAlign{ 0.0f, 0.5f };
+			ImVec2 buttonTextOffset{ 0.0f, 0.0f };
 
 			float borderSize{ 4.0f };
 			float buttonBorderSize{ 3.0f };
@@ -222,7 +223,8 @@ namespace ImGui
 			}
 			return { T(), false };
 		} else if constexpr (std::is_same_v<ImVec2, T>) {
-			static boost::regex vec2_pattern("([0-9\\.]+),([0-9\\.]+)");
+			// Signed, for offsets
+			static boost::regex vec2_pattern("(-?[0-9\\.]+),(-?[0-9\\.]+)");
 			boost::smatch       matches;
 			if (boost::regex_match(a_str, matches, vec2_pattern)) {
 				auto x = std::stof(matches[1]);

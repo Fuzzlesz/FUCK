@@ -1324,9 +1324,9 @@ void FUCKMan::Draw(bool a_passthroughOnly)
  
 	struct LayoutMetrics
 	{
-		float uiScale;
-		float textH;
-		float padBase;
+		float  uiScale;
+		float  textH;
+		ImVec2 pad;  // the theme's window padding, at resolution scale
  
 		float iconAspect;
 		float chromeIconBaseH;  // = 16.0f * uiScale  (userScale intentionally excluded for chrome)
@@ -1347,7 +1347,9 @@ void FUCKMan::Draw(bool a_passthroughOnly)
  
 	m.uiScale = FUCK::GetResolutionScale();
 	m.textH   = FUCK::GetTextLineHeight();
-	m.padBase = 15.0f * m.uiScale;
+
+	const ImVec2& themePadding = ImGui::Styles::GetSingleton()->user.windowPadding;
+	m.pad                      = { themePadding.x * m.uiScale, themePadding.y * m.uiScale };
  
 	m.iconAspect = (iconArrow && iconArrow->imageSize.y > 0.0f) ? (iconArrow->imageSize.x / iconArrow->imageSize.y) : 1.0f;
  
@@ -1633,7 +1635,7 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 			ImVec2 checkPos   = (winState.livePos.x != -1.0f) ? winState.livePos : (winState.hasLoadedPos ? winState.pos : win->GetDefaultPos());
 			float  checkWidth = (winState.liveSize.x != -1.0f) ? winState.liveSize.x : targetSize.x;
  
-			float paddingY      = (userFlags & FUCK::WindowFlags::kNoBackground) ? 0.0f : m.padBase;
+			float paddingY      = (userFlags & FUCK::WindowFlags::kNoBackground) ? 0.0f : m.pad.y;
 			float chromeBottomY = checkPos.y + paddingY + m.titleH + 1.0f;
  
 			// When collapsed, the entire window is basically just the chrome + padding.
@@ -1664,8 +1666,8 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 			// Push 0 padding for decorated windows and background-less overlays
 			FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, editMargin);
 		} else {
-			// Give standard padding to frameless windows that still have a solid background panel
-			FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase + editMargin.x, m.padBase + editMargin.y));
+			// Give the theme's padding to frameless windows that still have a solid background panel
+			FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.pad.x + editMargin.x, m.pad.y + editMargin.y));
 		}
  
 		// Combine the display title with the Host's unique tracking key
@@ -1840,7 +1842,7 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 				if (!winState.isCollapsed && !isCollapsed) {
 					FUCK::SetCursorPosX(0.0f);
  
-					FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase, m.padBase));
+					FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, m.pad);
  
 					ImGuiChildFlags  childFlags  = ImGuiChildFlags_AlwaysUseWindowPadding;
 					ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoBackground;
@@ -2474,8 +2476,9 @@ void FUCKMan::Draw(bool a_passthroughOnly)
  
 			// -- Content (scaled) --
 			auto renderContent = [&](float width) {
-				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(m.padBase, m.padBase));
-				ImGui::BeginChild("Content", ImVec2(width, availHeight), true, ImGuiChildFlags_AlwaysUseWindowPadding);
+				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, m.pad);
+				// Padded even when the theme's border size is 0, as ImGui drops a child's padding when it has no border
+				ImGui::BeginChild("Content", ImVec2(width, availHeight), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
 				{
 					pushContentScale(false);
 					if (_activeTool)
