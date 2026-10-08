@@ -742,6 +742,11 @@ namespace ImGui
 		PushStyleColor(ImGuiCol_Text, GetUserStyleColorU32(USER_STYLE::kComboBoxText));
 		PushStyleColor(ImGuiCol_NavCursor, ImVec4(0, 0, 0, 0));
 		PushItemWidth(GetContentRegionAvail().x);
+		
+		if (ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_F, false)) {
+			ImGui::SetKeyboardFocusHere();
+		}
+		
 		InputText("##filter", s_comboFilterStates[id].pattern, 256, ImGuiInputTextFlags_AutoSelectAll);
 		bool isInputFocused = IsItemFocused() || IsItemActive();
 

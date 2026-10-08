@@ -2102,6 +2102,12 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 						ImGui::PushStyleColor(ImGuiCol_FrameBg, ImGui::GetUserStyleColorVec4(ImGui::USER_STYLE::kComboBoxTextBox));
 
 						ImGui::SetNextItemWidth(-1.0f);
+
+						// CTRL+F to focus the sidebar filter
+						if (ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_F, false)) {
+							ImGui::SetKeyboardFocusHere();
+						}
+
 						ImGui::InputTextWithHint("##SidebarFilter", "$FUCK_Sidebar_FilterHint"_T, filterBuf, sizeof(filterBuf));
 
 						ImGui::PopStyleColor(1);
