@@ -101,7 +101,7 @@ namespace ImGui
 			// --------------------------------------------------
 			ImVec2 windowPadding{ 8.0f, 8.0f };
 			ImVec2 itemSpacing{ 8.0f, 4.0f };
-			float  indentSpacing{ 80.0f };
+			float  indentSpacing{ 25.0f };
 
 			float  widgetSplit{ 0.5f };
 			ImVec2 labelAlign{ 0.0f, 0.5f };

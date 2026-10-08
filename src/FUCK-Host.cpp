@@ -285,7 +285,12 @@ namespace FUCK::Host
 		ImGui::Separator();
 		SeparatorPadding();
 	}
-	static void SeparatorThick_Impl() { ImGui::SeparatorThick(); }
+	static void SeparatorThick_Impl()
+	{
+		SeparatorPadding();
+		ImGui::SeparatorThick();
+		SeparatorPadding();
+	}
 	static void SeparatorText_Impl(const char* label)
 	{
 		SeparatorPadding();
@@ -752,7 +757,16 @@ namespace FUCK::Host
 	// ==================================================
 	// Version 2
 	// ==================================================
-	static void SeparatorVertical_Impl() { ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical); }
+	static void SeparatorVertical_Impl()
+	{
+		float pad = 2.0f * ImGui::GetDynamicWidgetScale();
+		ImGui::Dummy(ImVec2(pad, 0.0f));
+		ImGui::SameLine(0.0f, 0.0f);
+		ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+		ImGui::SameLine(0.0f, 0.0f);
+		ImGui::Dummy(ImVec2(pad, 0.0f));
+	}
+
 	static void PushItemWidth_Impl(float item_width) { ImGui::PushItemWidth(item_width); }
 	static void PopItemWidth_Impl() { ImGui::PopItemWidth(); }
 	static bool BeginTooltip_Impl() { return ImGui::BeginTooltip(); }

@@ -2080,7 +2080,7 @@ namespace ImGui
 
 		// Scale icon for the layout footprint
 		float maxIconDim = baseArrowSize * scale;
-		float textOff    = padX + maxIconDim + GImGui->Style.ItemInnerSpacing.x;
+		float textOff    = padX + maxIconDim + (8.0f * scale) + GImGui->Style.ItemInnerSpacing.x;
 
 		// Pass the unscaled base icon (only if not a leaf)
 		if (!is_leaf) {
@@ -2125,7 +2125,7 @@ namespace ImGui
 
 		// Scale icon for the layout footprint
 		float maxIconDim = baseArrowSize * scale;
-		float textOff    = padX + maxIconDim + GImGui->Style.ItemInnerSpacing.x;
+		float textOff    = padX + maxIconDim + (8.0f * scale) + GImGui->Style.ItemInnerSpacing.x;
 
 		if (!ItemAdd(bb, id)) {
 			if (is_open && !is_leaf && !no_push)
