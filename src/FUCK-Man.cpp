@@ -1396,9 +1396,11 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 			float margin = kEditMargin * m.uiScale;
 			editMargin   = { margin, margin };
 
-			// Room for the handles at any angle, so turning never resizes or moves the window
+			// Room for the handles at any angle, so turning never resizes or moves the window.
+			// A fixed-size window's body is its default size, as its margin is added on top below
 			if (rotatable) {
-				ImVec2 half  = { winState.bodySize.x * 0.5f, winState.bodySize.y * 0.5f };
+				ImVec2 body  = autoResize ? winState.bodySize : win->GetDefaultSize();
+				ImVec2 half  = { body.x * 0.5f, body.y * 0.5f };
 				float  reach = std::max(std::sqrt(half.x * half.x + half.y * half.y) + margin, half.y + kRotateReach * m.uiScale);
 				editMargin   = { std::max(margin, reach - half.x), std::max(margin, reach - half.y) };
 			}
@@ -1489,7 +1491,12 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 		}
 
 		// If AutoResize is active, ImGui shrinks the window dynamically. We bypass hard size forcing.
-		if (!autoResize) {
+		if (editable && !autoResize && !isCollapsed) {
+			// The edit margin is added around the body rather than taken out of it, so the body keeps its size
+			// whether or not it's being edited. Editable windows are resized by their scale handles, not their edges
+			flags |= ImGuiWindowFlags_NoResize;
+			FUCK::SetNextWindowSize({ targetSize.x + editMargin.x * 2.0f, targetSize.y + editMargin.y * 2.0f }, ImGuiCond_Always);
+		} else if (!autoResize) {
 			if (isCollapsed) {
 				ImGui::SetNextWindowSizeConstraints(ImVec2(targetSize.x, 0.0f), ImVec2(targetSize.x, FLT_MAX));
 			} else {
@@ -1500,8 +1507,9 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 		}
 
 		// --- Host Chrome Interaction Protection ---
+		// Works from the live position, so custom-positioned windows are covered too
 		bool mouseOverChrome = false;
-		if (!noDecoration && !isCustomPos) {
+		if (!noDecoration) {
 			ImVec2 mouse      = ImGui::GetMousePos();
 			ImVec2 checkPos   = (winState.livePos.x != -1.0f) ? winState.livePos : (winState.hasLoadedPos ? winState.pos : win->GetDefaultPos());
 			float  checkWidth = (winState.liveSize.x != -1.0f) ? winState.liveSize.x : targetSize.x;
@@ -1712,7 +1720,12 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 						ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
 						pushContentScale(ignoreUserScale);
 						_currentRenderingPlugin = win->PluginName();
+
+						// So SetWindowPos/Size from Draw() apply to the window, not this child
+						FUCK::Host::SetContentChild(ImGui::GetCurrentWindow());
 						win->Draw();
+						FUCK::Host::SetContentChild(nullptr);
+
 						_currentRenderingPlugin.clear();
 						popContentScale();
 						ImGui::PopItemWidth();

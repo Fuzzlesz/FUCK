@@ -603,9 +603,20 @@ namespace FUCK::Host
 	// ==================================================
 	static void SetNextWindowPos_Impl(float x, float y, int c, float px, float py) { ImGui::SetNextWindowPos({ x, y }, c, { px, py }); }
 	static void SetNextWindowSize_Impl(float x, float y, int c) { ImGui::SetNextWindowSize({ x, y }, c); }
+	
+	// A decorated window's Draw() runs in the host's content child, which can't be moved or sized itself,
+	// so these apply to the window it sits in
+	static ImGuiWindow* s_contentChild = nullptr;
+	void                SetContentChild(ImGuiWindow* a_child) { s_contentChild = a_child; }
+	static ImGuiWindow* GetTargetWindow()
+	{
+		ImGuiWindow* window = ImGui::GetCurrentWindow();
+		return (window == s_contentChild && window->ParentWindow) ? window->ParentWindow : window;
+	}
+
 	static void GetWindowPos_Impl(float* x, float* y)
 	{
-		ImVec2 p = ImGui::GetWindowPos();
+		const ImVec2 p = GetTargetWindow()->Pos;
 		if (x)
 			*x = p.x;
 		if (y)
@@ -613,14 +624,14 @@ namespace FUCK::Host
 	}
 	static void GetWindowSize_Impl(float* x, float* y)
 	{
-		ImVec2 s = ImGui::GetWindowSize();
+		const ImVec2 s = GetTargetWindow()->Size;
 		if (x)
 			*x = s.x;
 		if (y)
 			*y = s.y;
 	}
-	static void SetWindowPos_Impl(float x, float y, int c) { ImGui::SetWindowPos({ x, y }, c); }
-	static void SetWindowSize_Impl(float x, float y, int c) { ImGui::SetWindowSize({ x, y }, c); }
+	static void SetWindowPos_Impl(float x, float y, int c) { ImGui::SetWindowPos(GetTargetWindow(), { x, y }, c); }
+	static void SetWindowSize_Impl(float x, float y, int c) { ImGui::SetWindowSize(GetTargetWindow(), { x, y }, c); }
 	static bool BeginWindow_Impl(const char* n, bool* o, int f) { return ImGui::Begin(n, o, f); }
 	static void EndWindow_Impl() { ImGui::End(); }
 	static void ExtendWindowPastBorder_Impl() { ImGui::ExtendWindowPastBorder(); }
