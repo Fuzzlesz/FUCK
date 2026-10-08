@@ -15,6 +15,21 @@
 #include "System/Settings.h"
 #include "System/Utils.h"
 
+// Where an edited window's handles were drawn last frame, so they can take the mouse over windows in front
+struct EditHandles
+{
+	ImGuiContext* context = nullptr;  // VR draws its HUD panel in a context of its own
+	ImGuiWindow*  window  = nullptr;
+	int           frame   = -1;
+	ImVec2        min;  // the outline
+	ImVec2        max;
+	float         rotation  = 0.0f;
+	bool          scalable  = false;
+	bool          rotatable = false;
+	ImVec2        resetMin;  // the reset icon, when it's shown
+	ImVec2        resetMax;
+};
+
 struct WindowState
 {
 	bool   wasOpen      = false;
@@ -44,6 +59,7 @@ struct WindowState
 	ImVec2                  resizeStartPos{};
 	FUCK::EditorRotateState rotate;
 	float                   rotateStart = 0.0f;
+	EditHandles             handles;
 
 	bool IsLayoutModified() const { return hasLoadedPos || std::abs(scale - 1.0f) > 0.001f || std::abs(rotation) > 0.001f; }
 };
@@ -272,6 +288,58 @@ bool FUCKMan::DrawResetIcon(float a_rowHeight)
 	return clicked;
 }
 
+// Matches where EditorResizeHandles and EditorRotateHandle in FUCK_API.h put their handles
+static bool IsOverEditHandle(const EditHandles& a_handles, const ImVec2& a_mouse)
+{
+	const float  half   = FUCK::Scale(6.0f);  // corner half size, and the rotation handle's radius
+	const ImVec2 center = { (a_handles.min.x + a_handles.max.x) * 0.5f, (a_handles.min.y + a_handles.max.y) * 0.5f };
+
+	if (a_handles.scalable) {
+		const ImVec2 corners[4] = { a_handles.min, { a_handles.max.x, a_handles.min.y }, a_handles.max, { a_handles.min.x, a_handles.max.y } };
+		for (const auto& corner : corners) {
+			ImVec2 c = FUCK::RotatePoint(corner, center, a_handles.rotation);
+			if (std::abs(a_mouse.x - c.x) <= half && std::abs(a_mouse.y - c.y) <= half)
+				return true;
+		}
+	}
+
+	if (a_handles.rotatable) {
+		ImVec2 c  = FUCK::RotatePoint({ center.x, a_handles.min.y - FUCK::Scale(24.0f) }, center, a_handles.rotation);
+		float  dx = a_mouse.x - c.x;
+		float  dy = a_mouse.y - c.y;
+		if (dx * dx + dy * dy <= half * half)
+			return true;
+	}
+
+	return a_handles.resetMax.x > a_handles.resetMin.x && ImRect(a_handles.resetMin, a_handles.resetMax).Contains(a_mouse);
+}
+
+// Handles are drawn over windows in front, but ImGui gives the mouse to the front window before anything is drawn.
+// So before any window is drawn, give the mouse to an edited window whose handle it's over. What you see is what you grab
+static void ClaimEditHandleHover()
+{
+	ImGuiContext& g = *GImGui;
+
+	// Leave the mouse alone while something else has it, or a popup is open
+	if (g.ActiveId != 0 || g.MovingWindow || ImGui::GetTopMostPopupModal())
+		return;
+	if (g.HoveredWindow && (g.HoveredWindow->RootWindow->Flags & ImGuiWindowFlags_Popup))
+		return;
+
+	const ImVec2 mouse = g.IO.MousePos;
+	for (auto& [key, state] : s_windowStates) {
+		const EditHandles& handles = state.handles;
+
+		// Only handles drawn in this context last frame, so a closed window's old spots don't count
+		if (handles.context != &g || !handles.window || handles.frame < g.FrameCount - 1 || !IsOverEditHandle(handles, mouse))
+			continue;
+
+		g.HoveredWindow                  = handles.window;
+		g.HoveredWindowUnderMovingWindow = handles.window;
+		return;
+	}
+}
+
 void FUCKMan::UpdateEditableWindow(WindowState& a_state, const ImVec2& a_pos, const ImVec2& a_size, const ImVec2& a_margin, bool a_scalable, bool a_rotatable)
 {
 	float  res      = FUCK::GetResolutionScale();
@@ -318,10 +386,13 @@ void FUCKMan::UpdateEditableWindow(WindowState& a_state, const ImVec2& a_pos, co
 	}
 
 	// Reset icon above the outline's top-right, once the window has been moved, scaled or rotated
+	ImVec2 resetMin, resetMax;
 	if (a_state.IsLayoutModified()) {
 		float  rowH     = ImGui::GetFontSize();
 		ImVec2 iconSize = ImGui::CalcTextSize(ICON_FA_ARROW_ROTATE_LEFT);
-		ImGui::SetCursorScreenPos({ outMax.x - iconSize.x, outMin.y - outline - rowH });
+		resetMin        = { outMax.x - iconSize.x, outMin.y - outline - rowH };
+		resetMax        = { outMax.x, outMin.y - outline };
+		ImGui::SetCursorScreenPos(resetMin);
 		if (DrawResetIcon(rowH))
 			ResetEditableLayout(a_state);
 	}
@@ -337,6 +408,9 @@ void FUCKMan::UpdateEditableWindow(WindowState& a_state, const ImVec2& a_pos, co
 		if (result == FUCK::EditorHandleResult::kFinished)
 			SaveWorkspace();
 	}
+
+	// Remember where the handles are, so next frame they can take the mouse even with a window in front
+	a_state.handles = { GImGui, window->RootWindow, ImGui::GetFrameCount(), outMin, outMax, rotation, a_scalable, a_rotatable, resetMin, resetMax };
 
 	// Drag from any empty part of the window. Items and handles keep their clicks
 	bool onHandle = a_state.resize.hovered || a_state.rotate.hovered;
@@ -1182,6 +1256,10 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 	}
 
 	UpdateGameState();
+
+	// Before any window is drawn, so it decides who gets the mouse this frame
+	if (_isOpen)
+		ClaimEditHandleHover();
 
 	// If the user hides menus via 'tm', the Skyrim Scaleform cursor becomes invisible.
 	// We force ImGui to draw its own cursor so KBM users aren't clicking blind. Flatrim only.
