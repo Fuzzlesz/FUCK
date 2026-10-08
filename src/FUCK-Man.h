@@ -108,7 +108,10 @@ public:
 	void ResetSettings();
 
 	void LoadWorkspace();
+	// Asks for the workspace to be written. The write waits until nothing has asked for half a second, or the menu
+	// closes, so a burst of changes is one write. Files whose contents haven't changed aren't written at all
 	void SaveWorkspace();
+	void FlushWorkspace(bool a_force = false);
 
 	void Save();
 	void SaveKeybinds();
@@ -222,6 +225,7 @@ private:
 	std::vector<PendingCommand> _pendingCommands;
 
 	void FlushPendingRegistrations();
+	void WriteWorkspace();
 	void UpdateGameState();
 	bool IsWindowSuppressed(const FUCK::IWindow* win) const;
 
@@ -242,6 +246,9 @@ private:
 	FUCK::ITool* _activeTool      = nullptr;
 	bool         _isOpen          = false;
 	bool         _workspaceLoaded = false;
+
+	bool                                  _workspaceDirty = false;
+	std::chrono::steady_clock::time_point _workspaceDirtyAt{};
 
 	JournalMenuType _journalMenuType{ JournalMenuType::kUnknown };
 

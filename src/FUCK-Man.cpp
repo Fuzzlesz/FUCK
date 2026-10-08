@@ -66,6 +66,10 @@ struct WindowState
 	int    pinFrames   = 0;      // Frames left to hold it after letting go, while the size catches up
 	bool   anchorRight = false;  // kAnchorRight, so pos is the top-right corner
 
+	// Where the window was when the mouse went down, so a release can tell whether the user moved or resized it
+	ImVec2 pressPos{ -FLT_MAX, -FLT_MAX };
+	ImVec2 pressSize{};
+
 	bool IsLayoutModified() const { return hasLoadedPos || std::abs(scale - 1.0f) > 0.001f || std::abs(rotation) > 0.001f; }
 };
 static StringMap<WindowState> s_windowStates;  // Maps using "PluginName|WindowId"
@@ -244,8 +248,20 @@ void FUCKMan::FlushPendingRegistrations()
 				auto* win = cmd.window;
 				auto  it  = std::find(_windows.begin(), _windows.end(), win);
 				if (it != _windows.end()) {
+					// Only what the window was doing is dropped. Where the user put it is kept, so it's still saved,
+					// and a window registered again later comes back where it was
 					std::string key = std::format("{}|{}", win->PluginName(), win->Id());
-					s_windowStates.erase(key);
+					if (auto st = s_windowStates.find(key); st != s_windowStates.end()) {
+						WindowState kept;
+						kept.pos             = st->second.pos;
+						kept.size            = st->second.size;
+						kept.hasLoadedPos    = st->second.hasLoadedPos;
+						kept.isCollapsed     = st->second.isCollapsed;
+						kept.preCollapseSize = st->second.preCollapseSize;
+						kept.scale           = st->second.scale;
+						kept.rotation        = st->second.rotation;
+						st->second           = kept;
+					}
 					_windows.erase(it);
 				}
 				break;
@@ -481,17 +497,64 @@ void FUCKMan::UpdateEditableWindow(WindowState& a_state, const ImVec2& a_pos, co
 // Sidebar & Geometry Management
 // ==================================================
 
+// What each workspace file last held, as written or read this session, so a save only writes the files that changed
+static StringMap<std::string> s_workspaceFiles;
+
+// Plugin files that couldn't be read. Left alone, so a typo made by hand isn't wiped out by the next save
+static std::set<std::string> s_unreadablePluginFiles;
+
+// Likewise for the workspace file itself
+static bool s_workspaceUnreadable = false;
+
+// One spelling per file, whichever way its path was put together, so it's tracked under one key
+static std::string NormalisePath(const fs::path& a_path)
+{
+	return a_path.lexically_normal().string();
+}
+
+template <class T>
+static void WriteJsonIfChanged(const T& a_data, const std::string& a_path)
+{
+	std::string buffer;
+	if (auto err = glz::write_json(a_data, buffer); err) {
+		logger::warn("Failed to serialise {}", a_path);
+		return;
+	}
+
+	// Not read or written yet this session, so compare against what's on disk
+	if (s_workspaceFiles.find(a_path) == s_workspaceFiles.end()) {
+		std::ifstream in(a_path, std::ios::binary);
+		if (in) {
+			s_workspaceFiles[a_path] = std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+		}
+	}
+
+	// Unchanged, and still there (it may have been deleted by hand)
+	if (auto it = s_workspaceFiles.find(a_path); it != s_workspaceFiles.end() && it->second == buffer && fs::exists(a_path))
+		return;
+
+	std::ofstream out(a_path, std::ios::binary | std::ios::trunc);
+	if (!out) {
+		logger::warn("Failed to write to {}", a_path);
+		return;
+	}
+	out.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+	s_workspaceFiles[a_path] = std::move(buffer);
+}
+
 void FUCKMan::LoadWorkspace()
 {
 	float scale            = ImGui::Renderer::GetResolutionScale();
 	bool  mainWindowLoaded = false;
 
 	// Load global workspace settings. (Main Window, Groups & Tool Order)
-	std::string workspacePath = Settings::GetSingleton()->GetWorkspacePath();
+	std::string workspacePath = NormalisePath(Settings::GetSingleton()->GetWorkspacePath());
 	if (fs::exists(workspacePath)) {
 		WorkspaceSaveData sd;
 		std::string       wBuffer;
 		if (auto err = glz::read_file_json(sd, workspacePath, wBuffer); !err) {
+			s_workspaceFiles[workspacePath] = wBuffer;
+
 			// Apply Main Window state
 			if (sd.mainWindow.x != -1.0f && sd.mainWindow.y != -1.0f) {
 				_cfg.windowPos  = { sd.mainWindow.x * scale, sd.mainWindow.y * scale };
@@ -512,6 +575,9 @@ void FUCKMan::LoadWorkspace()
 				_groupOverrides[k].customName   = v.sName;
 				_groupOverrides[k].sortOrder    = v.iOrder;
 			}
+		} else {
+			s_workspaceUnreadable = true;
+			logger::warn("FUCK: Couldn't read {}, so it'll be left as it is", workspacePath);
 		}
 	}
 
@@ -528,10 +594,13 @@ void FUCKMan::LoadWorkspace()
 		for (const auto& entry : fs::directory_iterator(toolsPath)) {
 			if (entry.path().extension() == ".json") {
 				std::string pluginName = entry.path().stem().string();
+				std::string path       = NormalisePath(entry.path());
 
 				PluginSaveData pd;
 				std::string    pBuffer;
-				if (auto err = glz::read_file_json(pd, entry.path().string(), pBuffer); !err) {
+				if (auto err = glz::read_file_json(pd, path, pBuffer); !err) {
+					s_workspaceFiles[path] = pBuffer;
+
 					for (const auto& [toolName, toolData] : pd.tools) {
 						std::string key                  = std::format("{}|{}", pluginName, toolName);
 						_toolOverrides[key].isFavourited = toolData.bFavourited;
@@ -555,6 +624,9 @@ void FUCKMan::LoadWorkspace()
 						st.scale       = std::clamp(winData.scale, kMinEditScale, kMaxEditScale);
 						st.rotation    = winData.rotation;
 					}
+				} else {
+					s_unreadablePluginFiles.insert(pluginName);
+					logger::warn("FUCK: Couldn't read {}, so it'll be left as it is", path);
 				}
 			}
 		}
@@ -563,10 +635,29 @@ void FUCKMan::LoadWorkspace()
 
 void FUCKMan::SaveWorkspace()
 {
+	_workspaceDirty   = true;
+	_workspaceDirtyAt = std::chrono::steady_clock::now();
+}
+
+void FUCKMan::FlushWorkspace(bool a_force)
+{
+	// Never before it's loaded, or the defaults would be written over what's saved
+	if (!_workspaceDirty || !_workspaceLoaded)
+		return;
+
+	if (!a_force && std::chrono::steady_clock::now() - _workspaceDirtyAt < std::chrono::milliseconds(500))
+		return;
+
+	_workspaceDirty = false;
+	WriteWorkspace();
+}
+
+void FUCKMan::WriteWorkspace()
+{
 	WorkspaceSaveData         sd;
 	StringMap<PluginSaveData> pdMap;
 
-	// Distribute Tool Overrides
+	// Distribute Tool Overrides. Only what differs from the defaults is kept
 	for (const auto& [key, over] : _toolOverrides) {
 		auto pipe = key.find('|');
 		if (pipe != std::string::npos) {
@@ -615,84 +706,113 @@ void FUCKMan::SaveWorkspace()
 	// Distribute Window Geometries (External plugins)
 	for (const auto& [key, st] : s_windowStates) {
 		auto pipe = key.find('|');
-		if (pipe != std::string::npos) {
-			std::string plugin = key.substr(0, pipe);
-			std::string winId  = key.substr(pipe + 1);
+		if (pipe == std::string::npos)
+			continue;
 
-			bool isCustomPos   = false;
-			bool isUndecorated = false;
-			bool isNoMove      = false;
-			bool isEditable    = false;
-			for (auto* w : _windows) {
-				if (w->PluginName() == plugin && w->Id() == winId) {
-					if (w->GetFlags() & FUCK::WindowFlags::kEditable)
-						isEditable = true;
-					if (w->GetFlags() & FUCK::WindowFlags::kCustomPosition)
-						isCustomPos = true;
-					if (w->GetFlags() & FUCK::WindowFlags::kNoDecoration)
-						isUndecorated = true;
-					if (w->GetFlags() & FUCK::WindowFlags::kNoMove)
-						isNoMove = true;
-					break;
-				}
+		std::string plugin = key.substr(0, pipe);
+		std::string winId  = key.substr(pipe + 1);
+
+		const FUCK::IWindow* registered = nullptr;
+		for (auto* w : _windows) {
+			if (w->PluginName() == plugin && w->Id() == winId) {
+				registered = w;
+				break;
 			}
+		}
 
-			// Editable widgets only save what the user changed, so an untouched one keeps following its default
-			if (isEditable) {
-				if (!st.IsLayoutModified())
-					continue;
+		// Nothing the user changed, so nothing to keep. The window follows its defaults
+		const bool hasPos  = st.hasLoadedPos;
+		const bool hasSize = st.size.x >= 0.0f && st.size.y >= 0.0f;
+		const bool hasEdit = std::abs(st.scale - 1.0f) > 0.001f || std::abs(st.rotation) > 0.001f;
+		if (!hasPos && !hasSize && !st.isCollapsed && !hasEdit)
+			continue;
 
-				WindowSaveData wd;
-				wd.x     = st.hasLoadedPos ? st.pos.x / scale : -1.0f;
-				wd.y     = st.hasLoadedPos ? st.pos.y / scale : -1.0f;
-				wd.scale    = st.scale;
-				wd.rotation = st.rotation;
-
-				pdMap[plugin].windows[winId] = wd;
-				continue;
-			}
-
-			// Skip saving to JSON entirely for custom-positioned or unmovable widgets
-			if (isCustomPos || isNoMove) {
-				continue;
-			}
-
+		// A window from a plugin that isn't loaded this session keeps what it had, untouched
+		if (!registered) {
 			WindowSaveData wd;
-			wd.x         = (st.pos.x  >= 0.0f) ? st.pos.x  / scale : -1.0f;
-			wd.y         = (st.pos.y  >= 0.0f) ? st.pos.y  / scale : -1.0f;
-			wd.w         = (st.size.x >= 0.0f) ? st.size.x / scale : -1.0f;
-			wd.h         = (st.size.y >= 0.0f) ? st.size.y / scale : -1.0f;
-			wd.collapsed = !isUndecorated && st.isCollapsed;
+			wd.x         = hasPos ? st.pos.x / scale : -1.0f;
+			wd.y         = hasPos ? st.pos.y / scale : -1.0f;
+			wd.w         = hasSize ? st.size.x / scale : -1.0f;
+			wd.h         = hasSize ? st.size.y / scale : -1.0f;
+			wd.collapsed = st.isCollapsed;
+			wd.scale     = st.scale;
+			wd.rotation  = st.rotation;
 
 			pdMap[plugin].windows[winId] = wd;
+			continue;
 		}
+
+		const auto flags         = registered->GetFlags();
+		const bool isEditable    = flags & FUCK::WindowFlags::kEditable;
+		const bool isCustomPos   = flags & FUCK::WindowFlags::kCustomPosition;
+		const bool isUndecorated = flags & FUCK::WindowFlags::kNoDecoration;
+		const bool isNoMove      = flags & FUCK::WindowFlags::kNoMove;
+		const bool isFixedSize   = (flags & FUCK::WindowFlags::kNoResize) || (flags & FUCK::WindowFlags::kAutoResize);
+
+		// Editable widgets only save what the user changed, so an untouched one keeps following its default
+		if (isEditable) {
+			if (!st.IsLayoutModified())
+				continue;
+
+			WindowSaveData wd;
+			wd.x        = st.hasLoadedPos ? st.pos.x / scale : -1.0f;
+			wd.y        = st.hasLoadedPos ? st.pos.y / scale : -1.0f;
+			wd.scale    = st.scale;
+			wd.rotation = st.rotation;
+
+			pdMap[plugin].windows[winId] = wd;
+			continue;
+		}
+
+		// Skip saving to JSON entirely for custom-positioned or unmovable widgets
+		if (isCustomPos || isNoMove) {
+			continue;
+		}
+
+		WindowSaveData wd;
+		wd.x         = hasPos ? st.pos.x / scale : -1.0f;
+		wd.y         = hasPos ? st.pos.y / scale : -1.0f;
+		wd.w         = (hasSize && !isFixedSize) ? st.size.x / scale : -1.0f;
+		wd.h         = (hasSize && !isFixedSize) ? st.size.y / scale : -1.0f;
+		wd.collapsed = !isUndecorated && st.isCollapsed;
+
+		// Its size alone doesn't count when the window sizes itself
+		if (!hasPos && wd.w < 0.0f && !wd.collapsed)
+			continue;
+
+		pdMap[plugin].windows[winId] = wd;
 	}
 
 	// Commit Workspace Settings
-	std::string workspacePath = Settings::GetSingleton()->GetWorkspacePath();
+	std::string workspacePath = NormalisePath(Settings::GetSingleton()->GetWorkspacePath());
 	fs::create_directories(Settings::Core.GetConfigDirectory());
-	std::string sBuffer;
-	if (auto err = glz::write_file_json(sd, workspacePath, sBuffer); err) {
-		logger::warn("Failed to write to {}", workspacePath);
-	}
+	if (!s_workspaceUnreadable)
+		WriteJsonIfChanged(sd, workspacePath);
 
 	// Commit Per-Plugin Settings
 	std::string toolsPath = Settings::GetSingleton()->GetToolsPath();
 	fs::create_directories(toolsPath);
 
 	for (const auto& [plugin, pd] : pdMap) {
-		std::string path = std::format("{}/{}.json", toolsPath, plugin);
+		if (s_unreadablePluginFiles.contains(plugin))
+			continue;
+		WriteJsonIfChanged(pd, NormalisePath(fs::path(toolsPath) / (plugin + ".json")));
+	}
 
-		if (pd.tools.empty() && pd.windows.empty()) {
-			if (fs::exists(path)) {
-				fs::remove(path);
-			}
-		} else {
-			std::string pBuffer;
-			if (auto err = glz::write_file_json(pd, path, pBuffer); err) {
-				logger::warn("Failed to write to {}", path);
-			}
-		}
+	// A plugin whose settings are all back to default has nothing left to keep, so its file goes.
+	// Otherwise a reset name or group would come back from the old file next session
+	std::error_code ec;
+	for (const auto& entry : fs::directory_iterator(toolsPath, ec)) {
+		if (entry.path().extension() != ".json")
+			continue;
+
+		std::string pluginName = entry.path().stem().string();
+		if (pdMap.find(pluginName) != pdMap.end() || s_unreadablePluginFiles.contains(pluginName))
+			continue;
+
+		std::error_code removeEc;
+		fs::remove(entry.path(), removeEc);
+		s_workspaceFiles.erase(NormalisePath(entry.path()));
 	}
 }
 
@@ -1180,6 +1300,9 @@ void FUCKMan::Close()
 
 	ImGui::ClearNavState();
 	ImGui::PlayAudio(ImGui::Audio::kCancel);
+
+	// Anything still waiting is written now, rather than half a second from now
+	FlushWorkspace(true);
 }
 
 void FUCKMan::Toggle()
@@ -1282,6 +1405,20 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 		_workspaceLoaded = true;
 	}
  
+	// Writes the workspace once changes have settled
+	FlushWorkspace();
+
+	// Draw stops being called once nothing is shown, so whatever's still waiting is written as the last thing closes
+	struct FlushWhenHidden
+	{
+		FUCKMan* manager;
+		~FlushWhenHidden()
+		{
+			if (!manager->ShouldRender())
+				manager->FlushWorkspace(true);
+		}
+	} flushWhenHidden{ this };
+
 	if (auto ui = RE::UI::GetSingleton(); ui && ui->closingAllMenus) {
 		if (_isOpen) {
 			Close();
@@ -1712,10 +1849,21 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 			}
  
 			// Auto-save settings on move/resize end preventing overwrite during collapse.
-			// Editable windows save their own position, which isn't the window's corner
-			if (!editable && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-				bool posChanged  = !isCustomPos && !noMove && (std::abs(curPos.x - winState.pos.x) > 1.0f || std::abs(curPos.y - winState.pos.y) > 1.0f);
-				bool sizeChanged = !isCollapsed && (std::abs(curSize.x - winState.size.x) > 1.0f || std::abs(curSize.y - winState.size.y) > 1.0f);
+			// Editable windows save their own position, which isn't the window's corner.
+			// Only what changed while the mouse was held counts, so a click anywhere doesn't save a window the user
+			// never touched, and a window that sizes itself to its content doesn't save its size at all
+			if (!editable && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+				winState.pressPos  = curPos;
+				winState.pressSize = curSize;
+			}
+
+			if (!editable && ImGui::IsMouseReleased(ImGuiMouseButton_Left) && winState.pressPos.x != -FLT_MAX) {
+				bool movedNow    = std::abs(curPos.x - winState.pressPos.x) > 1.0f || std::abs(curPos.y - winState.pressPos.y) > 1.0f;
+				bool resizedNow  = std::abs(curSize.x - winState.pressSize.x) > 1.0f || std::abs(curSize.y - winState.pressSize.y) > 1.0f;
+				bool posChanged  = movedNow && !isCustomPos && !noMove && (std::abs(curPos.x - winState.pos.x) > 1.0f || std::abs(curPos.y - winState.pos.y) > 1.0f);
+				bool sizeChanged = resizedNow && !isCollapsed && !autoResize && !noResize && (std::abs(curSize.x - winState.size.x) > 1.0f || std::abs(curSize.y - winState.size.y) > 1.0f);
+
+				winState.pressPos = { -FLT_MAX, -FLT_MAX };
  
 				if (posChanged || sizeChanged) {
 					if (posChanged)
