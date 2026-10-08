@@ -56,10 +56,15 @@ struct WindowState
 	bool                    dragging = false;
 	FUCK::EditorResizeState resize;
 	float                   resizeStartScale = 1.0f;
-	ImVec2                  resizeStartPos{};
 	FUCK::EditorRotateState rotate;
 	float                   rotateStart = 0.0f;
 	EditHandles             handles;
+
+	// While scaling, the body's corner opposite the grabbed one stays put
+	int    pinCorner   = -1;     // 0-3 clockwise from top-left, -1 = none
+	ImVec2 pinPoint{};           // Where it's held, in screen space
+	int    pinFrames   = 0;      // Frames left to hold it after letting go, while the size catches up
+	bool   anchorRight = false;  // kAnchorRight, so pos is the top-right corner
 
 	bool IsLayoutModified() const { return hasLoadedPos || std::abs(scale - 1.0f) > 0.001f || std::abs(rotation) > 0.001f; }
 };
@@ -269,6 +274,7 @@ void FUCKMan::ResetEditableLayout(WindowState& a_state)
 	a_state.hasLoadedPos = false;
 	a_state.scale        = 1.0f;
 	a_state.rotation     = 0.0f;
+	a_state.pinCorner    = -1;
 	SaveWorkspace();
 }
 
@@ -340,6 +346,26 @@ static void ClaimEditHandleHover()
 	}
 }
 
+// A rect's corner, 0-3 clockwise from top-left
+static ImVec2 CornerOf(const ImVec2& a_min, const ImVec2& a_max, int a_index)
+{
+	return { a_index == 1 || a_index == 2 ? a_max.x : a_min.x, a_index >= 2 ? a_max.y : a_min.y };
+}
+
+// Places the body so its pinned corner sits on the pin, at the body's current size and angle.
+// Rounded to whole pixels, as ImGui snaps the window to a pixel anyway, and a fractional pos would leave the body off-pixel
+static void PinBodyCorner(WindowState& a_state, float a_rotation)
+{
+	const int    k      = a_state.pinCorner;
+	const ImVec2 half   = { a_state.bodySize.x * 0.5f, a_state.bodySize.y * 0.5f };
+	const ImVec2 offset = FUCK::RotatePoint({ (k == 1 || k == 2) ? half.x : -half.x, k >= 2 ? half.y : -half.y }, { 0.0f, 0.0f }, a_rotation);
+	const ImVec2 center = { a_state.pinPoint.x - offset.x, a_state.pinPoint.y - offset.y };
+
+	// pos is the body's top-left, or top-right with kAnchorRight
+	a_state.pos          = { std::round(a_state.anchorRight ? center.x + half.x : center.x - half.x), std::round(center.y - half.y) };
+	a_state.hasLoadedPos = true;
+}
+
 void FUCKMan::UpdateEditableWindow(WindowState& a_state, const ImVec2& a_pos, const ImVec2& a_size, const ImVec2& a_margin, bool a_scalable, bool a_rotatable)
 {
 	float  res      = FUCK::GetResolutionScale();
@@ -369,18 +395,27 @@ void FUCKMan::UpdateEditableWindow(WindowState& a_state, const ImVec2& a_pos, co
 
 		if (result == FUCK::EditorHandleResult::kStarted) {
 			a_state.resizeStartScale = a_state.scale;
-			a_state.resizeStartPos   = a_state.pos;
+
+			// Hold the body's corner rather than the outline's, as the outline sits a little outside it
+			ImVec2 bodyMin    = { a_pos.x + a_margin.x, a_pos.y + a_margin.y };
+			ImVec2 bodyMax    = { bodyMin.x + a_state.bodySize.x, bodyMin.y + a_state.bodySize.y };
+			a_state.pinCorner = (a_state.resize.corner + 2) % 4;
+			a_state.pinPoint  = FUCK::RotatePoint(CornerOf(bodyMin, bodyMax, a_state.pinCorner), center, rotation);
 		}
 
-		if (a_state.resize.IsActive()) {
+		if (a_state.resize.IsActive())
 			a_state.scale = std::clamp(a_state.resizeStartScale * a_state.resize.scale.x, kMinEditScale, kMaxEditScale);
 
-			// Scale the position about the fixed corner by what was actually applied, so that corner stays put
-			float  applied       = a_state.scale / a_state.resizeStartScale;
-			ImVec2 pivot         = a_state.resize.pivot;
-			a_state.pos          = { pivot.x + (a_state.resizeStartPos.x - pivot.x) * applied, pivot.y + (a_state.resizeStartPos.y - pivot.y) * applied };
-			a_state.hasLoadedPos = true;
-		} else if (result == FUCK::EditorHandleResult::kFinished) {
+		if (result == FUCK::EditorHandleResult::kFinished)
+			a_state.pinFrames = 3;
+	}
+
+	// The body is sized from what was drawn, so it reaches its new size a frame or two after the scale changes.
+	// Keep its held corner in place until then, and save once it's settled
+	if (a_state.pinCorner >= 0) {
+		PinBodyCorner(a_state, rotation);
+		if (!a_state.resize.IsActive() && --a_state.pinFrames <= 0) {
+			a_state.pinCorner = -1;
 			SaveWorkspace();
 		}
 	}
@@ -1468,6 +1503,8 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 		bool anchorRight = editable && (userFlags & FUCK::WindowFlags::kAnchorRight);
 		bool isEditing   = editable && _isOpen;
 
+		winState.anchorRight = anchorRight;
+
 		// While editing, the margin grows the window past the outline so its handles sit over it
 		ImVec2 editMargin = { 0.0f, 0.0f };
 		if (isEditing) {
@@ -1485,6 +1522,10 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 
 			// Room above the outline for the reset icon, kept even while it's hidden so the window doesn't jump
 			editMargin.y = std::max(editMargin.y, margin + ImGui::GetFontSize());
+
+			// Whole pixels. ImGui snaps the window to a pixel, so a fractional margin shifts the body by a sub-pixel
+			// amount that can change its measured size, which changes the margin again next frame and jitters
+			editMargin = { std::ceil(editMargin.x), std::ceil(editMargin.y) };
 		}
 
 		flags |= ImGuiWindowFlags_NoTitleBar;
@@ -1644,8 +1685,17 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 			winState.liveSize  = curSize;
 			winState.isFocused = ImGui::IsWindowFocused();
 
+			// An auto-sized window is capped to the screen, so a big enough widget would read back smaller than it is.
+			// Work its size out from the content instead, which isn't capped. It's the same sum ImGui uses to fit the window
+			ImVec2 fullSize = curSize;
+			if (editable && autoResize) {
+				ImGuiWindow* window = ImGui::GetCurrentWindow();
+				fullSize            = { window->ContentSizeIdeal.x + window->WindowPadding.x * 2.0f + window->DecoOuterSizeX1 + window->DecoOuterSizeX2,
+							   window->ContentSizeIdeal.y + window->WindowPadding.y * 2.0f + window->DecoOuterSizeY1 + window->DecoOuterSizeY2 };
+			}
+
 			if (editable) {
-				winState.bodySize = { curSize.x - editMargin.x * 2.0f, curSize.y - editMargin.y * 2.0f };
+				winState.bodySize = { fullSize.x - editMargin.x * 2.0f, fullSize.y - editMargin.y * 2.0f };
 				s_windowScale     = scalable ? winState.scale : 1.0f;
 				s_windowRotation  = rotatable ? winState.rotation : 0.0f;
 			}
@@ -1829,7 +1879,7 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 			}
 
 			if (isEditing) {
-				UpdateEditableWindow(winState, curPos, curSize, editMargin, scalable, rotatable);
+				UpdateEditableWindow(winState, curPos, fullSize, editMargin, scalable, rotatable);
 			}
 		}
 		FUCK::EndWindow();
