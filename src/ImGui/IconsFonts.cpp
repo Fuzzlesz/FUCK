@@ -12,8 +12,118 @@
 #include "System/Settings.h"
 #include "System/Utils.h"
 
+#include <cstring>
+#include <optional>
+
 namespace IconFont
 {
+	namespace
+	{
+		// The range Font Awesome's icons are drawn from. The main typeface is kept out of it, as many typefaces have
+		// glyphs of their own in the same private-use area, and those would be drawn in place of the icons
+		const ImWchar kIconRanges[] = { ICON_MIN_FA, ICON_MAX_16_FA, 0 };
+
+		// A typeface's ascent and descent as fractions of its em, descent negative, read as FreeType reads them
+		struct VMetrics
+		{
+			float ascent  = 0.8f;
+			float descent = -0.2f;
+
+			// Where the baseline falls in a line, as a fraction of the line's height from the top. The loaders size a
+			// typeface so its ascent to descent spans the font size, so this is the same at every size
+			float Baseline() const { return ascent / (ascent - descent); }
+		};
+
+		std::uint16_t ReadU16(const std::uint8_t* a_p) { return static_cast<std::uint16_t>((a_p[0] << 8) | a_p[1]); }
+		std::int16_t  ReadS16(const std::uint8_t* a_p) { return static_cast<std::int16_t>(ReadU16(a_p)); }
+		std::uint32_t ReadU32(const std::uint8_t* a_p)
+		{
+			return (static_cast<std::uint32_t>(a_p[0]) << 24) | (static_cast<std::uint32_t>(a_p[1]) << 16) | (static_cast<std::uint32_t>(a_p[2]) << 8) | a_p[3];
+		}
+
+		// Reads the vertical metrics from a TrueType/OpenType file in memory: 'hhea', or 'OS/2' when 'hhea' has none
+		std::optional<VMetrics> ReadVMetrics(const void* a_data, int a_size)
+		{
+			const auto* data = static_cast<const std::uint8_t*>(a_data);
+			const auto  size = static_cast<std::size_t>(std::max(a_size, 0));
+			if (!data || size < 12)
+				return std::nullopt;
+
+			// A collection: the first font in it, as that's the one ImGui loads
+			std::size_t font = 0;
+			if (std::memcmp(data, "ttcf", 4) == 0) {
+				if (size < 16)
+					return std::nullopt;
+				font = ReadU32(data + 12);
+			}
+			if (font + 12 > size)
+				return std::nullopt;
+
+			struct Table
+			{
+				const std::uint8_t* data   = nullptr;
+				std::size_t         length = 0;
+			} head, hhea, os2;
+
+			const std::uint16_t numTables = ReadU16(data + font + 4);
+			for (std::uint16_t i = 0; i < numTables; ++i) {
+				const std::size_t record = font + 12 + static_cast<std::size_t>(i) * 16;
+				if (record + 16 > size)
+					break;
+
+				const std::size_t offset = ReadU32(data + record + 8);
+				const std::size_t length = ReadU32(data + record + 12);
+				if (offset > size || length > size - offset)
+					continue;
+
+				const Table table{ data + offset, length };
+				if (std::memcmp(data + record, "head", 4) == 0)
+					head = table;
+				else if (std::memcmp(data + record, "hhea", 4) == 0)
+					hhea = table;
+				else if (std::memcmp(data + record, "OS/2", 4) == 0)
+					os2 = table;
+			}
+
+			if (!head.data || head.length < 20 || !hhea.data || hhea.length < 8)
+				return std::nullopt;
+
+			const std::uint16_t unitsPerEm = ReadU16(head.data + 18);
+			if (unitsPerEm == 0)
+				return std::nullopt;
+
+			int ascent  = ReadS16(hhea.data + 4);
+			int descent = ReadS16(hhea.data + 6);
+			if (ascent == 0 && descent == 0 && os2.data && os2.length >= 72) {
+				ascent  = ReadS16(os2.data + 68);
+				descent = ReadS16(os2.data + 70);
+			}
+			if (ascent <= descent)
+				return std::nullopt;
+
+			return VMetrics{ static_cast<float>(ascent) / unitsPerEm, static_cast<float>(descent) / unitsPerEm };
+		}
+
+		// The built-in typeface's metrics. Icons are placed against the line as they are with it, whichever typeface
+		// is chosen. Read once, by adding the font, reading its data, and taking it out again
+		const VMetrics& GetReferenceMetrics()
+		{
+			static std::optional<VMetrics> s_metrics;
+			if (!s_metrics) {
+				auto&        io = ImGui::GetIO();
+				ImFontConfig cfg;
+				if (ImFont* font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(GetDefaultFontData(), 30.0f, &cfg)) {
+					if (font->Sources.Size > 0)
+						s_metrics = ReadVMetrics(font->Sources[0]->FontData, font->Sources[0]->FontDataSize);
+					io.Fonts->RemoveFont(font);
+				}
+				if (!s_metrics)
+					s_metrics = VMetrics{};
+			}
+			return *s_metrics;
+		}
+	}
+
 	IconTexture::IconTexture(std::wstring_view a_iconName) :
 		ImGui::Texture(LR"(Data/Interface/ImGuiIcons/Icons/)", a_iconName)
 	{}
@@ -76,6 +186,14 @@ namespace IconFont
 		auto& io    = ImGui::GetIO();
 		io.Fonts->Clear();
 
+		// Set before any font is added, so the flags apply from the first build
+		io.Fonts->SetFontLoader(ImGuiFreeType::GetFontLoader());
+		io.Fonts->FontLoaderFlags = ImGuiFreeTypeLoaderFlags_NoHinting;
+
+		// Before the fonts that are kept, as it adds and removes a font of its own
+		GetReferenceMetrics();
+
+		// The text the typeface is used for. The icons come from Font Awesome alone
 		ImVector<ImWchar>        ranges;
 		ImFontGlyphRangesBuilder builder;
 		if (auto scaleform = RE::BSScaleformManager::GetSingleton()) {
@@ -83,8 +201,6 @@ namespace IconFont
 		} else {
 			builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
 		}
-		static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_16_FA, 0 };
-		builder.AddRanges(icons_ranges);
 		builder.BuildRanges(&ranges);
 
 		_regularFont = LoadFontIconSet(_baseFontSize, _baseIconSize, ranges);
@@ -92,9 +208,6 @@ namespace IconFont
 
 		io.FontDefault                 = _regularFont;
 		ImGui::GetStyle().FontSizeBase = _regularFont->LegacySize;
-
-		io.Fonts->SetFontLoader(ImGuiFreeType::GetFontLoader());
-		io.Fonts->FontLoaderFlags = ImGuiFreeTypeLoaderFlags_NoHinting;
 
 		io.Fonts->Build();
 
@@ -108,14 +221,17 @@ namespace IconFont
 
 		ImFont* font = nullptr;
 
+		// The typeface never supplies the icons, even where it has glyphs of its own in their range
+		ImFontConfig main_cfg;
+		main_cfg.GlyphExcludeRanges = kIconRanges;
+
 		if (_fontName == "Default") {
-			ImFontConfig default_cfg;
-			default_cfg.FontDataOwnedByAtlas = false;
-			font                             = io.Fonts->AddFontFromMemoryCompressedBase85TTF(
-                GetDefaultFontData(), a_fontSize, &default_cfg, a_ranges.Data);
+			main_cfg.FontDataOwnedByAtlas = false;
+			font                          = io.Fonts->AddFontFromMemoryCompressedBase85TTF(
+                GetDefaultFontData(), a_fontSize, &main_cfg, a_ranges.Data);
 		} else {
 			std::string fullPath = ResolveFontPath(_fontName);
-			font                 = io.Fonts->AddFontFromFileTTF(fullPath.c_str(), a_fontSize, nullptr, a_ranges.Data);
+			font                 = io.Fonts->AddFontFromFileTTF(fullPath.c_str(), a_fontSize, &main_cfg, a_ranges.Data);
 		}
 
 		if (!font)
@@ -130,8 +246,17 @@ namespace IconFont
 		icon_config.GlyphMinAdvanceX = a_iconSize;
 		icon_config.GlyphMaxAdvanceX = a_iconSize;
 
+		// Merged glyphs sit on the typeface's baseline, and where the baseline falls in the line depends on the
+		// typeface's ascent and descent. So the icons are moved to keep the place in the line they have with the
+		// built-in typeface, rather than shifting up or down with each typeface
+		if (font && font->Sources.Size > 0) {
+			if (auto metrics = ReadVMetrics(font->Sources[0]->FontData, font->Sources[0]->FontDataSize)) {
+				icon_config.GlyphOffset.y = std::round((GetReferenceMetrics().Baseline() - metrics->Baseline()) * a_fontSize);
+			}
+		}
+
 		std::string faPath = ResolveFontPath(FONT_ICON_FILE_NAME_FAS);
-		io.Fonts->AddFontFromFileTTF(faPath.c_str(), a_iconSize, &icon_config, a_ranges.Data);
+		io.Fonts->AddFontFromFileTTF(faPath.c_str(), a_iconSize, &icon_config, kIconRanges);
 		return font;
 	}
 
