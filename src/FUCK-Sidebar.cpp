@@ -882,11 +882,11 @@ void FUCKMan::DrawSidebar(const SidebarMetrics& a_metrics, float a_height)
 			ImGui::PushFont(regularFont, m.sidebarFontSize);
 			float textY = startPos.y + (m.sidebarItemH - textHeightCalc) * 0.5f + textVisualOffset;
 
-			// Cut short before the star, with the whole name in a tooltip
+			// Cut short before the star, with the whole name in a tooltip on hover or gamepad focus
 			const ImVec2 textPos = { startScreenPos.x + alignedTextOffset + extraIndent, startScreenPos.y + (textY - startPos.y) };
 			const bool   cut     = DrawFittedLabel(window->DrawList, textPos, rowW - alignedTextOffset - extraIndent - starReserve, label);
-			if (cut && ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip))
-				ImGui::SetTooltip("%s", label);
+			if (cut)
+				ImGui::SetTooltipEx(label);
 
 			if (_cfg.showSidebarFavourites && (over.isFavourited || itemHovered)) {
 				const char* starIcon     = ICON_FA_STAR;
@@ -976,12 +976,12 @@ void FUCKMan::DrawSidebar(const SidebarMetrics& a_metrics, float a_height)
 						isOpen ? ImGui::IconDirection::kDown : ImGui::IconDirection::kRight);
 				}
 
-				// Cut short before the star, with the whole name in a tooltip
+				// Cut short before the star, with the whole name in a tooltip on hover or gamepad focus
 				const float textX = pos.x + indent + alignedTextOffset;
 				const float textY = bb.Min.y + (m.sidebarItemH - ImGui::GetFontSize()) * 0.5f + textVisualOffset;
 				const bool  cut   = DrawFittedLabel(window->DrawList, { textX, textY }, bb.Max.x - textX - (canFav ? starReserve : 8.0f * m.uiScale), label);
-				if (cut && hovered)
-					ImGui::SetTooltip("%s", label);
+				if (cut)
+					ImGui::SetTooltipEx(label);
 
 				if (canFav) {
 					auto it    = _groupOverrides.find(path);
