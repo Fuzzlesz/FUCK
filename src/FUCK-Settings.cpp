@@ -501,11 +501,12 @@ void SettingsTool::Draw()
 				static_cast<int>(FUCK::TableFlags::kBorders | FUCK::TableFlags::kRowBg | FUCK::TableFlags::kResizable | FUCK::TableFlags::kSizingStretchProp | FUCK::TableFlags::kNoSavedSettings) |
 				ImGuiTableFlags_ScrollY);
 
-			if (FUCK::BeginTable("WorkspaceToolTable", 6, tableFlags, ImVec2(0.0f, tableH))) {
+			if (FUCK::BeginTable("WorkspaceToolTable", 7, tableFlags, ImVec2(0.0f, tableH))) {
 				ImGui::TableSetupScrollFreeze(0, 1);
 
 				// Base Columns
 				FUCK::TableSetupColumn("##Hide", FUCK::TableColumnFlags::kWidthFixed | FUCK::TableColumnFlags::kNoSort, 35.0f * tableScale);
+				FUCK::TableSetupColumn("##Fav", FUCK::TableColumnFlags::kWidthFixed | FUCK::TableColumnFlags::kNoSort, 35.0f * tableScale);
 				FUCK::TableSetupColumn("$FUCK_Sidebar_TableOrig"_T, FUCK::TableColumnFlags::kWidthStretch | FUCK::TableColumnFlags::kNoSort, 2.0f);
 				FUCK::TableSetupColumn("$FUCK_Sidebar_TablePlugin"_T, FUCK::TableColumnFlags::kWidthStretch | FUCK::TableColumnFlags::kNoSort, 1.5f);
 				FUCK::TableSetupColumn("$FUCK_Sidebar_TableCustom"_T, FUCK::TableColumnFlags::kWidthStretch | FUCK::TableColumnFlags::kNoSort, 2.0f);
@@ -530,6 +531,20 @@ void SettingsTool::Draw()
 				ImGui::PopFont();
 				FUCK::SetTooltip("$FUCK_Sidebar_TableHideTT"_T);
 
+				// Header: Star Icon (Col 1)
+				FUCK::TableNextColumn();
+				FUCK::TableSetBgColor(FUCK::TableBgTarget::kCellBg, ImGui::GetColorU32(ImGuiCol_TableHeaderBg));
+				ImGui::PushFont(ImGui::GetFont(), ImGui::GetFontSize() * 0.8f);
+				float iconStarW = FUCK::CalcTextSize(ICON_FA_STAR).x;
+				FUCK::SetCursorPosX(FUCK::GetCursorPos().x + std::max(0.0f, (FUCK::GetColumnWidth() - iconStarW) * 0.5f));
+				FUCK::SetCursorPosY(FUCK::GetCursorPos().y + (3.0f * tableScale));
+
+				FUCK::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.84f, 0.0f, 1.0f));
+				FUCK::Text(ICON_FA_STAR);
+				FUCK::PopStyleColor();
+				ImGui::PopFont();
+				FUCK::SetTooltip("$FUCK_Sidebar_TableFavTT"_T);
+
 				// Header: Text Columns
 				auto DrawCenterHeader = [](const char* label) {
 					FUCK::TableNextColumn();
@@ -548,7 +563,7 @@ void SettingsTool::Draw()
 				// Where the frozen header ends, so nothing drawn for the rows spills over it
 				const float headerBottom = ImGui::TableGetCellBgRect(ImGui::GetCurrentTable(), 0).Max.y;
 
-				// Header: Hand Icon (Col 5)
+				// Header: Hand Icon (Col 6)
 				FUCK::TableNextColumn();
 				FUCK::TableSetBgColor(FUCK::TableBgTarget::kCellBg, ImGui::GetColorU32(ImGuiCol_TableHeaderBg));
 
@@ -772,6 +787,8 @@ void SettingsTool::Draw()
 					const bool        isHidden       = toolOver && toolOver->isHidden;
 					const std::string customName     = toolOver ? toolOver->customName : std::string();
 					const bool        hasCustomGroup = toolOver && !toolOver->customGroup.empty();
+					const auto*       groupOver      = row.tool ? nullptr : findGroupOver(row.path);
+					const bool        isFavourited   = row.tool ? (toolOver && toolOver->isFavourited) : (groupOver && groupOver->isFavourited);
 
 					if (row.tool) {
 						FUCK::SetCursorPos(startPos);
@@ -799,7 +816,32 @@ void SettingsTool::Draw()
 						ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), scaledFontSize, textPos, iconCol, icon);
 					}
 
-					// Col 1: Original Name, or the group's name with its collapse arrow
+					// Col 1: Favourite star, for tools and groups alike
+					FUCK::TableNextColumn();
+					{
+						const float cellW = FUCK::GetColumnWidth();
+						if (ImGui::InvisibleButton("##FavBtn", ImVec2(cellW, rowH))) {
+							if (row.tool)
+								manager->_toolOverrides[row.key].isFavourited = !isFavourited;
+							else
+								manager->_groupOverrides[row.path].isFavourited = !isFavourited;
+							manager->OnOverridesChanged();
+						}
+
+						const bool   starHovered = ImGui::IsItemHovered();
+						const ImU32  starCol     = starHovered ? IM_COL32(255, 255, 100, 255) : (isFavourited ? IM_COL32(255, 215, 0, 255) : ImGui::GetColorU32(ImGuiCol_TextDisabled));
+						const ImVec2 cellPos     = ImGui::GetItemRectMin();
+
+						const float starFontSize = ImGui::GetFontSize() * 0.8f;
+						ImGui::PushFont(nullptr, starFontSize);
+						const ImVec2 starSize = FUCK::CalcTextSize(ICON_FA_STAR);
+						ImGui::PopFont();
+
+						ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), starFontSize,
+							ImVec2(cellPos.x + (cellW - starSize.x) * 0.5f, cellPos.y + (rowH - starSize.y) * 0.5f), starCol, ICON_FA_STAR);
+					}
+
+					// Col 2: Original Name, or the group's name with its collapse arrow
 					FUCK::TableNextColumn();
 					if (row.tool) {
 						FUCK::AlignTextToFramePadding();
@@ -845,14 +887,14 @@ void SettingsTool::Draw()
 						ImGui::PopStyleColor();
 					}
 
-					// Col 2: Plugin Name
+					// Col 3: Plugin Name
 					FUCK::TableNextColumn();
 					if (row.tool) {
 						FUCK::AlignTextToFramePadding();
 						FUCK::TextDisabled("%s", row.plugin.c_str());
 					}
 
-					// Col 3: Custom Name, keyed by the tool, or by the group's full path
+					// Col 4: Custom Name, keyed by the tool, or by the group's full path
 					FUCK::TableNextColumn();
 					if (row.tool) {
 						if (EditableCell(i, "name", customName, false, nullptr) && customName != T.editBuf) {
@@ -868,7 +910,7 @@ void SettingsTool::Draw()
 						}
 					}
 
-					// Col 4: The tool's group as a path such as "Camera::Presets", dimmed while it's the one it came with.
+					// Col 5: The tool's group as a path such as "Camera::Presets", dimmed while it's the one it came with.
 					// For a nested group, the group it sits in
 					FUCK::TableNextColumn();
 					if (row.tool) {
@@ -888,7 +930,7 @@ void SettingsTool::Draw()
 						}
 					}
 
-					// Col 5: Drag Handle
+					// Col 6: Drag Handle
 					FUCK::TableNextColumn();
 					DrawGrip(rowHovered);
 
@@ -1012,6 +1054,7 @@ void SettingsTool::Draw()
 						const std::string current = manager->GetToolGroup(tool);
 						const auto*       over    = findToolOver(key);
 						const bool        hidden  = over && over->isHidden;
+						const bool        fav     = over && over->isFavourited;
 
 						ImGui::TextDisabled("%s", manager->GetToolLabel(tool).c_str());
 						ImGui::Separator();
@@ -1041,6 +1084,10 @@ void SettingsTool::Draw()
 							manager->_toolOverrides[key].isHidden = !hidden;
 							manager->OnOverridesChanged();
 						}
+						if (ImGui::MenuItem(fav ? "$FUCK_Sidebar_RemoveFavourite"_T : "$FUCK_Sidebar_AddFavourite"_T)) {
+							manager->_toolOverrides[key].isFavourited = !fav;
+							manager->OnOverridesChanged();
+						}
 
 						ImGui::Separator();
 						if (ImGui::MenuItem("$FUCK_Sidebar_ResetRow"_T)) {
@@ -1053,7 +1100,9 @@ void SettingsTool::Draw()
 							manager->OnOverridesChanged();
 						}
 					} else if (!T.menuGroup.empty()) {
-						const std::string path = T.menuGroup;
+						const std::string path     = T.menuGroup;
+						const auto*       groupFav = findGroupOver(path);
+						const bool        fav      = groupFav && groupFav->isFavourited;
 
 						ImGui::TextDisabled("%s", manager->GetGroupDisplayName(path).c_str());
 						ImGui::Separator();
@@ -1083,6 +1132,11 @@ void SettingsTool::Draw()
 								ImGui::PopID();
 							}
 							ImGui::EndMenu();
+						}
+
+						if (ImGui::MenuItem(fav ? "$FUCK_Sidebar_RemoveFavourite"_T : "$FUCK_Sidebar_AddFavourite"_T)) {
+							manager->_groupOverrides[path].isFavourited = !fav;
+							manager->OnOverridesChanged();
 						}
 
 						ImGui::Separator();

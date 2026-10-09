@@ -1156,49 +1156,64 @@ void FUCKMan::DrawSidebar(const SidebarMetrics& a_metrics, float a_height)
 					return added;
 				};
 
-				// Favourites first, gathered in a group of their own or as loose rows
-				std::vector<FUCK::ITool*> favTools;
+				// Favourites first: favourited tools and groups together, alphabetically, under a header of their own or as
+				// loose rows. A favourited group brings everything in it along, from whatever level it's at
+				struct Favourite
+				{
+					std::string  name;
+					std::string  tieBreak;  // a fixed order between the same name
+					FUCK::ITool* tool = nullptr;
+					std::string  group;
+				};
+				std::vector<Favourite> favourites;
 				for (const auto& [path, node] : layout.tree) {
 					for (auto* t : node.tools) {
 						if (isFavourite(t) && isShown(t))
-							favTools.push_back(t);
+							favourites.push_back({ GetToolLabel(t), GetToolKey(t), t, std::string() });
 					}
-				}
-				std::sort(favTools.begin(), favTools.end(), [&](FUCK::ITool* a, FUCK::ITool* b) {
-					if (int cmp = _stricmp(GetToolLabel(a).c_str(), GetToolLabel(b).c_str()); cmp != 0)
-						return cmp < 0;
-					return GetToolKey(a) < GetToolKey(b);  // same name, so a fixed order
-				});
-
-				if (!favTools.empty()) {
-					if (_cfg.groupFavourites) {
-						const ImGuiID id = groupStateId(kFavouritesPath);
-						s_rows.push_back({ nullptr, kFavouritesPath, "$FUCK_Sidebar_FavouritesGroup"_T, 0, id });
-						if (isGroupOpen(id)) {
-							for (auto* t : favTools)
-								s_rows.push_back({ t, std::string(), GetToolLabel(t), 1 });
-						}
-					} else {
-						for (auto* t : favTools)
-							s_rows.push_back({ t, std::string(), GetToolLabel(t), 0 });
-					}
-				}
-
-				// Then the favourited groups, nested ones brought up to the top level, alphabetically
-				std::vector<std::pair<std::string, std::string>> favGroups;  // display name, path
-				for (const auto& [path, node] : layout.tree) {
 					for (const auto& g : node.groups) {
 						if (isFavouriteGroup(g))
-							favGroups.emplace_back(GetGroupDisplayName(g), g);
+							favourites.push_back({ GetGroupDisplayName(g), g, nullptr, g });
 					}
 				}
-				std::sort(favGroups.begin(), favGroups.end(), [](const auto& a, const auto& b) {
-					if (int cmp = _stricmp(a.first.c_str(), b.first.c_str()); cmp != 0)
+				std::sort(favourites.begin(), favourites.end(), [](const Favourite& a, const Favourite& b) {
+					if (int cmp = _stricmp(a.name.c_str(), b.name.c_str()); cmp != 0)
 						return cmp < 0;
-					return a.second < b.second;  // same name, so by path
+					return a.tieBreak < b.tieBreak;
 				});
-				for (const auto& [name, g] : favGroups) {
-					addGroup(g, 0);
+
+				// Adds one favourite at depth. Returns false for a group with nothing to show, which is left out
+				auto addFavourite = [&](const Favourite& f, int depth) -> bool {
+					if (f.tool) {
+						s_rows.push_back({ f.tool, std::string(), GetToolLabel(f.tool), depth });
+						return true;
+					}
+					return addGroup(f.group, depth);
+				};
+
+				if (!favourites.empty()) {
+					if (_cfg.groupFavourites) {
+						const std::size_t at = s_rows.size();
+						const ImGuiID     id = groupStateId(kFavouritesPath);
+						s_rows.push_back({ nullptr, kFavouritesPath, "$FUCK_Sidebar_FavouritesGroup"_T, 0, id });
+
+						// Open, its rows are added. Closed, it stays as long as one of them would show
+						bool hasContent = false;
+						for (const auto& f : favourites) {
+							if (isGroupOpen(id)) {
+								if (addFavourite(f, 1))
+									hasContent = true;
+							} else if (f.tool || hasShownTool(f.group)) {
+								hasContent = true;
+								break;
+							}
+						}
+						if (!hasContent)
+							s_rows.resize(at);
+					} else {
+						for (const auto& f : favourites)
+							addFavourite(f, 0);
+					}
 				}
 
 				// Then everything else, groups and tools together in the layout's order
