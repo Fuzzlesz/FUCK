@@ -2,6 +2,7 @@ set(sources ${sources}
 	src/FUCK-Host.cpp
 	src/FUCK-Man.cpp
 	src/FUCK-Settings.cpp
+	src/FUCK-Sidebar.cpp
 	src/FUCK-Styles.cpp
 	src/ImGui/Audio.cpp
 	src/ImGui/Backend/imgui_impl_skyrim.cpp

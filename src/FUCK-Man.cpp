@@ -15,6 +15,8 @@
 #include "System/Settings.h"
 #include "System/Utils.h"
 
+#include <fstream>
+
 // Where an edited window's handles were drawn last frame, so they can take the mouse over windows in front
 struct EditHandles
 {
@@ -158,6 +160,7 @@ struct WorkspaceSaveData
 	WindowSaveData           mainWindow;
 	StringMap<int>           toolOrder;
 	StringMap<GroupSaveData> groups;
+	StringMap<std::string>   groupMoves;  // groups the user moved: the path the plugins give, and where it is now
 };
 
 FUCKMan::FUCKMan()
@@ -227,8 +230,10 @@ void FUCKMan::FlushPendingRegistrations()
 				auto it = std::find_if(_tools.begin(), _tools.end(), [&](FUCK::ITool* existing) {
 					return existing && (strcmp(existing->Name(), tool->Name()) == 0) && (strcmp(existing->PluginName(), tool->PluginName()) == 0);
 				});
-				if (it == _tools.end())
+				if (it == _tools.end()) {
 					_tools.push_back(tool);
+					MarkLayoutDirty();
+				}
 				break;
 			}
 		case PendingCommand::Type::kAddWindow:
@@ -266,6 +271,10 @@ void FUCKMan::FlushPendingRegistrations()
 				}
 				break;
 			}
+		case PendingCommand::Type::kRefreshTools:
+			// The layout reads each tool's name, group and visibility when it's rebuilt
+			MarkLayoutDirty();
+			break;
 		}
 	}
 }
@@ -571,9 +580,17 @@ void FUCKMan::LoadWorkspace()
 				_toolOverrides[k].sortOrder = v;
 			}
 			for (const auto& [k, v] : sd.groups) {
-				_groupOverrides[k].isFavourited = v.bFavourited;
-				_groupOverrides[k].customName   = v.sName;
-				_groupOverrides[k].sortOrder    = v.iOrder;
+				// Saved before groups could nest, or typed by hand, so tidied to match the paths they're looked up by
+				auto& over        = _groupOverrides[Sidebar::NormaliseGroupPath(k)];
+				over.isFavourited = v.bFavourited;
+				over.customName   = v.sName;
+				over.sortOrder    = v.iOrder;
+			}
+			for (const auto& [from, to] : sd.groupMoves) {
+				const std::string fromPath = Sidebar::NormaliseGroupPath(from);
+				const std::string toPath   = Sidebar::NormaliseGroupPath(to);
+				if (!fromPath.empty() && !toPath.empty() && fromPath != toPath)
+					_groupMoves[fromPath] = toPath;
 			}
 		} else {
 			s_workspaceUnreadable = true;
@@ -631,6 +648,8 @@ void FUCKMan::LoadWorkspace()
 			}
 		}
 	}
+
+	MarkLayoutDirty();
 }
 
 void FUCKMan::SaveWorkspace()
@@ -690,6 +709,10 @@ void FUCKMan::WriteWorkspace()
 
 			sd.groups[grp] = gd;
 		}
+	}
+
+	for (const auto& [from, to] : _groupMoves) {
+		sd.groupMoves[from] = to;
 	}
 
 	// Distribute Main Window Geometry
@@ -2201,425 +2224,9 @@ void FUCKMan::Draw(bool a_passthroughOnly)
  
 			float availHeight = ImGui::GetContentRegionAvail().y;
  
-			// -- Sidebar (unscaled) --
+			// -- Sidebar (unscaled), drawn in FUCK-Sidebar.cpp --
 			auto renderSidebar = [&]() {
-				const float topPadding       = 2.0f * m.uiScale;
-				const float bottomPadding    = 2.0f * m.uiScale;
-				const float textVisualOffset = 1.0f * m.uiScale;
- 
-				ImFont* regularFont = MANAGER(IconFont)->GetRegularFont();
- 
-				auto GetOverrides = [&](FUCK::ITool* t) -> ToolOverrideState& {
-					return _toolOverrides[std::format("{}|{}", t->PluginName(), t->Name())];
-				};
- 
-				std::vector<FUCK::ITool*>            favTools;
-				std::vector<FUCK::ITool*>            looseTools;
-				StringMap<std::vector<FUCK::ITool*>> toolGroups;
- 
-				ImGui::BeginChild("Sidebar", ImVec2(m.sidebarWidth, availHeight), true, ImGuiWindowFlags_None);
-				{
-					ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
-					ImVec2 headerStart = ImGui::GetCursorPos();
-					headerStart.y += topPadding;
- 
-					// --- HEADER: TOOLS (Centred) ---
-					ImGui::SetCursorPos(headerStart);
- 
-					// Bypassing ImGui::PushFont scaling
-					ImGui::PushFont(regularFont, m.sidebarFontSize);
-					float       textHeightCalc = ImGui::GetTextLineHeight();
-					float       sidebarAvailW  = ImGui::GetContentRegionAvail().x;
-					const char* headerText     = "$FUCK_Tools"_T;
-					float       headerW        = ImGui::CalcTextSize(headerText).x;
- 
-					ImGui::SetCursorPosX(headerStart.x + (sidebarAvailW - headerW) * 0.5f);
-					ImGui::SetCursorPosY(headerStart.y + (m.sidebarItemH - textHeightCalc) * 0.5f + textVisualOffset);
-					ImGui::TextUnformatted(headerText);
-					ImGui::PopFont();
- 
-					ImGui::SetCursorPos(ImVec2(headerStart.x, headerStart.y + m.sidebarItemH));
-					ImGui::SeparatorThick();
- 
-					// --- FILTER BOX ---
-					static char filterBuf[128] = "";
-					if (_cfg.showSidebarFilter) {
-						ImGui::PushFont(regularFont, m.sidebarFontSize * 0.8f);
-						ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8.0f * m.uiScale, 6.0f * m.uiScale));
-						ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f * m.uiScale);
-						ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f * m.uiScale);
- 
-						// Sync background with the active theme's input box styling
-						ImGui::PushStyleColor(ImGuiCol_FrameBg, ImGui::GetUserStyleColorVec4(ImGui::USER_STYLE::kComboBoxTextBox));
- 
-						ImGui::SetNextItemWidth(-1.0f);
-						ImGui::InputTextWithHint("##SidebarFilter", "$FUCK_Sidebar_FilterHint"_T, filterBuf, sizeof(filterBuf));
- 
-						ImGui::PopStyleColor(1);
-						ImGui::PopStyleVar(3);
-						ImGui::PopFont();
- 
-						ImGui::Dummy(ImVec2(0.0f, 4.0f * m.uiScale));
-					}
- 
-					bool        filtering = filterBuf[0] != '\0';
-					std::string lowerFilter;
-					if (filtering) {
-						lowerFilter = clib_util::string::tolower(filterBuf);
-					}
- 
-					static std::string lowerNameBuffer;
- 
-					// Evaluate and distribute tools into collections
-					for (auto* tool : _tools) {
-						if (!tool->ShowInSidebar())
-							continue;
- 
-						auto& over = GetOverrides(tool);
-						if (over.isHidden)
-							continue;
- 
-						std::string resolvedName = over.customName.empty() ? tool->Name() : over.customName;
- 
-						if (filtering) {
-							// Copy to buffer and lower-case in-place to avoid allocations
-							lowerNameBuffer = resolvedName;
-							std::transform(lowerNameBuffer.begin(), lowerNameBuffer.end(), lowerNameBuffer.begin(),
-								[](unsigned char c) { return static_cast<unsigned char>(std::tolower(c)); });
- 
-							auto score = rapidfuzz::fuzz::partial_token_ratio(lowerFilter, lowerNameBuffer);
-							if (score < 65.0)
-								continue;
-						}
- 
-						if (_cfg.showSidebarFavourites && over.isFavourited) {
-							favTools.push_back(tool);
-						} else {
-							// Use the exact same resolution logic as the Settings Table
-							std::string resolvedGrp = over.customGroup;
-							if (resolvedGrp.empty())
-								resolvedGrp = tool->Group() ? tool->Group() : "";
-							if (resolvedGrp == "##ROOT")
-								resolvedGrp = "";
- 
-							if (resolvedGrp.empty())
-								looseTools.push_back(tool);
-							else
-								toolGroups[resolvedGrp].push_back(tool);
-						}
-					}
- 
-					auto sortToolsAlphabetically = [&](FUCK::ITool* a, FUCK::ITool* b) {
-						auto& oa = GetOverrides(a);
-						auto& ob = GetOverrides(b);
-						if (oa.sortOrder != ob.sortOrder)
-							return oa.sortOrder < ob.sortOrder;
-						std::string na = oa.customName.empty() ? a->Name() : oa.customName;
-						std::string nb = ob.customName.empty() ? b->Name() : ob.customName;
-						return _stricmp(na.c_str(), nb.c_str()) < 0;
-					};
- 
-					auto sortToolsByRegOrder = [&](FUCK::ITool* a, FUCK::ITool* b) {
-						return GetOverrides(a).sortOrder < GetOverrides(b).sortOrder;
-					};
- 
-					struct SidebarEntry
-					{
-						const char*                label;
-						const char*                origGroup;
-						bool                       isGroup   = false;
-						FUCK::ITool*               tool      = nullptr;
-						std::vector<FUCK::ITool*>* tools     = nullptr;
-						int                        sortOrder = 0;
-					};
- 
-					std::vector<SidebarEntry> entries;
- 
-					if (!favTools.empty()) {
-						std::sort(favTools.begin(), favTools.end(), sortToolsAlphabetically);
-						if (_cfg.groupFavourites) {
-							entries.push_back({ "$FUCK_Sidebar_FavouritesGroup"_T, "", true, nullptr, &favTools, -1000000 });
-						} else {
-							for (auto* t : favTools) {
-								auto&       over = GetOverrides(t);
-								const char* name = over.customName.empty() ? t->Name() : over.customName.c_str();
-								entries.push_back({ name, "", false, t, nullptr, -1000000 });
-							}
-						}
-					}
- 
-					for (auto* t : looseTools) {
-						auto&       over = GetOverrides(t);
-						const char* name = over.customName.empty() ? t->Name() : over.customName.c_str();
-						entries.push_back({ name, "", false, t, nullptr, over.sortOrder });
-					}
- 
-					for (auto& [name, tools] : toolGroups) {
-						std::stable_sort(tools.begin(), tools.end(), sortToolsByRegOrder);
-						auto&       gOver      = _groupOverrides[name];
-						const char* dispName   = gOver.customName.empty() ? name.c_str() : gOver.customName.c_str();
-						int         groupOrder = (_cfg.showSidebarFavourites && gOver.isFavourited) ? -999999 : gOver.sortOrder;
-						entries.push_back({ dispName, name.c_str(), true, nullptr, &tools, groupOrder });
-					}
- 
-					std::sort(entries.begin(), entries.end(), [](const SidebarEntry& a, const SidebarEntry& b) {
-						if (a.sortOrder != b.sortOrder)
-							return a.sortOrder < b.sortOrder;
-						return _stricmp(a.label, b.label) < 0;
-					});
- 
-					auto  apRight           = chromeArrow(false, m.sidebarItemH);
-					float alignedTextOffset = (m.sidebarIndent * 0.5f) + apRight.drawSize.x + (10.0f * m.uiScale);
- 
-					auto RenderSidebarItem = [&](FUCK::ITool* tool, const char* label, float extraIndent = 0.0f) {
-						ImGuiWindow* window = ImGui::GetCurrentWindow();
-						if (window->SkipItems)
-							return;  // FIX: Prevents EXCEPTION_ACCESS_VIOLATION during collapse
- 
-						ImGui::PushID(tool);
- 
-						bool  isSelected = (_activeTool == tool);
-						auto& over       = GetOverrides(tool);
- 
-						// Cache both Screen and Window positions before the Selectable moves the cursor!
-						const auto startScreenPos = ImGui::GetCursorScreenPos();
-						const auto startPos       = ImGui::GetCursorPos();
- 
-						// Draw Selectable (Full width background & highlight)
-						if (ImGui::Selectable("##SidebarItem", isSelected, ImGuiSelectableFlags_AllowOverlap, ImVec2(0, m.sidebarItemH))) {
-							if (_activeTool != tool) {
-								if (_activeTool) {
-									Input::Manager::GetSingleton()->AbortBinding();
-									_activeTool->OnClose();
-								}
-								ImGui::PlayAudio(ImGui::Audio::kOk);
-								_activeTool = tool;
-								_activeTool->OnOpen();
-							}
-						}
- 
-						bool itemHovered = ImGui::IsItemHovered(0);
-						bool itemFocused = ImGui::IsItemFocused();
- 
-						// Add Gamepad 'Y' shortcut to favourite tools on the sidebar
-						if ((itemHovered || itemFocused) && ImGui::IsKeyPressed(ImGuiKey_GamepadFaceUp, false)) {
-							over.isFavourited = !over.isFavourited;
-							SaveWorkspace();
-						}
- 
-						ImVec2 endPos = ImGui::GetCursorPos();  // Save position after selectable
- 
-						// Bypassing ImGui::PushFont scaling
-						ImGui::PushFont(regularFont, m.sidebarFontSize);
-						float textY = startPos.y + (m.sidebarItemH - textHeightCalc) * 0.5f + textVisualOffset;
- 
-						ImGui::SetCursorPos({ startPos.x + alignedTextOffset + extraIndent, textY });
-						ImGui::TextUnformatted(label);
- 
-						// Draw Star
-						if (_cfg.showSidebarFavourites && (over.isFavourited || itemHovered)) {
-							const char* starIcon     = ICON_FA_STAR;
-							float       starScale    = 0.85f;
-							float       starFontSize = m.sidebarFontSize * starScale;
- 
-							ImGui::PushFont(regularFont, starFontSize);
-							ImVec2 starSize = ImGui::CalcTextSize(starIcon);
-							ImGui::PopFont();
- 
-							float starX = startScreenPos.x + sidebarAvailW - starSize.x - (15.0f * m.uiScale);
-							float starY = startScreenPos.y + (m.sidebarItemH - starFontSize) * 0.5f - (1.0f * m.uiScale);
- 
-							// Hit-testing logic bypassing ImGui Item overlap clashing
-							ImRect starBB(
-								ImVec2(starX - (5.0f * m.uiScale), startScreenPos.y),
-								ImVec2(starX + starSize.x + (5.0f * m.uiScale), startScreenPos.y + m.sidebarItemH));
-							bool starHovered = ImGui::IsMouseHoveringRect(starBB.Min, starBB.Max);
- 
-							if (starHovered && ImGui::IsMouseClicked(0)) {
-								over.isFavourited = !over.isFavourited;
-								SaveWorkspace();
-							}
- 
-							ImU32 starCol = starHovered ? IM_COL32(255, 255, 100, 255) : (over.isFavourited ? IM_COL32(255, 215, 0, 255) : IM_COL32(150, 150, 150, 150));
- 
-							ImGui::GetWindowDrawList()->AddText(regularFont, starFontSize,
-								ImVec2(starX, starY),
-								starCol, starIcon);
-						}
- 
-						ImGui::PopFont();
-						ImGui::SetCursorPos(endPos);  // Restore cursor to next line
-						ImGui::PopID();
-					};
- 
-					auto RenderSidebarGroup = [&](const char* groupName, const char* origGroup, std::vector<FUCK::ITool*>& tools) {
-						ImGuiWindow* window = ImGui::GetCurrentWindow();
-						if (window->SkipItems)
-							return;
- 
-						// Bypassing ImGui::PushFont scaling
-						ImGui::PushFont(regularFont, m.sidebarFontSize);
- 
-						// Custom TreeNode rendering
-						ImGui::PushID(groupName);
-						ImGuiID id     = window->GetID(groupName);
-						bool    isOpen = window->DC.StateStorage->GetInt(id, 0);
- 
-						ImVec2 pos = window->DC.CursorPos;
-						ImRect bb(pos, pos + ImVec2(ImGui::GetContentRegionAvail().x, m.sidebarItemH));
- 
-						ImGui::ItemSize(bb);
-						if (ImGui::ItemAdd(bb, id)) {
-							bool hovered, held;
-							if (ImGui::ButtonBehavior(bb, id, &hovered, &held, 0)) {
-								isOpen = !isOpen;
-								window->DC.StateStorage->SetInt(id, isOpen);
-								ImGui::PlayAudio(isOpen ? ImGui::Audio::kFocus : ImGui::Audio::kCancel);
-							}
-							if (hovered)
-								ImGui::RenderFrame(bb.Min, bb.Max, ImGui::GetColorU32(ImGuiCol_HeaderHovered), false);
- 
-							bool isFocused = ImGui::IsItemFocused();
- 
-							// Add Gamepad 'Y' shortcut to favourite groups on the sidebar
-							if ((hovered || isFocused) && ImGui::IsKeyPressed(ImGuiKey_GamepadFaceUp, false)) {
-								if (origGroup && origGroup[0] != '\0') {
-									auto& gOver        = _groupOverrides[origGroup];
-									gOver.isFavourited = !gOver.isFavourited;
-									SaveWorkspace();
-								}
-							}
- 
-							// Draw chevron
-							if (iconArrow) {
-								ImU32 col   = ImGui::GetDynamicTextColor(hovered);
-								bool  pDown = isOpen;
-								auto  ap    = chromeArrow(pDown, m.sidebarItemH);
- 
-								ImVec2 drawPos = {
-									pos.x + (m.sidebarIndent * 0.5f),
-									pos.y + ap.offsetY + textVisualOffset
-								};
-								ImGui::DrawArrowIcon(window->DrawList, drawPos, ap.drawSize, col,
-									pDown ? ImGui::IconDirection::kDown : ImGui::IconDirection::kRight);
-							}
- 
-							float textY = bb.Min.y + (m.sidebarItemH - ImGui::CalcTextSize(groupName).y) * 0.5f + textVisualOffset;
-							ImGui::RenderText({ pos.x + alignedTextOffset, textY }, groupName);
- 
-							// Draw Star
-							if (origGroup && origGroup[0] != '\0') {
-								bool isFav = false;
- 
-								// Transparent lookup
-								auto it = _groupOverrides.find(origGroup);
-								if (it != _groupOverrides.end()) {
-									isFav = it->second.isFavourited;
-								}
- 
-								if (_cfg.showSidebarFavourites && (isFav || hovered)) {
-									const char* starIcon     = ICON_FA_STAR;
-									float       starScale    = 0.85f;
-									float       starFontSize = m.sidebarFontSize * starScale;
- 
-									ImGui::PushFont(regularFont, starFontSize);
-									ImVec2 starSize = ImGui::CalcTextSize(starIcon);
-									ImGui::PopFont();
- 
-									float starX = bb.Min.x + sidebarAvailW - starSize.x - (15.0f * m.uiScale);
-									float starY = bb.Min.y + (m.sidebarItemH - starFontSize) * 0.5f - (1.0f * m.uiScale);
- 
-									// Hit-testing logic bypassing ImGui Item overlap clashing
-									ImRect starBB(
-										ImVec2(starX - (5.0f * m.uiScale), bb.Min.y),
-										ImVec2(starX + starSize.x + (5.0f * m.uiScale), bb.Min.y + m.sidebarItemH));
-									bool starHovered = ImGui::IsMouseHoveringRect(starBB.Min, starBB.Max);
- 
-									if (starHovered && ImGui::IsMouseClicked(0)) {
-										isFav                                   = !isFav;
-										_groupOverrides[origGroup].isFavourited = isFav;
-										SaveWorkspace();
-									}
- 
-									ImU32 starCol = starHovered ? IM_COL32(255, 255, 100, 255) : (isFav ? IM_COL32(255, 215, 0, 255) : IM_COL32(150, 150, 150, 150));
- 
-									ImGui::GetWindowDrawList()->AddText(regularFont, starFontSize,
-										ImVec2(starX, starY),
-										starCol, starIcon);
-								}
-							}
-						}
- 
-						if (isOpen) {
-							for (auto* tool : tools) {
-								auto&       over         = GetOverrides(tool);
-								const char* resolvedName = over.customName.empty() ? tool->Name() : over.customName.c_str();
-								RenderSidebarItem(tool, resolvedName, m.sidebarIndent);
-							}
-						}
- 
-						ImGui::PopID();
-						ImGui::PopFont();
-					};
- 
-					for (auto& entry : entries) {
-						if (entry.isGroup) {
-							RenderSidebarGroup(entry.label, entry.origGroup, *entry.tools);
-						} else {
-							RenderSidebarItem(entry.tool, entry.label);
-						}
-					}
- 
-					// --- FOOTER: SETTINGS (Centred) ---
-					float childHeight     = ImGui::GetWindowSize().y;
-					float separatorHeight = 1.0f;
-					float settingsY       = childHeight - m.sidebarItemH - bottomPadding;
- 
-					float minSettingY = ImGui::GetCursorPos().y + separatorHeight;
-					if (settingsY < minSettingY)
-						settingsY = minSettingY;
- 
-					ImGui::SetCursorPosY(settingsY - separatorHeight);
-					ImGui::SeparatorThick();
- 
-					ImGui::SetCursorPosY(settingsY);
-					{
-						auto*      settingsTool = &_settingsTool;
-						bool       isSelected   = (_activeTool == settingsTool);
-						const auto cursorPos    = ImGui::GetCursorPos();
- 
-						if (ImGui::Selectable("##SETTINGS", isSelected, 0, ImVec2(0, m.sidebarItemH))) {
-							if (_activeTool != settingsTool) {
-								if (_activeTool) {
-									Input::Manager::GetSingleton()->AbortBinding();
-									_activeTool->OnClose();
-								}
-								ImGui::PlayAudio(ImGui::Audio::kOk);
-								_activeTool = settingsTool;
-								_activeTool->OnOpen();
-							}
-						}
- 
-						ImVec2 endPos = ImGui::GetCursorPos();
-						ImGui::SetCursorPos(cursorPos);
- 
-						// Bypassing ImGui::PushFont scaling
-						ImGui::PushFont(regularFont, m.sidebarFontSize);
- 
-						const char* settingText = "$FUCK_Settings"_T;
-						float       setW        = ImGui::CalcTextSize(settingText).x;
- 
-						ImGui::SetCursorPosX(cursorPos.x + (sidebarAvailW - setW) * 0.5f);
-						ImGui::SetCursorPosY(cursorPos.y + (m.sidebarItemH - textHeightCalc) * 0.5f + textVisualOffset);
-						ImGui::TextUnformatted(settingText);
- 
-						ImGui::PopFont();
-						ImGui::SetCursorPos(endPos);
-					}
-					ImGui::PopStyleVar();
-					ImGui::Dummy(ImVec2(0, bottomPadding));
-				}
-				ImGui::EndChild();
+				DrawSidebar({ m.uiScale, m.iconAspect, m.chromeIconBaseH, m.sidebarWidth, m.sidebarItemH, m.sidebarFontSize, m.sidebarIndent }, availHeight);
 			};
  
 			// -- Content (scaled) --

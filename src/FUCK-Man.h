@@ -1,6 +1,7 @@
 #pragma once
 
 #include "FUCK-Settings.h"
+#include "FUCK-Sidebar.h"
 #include "FUCK-Styles.h"
 
 struct WindowState;
@@ -58,12 +59,39 @@ public:
 		int         sortOrder    = 0;
 	};
 
+	// Keyed by the group's full path, so each nested level has its own
 	struct GroupOverrideState
 	{
 		bool        isFavourited = false;
 		std::string customName   = "";
 		int         sortOrder    = 0;
 	};
+
+	// --- Sidebar (FUCK-Sidebar.cpp) ---
+	std::string GetToolGroup(FUCK::ITool* a_tool);              // with the user's override, normalised
+	std::string GetGroupDisplayName(const std::string& a_path);  // the user's name for it, or its last level
+
+	const Sidebar::ToolLayout& GetToolLayout();  // rebuilds first, if anything changed
+	void                       MarkLayoutDirty() { _layoutDirty = true; }
+	void                       OnOverridesChanged() { MarkLayoutDirty(); SaveWorkspace(); }  // after any change to a tool's or group's overrides
+	const std::string&         GetToolKey(FUCK::ITool* a_tool);
+	const std::string&         GetToolLabel(FUCK::ITool* a_tool);
+	int                        GetEntryOrder(const Sidebar::Entry& a_entry);  // its own order, or its baseline
+
+	// Moves a tool into a group. a_index places it among everything at that level, groups and tools together,
+	// counted without the tool itself (past the end = last). Only the orders that need to change are written
+	void MoveTool(FUCK::ITool* a_tool, const std::string& a_group, std::size_t a_index);
+	// Moves a group among everything at its level, the same way
+	void MoveGroup(const std::string& a_path, std::size_t a_index);
+	// Moves a group, and everything in it, into another group ("" for the top level), at a_index among what's there.
+	// Its tools are given the new path, and its names, favourites and orders go with it. Returns false if it can't go there
+	bool MoveGroupInto(const std::string& a_path, const std::string& a_parent, std::size_t a_index);
+	// Whether a group can be moved into another: not into itself or anything in it, not where it already is,
+	// and not so deep that something in it would pass the depth limit
+	bool CanMoveGroupInto(const std::string& a_path, const std::string& a_parent);
+	// Sets the group a tool goes in, stored relative to its own group (after any group moves). It takes its default place there.
+	// Doesn't renumber the groups it leaves and joins, so for a move the user makes, use MoveTool, which does
+	void SetToolGroup(FUCK::ITool* a_tool, const std::string& a_group);
 
 	friend class SettingsTool;
 	friend class ThemeEditorWindow;
@@ -226,6 +254,17 @@ private:
 
 	void FlushPendingRegistrations();
 	void WriteWorkspace();
+
+	// --- Sidebar (FUCK-Sidebar.cpp) ---
+	void                    DrawSidebar(const SidebarMetrics& a_metrics, float a_height);
+	void                    RebuildToolLayout();
+	Sidebar::LevelBaselines ComputeLevelBaselines(const std::string& a_level, const std::vector<Sidebar::Entry>& a_entries);
+	void                    RenumberLevel(const std::vector<Sidebar::Entry>& a_entries, const Sidebar::LevelBaselines& a_baselines);
+	void                    SetEntryOrder(const Sidebar::Entry& a_entry, int a_order);
+	void                    PlaceInLevel(const std::string& a_level, const Sidebar::Entry& a_entry, std::size_t a_index);
+	void                    KeepShownOrder(const StringMap<std::vector<Sidebar::Entry>>& a_shown);
+	std::string             GetNativeGroup(FUCK::ITool* a_tool);  // the tool's own group, after the user's group moves
+	std::string             ApplyGroupMoves(const std::string& a_path) const;
 	void UpdateGameState();
 	bool IsWindowSuppressed(const FUCK::IWindow* win) const;
 
@@ -246,6 +285,16 @@ private:
 	FUCK::ITool* _activeTool      = nullptr;
 	bool         _isOpen          = false;
 	bool         _workspaceLoaded = false;
+
+	Sidebar::ToolLayout _layout;
+	bool                _layoutDirty = true;
+
+	// Groups moved into other groups (old path, new path), for the sidebar to carry their open state across
+	std::vector<std::pair<std::string, std::string>> _movedGroups;
+
+	// Saved: groups the user has moved, from the path the plugins give them to where they are now. A plugin's tools,
+	// including ones it adds after the move, follow their group there
+	StringMap<std::string> _groupMoves;
 
 	bool                                  _workspaceDirty = false;
 	std::chrono::steady_clock::time_point _workspaceDirtyAt{};

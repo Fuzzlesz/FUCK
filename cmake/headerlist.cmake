@@ -5,6 +5,7 @@ set(headers ${headers}
 	src/FUCK-Host.h
 	src/FUCK-Man.h
 	src/FUCK-Settings.h
+	src/FUCK-Sidebar.h
 	src/FUCK-Styles.h
 	src/ImGui/Audio.h
 	src/ImGui/Backend/imgui_default.h

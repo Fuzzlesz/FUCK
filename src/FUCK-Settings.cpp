@@ -4,12 +4,99 @@
 #include "ImGui/IconsFontAwesome6.h"
 #include "ImGui/IconsFonts.h"
 #include "ImGui/Styles.h"
+#include "ImGui/Util.h"
 #include "ImGui/Widgets.h"
 
 #include "System/Hotkeys.h"
 #include "System/Settings.h"
 #include "System/Translation.h"
 #include "System/Utils.h"
+
+#include <functional>
+#include <unordered_set>
+
+// ==================================================
+// Sidebar Table
+// ==================================================
+
+namespace
+{
+	// Case-insensitive search, for the table's filter. a_lowerNeedle is already lower case
+	bool ContainsNoCase(std::string_view a_text, std::string_view a_lowerNeedle)
+	{
+		if (a_lowerNeedle.empty())
+			return true;
+		auto it = std::search(a_text.begin(), a_text.end(), a_lowerNeedle.begin(), a_lowerNeedle.end(), [](char c, char n) {
+			return static_cast<char>(std::tolower(static_cast<unsigned char>(c))) == n;
+		});
+		return it != a_text.end();
+	}
+
+	// One row of the table, flattened from the tool layout
+	struct TableRow
+	{
+		FUCK::ITool* tool = nullptr;  // null for a group
+		std::string  path;            // a group's own path, or the group a tool is in
+		std::string  key;             // names the row: the tool's override key, or "##grp|" + the group's path
+		std::string  name;            // the tool's own name, or the group's last level
+		std::string  plugin;
+		int          depth     = 0;
+		bool         collapsed = false;
+	};
+
+	// Everything the table keeps between frames. The rows are rebuilt only when the layout, the filter, or
+	// which groups are collapsed changes, and only the rows on screen are drawn
+	struct TableState
+	{
+		std::vector<TableRow>           rows;
+		std::vector<std::string>        groupPaths;  // every group in display order, for "Move to Group"
+		std::unordered_set<std::string> collapsed;   // for this session
+		char                            filter[128]  = "";
+		std::string                     builtFilter;
+		std::uint32_t                   builtVersion = 0;
+		bool                            dirty        = true;
+		bool                            isModified   = false;
+		std::size_t                     shownTools   = 0;
+		std::size_t                     totalTools   = 0;
+
+		// Click to edit: one cell at a time
+		std::string editKey;     // the row's key + "|name" or "|group"
+		std::string editRowKey;  // the row's key
+		int         editRow      = -1;
+		int         editWait     = 0;  // frames left for the box to take focus
+		char        editBuf[128] = "";
+
+		// The row being dragged, kept drawn while it's scrolled out of view so the drag carries on
+		std::string dragRowKey;
+		int         dragRow = -1;
+
+		// The right-click menu
+		FUCK::ITool* menuTool = nullptr;
+		std::string  menuGroup;
+		bool         menuRequested = false;
+
+		int FindRow(const std::string& a_key) const
+		{
+			if (a_key.empty())
+				return -1;
+			for (int i = 0; i < static_cast<int>(rows.size()); ++i) {
+				if (rows[i].key == a_key)
+					return i;
+			}
+			return -1;
+		}
+
+		void CancelEdit()
+		{
+			editKey.clear();
+			editRowKey.clear();
+			editRow  = -1;
+			editWait = 0;
+		}
+	};
+
+	TableState s_table;
+}
 
 const char* SettingsTool::Name() const
 {
@@ -164,21 +251,18 @@ void SettingsTool::Draw()
 		// --------------------------------------------------
 		// TAB 2: SIDEBAR
 		// --------------------------------------------------
-		static bool   s_wasSidebarTabOpen = false;
-		static int    s_tableResetCounter = 0;
-		static bool   s_needsRebuild      = true;
-		static size_t s_lastToolCount     = 0;
-
-		static std::vector<FUCK::ITool*>            looseTools;
-		static StringMap<std::vector<FUCK::ITool*>> groupedTools;
-		static std::vector<std::string>             groupNames;
+		static bool s_wasSidebarTabOpen = false;
+		static int  s_tableResetCounter = 0;
 
 		bool isSidebarTabOpen = FUCK::BeginTabItem("$FUCK_Settings_TabSidebar"_T);
 
 		if (isSidebarTabOpen) {
+			auto& T = s_table;
+
 			if (!s_wasSidebarTabOpen) {
 				s_tableResetCounter++;
-				s_needsRebuild = true;
+				T.dirty = true;
+				T.CancelEdit();
 			}
 			s_wasSidebarTabOpen = true;
 
@@ -199,6 +283,117 @@ void SettingsTool::Draw()
 
 			FUCK::Spacing(4);
 
+			const auto& layout = manager->GetToolLayout();
+
+			// --- Rebuild the rows, only when something they show has changed ---
+			if (T.dirty || layout.version != T.builtVersion || T.builtFilter != T.filter) {
+				T.dirty        = false;
+				T.builtVersion = layout.version;
+				T.builtFilter  = T.filter;
+				T.rows.clear();
+				T.groupPaths.clear();
+				T.shownTools = 0;
+				T.totalTools = layout.keys.size();
+
+				std::string needle = T.filter;
+				std::transform(needle.begin(), needle.end(), needle.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+				const bool filtering = !needle.empty();
+
+				auto toolMatches = [&](FUCK::ITool* t) {
+					if (ContainsNoCase(t->Name(), needle) || ContainsNoCase(t->PluginName(), needle))
+						return true;
+					if (auto it = layout.labels.find(t); it != layout.labels.end() && ContainsNoCase(it->second, needle))
+						return true;
+					if (auto it = layout.groups.find(t); it != layout.groups.end() && ContainsNoCase(it->second, needle))
+						return true;
+					return false;
+				};
+
+				auto groupMatches = [&](const std::string& path) {
+					return ContainsNoCase(path, needle) || ContainsNoCase(manager->GetGroupDisplayName(path), needle);
+				};
+
+				// Adds a level's groups and tools, in the layout's order. While filtering, a group shows when it or anything
+				// in it matches, and a group that matches shows everything in it. Returns whether anything was added
+				std::function<bool(const std::string&, int, bool)> addLevel = [&](const std::string& path, int depth, bool showAll) -> bool {
+					auto it = layout.tree.find(path);
+					if (it == layout.tree.end())
+						return false;
+
+					bool added = false;
+					for (const auto& e : it->second.entries) {
+						if (e.IsGroup()) {
+							const std::string& g         = e.group;
+							const std::size_t  at        = T.rows.size();
+							const bool         matchAll  = showAll || (filtering && groupMatches(g));
+							const bool         collapsed = !filtering && T.collapsed.contains(g);
+
+							T.rows.push_back({ nullptr, g, "##grp|" + g, Sidebar::GetGroupLeaf(g), std::string(), depth, collapsed });
+
+							const bool hasContent = collapsed || addLevel(g, depth + 1, matchAll);
+							if (!hasContent && !matchAll) {
+								T.rows.resize(at);
+								continue;
+							}
+							added = true;
+						} else {
+							FUCK::ITool* t = e.tool;
+							if (filtering && !showAll && !toolMatches(t))
+								continue;
+
+							auto key = layout.keys.find(t);
+							T.rows.push_back({ t, path, key != layout.keys.end() ? key->second : std::string(), t->Name(), t->PluginName(), depth });
+							++T.shownTools;
+							added = true;
+						}
+					}
+					return added;
+				};
+
+				addLevel(std::string(), 0, false);
+
+				std::function<void(const std::string&)> collectGroups = [&](const std::string& path) {
+					auto it = layout.tree.find(path);
+					if (it == layout.tree.end())
+						return;
+					for (const auto& g : it->second.groups) {
+						T.groupPaths.push_back(g);
+						collectGroups(g);
+					}
+				};
+				collectGroups(std::string());
+
+				T.isModified = !manager->_groupMoves.empty();
+				for (const auto& [k, v] : manager->_toolOverrides) {
+					if (!v.customName.empty() || !v.customGroup.empty() || v.sortOrder != 0 || v.isHidden) {
+						T.isModified = true;
+						break;
+					}
+				}
+				if (!T.isModified) {
+					for (const auto& [k, v] : manager->_groupOverrides) {
+						if (!v.customName.empty() || v.sortOrder != 0) {
+							T.isModified = true;
+							break;
+						}
+					}
+				}
+
+				// Rows move about on a rebuild, so find the edited and dragged ones again
+				T.editRow = T.FindRow(T.editRowKey);
+				if (T.editRow < 0)
+					T.CancelEdit();
+				T.dragRow = T.FindRow(T.dragRowKey);
+			}
+
+			// The drag has ended, one way or another
+			const ImGuiPayload* activePayload = ImGui::GetDragDropPayload();
+			const bool          rowDragging   = activePayload && (activePayload->IsDataType("TOOL_ORDER") || activePayload->IsDataType("GROUP_ORDER"));
+			if (!rowDragging) {
+				T.dragRowKey.clear();
+				T.dragRow = -1;
+			}
+
 			// --- Tools Header with inline Workspace Reset Button ---
 			float startX     = FUCK::GetCursorPos().x;
 			float availW     = FUCK::GetContentRegionAvail().x;
@@ -206,24 +401,7 @@ void SettingsTool::Draw()
 
 			FUCK::Header("$FUCK_Tools"_T);
 
-			// Check if layout is modified
-			bool isModified = false;
-			for (const auto& [k, v] : manager->_toolOverrides) {
-				if (!v.customName.empty() || !v.customGroup.empty() || v.sortOrder != 0 || v.isHidden) {
-					isModified = true;
-					break;
-				}
-			}
-			if (!isModified) {
-				for (const auto& [k, v] : manager->_groupOverrides) {
-					if (!v.customName.empty() || v.sortOrder != 0) {
-						isModified = true;
-						break;
-					}
-				}
-			}
-
-			if (isModified) {
+			if (T.isModified) {
 				float afterHeaderY = FUCK::GetCursorPos().y;
 				float btnW         = FUCK::CalcTextSize("$FUCK_Settings_Reset"_T).x + (ImGui::GetStyle().FramePadding.x * 2.0f);
 
@@ -240,8 +418,21 @@ void SettingsTool::Draw()
 						v.customName = "";
 						v.sortOrder  = 0;
 					}
-					manager->SaveWorkspace();
-					s_needsRebuild = true;
+					// Moved groups go back to where their plugins put them, and their favourites go with them
+					for (const auto& [from, to] : manager->_groupMoves) {
+						std::vector<std::string> favourites;
+						for (const auto& [k, v] : manager->_groupOverrides) {
+							if (v.isFavourited && Sidebar::IsInGroup(k, to))
+								favourites.push_back(k);
+						}
+						for (const auto& k : favourites) {
+							manager->_groupOverrides[k].isFavourited = false;
+							manager->_groupOverrides[from + k.substr(to.size())].isFavourited = true;
+						}
+					}
+					manager->_groupMoves.clear();
+					T.CancelEdit();
+					manager->OnOverridesChanged();
 				}
 				ImGui::PopStyleVar();
 
@@ -250,112 +441,69 @@ void SettingsTool::Draw()
 
 			FUCK::Spacing(2);
 
-			// --- Rebuild Active Tool Arrays ---
-			if (s_needsRebuild || manager->_tools.size() != s_lastToolCount) {
-				s_lastToolCount = manager->_tools.size();
-				looseTools.clear();
-				groupedTools.clear();
-				groupNames.clear();
+			// --- Filter, with Expand All / Collapse All beside it ---
+			{
+				const ImGuiStyle& st       = ImGui::GetStyle();
+				const char*       expand   = "$FUCK_Sidebar_ExpandAll"_T;
+				const char*       collapse = "$FUCK_Sidebar_CollapseAll"_T;
 
-				for (auto* t : manager->_tools) {
-					if (!t->ShowInSidebar())
-						continue;
+				// Sized like the buttons beside it, which pad their text by 7px a side and take at least a frame's height,
+				// so the box and the buttons share a top and a bottom
+				const float widgetScale = ImGui::GetDynamicWidgetScale();
+				const float buttonPadX  = 8.0f * widgetScale;
+				const float buttonH     = std::max(ImGui::GetFrameHeight(), ImGui::GetFontSize() + 14.0f * widgetScale);
+				const float expandW     = FUCK::CalcTextSize(expand).x + buttonPadX * 2.0f;
+				const float collW       = FUCK::CalcTextSize(collapse).x + buttonPadX * 2.0f;
+				const float filterW     = std::max(100.0f, FUCK::GetContentRegionAvail().x - expandW - collW - st.ItemSpacing.x * 2.0f);
 
-					std::string key  = std::format("{}|{}", t->PluginName(), t->Name());
-					auto&       over = manager->_toolOverrides[key];
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(st.FramePadding.x, std::max(0.0f, (buttonH - ImGui::GetFontSize()) * 0.5f)));
+				ImGui::SetNextItemWidth(filterW);
+				ImGui::InputTextWithHint("##SidebarTableFilter", "$FUCK_Sidebar_FilterHint"_T, T.filter, sizeof(T.filter));
+				ImGui::PopStyleVar();
 
-					std::string grp = over.customGroup;
-					if (grp.empty())
-						grp = t->Group() ? t->Group() : "";
-					if (grp == "##ROOT")
-						grp = "";
+				const bool filtering = T.filter[0] != '\0';
+				FUCK::BeginDisabled(filtering || T.groupPaths.empty());
+				FUCK::SameLine();
+				if (FUCK::Button(expand)) {
+					T.collapsed.clear();
+					T.dirty = true;
+				}
+				FUCK::SameLine();
+				if (FUCK::Button(collapse)) {
+					T.collapsed.insert(T.groupPaths.begin(), T.groupPaths.end());
+					T.dirty = true;
+				}
+				FUCK::EndDisabled();
 
-					if (grp.empty())
-						looseTools.push_back(t);
+				if (filtering) {
+					FUCK::Spacing();
+					if (T.rows.empty())
+						FUCK::TextDisabled("$FUCK_Sidebar_NoMatches"_T);
 					else
-						groupedTools[grp].push_back(t);
+						FUCK::TextDisabled("$FUCK_Sidebar_MatchCount"_T, static_cast<int>(T.shownTools), static_cast<int>(T.totalTools));
 				}
-
-				for (const auto& [grp, tools] : groupedTools) {
-					groupNames.push_back(grp);
-				}
-
-				Map<std::string, int>  groupBaseline;
-				Map<FUCK::ITool*, int> toolBaseline;
-
-				auto alphaGroups = groupNames;
-				std::sort(alphaGroups.begin(), alphaGroups.end(), [](const std::string& a, const std::string& b) {
-					return _stricmp(a.c_str(), b.c_str()) < 0;
-				});
-
-				for (size_t i = 0; i < alphaGroups.size(); ++i) {
-					groupBaseline[alphaGroups[i]] = static_cast<int>((i + 1) * 10000);
-				}
-
-				auto computeToolBaseline = [&](std::vector<FUCK::ITool*>& list, bool registrationOrder) {
-					std::vector<FUCK::ITool*> ordered = list;
-					if (!registrationOrder) {
-						std::sort(ordered.begin(), ordered.end(), [&](FUCK::ITool* a, FUCK::ITool* b) {
-							auto&       oa = manager->_toolOverrides[std::format("{}|{}", a->PluginName(), a->Name())];
-							auto&       ob = manager->_toolOverrides[std::format("{}|{}", b->PluginName(), b->Name())];
-							const char* na = oa.customName.empty() ? a->Name() : oa.customName.c_str();
-							const char* nb = ob.customName.empty() ? b->Name() : ob.customName.c_str();
-							return _stricmp(na, nb) < 0;
-						});
-					}
-					for (size_t i = 0; i < ordered.size(); ++i) {
-						toolBaseline[ordered[i]] = static_cast<int>((i + 1) * 10000);
-					}
-				};
-
-				for (auto& [grp, tools] : groupedTools) computeToolBaseline(tools, true);
-				computeToolBaseline(looseTools, false);
-
-				auto getGroupEffectiveOrder = [&](const std::string& g) {
-					auto& over = manager->_groupOverrides[g];
-					return over.sortOrder != 0 ? over.sortOrder : groupBaseline[g];
-				};
-
-				auto getToolEffectiveOrder = [&](FUCK::ITool* t) {
-					auto& over = manager->_toolOverrides[std::format("{}|{}", t->PluginName(), t->Name())];
-					return over.sortOrder != 0 ? over.sortOrder : toolBaseline[t];
-				};
-
-				std::sort(groupNames.begin(), groupNames.end(), [&](const std::string& a, const std::string& b) {
-					int effA = getGroupEffectiveOrder(a);
-					int effB = getGroupEffectiveOrder(b);
-					if (effA != effB)
-						return effA < effB;
-					return _stricmp(a.c_str(), b.c_str()) < 0;
-				});
-
-				auto sortTools = [&](FUCK::ITool* a, FUCK::ITool* b) {
-					int effA = getToolEffectiveOrder(a);
-					int effB = getToolEffectiveOrder(b);
-					if (effA != effB)
-						return effA < effB;
-					auto&       oa = manager->_toolOverrides[std::format("{}|{}", a->PluginName(), a->Name())];
-					auto&       ob = manager->_toolOverrides[std::format("{}|{}", b->PluginName(), b->Name())];
-					const char* na = oa.customName.empty() ? a->Name() : oa.customName.c_str();
-					const char* nb = ob.customName.empty() ? b->Name() : ob.customName.c_str();
-					return _stricmp(na, nb) < 0;
-				};
-
-				for (auto& [grp, tools] : groupedTools) std::sort(tools.begin(), tools.end(), sortTools);
-				std::sort(looseTools.begin(), looseTools.end(), sortTools);
-
-				s_needsRebuild = false;
 			}
 
-			// --- Setup Reorderable List Table ---
+			FUCK::Spacing(2);
+
+			// --- Reorderable List Table ---
 			float tableScale = FUCK::GetGlobalScale();
+			float indentStep = 25.0f * tableScale;
 			FUCK::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(FUCK::GetStyleVarVec(ImGuiStyleVar_FramePadding).x, 7.0f * tableScale));
 
-			float tableRightEdge = FUCK::GetCursorScreenPos().x + FUCK::GetContentRegionAvail().x;
+			const float rowH   = FUCK::GetFrameHeight();
+			const float tableH = std::max(FUCK::GetContentRegionAvail().y - 4.0f * tableScale, rowH * 12.0f);
 
 			FUCK::PushID(s_tableResetCounter);
 
-			if (FUCK::BeginTable("WorkspaceToolTable", 6, FUCK::TableFlags::kBorders | FUCK::TableFlags::kRowBg | FUCK::TableFlags::kResizable | FUCK::TableFlags::kSizingStretchProp | FUCK::TableFlags::kNoSavedSettings)) {
+			// Scrolls inside itself with the header frozen at the top, so only the rows on screen are drawn
+			const auto tableFlags = static_cast<FUCK::TableFlags>(
+				static_cast<int>(FUCK::TableFlags::kBorders | FUCK::TableFlags::kRowBg | FUCK::TableFlags::kResizable | FUCK::TableFlags::kSizingStretchProp | FUCK::TableFlags::kNoSavedSettings) |
+				ImGuiTableFlags_ScrollY);
+
+			if (FUCK::BeginTable("WorkspaceToolTable", 6, tableFlags, ImVec2(0.0f, tableH))) {
+				ImGui::TableSetupScrollFreeze(0, 1);
+
 				// Base Columns
 				FUCK::TableSetupColumn("##Hide", FUCK::TableColumnFlags::kWidthFixed | FUCK::TableColumnFlags::kNoSort, 35.0f * tableScale);
 				FUCK::TableSetupColumn("$FUCK_Sidebar_TableOrig"_T, FUCK::TableColumnFlags::kWidthStretch | FUCK::TableColumnFlags::kNoSort, 2.0f);
@@ -395,6 +543,10 @@ void SettingsTool::Draw()
 				DrawCenterHeader("$FUCK_Sidebar_TablePlugin"_T);
 				DrawCenterHeader("$FUCK_Sidebar_TableCustom"_T);
 				DrawCenterHeader("$FUCK_Sidebar_TableGroup"_T);
+				FUCK::SetTooltip("$FUCK_Sidebar_TableGroupTT"_T);
+
+				// Where the frozen header ends, so nothing drawn for the rows spills over it
+				const float headerBottom = ImGui::TableGetCellBgRect(ImGui::GetCurrentTable(), 0).Max.y;
 
 				// Header: Hand Icon (Col 5)
 				FUCK::TableNextColumn();
@@ -417,351 +569,538 @@ void SettingsTool::Draw()
 				ImGui::PopFont();
 				FUCK::SetTooltip("$FUCK_Sidebar_TableDragTT"_T);
 
-				// --- Table Context Generators ---
-				auto RenderToolRow = [&](FUCK::ITool* tool, bool indented, std::vector<FUCK::ITool*>& parentList) {
-					std::string key  = std::format("{}|{}", tool->PluginName(), tool->Name());
-					auto&       over = manager->_toolOverrides[key];
+				ImGuiWindow* tableWindow = ImGui::GetCurrentWindow();
+				const ImRect bodyRect(ImVec2(tableWindow->InnerClipRect.Min.x, std::max(headerBottom, tableWindow->InnerClipRect.Min.y)), tableWindow->InnerClipRect.Max);
+				const float  rightEdge = tableWindow->InnerClipRect.Max.x;
 
-					FUCK::PushID(key.c_str());
+				// --- Scroll while dragging near the top or bottom of the list ---
+				if (rowDragging) {
+					const ImGuiIO& io    = ImGui::GetIO();
+					const ImVec2   mouse = io.MousePos;
+					const float    zone  = rowH * 1.5f;
+
+					if (mouse.x >= bodyRect.Min.x && mouse.x <= bodyRect.Max.x && mouse.y > bodyRect.Min.y - zone * 2.0f && mouse.y < bodyRect.Max.y + zone * 2.0f) {
+						float speed = 0.0f;
+						if (mouse.y < bodyRect.Min.y + zone)
+							speed = -std::min(1.5f, (bodyRect.Min.y + zone - mouse.y) / zone);
+						else if (mouse.y > bodyRect.Max.y - zone)
+							speed = std::min(1.5f, (mouse.y - (bodyRect.Max.y - zone)) / zone);
+
+						if (speed != 0.0f)
+							ImGui::SetScrollY(tableWindow, tableWindow->Scroll.y + speed * rowH * 15.0f * io.DeltaTime);
+					}
+				}
+
+				// --- Row Helpers ---
+
+				// Moves a group into another, and keeps the groups it carries collapsed if they were
+				auto MoveGroupKeepingState = [&](const std::string& a_src, const std::string& a_parent, std::size_t a_index) {
+					const std::string parent  = Sidebar::NormaliseGroupPath(a_parent);
+					const std::string newPath = parent.empty() ? Sidebar::GetGroupLeaf(a_src) : parent + std::string(Sidebar::kGroupSeparator) + Sidebar::GetGroupLeaf(a_src);
+					if (!manager->MoveGroupInto(a_src, parent, a_index))
+						return;
+
+					std::vector<std::string> carried;
+					for (const auto& c : T.collapsed) {
+						if (Sidebar::IsInGroup(c, a_src))
+							carried.push_back(c);
+					}
+					for (const auto& c : carried) {
+						T.collapsed.erase(c);
+						T.collapsed.insert(newPath + c.substr(a_src.size()));
+					}
+					T.dirty = true;
+				};
+
+
+				auto findToolOver = [&](const std::string& a_key) -> const FUCKMan::ToolOverrideState* {
+					auto it = manager->_toolOverrides.find(a_key);
+					return it != manager->_toolOverrides.end() ? &it->second : nullptr;
+				};
+
+				auto findGroupOver = [&](const std::string& a_path) -> const FUCKMan::GroupOverrideState* {
+					auto it = manager->_groupOverrides.find(a_path);
+					return it != manager->_groupOverrides.end() ? &it->second : nullptr;
+				};
+
+				// Draws the tree connector for a row a_depth levels in, and moves the cursor past the indent
+				auto DrawIndent = [&](int a_depth) {
+					if (a_depth <= 0)
+						return;
+
+					ImVec2 p     = FUCK::GetCursorScreenPos();
+					float  baseX = p.x + (a_depth - 1) * indentStep;
+					float  lineX = baseX + 10.0f * tableScale;
+					float  lineY = p.y - ImGui::GetStyle().FramePadding.y;
+					float  midY  = p.y + rowH * 0.5f;
+
+					ImU32 lineCol = ImGui::GetColorU32(ImGuiCol_TextDisabled);
+					ImGui::GetWindowDrawList()->AddLine(ImVec2(lineX, lineY), ImVec2(lineX, midY), lineCol);
+					ImGui::GetWindowDrawList()->AddLine(ImVec2(lineX, midY), ImVec2(lineX + 10.0f * tableScale, midY), lineCol);
+
+					FUCK::SetCursorPosX(FUCK::GetCursorPos().x + a_depth * indentStep);
+				};
+
+				auto DrawGrip = [&](bool a_rowHovered) {
+					ImU32  gripCol = a_rowHovered ? IM_COL32(50, 205, 50, 255) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
+					ImVec2 gripSz  = FUCK::CalcTextSize(ICON_FA_GRIP_LINES);
+					ImVec2 gripPos(FUCK::GetCursorScreenPos().x + (FUCK::GetColumnWidth() - gripSz.x) * 0.5f, FUCK::GetCursorScreenPos().y + (rowH - gripSz.y) * 0.5f);
+					ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), ImGui::GetFontSize(), gripPos, gripCol, ICON_FA_GRIP_LINES);
+				};
+
+				// Makes the last item a drag source for its row, so a row can be dragged from any of its cells
+				auto RowDragSource = [&](int a_row) {
+					if (!ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+						return;
+
+					const TableRow& row = T.rows[a_row];
+					if (row.tool) {
+						ImGui::SetDragDropPayload("TOOL_ORDER", &row.tool, sizeof(FUCK::ITool*));
+						ImGui::TextUnformatted(manager->GetToolLabel(row.tool).c_str());
+					} else {
+						ImGui::SetDragDropPayload("GROUP_ORDER", row.path.c_str(), row.path.size() + 1);
+						ImGui::TextUnformatted(manager->GetGroupDisplayName(row.path).c_str());
+					}
+					T.dragRowKey = row.key;
+					T.dragRow    = a_row;
+					ImGui::EndDragDropSource();
+				};
+
+				// A cell showing a_text that turns into a text box when clicked. Enter or clicking away keeps the edit,
+				// Escape drops it. Returns true when an edit was kept, with the text in T.editBuf
+				auto EditableCell = [&](int a_row, const char* a_field, const std::string& a_text, bool a_dim, const char* a_tooltip) -> bool {
+					const TableRow&   row     = T.rows[a_row];
+					const std::string editKey = row.key + "|" + a_field;
+					bool              kept    = false;
+
+					ImGui::PushID(a_field);
+
+					if (T.editKey == editKey) {
+						ImGui::SetNextItemWidth(-FLT_MIN);
+						if (T.editWait > 0)
+							ImGui::SetKeyboardFocusHere();
+
+						ImGui::InputText("##edit", T.editBuf, sizeof(T.editBuf), ImGuiInputTextFlags_AutoSelectAll);
+
+						if (ImGui::IsItemDeactivated()) {
+							kept = !ImGui::IsKeyPressed(ImGuiKey_Escape, false);
+							T.CancelEdit();
+						} else if (ImGui::IsItemActive()) {
+							T.editWait = 0;
+						} else if (T.editWait > 0) {
+							--T.editWait;
+						} else {
+							T.CancelEdit();  // never took focus, or lost it some other way
+						}
+					} else {
+						const ImVec2 p = ImGui::GetCursorScreenPos();
+						const float  w = std::max(1.0f, ImGui::GetContentRegionAvail().x);
+
+						if (ImGui::InvisibleButton("##cell", ImVec2(w, rowH))) {
+							T.editKey    = editKey;
+							T.editRowKey = row.key;
+							T.editRow    = a_row;
+							T.editWait   = 3;
+							FUCK::StringCopy(T.editBuf, a_text);
+						}
+						RowDragSource(a_row);
+
+						const bool hovered = ImGui::IsItemHovered();
+						auto*      dl      = ImGui::GetWindowDrawList();
+						if (hovered) {
+							dl->AddRectFilled(p, ImVec2(p.x + w, p.y + rowH), ImGui::GetColorU32(ImGuiCol_FrameBgHovered), ImGui::GetStyle().FrameRounding);
+							FUCK::SetTooltip(a_tooltip ? a_tooltip : "$FUCK_Sidebar_EditTT"_T);
+						}
+
+						const float padX = ImGui::GetStyle().FramePadding.x;
+						if (!a_text.empty()) {
+							ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetColorU32(a_dim ? ImGuiCol_TextDisabled : ImGuiCol_Text));
+							ImGui::RenderTextClipped(ImVec2(p.x + padX, p.y), ImVec2(p.x + w - padX, p.y + rowH), a_text.c_str(), nullptr, nullptr, ImVec2(0.0f, 0.5f));
+							ImGui::PopStyleColor();
+						}
+
+						if (hovered) {
+							ImVec2 penSz = ImGui::CalcTextSize(ICON_FA_PEN);
+							dl->AddText(ImVec2(p.x + w - padX - penSz.x, p.y + (rowH - penSz.y) * 0.5f), ImGui::GetColorU32(ImGuiCol_TextDisabled), ICON_FA_PEN);
+						}
+					}
+
+					ImGui::PopID();
+					return kept;
+				};
+
+				auto DrawDropLine = [&](const ImVec2& a_min, const ImVec2& a_max, bool a_after) {
+					auto*       fg = ImGui::GetForegroundDrawList();
+					const float y  = a_after ? a_max.y : a_min.y;
+					fg->PushClipRect(bodyRect.Min, bodyRect.Max, false);
+					fg->AddLine(ImVec2(a_min.x, y), ImVec2(a_max.x, y), ImGui::GetColorU32(ImGuiCol_DragDropTarget), 2.0f);
+					fg->PopClipRect();
+				};
+
+				auto DrawDropRect = [&](const ImVec2& a_min, const ImVec2& a_max) {
+					auto* fg = ImGui::GetForegroundDrawList();
+					fg->PushClipRect(bodyRect.Min, bodyRect.Max, false);
+					fg->AddRect(a_min, a_max, ImGui::GetColorU32(ImGuiCol_DragDropTarget), 0.0f, 0, 2.0f);
+					fg->PopClipRect();
+				};
+
+				auto RenderRow = [&](int i) {
+					const TableRow& row = T.rows[i];
+
+					FUCK::PushID(row.key.c_str());
 					FUCK::TableNextRow();
 
-					// Col 0: Row Background Selectable (Spans all columns for Drag & Drop) & Hide Button
+					// Col 0: Row Background Selectable (spans all columns, for dragging and the menu) & Hide Button
 					FUCK::TableNextColumn();
 					ImVec2 startPos = FUCK::GetCursorPos();
 
-					FUCK::Selectable("##Drag", false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap, ImVec2(0, FUCK::GetFrameHeight()));
-					bool   rowHovered = FUCK::IsItemHovered();
-					ImVec2 rowMin     = FUCK::GetItemRectMin();
-					ImVec2 rowMax     = FUCK::GetItemRectMax();
-					rowMax.x          = tableRightEdge;
+					ImGui::Selectable("##Row", false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap, ImVec2(0, rowH));
+					RowDragSource(i);
 
-					bool isHoveringDrop = false;
+					const bool rowFocused = ImGui::IsItemFocused();
+					ImVec2     rowMin     = ImGui::GetItemRectMin();
+					ImVec2     rowMax     = ImGui::GetItemRectMax();
+					rowMax.x              = rightEdge;
+					// Tested against the whole row, not the cell's clip rect, which is only the current column's.
+					// Kept below the frozen header, so a row scrolled under it can't be hovered
+					const ImVec2 mousePos   = ImGui::GetIO().MousePos;
+					const bool   rowHovered = ImGui::IsMouseHoveringRect(rowMin, rowMax, false) && bodyRect.Contains(mousePos) &&
+					                        ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
 
-					// --- Drag & Drop: Drag Source ---
-					if (FUCK::BeginDragDropSource(FUCK::DragDropFlags::kSourceAllowNullID)) {
-						FUCK::SetDragDropPayload("TOOL_ORDER", &tool, sizeof(FUCK::ITool*));
-						FUCK::Text(std::format("Move {}", tool->Name()).c_str());
-						FUCK::EndDragDropSource();
-					}
+					// Copied out, as a change below can add to the overrides and move what a pointer would point at
+					const auto*       toolOver       = row.tool ? findToolOver(row.key) : nullptr;
+					const bool        isHidden       = toolOver && toolOver->isHidden;
+					const std::string customName     = toolOver ? toolOver->customName : std::string();
+					const bool        hasCustomGroup = toolOver && !toolOver->customGroup.empty();
 
-					// --- Drag & Drop: Drop Target (Tool Reordering) ---
-					if (FUCK::BeginDragDropTarget()) {
-						if (const ImGuiPayload* payload = FUCK::AcceptDragDropPayload("TOOL_ORDER", FUCK::DragDropFlags::kAcceptPeekOnly)) {
-							isHoveringDrop = true;
-						}
+					if (row.tool) {
+						FUCK::SetCursorPos(startPos);
 
-						if (const ImGuiPayload* payload = FUCK::AcceptDragDropPayload("TOOL_ORDER", FUCK::DragDropFlags::kAcceptNoDrawDefaultRect)) {
-							FUCK::ITool* srcTool = *static_cast<FUCK::ITool**>(payload->Data);
-
-							if (srcTool != tool) {
-								std::string srcKey = std::format("{}|{}", srcTool->PluginName(), srcTool->Name());
-
-								std::string dstGrp = over.customGroup;
-								if (dstGrp.empty())
-									dstGrp = tool->Group() ? tool->Group() : "";
-								if (dstGrp == "##ROOT")
-									dstGrp = "";
-
-								std::string srcNativeGrp = srcTool->Group() ? srcTool->Group() : "";
-
-								if (dstGrp == srcNativeGrp) {
-									manager->_toolOverrides[srcKey].customGroup = "";
-								} else if (dstGrp.empty() && !srcNativeGrp.empty()) {
-									manager->_toolOverrides[srcKey].customGroup = "##ROOT";
-								} else {
-									manager->_toolOverrides[srcKey].customGroup = dstGrp;
-								}
-
-								// Execute sequential insertion to guarantee deterministic reordering
-								std::vector<FUCK::ITool*> newList = parentList;
-								std::erase(newList, srcTool);
-
-								auto it = std::find(newList.begin(), newList.end(), tool);
-								if (it != newList.end()) {
-									newList.insert(it, srcTool);
-								} else {
-									newList.push_back(srcTool);
-								}
-
-								int order = 10000;
-								for (auto* t : newList) {
-									manager->_toolOverrides[std::format("{}|{}", t->PluginName(), t->Name())].sortOrder = order;
-									order += 10000;
-								}
-
-								manager->SaveWorkspace();
-								s_needsRebuild = true;
-							}
-						}
-						FUCK::EndDragDropTarget();
-					}
-
-					// Visual Drop Indicator
-					if (isHoveringDrop) {
-						ImGui::GetForegroundDrawList()->AddLine(rowMin, ImVec2(rowMax.x, rowMin.y), ImGui::GetColorU32(ImGuiCol_DragDropTarget), 2.0f);
-					}
-
-					// Overlap with actual Hide Button logic
-					FUCK::SetCursorPos(startPos);
-					{
-						float       cellH   = FUCK::GetFrameHeight();
 						float       cellW   = FUCK::GetColumnWidth();
-						const char* icon    = over.isHidden ? ICON_FA_EYE_SLASH : ICON_FA_EYE;
-						ImU32       iconCol = over.isHidden ? ImGui::GetColorU32(ImGuiCol_TextDisabled) : ImGui::GetColorU32(ImGuiCol_Text);
+						const char* icon    = isHidden ? ICON_FA_EYE_SLASH : ICON_FA_EYE;
+						ImU32       iconCol = isHidden ? ImGui::GetColorU32(ImGuiCol_TextDisabled) : ImGui::GetColorU32(ImGuiCol_Text);
 
-						if (FUCK::InvisibleButton("##HideBtn", ImVec2(cellW, cellH))) {
-							over.isHidden = !over.isHidden;
-							manager->SaveWorkspace();
-							s_needsRebuild = true;
+						if (ImGui::InvisibleButton("##HideBtn", ImVec2(cellW, rowH))) {
+							manager->_toolOverrides[row.key].isHidden = !isHidden;
+							manager->OnOverridesChanged();
 						}
-						if (FUCK::IsItemHovered()) {
+						if (ImGui::IsItemHovered()) {
 							iconCol = ImGui::GetColorU32(ImGuiCol_Text);
 						}
 
-						ImVec2 curPos = FUCK::GetItemRectMin();
+						ImVec2 curPos = ImGui::GetItemRectMin();
 
 						float scaledFontSize = ImGui::GetFontSize() * 0.8f;
 						ImGui::PushFont(nullptr, scaledFontSize);
 						ImVec2 textSize = FUCK::CalcTextSize(icon);
 						ImGui::PopFont();
 
-						// Center mathematically based on the newly scaled text size
-						ImVec2 textPos(curPos.x + (cellW - textSize.x) * 0.5f, curPos.y + (cellH - textSize.y) * 0.5f);
+						ImVec2 textPos(curPos.x + (cellW - textSize.x) * 0.5f, curPos.y + (rowH - textSize.y) * 0.5f);
 						ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), scaledFontSize, textPos, iconCol, icon);
 					}
 
-					// Col 1: Original Name
+					// Col 1: Original Name, or the group's name with its collapse arrow
 					FUCK::TableNextColumn();
-					FUCK::AlignTextToFramePadding();
+					if (row.tool) {
+						FUCK::AlignTextToFramePadding();
+						DrawIndent(row.depth);
 
-					if (indented) {
-						ImVec2 p     = FUCK::GetCursorScreenPos();
-						float  lineX = p.x + 10.0f * tableScale;
-						float  lineY = p.y - ImGui::GetStyle().FramePadding.y;
-						float  midY  = p.y + FUCK::GetFrameHeight() * 0.5f;
+						if (isHidden)
+							ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetColorU32(ImGuiCol_TextDisabled));
+						FUCK::Text("%s", row.name.c_str());
+						if (isHidden)
+							ImGui::PopStyleColor();
+					} else {
+						DrawIndent(row.depth);
 
-						ImU32 lineCol = ImGui::GetColorU32(ImGuiCol_TextDisabled);
-						ImGui::GetWindowDrawList()->AddLine(ImVec2(lineX, lineY), ImVec2(lineX, midY), lineCol);
-						ImGui::GetWindowDrawList()->AddLine(ImVec2(lineX, midY), ImVec2(lineX + 10.0f * tableScale, midY), lineCol);
+						const ImVec2 p = ImGui::GetCursorScreenPos();
+						const float  w = std::max(1.0f, ImGui::GetContentRegionAvail().x);
+						const bool   filtering = T.filter[0] != '\0';
 
-						FUCK::SetCursorPosX(FUCK::GetCursorPos().x + (25.0f * tableScale));
-					}
+						if (ImGui::InvisibleButton("##Collapse", ImVec2(w, rowH)) && !filtering) {
+							if (row.collapsed)
+								T.collapsed.erase(row.path);
+							else
+								T.collapsed.insert(row.path);
+							T.dirty = true;
+						}
+						RowDragSource(i);
 
-					if (over.isHidden)
-						ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetColorU32(ImGuiCol_TextDisabled));
-					FUCK::Text(tool->Name());
-					if (over.isHidden)
+						float textX     = p.x;
+						auto  iconArrow = IconFont::Manager::GetSingleton()->GetStepperRight();
+						if (iconArrow) {
+							float  aspect  = iconArrow->imageSize.y > 0.0f ? (iconArrow->imageSize.x / iconArrow->imageSize.y) : 1.0f;
+							// Sized for the way it points, as the texture turns to point down. Centred in the wider of the two,
+							// so the arrow and the name stay put when the group opens or closes
+							auto   ap      = ImGui::CalcArrowIconParams(aspect, !row.collapsed, rowH, 20.0f * tableScale, 1.0f);
+							float  slotW   = std::max(ap.drawSize.x, ap.drawSize.y);
+							ImVec2 drawPos = { p.x + (slotW - ap.drawSize.x) * 0.5f, p.y + ap.offsetY };
+							ImU32  col     = ImGui::GetColorU32(ImGui::IsItemHovered() ? ImGuiCol_Text : ImGuiCol_TextDisabled);
+							ImGui::DrawArrowIcon(ImGui::GetWindowDrawList(), drawPos, ap.drawSize, col, row.collapsed ? ImGui::IconDirection::kRight : ImGui::IconDirection::kDown);
+							textX += slotW + (6.0f * tableScale);
+						}
+
+						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 0.8f, 1.0f));
+						ImGui::RenderTextClipped(ImVec2(textX, p.y), ImVec2(p.x + w, p.y + rowH), row.name.c_str(), nullptr, nullptr, ImVec2(0.0f, 0.5f));
 						ImGui::PopStyleColor();
+					}
 
 					// Col 2: Plugin Name
 					FUCK::TableNextColumn();
-					FUCK::AlignTextToFramePadding();
-					FUCK::TextDisabled(tool->PluginName());
-
-					// Col 3: Custom Name Override
-					FUCK::TableNextColumn();
-					FUCK::SetNextItemWidth(-1.0f);
-					char nameBuf[64] = "";
-					FUCK::StringCopy(nameBuf, over.customName);
-					if (FUCK::InputText("##tname", nameBuf, sizeof(nameBuf))) {
-						over.customName = nameBuf;
-					}
-					if (FUCK::IsItemDeactivatedAfterEdit()) {
-						manager->SaveWorkspace();
-						s_needsRebuild = true;
+					if (row.tool) {
+						FUCK::AlignTextToFramePadding();
+						FUCK::TextDisabled("%s", row.plugin.c_str());
 					}
 
-					// Col 4: Custom Group Override
+					// Col 3: Custom Name, keyed by the tool, or by the group's full path
 					FUCK::TableNextColumn();
-					FUCK::SetNextItemWidth(-1.0f);
-					char grpBuf[64] = "";
-					FUCK::StringCopy(grpBuf, over.customGroup == "##ROOT" ? "" : over.customGroup);
-					if (FUCK::InputText("##tgrp", grpBuf, sizeof(grpBuf))) {
-						if (grpBuf[0] == '\0' && tool->Group() && tool->Group()[0] != '\0') {
-							over.customGroup = "##ROOT";
+					if (row.tool) {
+						if (EditableCell(i, "name", customName, false, nullptr) && customName != T.editBuf) {
+							manager->_toolOverrides[row.key].customName = T.editBuf;
+							manager->OnOverridesChanged();
+						}
+					} else {
+						const auto*       gOver   = findGroupOver(row.path);
+						const std::string current = gOver ? gOver->customName : std::string();
+						if (EditableCell(i, "name", current, false, nullptr) && current != T.editBuf) {
+							manager->_groupOverrides[row.path].customName = T.editBuf;
+							manager->OnOverridesChanged();
+						}
+					}
+
+					// Col 4: The tool's group as a path such as "Camera::Presets", dimmed while it's the one it came with.
+					// For a nested group, the group it sits in
+					FUCK::TableNextColumn();
+					if (row.tool) {
+						if (EditableCell(i, "group", row.path, !hasCustomGroup, "$FUCK_Sidebar_TableGroupTT"_T)) {
+							// Moved to the end of the group it's typed into. MoveTool keeps everything else where it is
+							const std::string typed = Sidebar::NormaliseGroupPath(T.editBuf);
+							if (typed != row.path)
+								manager->MoveTool(row.tool, typed, SIZE_MAX);
+						}
+					} else {
+						// The group it sits in. Typing another moves the group, and everything in it, there
+						const std::string parent = Sidebar::GetGroupParent(row.path);
+						if (EditableCell(i, "group", parent, true, "$FUCK_Sidebar_TableParentTT"_T)) {
+							const std::string typed = Sidebar::NormaliseGroupPath(T.editBuf);
+							if (typed != parent)
+								MoveGroupKeepingState(row.path, typed, SIZE_MAX);
+						}
+					}
+
+					// Col 5: Drag Handle
+					FUCK::TableNextColumn();
+					DrawGrip(rowHovered);
+
+					// --- Drop target: the whole row ---
+					// The target's hover test uses the clip rect, so it's set to the list's body for the whole row
+					ImGui::PushClipRect(bodyRect.Min, bodyRect.Max, false);
+					if (rowDragging && ImGui::BeginDragDropTargetCustom(ImRect(rowMin, rowMax), ImGui::GetID("##Drop"))) {
+						const ImGuiPayload* peek = ImGui::GetDragDropPayload();
+
+						// Where in the row the mouse is, from 0 at the top to 1 at the bottom
+						const float along = std::clamp((ImGui::GetIO().MousePos.y - rowMin.y) / std::max(1.0f, rowMax.y - rowMin.y), 0.0f, 1.0f);
+
+						// The level this row sits at: a tool's group, or a group's parent
+						const std::string    level = row.tool ? row.path : Sidebar::GetGroupParent(row.path);
+						const Sidebar::Entry target{ row.tool, row.tool ? std::string() : row.path };
+
+						// Where an entry dropped before or after this row lands among that level's groups and tools
+						auto IndexAtRow = [&](const Sidebar::Entry& a_moving, bool a_after) {
+							std::vector<Sidebar::Entry> list;
+							if (auto it = layout.tree.find(level); it != layout.tree.end())
+								list = it->second.entries;
+							std::erase(list, a_moving);
+							auto at = std::find(list.begin(), list.end(), target);
+							return static_cast<std::size_t>(at - list.begin()) + (a_after && at != list.end() ? 1 : 0);
+						};
+
+						// Before or after a tool by its halves. A group's top quarter is before it, and the bottom quarter after it
+						// while it's closed, as after an open group means after everything in it
+						bool before = false;
+						bool after  = false;
+						if (row.tool) {
+							before = along < 0.5f;
+							after  = !before;
 						} else {
-							over.customGroup = grpBuf;
-						}
-					}
-					if (FUCK::IsItemDeactivatedAfterEdit()) {
-						manager->SaveWorkspace();
-						s_needsRebuild = true;
-					}
-
-					// Col 5: Drag Handle
-					FUCK::TableNextColumn();
-					ImU32  gripCol = rowHovered ? IM_COL32(50, 205, 50, 255) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
-					float  gripW   = FUCK::CalcTextSize(ICON_FA_GRIP_LINES).x;
-					float  gripH   = FUCK::CalcTextSize(ICON_FA_GRIP_LINES).y;
-					ImVec2 gripPos(FUCK::GetCursorScreenPos().x + (FUCK::GetColumnWidth() - gripW) * 0.5f, FUCK::GetCursorScreenPos().y + (FUCK::GetFrameHeight() - gripH) * 0.5f);
-					ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), ImGui::GetFontSize(), gripPos, gripCol, ICON_FA_GRIP_LINES);
-
-					FUCK::PopID();
-				};
-
-				auto RenderGroupRow = [&](const std::string& grp) {
-					FUCK::PushID(grp.c_str());
-					FUCK::TableNextRow();
-
-					// Col 0: Row Background Selectable (Spans all columns for Drag & Drop)
-					FUCK::TableNextColumn();
-					ImVec2 startPos = FUCK::GetCursorPos();
-
-					FUCK::Selectable("##Drag", false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap, ImVec2(0, FUCK::GetFrameHeight()));
-					bool   rowHovered = FUCK::IsItemHovered();
-					ImVec2 rowMin     = FUCK::GetItemRectMin();
-					ImVec2 rowMax     = FUCK::GetItemRectMax();
-					rowMax.x          = tableRightEdge;
-
-					bool isHoveringGroupDrop       = false;
-					bool isHoveringToolDropOnGroup = false;
-
-					// --- Drag & Drop: Drag Source ---
-					if (FUCK::BeginDragDropSource(FUCK::DragDropFlags::kSourceAllowNullID)) {
-						FUCK::SetDragDropPayload("GROUP_ORDER", grp.c_str(), grp.size() + 1);
-						FUCK::Text(std::format("Move Group: {}", grp).c_str());
-						FUCK::EndDragDropSource();
-					}
-
-					// --- Drag & Drop: Drop Target (Group Reordering & Tool Assignment) ---
-					if (FUCK::BeginDragDropTarget()) {
-						if (const ImGuiPayload* payload = FUCK::AcceptDragDropPayload("GROUP_ORDER", FUCK::DragDropFlags::kAcceptPeekOnly)) {
-							isHoveringGroupDrop = true;
+							before = along < 0.25f;
+							after  = along > 0.75f && row.collapsed;
 						}
 
-						if (const ImGuiPayload* payload = FUCK::AcceptDragDropPayload("GROUP_ORDER", FUCK::DragDropFlags::kAcceptNoDrawDefaultRect)) {
-							std::string srcGrp = static_cast<const char*>(payload->Data);
+						if (peek && peek->IsDataType("TOOL_ORDER")) {
+							FUCK::ITool*         src = *static_cast<FUCK::ITool* const*>(peek->Data);
+							const Sidebar::Entry moving{ src, std::string() };
 
-							if (srcGrp != grp) {
-								std::vector<std::string> newGroups = groupNames;
-								std::erase(newGroups, srcGrp);
-
-								auto it = std::find(newGroups.begin(), newGroups.end(), grp);
-								if (it != newGroups.end()) {
-									newGroups.insert(it, srcGrp);
+							if (src != row.tool) {
+								if (before || after) {
+									DrawDropLine(rowMin, rowMax, after);
+									if (ImGui::AcceptDragDropPayload("TOOL_ORDER", ImGuiDragDropFlags_AcceptNoDrawDefaultRect))
+										manager->MoveTool(src, level, IndexAtRow(moving, after));
 								} else {
-									newGroups.push_back(srcGrp);
+									// Into this group, at the top
+									DrawDropRect(rowMin, rowMax);
+									if (ImGui::AcceptDragDropPayload("TOOL_ORDER", ImGuiDragDropFlags_AcceptNoDrawDefaultRect))
+										manager->MoveTool(src, row.path, 0);
 								}
+							}
+						} else if (peek && peek->IsDataType("GROUP_ORDER")) {
+							// Groups go before or after a row, at that row's level, or into a group. Never into themselves
+							const std::string    src = static_cast<const char*>(peek->Data);
+							const Sidebar::Entry moving{ nullptr, src };
 
-								int order = 10000;
-								for (const auto& g : newGroups) {
-									manager->_groupOverrides[g].sortOrder = order;
-									order += 10000;
+							if (src != row.path && !Sidebar::IsInGroup(row.path, src)) {
+								if (before || after) {
+									const bool sameLevel = Sidebar::GetGroupParent(src) == level;
+									if (sameLevel || manager->CanMoveGroupInto(src, level)) {
+										DrawDropLine(rowMin, rowMax, after);
+										if (ImGui::AcceptDragDropPayload("GROUP_ORDER", ImGuiDragDropFlags_AcceptNoDrawDefaultRect)) {
+											if (sameLevel)
+												manager->MoveGroup(src, IndexAtRow(moving, after));
+											else
+												MoveGroupKeepingState(src, level, IndexAtRow(moving, after));
+										}
+									}
+								} else if (!row.tool && manager->CanMoveGroupInto(src, row.path)) {
+									// Into this group, at the top
+									DrawDropRect(rowMin, rowMax);
+									if (ImGui::AcceptDragDropPayload("GROUP_ORDER", ImGuiDragDropFlags_AcceptNoDrawDefaultRect))
+										MoveGroupKeepingState(src, row.path, 0);
 								}
-
-								manager->SaveWorkspace();
-								s_needsRebuild = true;
 							}
 						}
-
-						if (const ImGuiPayload* payload = FUCK::AcceptDragDropPayload("TOOL_ORDER", FUCK::DragDropFlags::kAcceptPeekOnly)) {
-							isHoveringToolDropOnGroup = true;
-						}
-
-						if (const ImGuiPayload* payload = FUCK::AcceptDragDropPayload("TOOL_ORDER", FUCK::DragDropFlags::kAcceptNoDrawDefaultRect)) {
-							FUCK::ITool* srcTool      = *static_cast<FUCK::ITool**>(payload->Data);
-							std::string  srcKey       = std::format("{}|{}", srcTool->PluginName(), srcTool->Name());
-							std::string  srcNativeGrp = srcTool->Group() ? srcTool->Group() : "";
-
-							if (grp == srcNativeGrp) {
-								manager->_toolOverrides[srcKey].customGroup = "";
-							} else if (grp.empty() && !srcNativeGrp.empty()) {
-								manager->_toolOverrides[srcKey].customGroup = "##ROOT";
-							} else {
-								manager->_toolOverrides[srcKey].customGroup = grp;
-							}
-
-							// Sequentially place the tool at the top of the destination group
-							std::vector<FUCK::ITool*> newList = groupedTools[grp];
-							std::erase(newList, srcTool);
-							newList.insert(newList.begin(), srcTool);
-
-							int order = 10000;
-							for (auto* t : newList) {
-								manager->_toolOverrides[std::format("{}|{}", t->PluginName(), t->Name())].sortOrder = order;
-								order += 10000;
-							}
-
-							manager->SaveWorkspace();
-							s_needsRebuild = true;
-						}
-						FUCK::EndDragDropTarget();
+						ImGui::EndDragDropTarget();
 					}
+					ImGui::PopClipRect();
 
-					// Visual Drop Indicator
-					if (isHoveringGroupDrop) {
-						ImGui::GetForegroundDrawList()->AddLine(rowMin, ImVec2(rowMax.x, rowMin.y), ImGui::GetColorU32(ImGuiCol_DragDropTarget), 2.0f);
-					} else if (isHoveringToolDropOnGroup) {
-						ImGui::GetForegroundDrawList()->AddRect(rowMin, rowMax, ImGui::GetColorU32(ImGuiCol_DragDropTarget), 0.0f, 0, 2.0f);
+					// --- Right-click, or Y on a gamepad, opens the row's menu ---
+					const bool rightClicked = rowHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Right) && !rowDragging;
+					const bool padMenu      = rowFocused && ImGui::IsKeyPressed(ImGuiKey_GamepadFaceUp, false);
+					if (rightClicked || padMenu) {
+						T.menuTool      = row.tool;
+						T.menuGroup     = row.tool ? std::string() : row.path;
+						T.menuRequested = true;
 					}
-
-					// Col 1: Group Name & Collapse Indicator
-					FUCK::TableNextColumn();
-					FUCK::AlignTextToFramePadding();
-
-					ImVec2 curPos    = FUCK::GetCursorScreenPos();
-					float  rowH      = FUCK::GetFrameHeight();
-					auto   iconArrow = IconFont::Manager::GetSingleton()->GetStepperRight();
-					if (iconArrow) {
-						float  aspect  = iconArrow->imageSize.y > 0.0f ? (iconArrow->imageSize.x / iconArrow->imageSize.y) : 1.0f;
-						auto   ap      = ImGui::CalcArrowIconParams(aspect, true, rowH, 20.0f * tableScale, 1.0f);
-						ImVec2 drawPos = { curPos.x, curPos.y + ap.offsetY };
-						ImGui::DrawArrowIcon(ImGui::GetWindowDrawList(), drawPos, ap.drawSize, ImGui::GetColorU32(ImGuiCol_TextDisabled), ImGui::IconDirection::kDown);
-						FUCK::SetCursorPosX(FUCK::GetCursorPos().x + ap.drawSize.x + (6.0f * tableScale));
-					}
-
-					FUCK::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 0.8f, 1.0f));
-					FUCK::Text(grp.c_str());
-					FUCK::PopStyleColor();
-
-					// Col 2: Blank (no plugin name for groups)
-					FUCK::TableNextColumn();
-
-					// Col 3: Custom Name
-					FUCK::TableNextColumn();
-					FUCK::SetNextItemWidth(-1.0f);
-					auto& gOver       = manager->_groupOverrides[grp];
-					char  nameBuf[64] = "";
-					FUCK::StringCopy(nameBuf, gOver.customName);
-					if (FUCK::InputText("##gname", nameBuf, sizeof(nameBuf))) {
-						gOver.customName = nameBuf;
-					}
-					if (FUCK::IsItemDeactivatedAfterEdit()) {
-						manager->SaveWorkspace();
-						s_needsRebuild = true;
-					}
-
-					// Col 4: Blank (groups cannot override their own group)
-					FUCK::TableNextColumn();
-
-					// Col 5: Drag Handle
-					FUCK::TableNextColumn();
-					ImU32  gripCol = rowHovered ? IM_COL32(50, 205, 50, 255) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
-					float  gripW   = FUCK::CalcTextSize(ICON_FA_GRIP_LINES).x;
-					float  gripH   = FUCK::CalcTextSize(ICON_FA_GRIP_LINES).y;
-					ImVec2 gripPos(FUCK::GetCursorScreenPos().x + (FUCK::GetColumnWidth() - gripW) * 0.5f, FUCK::GetCursorScreenPos().y + (FUCK::GetFrameHeight() - gripH) * 0.5f);
-					ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), ImGui::GetFontSize(), gripPos, gripCol, ICON_FA_GRIP_LINES);
 
 					FUCK::PopID();
-
-					for (auto* tool : groupedTools[grp]) {
-						RenderToolRow(tool, true, groupedTools[grp]);
-					}
 				};
 
-				// --- Render Active Rows ---
-				for (const auto& grp : groupNames) {
-					RenderGroupRow(grp);
+				// --- Rows, only those on screen, plus any being dragged or edited so they carry on off screen ---
+				ImGuiListClipper clipper;
+				clipper.Begin(static_cast<int>(T.rows.size()));  // measures the row height from the first row
+				if (T.dragRow >= 0 && T.dragRow < static_cast<int>(T.rows.size()))
+					clipper.IncludeItemByIndex(T.dragRow);
+				if (T.editRow >= 0 && T.editRow < static_cast<int>(T.rows.size()))
+					clipper.IncludeItemByIndex(T.editRow);
+
+				while (clipper.Step()) {
+					for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i) {
+						RenderRow(i);
+					}
+				}
+				clipper.End();
+
+				// --- The row menu ---
+				if (T.menuRequested) {
+					T.menuRequested = false;
+					ImGui::OpenPopup("##SidebarRowMenu");
 				}
 
-				for (auto* tool : looseTools) {
-					RenderToolRow(tool, false, looseTools);
+				if (ImGui::BeginPopup("##SidebarRowMenu")) {
+					if (T.menuTool) {
+						FUCK::ITool*      tool    = T.menuTool;
+						const std::string key     = manager->GetToolKey(tool);
+						const std::string current = manager->GetToolGroup(tool);
+						const auto*       over    = findToolOver(key);
+						const bool        hidden  = over && over->isHidden;
+
+						ImGui::TextDisabled("%s", manager->GetToolLabel(tool).c_str());
+						ImGui::Separator();
+
+						if (ImGui::MenuItem("$FUCK_Sidebar_MoveTop"_T))
+							manager->MoveTool(tool, current, 0);
+						if (ImGui::MenuItem("$FUCK_Sidebar_MoveBottom"_T))
+							manager->MoveTool(tool, current, SIZE_MAX);
+
+						ImGui::SetNextWindowSizeConstraints(ImVec2(0.0f, 0.0f), ImVec2(FLT_MAX, 420.0f * tableScale));
+						if (ImGui::BeginMenu("$FUCK_Sidebar_MoveToGroup"_T)) {
+							if (ImGui::MenuItem("$FUCK_Sidebar_TopLevel"_T, nullptr, current.empty()) && !current.empty())
+								manager->MoveTool(tool, std::string(), SIZE_MAX);
+
+							for (const auto& g : T.groupPaths) {
+								ImGui::PushID(g.c_str());
+								std::string label(static_cast<std::size_t>(Sidebar::GetGroupDepth(g)) * 3, ' ');
+								label += manager->GetGroupDisplayName(g);
+								if (ImGui::MenuItem(label.c_str(), nullptr, g == current) && g != current)
+									manager->MoveTool(tool, g, SIZE_MAX);
+								ImGui::PopID();
+							}
+							ImGui::EndMenu();
+						}
+
+						if (ImGui::MenuItem(hidden ? "$FUCK_Sidebar_ShowTool"_T : "$FUCK_Sidebar_TableHideTT"_T)) {
+							manager->_toolOverrides[key].isHidden = !hidden;
+							manager->OnOverridesChanged();
+						}
+
+						ImGui::Separator();
+						if (ImGui::MenuItem("$FUCK_Sidebar_ResetRow"_T)) {
+							auto& o       = manager->_toolOverrides[key];
+							o.customName  = "";
+							o.customGroup = "";
+							o.sortOrder   = 0;
+							o.isHidden    = false;
+							T.CancelEdit();
+							manager->OnOverridesChanged();
+						}
+					} else if (!T.menuGroup.empty()) {
+						const std::string path = T.menuGroup;
+
+						ImGui::TextDisabled("%s", manager->GetGroupDisplayName(path).c_str());
+						ImGui::Separator();
+
+						if (ImGui::MenuItem("$FUCK_Sidebar_MoveTop"_T))
+							manager->MoveGroup(path, 0);
+						if (ImGui::MenuItem("$FUCK_Sidebar_MoveBottom"_T))
+							manager->MoveGroup(path, SIZE_MAX);
+
+						// Places it can go: not itself or anything in it, and not so deep it would pass the depth limit
+						ImGui::SetNextWindowSizeConstraints(ImVec2(0.0f, 0.0f), ImVec2(FLT_MAX, 420.0f * tableScale));
+						if (ImGui::BeginMenu("$FUCK_Sidebar_MoveToGroup"_T)) {
+							const std::string current = Sidebar::GetGroupParent(path);
+
+							if (ImGui::MenuItem("$FUCK_Sidebar_TopLevel"_T, nullptr, current.empty(), manager->CanMoveGroupInto(path, std::string())))
+								MoveGroupKeepingState(path, std::string(), SIZE_MAX);
+
+							for (const auto& g : T.groupPaths) {
+								if (g == path || Sidebar::IsInGroup(g, path))
+									continue;
+
+								ImGui::PushID(g.c_str());
+								std::string label(static_cast<std::size_t>(Sidebar::GetGroupDepth(g)) * 3, ' ');
+								label += manager->GetGroupDisplayName(g);
+								if (ImGui::MenuItem(label.c_str(), nullptr, g == current, manager->CanMoveGroupInto(path, g)))
+									MoveGroupKeepingState(path, g, SIZE_MAX);
+								ImGui::PopID();
+							}
+							ImGui::EndMenu();
+						}
+
+						ImGui::Separator();
+						if (ImGui::MenuItem("$FUCK_Sidebar_ResetRow"_T)) {
+							auto& o      = manager->_groupOverrides[path];
+							o.customName = "";
+							o.sortOrder  = 0;
+							T.CancelEdit();
+							manager->OnOverridesChanged();
+						}
+					}
+					ImGui::EndPopup();
 				}
 
 				FUCK::EndTable();
-				FUCK::PopID();
 			}
 
+			FUCK::PopID();
 			FUCK::PopStyleVar();
 
 			FUCK::Spacing(4);
