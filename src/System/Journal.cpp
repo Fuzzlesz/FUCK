@@ -80,6 +80,25 @@ namespace Hooks::Journal
 	};
 	static EntryRollOverHandler g_entryRollOverHandler;
 
+	// Opens FUCK once the Journal has closed. Opening while it's still fading out leaves it on the stack,
+	// where FUCK pauses it mid-close and it keeps the game's input
+	static void OpenWhenJournalCloses()
+	{
+		static bool s_waiting = false;
+		if (s_waiting)
+			return;
+		s_waiting = true;
+
+		FUCKMan::GetSingleton()->AddMenuListener(&s_waiting, [](const char* a_menu, bool a_opening, void* a_userdata) {
+			if (a_opening || RE::JournalMenu::MENU_NAME != a_menu)
+				return;
+
+			FUCKMan::GetSingleton()->RemoveMenuListener(a_userdata);
+			*static_cast<bool*>(a_userdata) = false;
+			SKSE::GetTaskInterface()->AddTask([]() { FUCKMan::GetSingleton()->Open(); });
+		});
+	}
+
 	// --- Menu Action Interceptors ---
 	class FUCKMainPressHandler : public RE::GFxFunctionHandler
 	{
@@ -100,8 +119,7 @@ namespace Hooks::Journal
 					if (auto queue = RE::UIMessageQueue::GetSingleton()) {
 						queue->AddMessage(RE::JournalMenu::MENU_NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
 					}
-					// Defer opening our menu to the next frame to prevent input collisions
-					SKSE::GetTaskInterface()->AddTask([]() { FUCKMan::GetSingleton()->Open(); });
+					OpenWhenJournalCloses();
 					return;  // Safe early out! Do not forward to vanilla
 				}
 			}
@@ -129,8 +147,7 @@ namespace Hooks::Journal
 					if (auto queue = RE::UIMessageQueue::GetSingleton()) {
 						queue->AddMessage(RE::JournalMenu::MENU_NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
 					}
-					// Defer opening our menu to the next frame to prevent input collisions
-					SKSE::GetTaskInterface()->AddTask([]() { FUCKMan::GetSingleton()->Open(); });
+					OpenWhenJournalCloses();
 					return;  // Safe early out! Do not forward to vanilla
 				}
 			}
