@@ -931,6 +931,8 @@ namespace FUCK::Host
 	static void EndStickyList_Impl() { ImGui::EndStickyList(); }
 	static bool StickyHeader_Impl(const char* label, bool* open, int count, int flags) { return ImGui::StickyHeader(label, open, count, flags); }
 
+	static void RefreshTools_Impl() { FUCKMan::GetSingleton()->RefreshTools(); }
+
 	// ==================================================
 	// CreateInterface
 	// ==================================================
@@ -1232,7 +1234,8 @@ namespace FUCK::Host
 			.GetWindowRotation = GetWindowRotation_Impl,
 			.BeginStickyList   = BeginStickyList_Impl,
 			.EndStickyList     = EndStickyList_Impl,
-			.StickyHeader      = StickyHeader_Impl
+			.StickyHeader      = StickyHeader_Impl,
+			.RefreshTools      = RefreshTools_Impl
 		};
 		return &api;
 	}

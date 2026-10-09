@@ -102,6 +102,7 @@ public:
 	void RegisterTool(FUCK::ITool* tool);
 	void RegisterWindow(FUCK::IWindow* window);
 	void UnregisterWindow(FUCK::IWindow* window);
+	void RefreshTools();  // a plugin's tools changed their names, groups or visibility. Safe from any thread
 
 	// --- Rendering & Input ---
 	bool ShouldRender() const;
@@ -243,7 +244,8 @@ private:
 		{
 			kAddTool,
 			kAddWindow,
-			kRemoveWindow
+			kRemoveWindow,
+			kRefreshTools
 		} type;
 		FUCK::ITool*   tool   = nullptr;
 		FUCK::IWindow* window = nullptr;

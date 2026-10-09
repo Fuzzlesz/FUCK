@@ -209,6 +209,13 @@ void FUCKMan::UnregisterWindow(FUCK::IWindow* a_window)
 	_pendingCommands.push_back({ PendingCommand::Type::kRemoveWindow, nullptr, a_window });
 }
 
+// Queued with registrations, so it's safe from any thread and the rebuild includes tools registered alongside it
+void FUCKMan::RefreshTools()
+{
+	std::lock_guard lock(_pendingLock);
+	_pendingCommands.push_back({ PendingCommand::Type::kRefreshTools, nullptr, nullptr });
+}
+
 void FUCKMan::FlushPendingRegistrations()
 {
 	std::vector<PendingCommand> commands;
