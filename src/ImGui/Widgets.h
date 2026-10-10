@@ -96,6 +96,27 @@ namespace ImGui
 	// Cache Management
 	void ClearFormCaches();
 
+	// Themed Corners: whether the theme turns rounded corners inwards ("Invert Corners"),
+	// and AddRectFilled / AddRect that follow it. Exactly the ImDrawList versions while it's off
+	bool UseInvertedCorners();
+	void AddThemedRectFilled(ImDrawList* a_drawList, const ImRect& a_bb, ImU32 a_col, float a_rounding, ImDrawFlags a_flags = ImDrawFlags_None);
+	void AddThemedRect(ImDrawList* a_drawList, const ImRect& a_bb, ImU32 a_col, float a_rounding, float a_thickness = 1.0f);
+
+	// ImGui only rounds a window's corners outwards. With inverted corners, call PushThemedWindowBg() just before Begin()
+	// (or BeginChild(), with a_child) and PopThemedWindowBg() straight after it, whatever it returned. ImGui then leaves
+	// the background, border and resize grip out, and they're drawn inverted instead. Returns false when there's nothing to invert
+	bool PushThemedWindowBg(bool a_child = false);
+	void PopThemedWindowBg(bool a_pushed);
+
+	// BeginChild() whose corners follow the theme. Pair with EndChild() as usual
+	bool BeginChildThemed(const char* a_id, const ImVec2& a_size = ImVec2(0, 0), ImGuiChildFlags a_childFlags = ImGuiChildFlags_None, ImGuiWindowFlags a_windowFlags = ImGuiWindowFlags_None);
+
+	// How far inverted corners cut into the current window's edges, so things along them can move in clear. 0 otherwise
+	float GetWindowCornerInset();
+
+	// Fills a_rect, leaving out any part of it in the current window's cut-away corners. A plain fill otherwise
+	void AddRectFilledInWindow(ImDrawList* a_drawList, const ImRect& a_rect, ImU32 a_col);
+
 	// Combo Boxes
 	bool ComboStyled(const char* label, int* current_item, const char* const* items, int items_count, int popup_max_height_in_items = -1);
 	bool ComboWithFilter(const char* label, int* current_item, std::span<const std::string> items, int popup_max_height_in_items = -1, const Set<std::string>* a_favourites = nullptr, std::string* a_favToggled = nullptr);

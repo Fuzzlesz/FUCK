@@ -115,7 +115,7 @@ namespace ImGui
 
 			float windowRounding{ 0.0f };
 			float frameRounding{ 0.0f };
-			bool  invertButtonCorners{ false };
+			bool  invertCorners{ false };  // turns inwards the corners of everything FUCK draws itself that can be rounded
 			float buttonRounding{ 9.0f };
 			float popupRounding{ 0.0f };
 			float scrollbarRounding{ 0.0f };

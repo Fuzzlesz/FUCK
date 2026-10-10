@@ -200,8 +200,9 @@ void ThemeEditorWindow::Draw()
 
 		FUCK::Header("$FUCK_Styles_Rounding"_T);
 
-		if (FUCK::Checkbox("$FUCK_Styles_InvertButtonCorners"_T, &style->user.invertButtonCorners, true, true))
+		if (FUCK::Checkbox("$FUCK_Styles_InvertCorners"_T, &style->user.invertCorners, true, true))
 			style->RefreshStyle();
+		FUCK::SetTooltip("$FUCK_Styles_InvertCornersTT"_T);
 
 		auto DragRound = [&](const char* label, float* v) {
 			if (FUCK::SliderFloat(label, v, 0.0f, 20.0f, "%.0f"))

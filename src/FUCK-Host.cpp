@@ -632,10 +632,17 @@ namespace FUCK::Host
 	}
 	static void SetWindowPos_Impl(float x, float y, int c) { ImGui::SetWindowPos(GetTargetWindow(), { x, y }, c); }
 	static void SetWindowSize_Impl(float x, float y, int c) { ImGui::SetWindowSize(GetTargetWindow(), { x, y }, c); }
-	static bool BeginWindow_Impl(const char* n, bool* o, int f) { return ImGui::Begin(n, o, f); }
+	// Corners follow the theme, for the host's windows and any a plugin begins itself
+	static bool BeginWindow_Impl(const char* n, bool* o, int f)
+	{
+		const bool themed  = ImGui::PushThemedWindowBg();
+		const bool visible = ImGui::Begin(n, o, f);
+		ImGui::PopThemedWindowBg(themed);
+		return visible;
+	}
 	static void EndWindow_Impl() { ImGui::End(); }
 	static void ExtendWindowPastBorder_Impl() { ImGui::ExtendWindowPastBorder(); }
-	static void BeginChild_Impl(const char* id, float w, float h, bool border, int flags) { ImGui::BeginChild(id, ImVec2(w, h), border, flags); }
+	static void BeginChild_Impl(const char* id, float w, float h, bool border, int flags) { ImGui::BeginChildThemed(id, ImVec2(w, h), border ? ImGuiChildFlags_Borders : ImGuiChildFlags_None, flags); }
 	static void EndChild_Impl() { ImGui::EndChild(); }
 	static bool TreeNode_Impl(const char* label) { return ImGui::TreeNodeIcon(label, 0); }
 	static void TreePop_Impl() { ImGui::TreePop(); }

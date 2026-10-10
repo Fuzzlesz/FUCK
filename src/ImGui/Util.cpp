@@ -4,6 +4,7 @@
 #include "Renderer.h"
 #include "Styles.h"
 #include "Util.h"
+#include "Widgets.h"
 
 #include "System/Input.h"
 
@@ -20,15 +21,14 @@ namespace ImGui
 
 		auto*      drawList     = GetBackgroundDrawList();
 		const auto newWindowPos = ImVec2{ window->Pos.x - borderSize, window->Pos.y - borderSize };
+		const auto extendedBB   = ImRect(newWindowPos, newWindowPos + ImVec2(window->Size.x + 2 * borderSize, window->Size.y + 2 * borderSize));
 
-		float extendedRounding = window->WindowRounding > 0.0f ? window->WindowRounding + borderSize : 0.0f;
+		// Inverted corners are centred on the corner itself, so the window's own rounding lines up with it
+		float extendedRounding = 0.0f;
+		if (window->WindowRounding > 0.0f)
+			extendedRounding = UseInvertedCorners() ? window->WindowRounding : window->WindowRounding + borderSize;
 
-		drawList->AddRect(
-			newWindowPos,
-			newWindowPos + ImVec2(window->Size.x + 2 * borderSize, window->Size.y + 2 * borderSize),
-			GetColorU32(ImGuiCol_WindowBg),
-			extendedRounding,
-			0, borderSize);
+		AddThemedRect(drawList, extendedBB, GetColorU32(ImGuiCol_WindowBg), extendedRounding, borderSize);
 	}
 
 	void SeparatorThick()

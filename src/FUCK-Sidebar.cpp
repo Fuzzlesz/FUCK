@@ -729,7 +729,7 @@ void FUCKMan::DrawSidebar(const SidebarMetrics& a_metrics, float a_height)
 	static int                     s_rowsConfig = -1;
 
 	// The header and footer stay put while the list between them scrolls, so a long list can't push Settings out of view
-	ImGui::BeginChild("Sidebar", ImVec2(m.sidebarWidth, availHeight), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+	ImGui::BeginChildThemed("Sidebar", ImVec2(m.sidebarWidth, availHeight), ImGuiChildFlags_Borders, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
 		ImVec2 headerStart = ImGui::GetCursorPos();
@@ -1363,7 +1363,28 @@ void FUCKMan::DrawSidebar(const SidebarMetrics& a_metrics, float a_height)
 			bool       isSelected   = (_activeTool == settingsTool);
 			const auto cursorPos    = ImGui::GetCursorPos();
 
-			if (ImGui::Selectable("##SETTINGS", isSelected, 0, ImVec2(0, m.sidebarItemH))) {
+			// Inverted corners cut into the bottom of the sidebar, beside this row, so its highlight is drawn here with them cut out
+			const bool themed = ImGui::GetWindowCornerInset() > 0.0f;
+			if (themed) {
+				ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0, 0, 0, 0));
+				ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0, 0, 0, 0));
+				ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImVec4(0, 0, 0, 0));
+			}
+
+			const bool pressed = ImGui::Selectable("##SETTINGS", isSelected, 0, ImVec2(0, m.sidebarItemH));
+
+			if (themed) {
+				ImGui::PopStyleColor(3);
+
+				const bool hovered = ImGui::IsItemHovered();
+				const bool held    = ImGui::IsItemActive();
+				if (isSelected || hovered) {
+					const ImGuiCol col = held ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header;
+					ImGui::AddRectFilledInWindow(ImGui::GetWindowDrawList(), ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax()), ImGui::GetColorU32(col));
+				}
+			}
+
+			if (pressed) {
 				if (_activeTool != settingsTool) {
 					if (_activeTool) {
 						Input::Manager::GetSingleton()->AbortBinding();

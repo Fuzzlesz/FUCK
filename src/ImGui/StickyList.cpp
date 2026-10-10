@@ -163,7 +163,7 @@ namespace ImGui
 
 	void BeginStickyList(const char* str_id, const ImVec2& size, bool border)
 	{
-		BeginChild(str_id, size, border ? ImGuiChildFlags_Borders : ImGuiChildFlags_None);
+		BeginChildThemed(str_id, size, border ? ImGuiChildFlags_Borders : ImGuiChildFlags_None);
 
 		auto& list   = s_lists.emplace_back();
 		list.window  = GetCurrentWindow();

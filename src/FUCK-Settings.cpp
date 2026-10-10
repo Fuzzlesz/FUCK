@@ -723,7 +723,7 @@ void SettingsTool::Draw()
 						const bool hovered = ImGui::IsItemHovered();
 						auto*      dl      = ImGui::GetWindowDrawList();
 						if (hovered) {
-							dl->AddRectFilled(p, ImVec2(p.x + w, p.y + rowH), ImGui::GetColorU32(ImGuiCol_FrameBgHovered), ImGui::GetStyle().FrameRounding);
+							ImGui::AddThemedRectFilled(dl, ImRect(p, ImVec2(p.x + w, p.y + rowH)), ImGui::GetColorU32(ImGuiCol_FrameBgHovered), ImGui::GetStyle().FrameRounding);
 							FUCK::SetTooltip(a_tooltip ? a_tooltip : "$FUCK_Sidebar_EditTT"_T);
 						}
 

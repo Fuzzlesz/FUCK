@@ -405,7 +405,7 @@ namespace ImGui
 		SET_VALUE(iconScale, "Icon", "fScale");
 		SET_VALUE(windowRounding, "Window", "fRounding");
 		SET_VALUE(frameRounding, "Widget", "fFrameRounding");
-		SET_VALUE(invertButtonCorners, "Widget", "bInvertButtonCorners");
+		SET_VALUE(invertCorners, "Widget", "bInvertCorners");
 		SET_VALUE(buttonRounding, "Widget", "fButtonRounding");
 		SET_VALUE(popupRounding, "ComboBox", "fPopupRounding");
 		SET_VALUE(scrollbarRounding, "Widget", "fScrollbarRounding");
@@ -484,7 +484,7 @@ namespace ImGui
 		GET_VALUE(iconScale, "Icon", "fScale");
 		GET_VALUE(windowRounding, "Window", "fRounding");
 		GET_VALUE(frameRounding, "Widget", "fFrameRounding");
-		GET_VALUE(invertButtonCorners, "Widget", "bInvertButtonCorners");
+		GET_VALUE(invertCorners, "Widget", "bInvertCorners");
 		GET_VALUE(buttonRounding, "Widget", "fButtonRounding");
 		GET_VALUE(popupRounding, "ComboBox", "fPopupRounding");
 		GET_VALUE(scrollbarRounding, "Widget", "fScrollbarRounding");

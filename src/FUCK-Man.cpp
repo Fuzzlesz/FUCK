@@ -1840,8 +1840,14 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 		// Combine the display title with the Host's unique tracking key
 		std::string windowLabel = std::format("{}###{}", title, key);
  
+		// FUCK::BeginWindow() draws the background and border itself when corners are inverted, as ImGui only rounds
+		// them outwards. Whether it does, for the title bar below
+		const bool themedBg = !(userFlags & FUCK::WindowFlags::kNoBackground) && ImGui::UseInvertedCorners() && ImGui::GetStyle().WindowRounding > 0.0f;
+
 		// Use the formatted string instead of raw title
-		if (FUCK::BeginWindow(windowLabel.c_str(), &open, flags)) {
+		const bool visible = FUCK::BeginWindow(windowLabel.c_str(), &open, flags);
+
+		if (visible) {
 			if (poppedInvisibleBg) {
 				ImGui::PopStyleColor(2);  // Clear WindowBg and Border
 			}
@@ -1913,9 +1919,14 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 				// --- Window Chrome Decoration (unscaled) ---
 				float winWidth = FUCK::GetWindowSize().x;
  
+				// Inverted corners cut into the ends of the title bar, so its icons move in clear of them
+				const float cornerInset = themedBg ? ImGui::GetWindowCornerInset() : 0.0f;
+
 				ImVec2 headerStartCursor = FUCK::GetCursorPos();
 				ImVec2 cursorScreen      = FUCK::GetCursorScreenPos();
- 
+				cursorScreen.x += cornerInset;
+
+				FUCK::SetCursorPosX(headerStartCursor.x + cornerInset);
 				FUCK::BeginGroup();
  
 				// 1. Collapse Icon
@@ -1960,13 +1971,13 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 				// 2. Title Text
 				ImFont* baseFont = ImGui::GetFont();
  
-				FUCK::SetCursorPos({ iconW, m.titleTextOffsetY });
+				FUCK::SetCursorPos({ cornerInset + iconW, m.titleTextOffsetY });
 				ImGui::GetWindowDrawList()->AddText(baseFont, m.titleFontSize,
 					FUCK::GetCursorScreenPos(), ImGui::GetColorU32(ImGuiCol_Text), title);
  
 				// 3. Close Button
 				const float btnSize = m.titleH;
-				const float btnX    = winWidth - btnSize - headerPadding;
+				const float btnX    = winWidth - btnSize - headerPadding - cornerInset;
  
 				FUCK::SetCursorPos({ btnX, 0 });
 				if (ImGui::InvisibleButton("##WinClose", ImVec2(btnSize, btnSize))) {
@@ -2025,7 +2036,8 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 					ImGuiChildFlags  childFlags  = ImGuiChildFlags_AlwaysUseWindowPadding;
 					ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoBackground;
  
-					if (ImGui::BeginChild("##Content", ImVec2(0, 0), childFlags, windowFlags)) {
+					// Themed for its scrollbar, which would otherwise run into the window's bottom corner
+					if (ImGui::BeginChildThemed("##Content", ImVec2(0, 0), childFlags, windowFlags)) {
 						ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
 						pushContentScale(ignoreUserScale);
 						_currentRenderingPlugin = win->PluginName();
@@ -2121,7 +2133,12 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 	if (_isCollapsed)
 		winFlags |= ImGuiWindowFlags_NoResize;
  
-	if (ImGui::Begin(windowTitle.c_str(), &wantsOpen, winFlags)) {
+	// ImGui only rounds window corners outwards, so with inverted corners the background and border are drawn here
+	const bool themedBg = ImGui::PushThemedWindowBg();
+	const bool visible  = ImGui::Begin(windowTitle.c_str(), &wantsOpen, winFlags);
+	ImGui::PopThemedWindowBg(themedBg);
+
+	if (visible) {
 		ImGui::ExtendWindowPastBorder();
  
 		if (!_isCollapsed) {
@@ -2146,8 +2163,12 @@ void FUCKMan::Draw(bool a_passthroughOnly)
  
 			float winWidth = ImGui::GetWindowSize().x;
  
+			// Inverted corners cut into the ends of the title bar, so its icons move in clear of them
+			const float cornerInset = themedBg ? ImGui::GetWindowCornerInset() : 0.0f;
+
 			ImVec2 cursorScreen = ImGui::GetCursorScreenPos();
- 
+			cursorScreen.x += cornerInset;
+
 			// 1. Collapse Icon
 			if (iconArrow) {
 				// Calculate exact physical dimensions of the arrow first
@@ -2157,7 +2178,7 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 				float maxIconDim = std::max(ap.drawSize.x, ap.drawSize.y);
 				float btnWidth   = (m.titleIconPadX * 2.0f) + maxIconDim;
  
-				ImGui::SetCursorPos({ 0, 0 });
+				ImGui::SetCursorPos({ cornerInset, 0.0f });
 				// Tightly wrap the invisible button around the graphic
 				if (ImGui::InvisibleButton("##CollapseToggle", ImVec2(btnWidth, m.titleH))) {
 					_isCollapsed = !_isCollapsed;
@@ -2178,7 +2199,7 @@ void FUCKMan::Draw(bool a_passthroughOnly)
  
 			// 2. Close Button
 			float btnSize = m.titleH;
-			float xPos    = winWidth - btnSize - headerPadding;
+			float xPos    = winWidth - btnSize - headerPadding - cornerInset;
  
 			ImGui::SetCursorPos({ xPos, 0.0f });
 			ImVec2 btnCursor = ImGui::GetCursorScreenPos();
@@ -2240,7 +2261,7 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 			auto renderContent = [&](float width) {
 				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, m.pad);
 				// Padded even when the theme's border size is 0, as ImGui drops a child's padding when it has no border
-				ImGui::BeginChild("Content", ImVec2(width, availHeight), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
+				ImGui::BeginChildThemed("Content", ImVec2(width, availHeight), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
 				{
 					pushContentScale(false);
 					if (_activeTool)
