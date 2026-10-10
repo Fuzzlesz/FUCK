@@ -572,7 +572,7 @@ namespace ImGui
 		colors[ImGuiCol_TabUnfocused]       = user.tab;
 		colors[ImGuiCol_TabUnfocusedActive] = user.tab;
 
-		colors[ImGuiCol_ResizeGrip]        = user.widgetBorderActive;
+		colors[ImGuiCol_ResizeGrip]        = user.widgetBorder;
 		colors[ImGuiCol_ResizeGripHovered] = user.widgetBorderActive;
 		colors[ImGuiCol_ResizeGripActive]  = user.widgetBorderActive;
 
