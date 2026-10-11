@@ -12,10 +12,16 @@ set(sources ${sources}
 	src/ImGui/IconsFonts.cpp
 	src/ImGui/Overlays.cpp
 	src/ImGui/Renderer.cpp
-	src/ImGui/StickyList.cpp
 	src/ImGui/Styles.cpp
 	src/ImGui/Util.cpp
-	src/ImGui/Widgets.cpp
+	src/ImGui/Widgets/Buttons.cpp
+	src/ImGui/Widgets/Colours.cpp
+	src/ImGui/Widgets/Common.cpp
+	src/ImGui/Widgets/Corners.cpp
+	src/ImGui/Widgets/Fields.cpp
+	src/ImGui/Widgets/Sliders.cpp
+	src/ImGui/Widgets/StickyList.cpp
+	src/ImGui/Widgets/Trees.cpp
 	src/PCH.cpp
 	src/System/Compat.cpp
 	src/System/Console.cpp

@@ -11,16 +11,17 @@ set(headers ${headers}
 	src/ImGui/Audio.h
 	src/ImGui/Backend/imgui_default.h
 	src/ImGui/Backend/imgui_impl_skyrim.h
-	src/ImGui/FormComboBox.h
 	src/ImGui/Graphics.h
 	src/ImGui/IconsFontAwesome6.h
 	src/ImGui/IconsFonts.h
 	src/ImGui/Overlays.h
 	src/ImGui/Renderer.h
-	src/ImGui/StickyList.h
 	src/ImGui/Styles.h
 	src/ImGui/Util.h
 	src/ImGui/Widgets.h
+	src/ImGui/Widgets/FormComboBox.h
+	src/ImGui/Widgets/StickyList.h
+	src/ImGui/Widgets/WidgetsInternal.h
 	src/PCH.h
 	src/System/Compat.h
 	src/System/Console.h

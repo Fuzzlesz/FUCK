@@ -1,7 +1,5 @@
-#include "StickyList.h"
-
-#include "Util.h"
-#include "Widgets.h"
+#include "ImGui/Util.h"
+#include "ImGui/Widgets.h"
 
 namespace ImGui
 {

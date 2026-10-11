@@ -123,6 +123,11 @@ namespace ImGui
 	bool ComboForm(const char* label, RE::FormID* currentFormID, RE::FormType formType);
 	bool ComboFormStr(const char* label, std::string* currentEdid, RE::FormType formType);
 
+	// Sticky List
+	void BeginStickyList(const char* str_id, const ImVec2& size = ImVec2(0, 0), bool border = true);
+	bool StickyHeader(const char* label, bool* open = nullptr, int count = -1, int flags = 0);  // Draw the rows when true
+	void EndStickyList();
+
 	// Core Widgets
 	bool SelectableStyled(const char* label, bool selected = false, int flags = 0, const ImVec2& size = ImVec2(0, 0));
 	bool CheckBox(const char* label, bool* a_toggle, bool alignFar = true, bool labelLeft = true);

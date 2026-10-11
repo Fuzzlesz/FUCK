@@ -1,7 +1,7 @@
 #pragma once
 
 #include "FUCK-Man.h"
-#include "Widgets.h"
+#include "ImGui/Widgets.h"
 
 #include "System/Favourites.h"
 #include "System/Hooks.h"
