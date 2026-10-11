@@ -7,6 +7,7 @@ set(headers ${headers}
 	src/FUCK-Settings.h
 	src/FUCK-Sidebar.h
 	src/FUCK-Styles.h
+	src/FUCK-Windows.h
 	src/ImGui/Audio.h
 	src/ImGui/Backend/imgui_default.h
 	src/ImGui/Backend/imgui_impl_skyrim.h
