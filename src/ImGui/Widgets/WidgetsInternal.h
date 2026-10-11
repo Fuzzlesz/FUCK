@@ -1,12 +1,13 @@
 #pragma once
 
 #include "ImGui/Audio.h"
-#include "ImGui/IconsFontAwesome6.h"
 #include "ImGui/IconsFonts.h"
 #include "ImGui/Renderer.h"
 #include "ImGui/Widgets.h"
 
 #include "System/Input.h"
+
+#include "API/IconsFontAwesome6.h"
 
 // Shared between the files in ImGui/Widgets. Not part of Widgets.h, so plugins and the rest of FUCK don't see it
 namespace ImGui::WidgetsDetail

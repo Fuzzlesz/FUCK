@@ -1,7 +1,6 @@
 #include "FUCK-Settings.h"
 #include "FUCK-Man.h"
 
-#include "ImGui/IconsFontAwesome6.h"
 #include "ImGui/IconsFonts.h"
 #include "ImGui/Styles.h"
 #include "ImGui/Util.h"
@@ -12,8 +11,7 @@
 #include "System/Translation.h"
 #include "System/Utils.h"
 
-#include <functional>
-#include <unordered_set>
+#include "API/IconsFontAwesome6.h"
 
 // ==================================================
 // Sidebar Table

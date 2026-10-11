@@ -3,7 +3,6 @@
 #include "ImGui/Backend/imgui_default.h"
 
 #include "IconsFonts.h"
-#include "IconsFontAwesome6.h"
 #include "Renderer.h"
 #include "Styles.h"
 #include "Util.h"
@@ -12,8 +11,7 @@
 #include "System/Settings.h"
 #include "System/Utils.h"
 
-#include <cstring>
-#include <optional>
+#include "API/IconsFontAwesome6.h"
 
 namespace IconFont
 {

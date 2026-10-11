@@ -1,6 +1,7 @@
 set(headers ${headers}
 	src/API/FUCK_API.h
 	src/API/FUCK_ColorPalette.h
+	src/API/IconsFontAwesome6.h
 	src/FUCK-Ass.h
 	src/FUCK-Host.h
 	src/FUCK-Man.h
@@ -12,7 +13,6 @@ set(headers ${headers}
 	src/ImGui/Backend/imgui_default.h
 	src/ImGui/Backend/imgui_impl_skyrim.h
 	src/ImGui/Graphics.h
-	src/ImGui/IconsFontAwesome6.h
 	src/ImGui/IconsFonts.h
 	src/ImGui/Overlays.h
 	src/ImGui/Renderer.h

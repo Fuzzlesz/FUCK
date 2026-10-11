@@ -1,6 +1,5 @@
 #include "FUCK-Man.h"
 
-#include "IconsFontAwesome6.h"
 #include "IconsFonts.h"
 #include "Renderer.h"
 #include "Styles.h"
@@ -8,6 +7,8 @@
 
 #include "System/Settings.h"
 #include "System/Utils.h"
+
+#include "API/IconsFontAwesome6.h"
 
 #include <shellapi.h>
 

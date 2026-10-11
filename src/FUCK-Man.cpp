@@ -3,7 +3,6 @@
 #include "FUCK-Windows.h"
 
 #include "ImGui/Audio.h"
-#include "ImGui/IconsFontAwesome6.h"
 #include "ImGui/IconsFonts.h"
 #include "ImGui/Renderer.h"
 #include "ImGui/Styles.h"
@@ -15,6 +14,8 @@
 #include "System/Input.h"
 #include "System/Settings.h"
 #include "System/Utils.h"
+
+#include "API/IconsFontAwesome6.h"
 
 // Auto-Close list for Game Menus
 static constexpr std::array<std::string_view, 18> s_closeOnOpen = {

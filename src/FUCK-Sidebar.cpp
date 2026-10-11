@@ -2,7 +2,6 @@
 #include "FUCK-Sidebar.h"
 
 #include "ImGui/Audio.h"
-#include "ImGui/IconsFontAwesome6.h"
 #include "ImGui/IconsFonts.h"
 #include "ImGui/Renderer.h"
 #include "ImGui/Styles.h"
@@ -11,6 +10,8 @@
 
 #include "System/Input.h"
 #include "System/Utils.h"
+
+#include "API/IconsFontAwesome6.h"
 
 // ==================================================
 // Group Paths
