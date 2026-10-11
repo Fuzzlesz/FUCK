@@ -602,6 +602,34 @@ namespace Input
 		}
 	}
 
+	// ImGui puts tooltips past the mouse by an offset scaled by ImGuiStyle::MouseCursorScale, which at 1 clears its own
+	// 12x19 arrow. So this is how many of those the game cursor is, read from the cursor movie so a replaced cursor counts
+	void Manager::UpdateCursorScale(RE::GFxMovieView* a_movie)
+	{
+		RE::GFxValue cursor, width, height;
+		if (!a_movie->GetVariable(&cursor, "_root.mc_Cursor") || !cursor.IsDisplayObject() ||
+			!cursor.GetMember("_width", &width) || !cursor.GetMember("_height", &height) || !width.IsNumber() || !height.IsNumber()) {
+			return;
+		}
+
+		// Its size is in the movie's stage units, so scale by how much of the stage the screen shows
+		RE::GViewport viewport;
+		a_movie->GetViewport(&viewport);
+		const auto  visible  = a_movie->GetVisibleFrameRect();
+		const float visibleW = visible.right - visible.left;
+		const float visibleH = visible.bottom - visible.top;
+		if (visibleW <= 0.0f || visibleH <= 0.0f)
+			return;
+
+		const float widthPx  = static_cast<float>(width.GetNumber()) * static_cast<float>(viewport.width) / visibleW;
+		const float heightPx = static_cast<float>(height.GetNumber()) * static_cast<float>(viewport.height) / visibleH;
+
+		// ImGui puts a tooltip 24 x MouseCursorScale right of the mouse, or below it when there's no room,
+		// so it expects a cursor 24px across at a scale of 1
+		constexpr float kImGuiCursorSize = 24.0f;
+		_cursorScale                     = std::max(1.0f, std::max(widthPx, heightPx) / kImGuiCursorSize);
+	}
+
 	void Manager::UpdateInputDevice(RE::INPUT_DEVICE a_device)
 	{
 		_lastInputDevice = _inputDevice;
@@ -724,6 +752,8 @@ namespace Input
 
 						root.SetMember("_alpha", RE::GFxValue(hideVisual ? 0.0 : 100.0));
 					}
+
+					UpdateCursorScale(cursorMenu->uiMovie.get());
 				}
 			}
 		}

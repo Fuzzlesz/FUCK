@@ -83,11 +83,15 @@ namespace Input
 		static bool IsUnifiedModifier(std::uint32_t a_unifiedKey);
 		bool        IsCursorMovedByJoystick() const { return _cursorMovedByJoystick; }
 
+		// The game cursor's size against ImGui's own arrow, for ImGuiStyle::MouseCursorScale
+		float GetCursorScale() const { return _cursorScale; }
+
 		const char* GetKeyName(std::uint32_t a_key) const;
 
 	private:
 		void UpdateInputDevice(RE::INPUT_DEVICE a_device);
 		void CacheInputState(const RE::InputEvent* const* a_events);
+		void UpdateCursorScale(RE::GFxMovieView* a_movie);
 
 		bool CheckModifiersStrict(const std::uint32_t* mods, size_t count, std::int32_t req1, std::int32_t req2, std::uint32_t primaryKey) const;
 
@@ -99,6 +103,7 @@ namespace Input
 		std::optional<bool> _cursorInit{ std::nullopt };
 		bool                _cursorMovedByJoystick{ false };
 		bool                _expectingSyntheticMouseMove{ false };
+		float               _cursorScale{ 1.0f };
 
 		mutable std::shared_mutex _dataLock;
 		Map<std::uint32_t, float> _keyStateCache;

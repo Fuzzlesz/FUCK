@@ -249,11 +249,9 @@ namespace ImGui
 			float tooltipPad = 12.0f * scale;
 			PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(tooltipPad, tooltipPad));
 
+			// Following the mouse, ImGui's own offset clears the cursor (see MouseCursorScale), so only the gamepad's needs placing
 			ImVec2 origMousePos = GetIO().MousePos;
-			if (anchorToMouse) {
-				GetIO().MousePos.x += 20.0f * scale;
-				GetIO().MousePos.y += 20.0f * scale;
-			} else {
+			if (!anchorToMouse) {
 				float  wrap_width  = GetFontSize() * 35.0f;
 				ImVec2 textSizeEst = CalcTextSize(desc, nullptr, false, wrap_width);
 				float  expectedH   = textSizeEst.y + (tooltipPad * 2.0f);
@@ -314,11 +312,9 @@ namespace ImGui
 			float tooltipPad = 12.0f * scale;
 			PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(tooltipPad, tooltipPad));
 
+			// Following the mouse, ImGui's own offset clears the cursor (see MouseCursorScale), so only the gamepad's needs placing
 			ImVec2 origMousePos = GetIO().MousePos;
-			if (anchorToMouse) {
-				GetIO().MousePos.x += 20.0f * scale;
-				GetIO().MousePos.y += 20.0f * scale;
-			} else {
+			if (!anchorToMouse) {
 				ImRect itemBB      = GImGui->LastItemData.Rect;
 				ImVec2 textSizeEst = CalcTextSize(fmt, nullptr, false, -1.0f);
 				float  expectedH   = textSizeEst.y + (tooltipPad * 2.0f);

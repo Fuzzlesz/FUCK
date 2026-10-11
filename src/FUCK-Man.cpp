@@ -1477,6 +1477,15 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 	} else {
 		ImGui::GetIO().MouseDrawCursor = false;
 	}
+
+	// ImGui's tooltips sit past the mouse by an offset it scales with this, so they clear the game cursor. Only while the
+	// cursor is what places them, as gamepad navigation anchors them to the item instead
+	{
+		const auto* input        = Input::Manager::GetSingleton();
+		const bool  cursorPlaces = input->IsInputKBM() || input->IsCursorMovedByJoystick();
+
+		ImGui::GetStyle().MouseCursorScale = cursorPlaces ? input->GetCursorScale() : 1.0f;
+	}
  
 	// Global mouse click detection for auto-closing flyout windows
 	bool        isAnyMouseDown    = MANAGER(Input)->IsInputDown(Input::Keymap::kMBBase) || MANAGER(Input)->IsInputDown(Input::Keymap::kMBBase + 1);
