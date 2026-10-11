@@ -127,6 +127,11 @@ public:
 	bool IsOpen() const { return _isOpen; }
 	bool IsGameHUDHidden() const { return _isGameHUDHidden.load(); }  // the game's own HUD, see RefreshGameHUDState()
 
+	// --- HUD widgets (kHideWithHUD), for HUD managers. Safe from any thread ---
+	void EnumerateHUDWidgets(void* a_userdata, void (*a_callback)(const char*, const char*, const char*, void*));
+	void SetWindowAlphaOverride(const char* a_pluginName, const char* a_windowId, float a_alpha);  // < 0 clears it
+	float GetHUDWidgetAlpha(const FUCK::IWindow* a_win, FUCK::WindowFlags a_flags) const;        // the override, or 1
+
 	// --- Menu Controls ---
 	void Open();
 	void Close();
@@ -288,6 +293,14 @@ private:
 
 	std::mutex                  _pendingLock;
 	std::vector<PendingCommand> _pendingCommands;
+
+	// A copy of _windows for EnumerateHUDWidgets(), which other threads call
+	std::mutex                  _snapshotLock;
+	std::vector<FUCK::IWindow*> _windowSnapshot;
+
+	// HUD managers' alpha overrides, keyed "PluginName|WindowId"
+	mutable std::mutex _alphaLock;
+	StringMap<float>   _alphaOverrides;
 
 	void FlushPendingRegistrations();
 	void WriteWorkspace();

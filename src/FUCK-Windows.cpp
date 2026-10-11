@@ -1,5 +1,5 @@
-#include "FUCK-Man.h"
 #include "FUCK-Host.h"
+#include "FUCK-Man.h"
 #include "FUCK-Windows.h"
 
 #include "ImGui/Audio.h"
@@ -9,7 +9,6 @@
 #include "ImGui/Util.h"
 #include "ImGui/Widgets.h"
 
-#include "System/Compat.h"
 #include "System/Hotkeys.h"
 #include "System/Input.h"
 #include "System/Settings.h"
@@ -39,6 +38,26 @@ void ClampWindowToScreen(ImVec2& pos, const ImVec2& size)
 		pos.x = 0.0f;
 	if (pos.y < 0.0f)
 		pos.y = 0.0f;
+}
+
+// Fades everything a window and its child windows drew this frame, for a HUD manager's alpha override.
+// Scaling the vertices catches every colour, including those drawn without the style's alpha (images, rotated quads, raw colours)
+static void ScaleWindowAlpha(ImGuiWindow* a_window, float a_alpha)
+{
+	if (!a_window || !a_window->DrawList)
+		return;
+
+	for (auto& vtx : a_window->DrawList->VtxBuffer) {
+		const ImU32 alpha = (vtx.col >> IM_COL32_A_SHIFT) & 0xFF;
+		vtx.col           = (vtx.col & ~IM_COL32_A_MASK) | (static_cast<ImU32>(alpha * a_alpha + 0.5f) << IM_COL32_A_SHIFT);
+	}
+
+	// Only children drawn this frame. One that wasn't keeps last frame's list, which isn't drawn
+	const int frame = ImGui::GetFrameCount();
+	for (auto* child : a_window->DC.ChildWindows) {
+		if (child && child->LastFrameActive == frame)
+			ScaleWindowAlpha(child, a_alpha);
+	}
 }
 
 // ==================================================
@@ -280,7 +299,7 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 		// --- Setup & State ---
 		std::string key      = std::format("{}|{}", win->PluginName(), win->Id());
 		auto&       winState = s_windowStates[key];
- 
+
 		// --- Trigger Event Listeners automatically if state changed! ---
 		bool currentOpen = win->IsOpen();
 		bool wasOpen     = winState.wasOpen;
@@ -288,12 +307,12 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 			winState.wasOpen = currentOpen;
 			DispatchWindowEvent(win->PluginName(), win->Id(), currentOpen);
 		}
- 
+
 		// Skip rendering if the game state suppresses the window.
 		if (IsWindowSuppressed(win)) {
 			continue;
 		}
- 
+
 		// In VR, kPassInputToGame windows always render on the separate,
 		// always-on HUD pass instead (see ImGui::Renderer::DrawHud) — split
 		// by which pass this call is for. Flat has no separate pass, so they
@@ -303,33 +322,36 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 		if (a_passthroughOnly ? !isPassthroughWindow : (isPassthroughWindow && REL::Module::IsVR())) {
 			continue;
 		}
- 
+
 		const char*       title     = win->Title();
 		FUCK::WindowFlags userFlags = win->GetFlags();
- 
+
 		ImGuiWindowFlags flags = ImGuiWindowFlags_None;
- 
+
 		// --- Flags Setup ---
 		bool noDecoration    = (userFlags & FUCK::WindowFlags::kNoDecoration);
 		bool ignoreUserScale = (userFlags & FUCK::WindowFlags::kIgnoreUserScale);
 		bool noResize        = (userFlags & FUCK::WindowFlags::kNoResize);
 		bool autoResize      = (userFlags & FUCK::WindowFlags::kAutoResize);
 		bool noMove          = (userFlags & FUCK::WindowFlags::kNoMove);
- 
+
 		bool editable    = (userFlags & FUCK::WindowFlags::kEditable);
 		bool scalable    = editable && (userFlags & FUCK::WindowFlags::kScalable);
 		bool rotatable   = editable && (userFlags & FUCK::WindowFlags::kRotatable);
 		bool anchorRight = editable && (userFlags & FUCK::WindowFlags::kAnchorRight);
 		bool isEditing   = editable && _isOpen;
- 
+
 		winState.anchorRight = anchorRight;
- 
+
+		// A HUD manager's fade, for kHideWithHUD windows. 1 when there's none
+		const float hudAlpha = GetHUDWidgetAlpha(win, userFlags);
+
 		// While editing, the margin grows the window past the outline so its handles sit over it
 		ImVec2 editMargin = { 0.0f, 0.0f };
 		if (isEditing) {
 			float margin = kEditMargin * a_m.uiScale;
 			editMargin   = { margin, margin };
- 
+
 			// Room for the handles at any angle, so turning never resizes or moves the window.
 			// A fixed-size window's body is its default size, as its margin is added on top below
 			if (rotatable) {
@@ -338,15 +360,15 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 				float  reach = std::max(std::sqrt(half.x * half.x + half.y * half.y) + margin, half.y + kRotateReach * a_m.uiScale);
 				editMargin   = { std::max(margin, reach - half.x), std::max(margin, reach - half.y) };
 			}
- 
+
 			// Room above the outline for the reset icon, kept even while it's hidden so the window doesn't jump
 			editMargin.y = std::max(editMargin.y, margin + ImGui::GetFontSize());
- 
+
 			// Whole pixels. ImGui snaps the window to a pixel, so a fractional margin shifts the body by a sub-pixel
 			// amount that can change its measured size, which changes the margin again next frame and jitters
 			editMargin = { std::ceil(editMargin.x), std::ceil(editMargin.y) };
 		}
- 
+
 		flags |= ImGuiWindowFlags_NoTitleBar;
 		if (noDecoration) {
 			winState.isCollapsed  = false;
@@ -355,7 +377,7 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 		} else {
 			flags |= ImGuiWindowFlags_NoScrollbar;
 		}
- 
+
 		if (noResize)
 			flags |= ImGuiWindowFlags_NoResize;
 		if (autoResize)
@@ -363,7 +385,7 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 		// Editable windows are moved by the Host's own drag below, not ImGui's
 		if (noMove || editable)
 			flags |= ImGuiWindowFlags_NoMove;
- 
+
 		bool poppedInvisibleBg = false;
 		if (userFlags & FUCK::WindowFlags::kNoBackground) {
 			if (!IsInputBlocked()) {
@@ -376,15 +398,15 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 				poppedInvisibleBg = true;
 			}
 		}
- 
+
 		// --- Collapse Logic ---
 		bool isCollapsed      = winState.isCollapsed;
 		bool wasCollapsed     = winState.wasCollapsed;
 		winState.wasCollapsed = isCollapsed;
- 
+
 		// Get Metrics from Interface
 		ImVec2 targetSize = win->GetDefaultSize();
- 
+
 		// Handle collapse override
 		if (isCollapsed) {
 			float targetW = (winState.size.x > 0.0f) ? winState.size.x : (winState.preCollapseSize.x > 0.0f) ? winState.preCollapseSize.x :
@@ -398,15 +420,15 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 			else if (winState.size.x > 0.0f)
 				targetSize = winState.size;
 		}
- 
+
 		// --- Position Logic ---
 		bool isCustomPos = (userFlags & FUCK::WindowFlags::kCustomPosition);
- 
+
 		if (editable) {
 			// Follow the default until the user moves it, so a consumer's default can change with its size
 			if (!winState.hasLoadedPos)
 				winState.pos = win->GetDefaultPos();
- 
+
 			// Last frame's width places a right-anchored window. The margin keeps the content where it was
 			float  left   = anchorRight ? winState.pos.x - winState.bodySize.x : winState.pos.x;
 			ImVec2 winPos = { left - editMargin.x, winState.pos.y - editMargin.y };
@@ -427,7 +449,7 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 				FUCK::SetNextWindowPos(defPos, ImGuiCond_FirstUseEver);
 			}
 		}
- 
+
 		// If AutoResize is active, ImGui shrinks the window dynamically. We bypass hard size forcing.
 		if (editable && !autoResize && !isCollapsed) {
 			// The edit margin is added around the body rather than taken out of it, so the body keeps its size
@@ -443,7 +465,7 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 				FUCK::SetNextWindowSize(sz, sizeCond);
 			}
 		}
- 
+
 		// --- Host Chrome Interaction Protection ---
 		// Works from the live position, so custom-positioned windows are covered too
 		bool mouseOverChrome = false;
@@ -451,33 +473,33 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 			ImVec2 mouse      = ImGui::GetMousePos();
 			ImVec2 checkPos   = (winState.livePos.x != -1.0f) ? winState.livePos : (winState.hasLoadedPos ? winState.pos : win->GetDefaultPos());
 			float  checkWidth = (winState.liveSize.x != -1.0f) ? winState.liveSize.x : targetSize.x;
- 
+
 			float paddingY      = (userFlags & FUCK::WindowFlags::kNoBackground) ? 0.0f : a_m.pad.y;
 			float chromeBottomY = checkPos.y + paddingY + a_m.titleH + 1.0f;
- 
+
 			// When collapsed, the entire window is basically just the chrome + padding.
 			if (winState.isCollapsed) {
 				float checkHeight = (winState.liveSize.y != -1.0f) ? winState.liveSize.y : (paddingY * 2.0f + a_m.titleH + 1.0f);
 				chromeBottomY     = checkPos.y + checkHeight;
 			}
- 
+
 			winState.chromePos  = checkPos;
 			winState.chromeSize = ImVec2(checkWidth, chromeBottomY - checkPos.y);
- 
+
 			if (mouse.x >= checkPos.x && mouse.x <= checkPos.x + checkWidth && mouse.y >= checkPos.y && mouse.y <= chromeBottomY) {
 				mouseOverChrome = true;
 			}
 		} else {
 			winState.chromePos = ImVec2(-1.0f, -1.0f);
 		}
- 
+
 		bool isDraggingWindow = winState.isFocused && ImGui::IsMouseDown(ImGuiMouseButton_Left);
 		if ((userFlags & FUCK::WindowFlags::kPassInputToGame) && !IsInputBlocked() && !mouseOverChrome && !isDraggingWindow) {
 			flags |= ImGuiWindowFlags_NoInputs;
 		}
- 
+
 		bool open = true;
- 
+
 		// While editing, the margin grows the window past the outline so the corner handles sit over it
 		if (!noDecoration || (userFlags & FUCK::WindowFlags::kNoBackground)) {
 			// Push 0 padding for decorated windows and background-less overlays
@@ -486,10 +508,10 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 			// Give the theme's padding to frameless windows that still have a solid background panel
 			FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(a_m.pad.x + editMargin.x, a_m.pad.y + editMargin.y));
 		}
- 
+
 		// Combine the display title with the Host's unique tracking key
 		std::string windowLabel = std::format("{}###{}", title, key);
- 
+
 		// FUCK::BeginWindow() draws the background and border itself when corners are inverted, as ImGui only rounds
 		// them outwards. Whether it does, for the title bar below
 		const bool themedBg = !(userFlags & FUCK::WindowFlags::kNoBackground) && ImGui::UseInvertedCorners() && ImGui::GetStyle().WindowRounding > 0.0f;
@@ -501,30 +523,30 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 			if (poppedInvisibleBg) {
 				ImGui::PopStyleColor(2);  // Clear WindowBg and Border
 			}
- 
+
 			ImVec2 curPos  = FUCK::GetWindowPos();
 			ImVec2 curSize = FUCK::GetWindowSize();
- 
+
 			// Update live state for chrome protection
 			winState.livePos   = curPos;
 			winState.liveSize  = curSize;
 			winState.isFocused = ImGui::IsWindowFocused();
- 
+
 			// An auto-sized window is capped to the screen, so a big enough widget would read back smaller than it is.
 			// Work its size out from the content instead, which isn't capped. It's the same sum ImGui uses to fit the window
 			ImVec2 fullSize = curSize;
 			if (editable && autoResize) {
 				ImGuiWindow* window = ImGui::GetCurrentWindow();
 				fullSize            = { window->ContentSizeIdeal.x + window->WindowPadding.x * 2.0f + window->DecoOuterSizeX1 + window->DecoOuterSizeX2,
-				                        window->ContentSizeIdeal.y + window->WindowPadding.y * 2.0f + window->DecoOuterSizeY1 + window->DecoOuterSizeY2 };
+							   window->ContentSizeIdeal.y + window->WindowPadding.y * 2.0f + window->DecoOuterSizeY1 + window->DecoOuterSizeY2 };
 			}
- 
+
 			if (editable) {
 				winState.bodySize = { fullSize.x - editMargin.x * 2.0f, fullSize.y - editMargin.y * 2.0f };
 				s_windowScale     = scalable ? winState.scale : 1.0f;
 				s_windowRotation  = rotatable ? winState.rotation : 0.0f;
 			}
- 
+
 			// Auto-Close on Click Outside
 			if (open && wasOpen && (userFlags & FUCK::WindowFlags::kCloseOnClickOutside)) {
 				if (a_globalMouseClick && !ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel)) {
@@ -533,7 +555,7 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 					}
 				}
 			}
- 
+
 			// Auto-save settings on move/resize end preventing overwrite during collapse.
 			// Editable windows save their own position, which isn't the window's corner.
 			// Only what changed while the mouse was held counts, so a click anywhere doesn't save a window the user
@@ -550,7 +572,7 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 				bool sizeChanged = resizedNow && !isCollapsed && !autoResize && !noResize && (std::abs(curSize.x - winState.size.x) > 1.0f || std::abs(curSize.y - winState.size.y) > 1.0f);
 
 				winState.pressPos = { -FLT_MAX, -FLT_MAX };
- 
+
 				if (posChanged || sizeChanged) {
 					if (posChanged)
 						winState.pos = curPos;
@@ -561,14 +583,14 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 					SaveWorkspace();
 				}
 			}
- 
+
 			if (win->GetFlags() & FUCK::WindowFlags::kExtendBorder)
 				FUCK::ExtendWindowPastBorder();
- 
+
 			if (!noDecoration) {
 				// --- Window Chrome Decoration (unscaled) ---
 				float winWidth = FUCK::GetWindowSize().x;
- 
+
 				// Inverted corners cut into the ends of the title bar, so its icons move in clear of them
 				const float cornerInset = themedBg ? ImGui::GetWindowCornerInset() : 0.0f;
 
@@ -578,19 +600,19 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 
 				FUCK::SetCursorPosX(headerStartCursor.x + cornerInset);
 				FUCK::BeginGroup();
- 
+
 				// 1. Collapse Icon
 				float iconW = 0.0f;
- 
+
 				if (iconArrow) {
 					// Calculate exact physical dimensions of the arrow first
 					bool pointsDown = !isCollapsed;
 					auto ap         = chromeArrow(pointsDown, a_m.titleH);
- 
+
 					// Lock horizontal container width to its maximum dimension to prevent shifting on rotation
 					float maxIconDim = std::max(ap.drawSize.x, ap.drawSize.y);
 					float btnWidth   = (a_m.titleIconPadX * 2.0f) + maxIconDim;
- 
+
 					// Tightly wrap the invisible button around the graphic
 					if (ImGui::InvisibleButton("##CollapseToggle", ImVec2(btnWidth, a_m.titleH))) {
 						winState.isCollapsed = !isCollapsed;
@@ -604,52 +626,52 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 					}
 					bool  isHovered = ImGui::IsItemHovered();
 					ImU32 iconColor = isHovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
- 
+
 					float iconOffsetX = (maxIconDim - ap.drawSize.x) * 0.5f;
- 
+
 					ImVec2 drawPos = cursorScreen;
 					drawPos.x += a_m.titleIconPadX + iconOffsetX;
 					drawPos.y += ap.offsetY + a_m.titleIconNudgeY;
- 
+
 					ImGui::DrawArrowIcon(ImGui::GetWindowDrawList(), drawPos, ap.drawSize, iconColor,
 						pointsDown ? ImGui::IconDirection::kDown : ImGui::IconDirection::kRight);
- 
+
 					// Give the title text slightly more breathing room past the exact button width
 					iconW = btnWidth + a_m.titleIconPadX;
 				}
- 
+
 				// 2. Title Text
 				ImFont* baseFont = ImGui::GetFont();
- 
+
 				FUCK::SetCursorPos({ cornerInset + iconW, a_m.titleTextOffsetY });
 				ImGui::GetWindowDrawList()->AddText(baseFont, a_m.titleFontSize,
 					FUCK::GetCursorScreenPos(), ImGui::GetColorU32(ImGuiCol_Text), title);
- 
+
 				// 3. Close Button
 				const float btnSize = a_m.titleH;
 				const float btnX    = winWidth - btnSize - a_m.headerPadding - cornerInset;
- 
+
 				FUCK::SetCursorPos({ btnX, 0 });
 				if (ImGui::InvisibleButton("##WinClose", ImVec2(btnSize, btnSize))) {
 					open = false;
 				}
- 
+
 				{
 					const char* xIcon      = ICON_FA_XMARK;
 					float       uiFontSize = ImGui::GetStyle().FontSizeBase * a_m.uiScale;
- 
+
 					ImGui::PushFont(nullptr, uiFontSize);
 					ImVec2 textSize = ImGui::CalcTextSize(xIcon);
 					ImGui::PopFont();
- 
+
 					ImVec2 btnScreenPos = ImGui::GetItemRectMin();
 					ImVec2 textPos      = {
                         btnScreenPos.x + (btnSize - textSize.x) * 0.5f,
                         btnScreenPos.y + (btnSize - textSize.y) * 0.5f + (1.0f * a_m.uiScale)
 					};
- 
+
 					ImU32 xColor = ImGui::IsItemHovered() ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
- 
+
 					ImGui::GetWindowDrawList()->AddText(
 						baseFont,
 						uiFontSize,
@@ -657,9 +679,9 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 						xColor,
 						xIcon);
 				}
- 
+
 				FUCK::EndGroup();
- 
+
 				// Double Click Header Interaction
 				if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && !ImGui::IsAnyItemHovered()) {
 					if (ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly)) {
@@ -671,38 +693,38 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 						SaveWorkspace();
 					}
 				}
- 
+
 				// 4. Separator
 				// ImGui's own, not FUCK::'s, which pads consumers' separators and would push the chrome down
 				FUCK::SetCursorPos({ headerStartCursor.x, a_m.titleH });
 				ImGui::SeparatorThick();
- 
+
 				// 5. Content Child (scaled)
 				if (!winState.isCollapsed && !isCollapsed) {
 					FUCK::SetCursorPosX(0.0f);
- 
+
 					FUCK::PushStyleVar(ImGuiStyleVar_WindowPadding, a_m.pad);
- 
+
 					ImGuiChildFlags  childFlags  = ImGuiChildFlags_AlwaysUseWindowPadding;
 					ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoBackground;
- 
+
 					// Themed for its scrollbar, which would otherwise run into the window's bottom corner
 					if (ImGui::BeginChildThemed("##Content", ImVec2(0, 0), childFlags, windowFlags)) {
 						ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
 						PushContentScale(a_m, ignoreUserScale);
 						_currentRenderingPlugin = win->PluginName();
- 
+
 						// So SetWindowPos/Size from Draw() apply to the window, not this child
 						FUCK::Host::SetContentChild(ImGui::GetCurrentWindow());
 						win->Draw();
 						FUCK::Host::SetContentChild(nullptr);
- 
+
 						_currentRenderingPlugin.clear();
 						PopContentScale();
 						ImGui::PopItemWidth();
 					}
 					ImGui::EndChild();
- 
+
 					FUCK::PopStyleVar();
 				}
 			} else {
@@ -710,32 +732,37 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 				// Rotated content can reach past the window's corners, so don't clip it to the window
 				if (rotatable)
 					ImGui::PushClipRect({ 0.0f, 0.0f }, ImGui::GetIO().DisplaySize, false);
- 
+
 				PushContentScale(a_m, ignoreUserScale);
 				_currentRenderingPlugin = win->PluginName();
 				win->Draw();
 				_currentRenderingPlugin.clear();
 				PopContentScale();
- 
+
 				if (rotatable)
 					ImGui::PopClipRect();
 			}
- 
+
 			if (isEditing) {
 				UpdateEditableWindow(winState, curPos, fullSize, editMargin, scalable, rotatable);
 			}
+
+			// Fade everything it drew this frame, chrome and content alike
+			if (hudAlpha < 1.0f) {
+				ScaleWindowAlpha(ImGui::GetCurrentWindow(), hudAlpha);
+			}
 		}
 		FUCK::EndWindow();
- 
+
 		s_windowScale    = 1.0f;
 		s_windowRotation = 0.0f;
- 
+
 		FUCK::PopStyleVar();
- 
+
 		if (!open) {
 			win->SetOpen(false);
 			UpdateGameState();
- 
+
 			if (!IsInputBlocked()) {
 				MANAGER(Input)->ClearState();
 			}

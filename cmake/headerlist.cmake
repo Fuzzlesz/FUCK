@@ -23,7 +23,6 @@ set(headers ${headers}
 	src/ImGui/Widgets/StickyList.h
 	src/ImGui/Widgets/WidgetsInternal.h
 	src/PCH.h
-	src/System/Compat.h
 	src/System/Console.h
 	src/System/Favourites.h
 	src/System/Hooks.h

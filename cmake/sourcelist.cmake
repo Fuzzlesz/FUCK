@@ -23,7 +23,6 @@ set(sources ${sources}
 	src/ImGui/Widgets/StickyList.cpp
 	src/ImGui/Widgets/Trees.cpp
 	src/PCH.cpp
-	src/System/Compat.cpp
 	src/System/Console.cpp
 	src/System/Favourites.cpp
 	src/System/Hooks.cpp

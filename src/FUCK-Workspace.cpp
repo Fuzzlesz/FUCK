@@ -1,5 +1,5 @@
-#include "FUCK-Man.h"
 #include "FUCK-Host.h"
+#include "FUCK-Man.h"
 #include "FUCK-Windows.h"
 
 #include "ImGui/Audio.h"
@@ -9,7 +9,6 @@
 #include "ImGui/Util.h"
 #include "ImGui/Widgets.h"
 
-#include "System/Compat.h"
 #include "System/Hotkeys.h"
 #include "System/Input.h"
 #include "System/Settings.h"

@@ -1,5 +1,5 @@
-#include "FUCK-Man.h"
 #include "FUCK-Host.h"
+#include "FUCK-Man.h"
 #include "FUCK-Windows.h"
 
 #include "ImGui/Audio.h"
@@ -9,7 +9,6 @@
 #include "ImGui/Util.h"
 #include "ImGui/Widgets.h"
 
-#include "System/Compat.h"
 #include "System/Hotkeys.h"
 #include "System/Input.h"
 #include "System/Settings.h"
@@ -72,6 +71,13 @@ void FUCKMan::UnregisterWindow(FUCK::IWindow* a_window)
 {
 	if (!a_window)
 		return;
+
+	// Out of the snapshot straight away, so EnumerateHUDWidgets() doesn't hand it out before the flush
+	{
+		std::lock_guard lock(_snapshotLock);
+		std::erase(_windowSnapshot, a_window);
+	}
+
 	std::lock_guard lock(_pendingLock);
 	_pendingCommands.push_back({ PendingCommand::Type::kRemoveWindow, nullptr, a_window });
 }
@@ -151,6 +157,61 @@ void FUCKMan::FlushPendingRegistrations()
 			break;
 		}
 	}
+
+	// The windows may have changed, so refresh the copy other threads list them from
+	std::lock_guard lock(_snapshotLock);
+	_windowSnapshot = _windows;
+}
+
+// ==================================================
+// HUD Widgets
+// ==================================================
+
+void FUCKMan::EnumerateHUDWidgets(void* a_userdata, void (*a_callback)(const char*, const char*, const char*, void*))
+{
+	if (!a_callback)
+		return;
+
+	// Copied out, so the callback can call back into FUCK without holding the lock
+	std::vector<FUCK::IWindow*> windows;
+	{
+		std::lock_guard lock(_snapshotLock);
+		windows = _windowSnapshot;
+	}
+
+	for (auto* win : windows) {
+		if (win && (win->GetFlags() & FUCK::WindowFlags::kHideWithHUD))
+			a_callback(win->PluginName(), win->Id(), win->Title(), a_userdata);
+	}
+}
+
+void FUCKMan::SetWindowAlphaOverride(const char* a_pluginName, const char* a_windowId, float a_alpha)
+{
+	if (!a_pluginName || !a_windowId)
+		return;
+
+	std::string     key = std::format("{}|{}", a_pluginName, a_windowId);
+	std::lock_guard lock(_alphaLock);
+	if (a_alpha < 0.0f)
+		_alphaOverrides.erase(key);
+	else
+		_alphaOverrides[key] = std::min(a_alpha, 1.0f);
+}
+
+float FUCKMan::GetHUDWidgetAlpha(const FUCK::IWindow* a_win, FUCK::WindowFlags a_flags) const
+{
+	// Only HUD widgets take it, and an editable one stays fully shown while the FUCK menu is open, so it can be placed
+	if (!(a_flags & FUCK::WindowFlags::kHideWithHUD))
+		return 1.0f;
+	if (_isOpen && (a_flags & FUCK::WindowFlags::kEditable))
+		return 1.0f;
+
+	std::lock_guard lock(_alphaLock);
+	if (_alphaOverrides.empty())
+		return 1.0f;
+
+	auto it = _alphaOverrides.find(std::format("{}|{}", a_win->PluginName(), a_win->Id()));
+	return it != _alphaOverrides.end() ? it->second : 1.0f;
 }
 
 // ==================================================
@@ -195,9 +256,10 @@ bool FUCKMan::IsWindowSuppressed(const FUCK::IWindow* win) const
 		}
 	}
 
-	// Hide while the game hides its HUD. An editable window stays while the FUCK menu is open, so it can still be placed
-	if ((userFlags & FUCK::WindowFlags::kHideWithHUD) && IsGameHUDHidden()) {
-		if (!(_isOpen && (userFlags & FUCK::WindowFlags::kEditable)))
+	// Hide while the game hides its HUD, or while a HUD manager has faded it right out.
+	// An editable window stays while the FUCK menu is open, so it can still be placed
+	if ((userFlags & FUCK::WindowFlags::kHideWithHUD) && !(_isOpen && (userFlags & FUCK::WindowFlags::kEditable))) {
+		if (IsGameHUDHidden() || GetHUDWidgetAlpha(win, userFlags) <= 0.001f)
 			return true;
 	}
 
@@ -289,8 +351,6 @@ void FUCKMan::UpdateGameState()
 	bool targetVanity  = _isVanityBlocked;
 
 	// Main menu state.
-	bool targetiHUDDisabled = _isOpen;
-
 	if (_isOpen) {
 		targetVanity  = true;
 		targetHideHUD = true;
@@ -313,16 +373,12 @@ void FUCKMan::UpdateGameState()
 				targetBlur = true;
 			if (f & FUCK::WindowFlags::kBlockVanity)
 				targetVanity = true;
-			if (f & FUCK::WindowFlags::kHideHUD) {
-				targetHideHUD      = true;
-				targetiHUDDisabled = true;
-			}
+			if (f & FUCK::WindowFlags::kHideHUD)
+				targetHideHUD = true;
 		}
 	}
 
 	// Apply States
-	Compat::ImmersiveHUD::SetDisabled(targetiHUDDisabled);
-
 	// HUD
 	if (targetHideHUD != _isHudHidden) {
 		// Flat only: there the menu draws over the game HUD, so it borrows the

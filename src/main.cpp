@@ -5,7 +5,6 @@
 #include "ImGui/Styles.h"
 #include "ImGui/Widgets.h"
 
-#include "System/Compat.h"
 #include "System/Console.h"
 #include "System/Hooks.h"
 #include "System/Hotkeys.h"
@@ -40,7 +39,6 @@ void OnInit(SKSE::MessagingInterface::Message* a_msg)
 
 		Translation::Manager::GetSingleton()->BuildTranslationMap();
 		Console::Install();
-		Compat::ImmersiveHUD::Initialize();
 		ImGui::Styles::GetSingleton()->OnStyleRefresh();
 		MANAGER(Hotkeys)->Enable(true);
 

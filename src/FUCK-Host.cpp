@@ -939,6 +939,8 @@ namespace FUCK::Host
 
 	static void RefreshTools_Impl() { FUCKMan::GetSingleton()->RefreshTools(); }
 	static bool IsGameHUDHidden_Impl() { return FUCKMan::GetSingleton()->IsGameHUDHidden(); }
+	static void EnumerateHUDWidgets_Impl(void* userdata, void (*callback)(const char*, const char*, const char*, void*)) { FUCKMan::GetSingleton()->EnumerateHUDWidgets(userdata, callback); }
+	static void SetWindowAlphaOverride_Impl(const char* pluginName, const char* windowId, float alpha) { FUCKMan::GetSingleton()->SetWindowAlphaOverride(pluginName, windowId, alpha); }
 
 	// ==================================================
 	// CreateInterface
@@ -1232,18 +1234,20 @@ namespace FUCK::Host
 			.PopGamepadTweakSlowDisabled  = PopGamepadTweakSlowDisabled_Impl,
 
 			// Version 6
-			.ColorButton       = ColorButton_Impl,
-			.ColorPicker3      = ColorPicker3_Impl,
-			.ColorPicker4      = ColorPicker4_Impl,
-			.IsItemActivated   = IsItemActivated_Impl,
-			.IsHotkeyEnabled   = IsHotkeyEnabled_Impl,
-			.GetWindowScale    = GetWindowScale_Impl,
-			.GetWindowRotation = GetWindowRotation_Impl,
-			.BeginStickyList   = BeginStickyList_Impl,
-			.EndStickyList     = EndStickyList_Impl,
-			.StickyHeader      = StickyHeader_Impl,
-			.RefreshTools      = RefreshTools_Impl,
-			.IsGameHUDHidden   = IsGameHUDHidden_Impl
+			.ColorButton            = ColorButton_Impl,
+			.ColorPicker3           = ColorPicker3_Impl,
+			.ColorPicker4           = ColorPicker4_Impl,
+			.IsItemActivated        = IsItemActivated_Impl,
+			.IsHotkeyEnabled        = IsHotkeyEnabled_Impl,
+			.GetWindowScale         = GetWindowScale_Impl,
+			.GetWindowRotation      = GetWindowRotation_Impl,
+			.BeginStickyList        = BeginStickyList_Impl,
+			.EndStickyList          = EndStickyList_Impl,
+			.StickyHeader           = StickyHeader_Impl,
+			.RefreshTools           = RefreshTools_Impl,
+			.IsGameHUDHidden        = IsGameHUDHidden_Impl,
+			.EnumerateHUDWidgets    = EnumerateHUDWidgets_Impl,
+			.SetWindowAlphaOverride = SetWindowAlphaOverride_Impl
 		};
 		return &api;
 	}
