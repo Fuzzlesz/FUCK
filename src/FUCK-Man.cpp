@@ -195,7 +195,89 @@ bool FUCKMan::IsWindowSuppressed(const FUCK::IWindow* win) const
 		}
 	}
 
+	// Hide while the game hides its HUD. An editable window stays while the FUCK menu is open, so it can still be placed
+	if ((userFlags & FUCK::WindowFlags::kHideWithHUD) && IsGameHUDHidden()) {
+		if (!(_isOpen && (userFlags & FUCK::WindowFlags::kEditable)))
+			return true;
+	}
+
 	return false;
+}
+
+// The vanilla HUD's modes in which it shows as normal. The same set SkyUI widgets show in by default
+static bool IsGameplayHUDMode(std::string_view a_mode)
+{
+	return a_mode == "All" ||
+	       a_mode == "StealthMode" ||
+	       a_mode == "Favor" ||
+	       a_mode == "Swimming" ||
+	       a_mode == "HorseMode" ||
+	       a_mode == "WarHorseMode";
+}
+
+// Whether the game has hidden its HUD. Reads Scaleform, so call it on the UI thread only
+static bool ReadGameHUDHidden(bool a_skipOwnPush)
+{
+	auto* ui = RE::UI::GetSingleton();
+	if (!ui)
+		return false;
+
+	// No HUD at all, or the game has hidden its movie outright
+	auto hud = ui->GetMenu<RE::HUDMenu>();
+	if (!hud || !hud->uiMovie || !hud->uiMovie->GetVisible())
+		return true;
+
+	// The intro cart ride and scenes don't open menus, they switch the HUD's mode ("CartMode", "MovementDisabled", ...).
+	// The last entry is the current one
+	RE::GFxValue modes;
+	if (!hud->uiMovie->GetVariable(&modes, "_root.HUDMovieBaseInstance.HUDModes") || !modes.IsArray())
+		return false;  // Can't tell, so hide nothing
+
+	bool skip = a_skipOwnPush;
+	for (std::uint32_t i = modes.GetArraySize(); i-- > 0;) {
+		RE::GFxValue entry;
+		if (!modes.GetElement(i, &entry) || !entry.IsString())
+			return false;
+
+		const std::string_view mode = entry.GetString();
+
+		// FUCK's own push, hiding the HUD under its menu. The mode beneath it is the game's
+		if (skip && mode == "WorldMapMode") {
+			skip = false;
+			continue;
+		}
+
+		static std::string s_lastMode;
+		if (s_lastMode != mode) {
+			s_lastMode = mode;
+			logger::debug("FUCK: HUD mode {}", s_lastMode);
+		}
+
+		return !IsGameplayHUDMode(mode);
+	}
+
+	return false;
+}
+
+void FUCKMan::RefreshGameHUDState()
+{
+	// One reading in flight at a time, so the result is at most a frame old
+	if (_hudReadQueued.exchange(true))
+		return;
+
+	auto* tasks = SKSE::GetTaskInterface();
+	if (!tasks) {
+		_hudReadQueued.store(false);
+		return;
+	}
+
+	// FUCK pushes WorldMapMode itself while its menu or a kHideHUD window is open (flat only). Read past it
+	const bool skipOwnPush = _isHudHidden && !REL::Module::IsVR();
+
+	tasks->AddUITask([this, skipOwnPush]() {
+		_isGameHUDHidden.store(ReadGameHUDHidden(skipOwnPush));
+		_hudReadQueued.store(false);
+	});
 }
 
 void FUCKMan::UpdateGameState()
@@ -804,16 +886,16 @@ void FUCKMan::PopContentScale()
 // ==================================================
 // CORE RENDER LOOP
 // ==================================================
- 
+
 void FUCKMan::Draw(bool a_passthroughOnly)
 {
 	FlushPendingRegistrations();
- 
+
 	if (!_workspaceLoaded) {
 		LoadWorkspace();
 		_workspaceLoaded = true;
 	}
- 
+
 	// Writes the workspace once changes have settled
 	FlushWorkspace();
 
@@ -835,13 +917,16 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 		}
 		return;
 	}
- 
+
+	// The game's HUD state, for kHideWithHUD windows
+	RefreshGameHUDState();
+
 	UpdateGameState();
- 
+
 	// Before any window is drawn, so it decides who gets the mouse this frame
 	if (_isOpen)
 		ClaimEditHandleHover();
- 
+
 	// If the user hides menus via 'tm', the Skyrim Scaleform cursor becomes invisible.
 	// We force ImGui to draw its own cursor so KBM users aren't clicking blind. Flatrim only.
 	bool menusHidden = false;
@@ -850,7 +935,7 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 			menusHidden = !ui->IsShowingMenus();
 		}
 	}
- 
+
 	if (menusHidden && IsInputBlocked() && Input::Manager::GetSingleton()->IsInputKBM()) {
 		ImGui::GetIO().MouseDrawCursor = true;
 	} else {
@@ -865,7 +950,7 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 
 		ImGui::GetStyle().MouseCursorScale = cursorPlaces ? input->GetCursorScale() : 1.0f;
 	}
- 
+
 	// Global mouse click detection for auto-closing flyout windows
 	bool        isAnyMouseDown    = MANAGER(Input)->IsInputDown(Input::Keymap::kMBBase) || MANAGER(Input)->IsInputDown(Input::Keymap::kMBBase + 1);
 	static bool s_wasAnyMouseDown = false;
@@ -891,30 +976,30 @@ void FUCKMan::DrawOverlays(const LayoutMetrics& a_m, bool a_menusHidden)
 {
 	ImGui::SetNextWindowPos(ImGui::GetMainViewport()->Pos);
 	ImGui::SetNextWindowSize(ImGui::GetMainViewport()->Size);
- 
+
 	ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration |
 	                         ImGuiWindowFlags_NoInputs |
 	                         ImGuiWindowFlags_NoBackground |
 	                         ImGuiWindowFlags_NoNav |
 	                         ImGuiWindowFlags_NoBringToFrontOnFocus |
 	                         ImGuiWindowFlags_NoFocusOnAppearing;
- 
+
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 	if (ImGui::Begin("##ToolOverlayLayer", nullptr, flags)) {
 		PushContentScale(a_m);
- 
+
 		if (_activeTool && !a_menusHidden) {
 			_currentRenderingPlugin = _activeTool->PluginName();
 			_activeTool->RenderOverlay();
 		}
- 
+
 		for (auto* tool : _tools) {
 			if (tool != _activeTool && !a_menusHidden) {
 				_currentRenderingPlugin = tool->PluginName();
 				tool->RenderOverlay();
 			}
 		}
- 
+
 		for (auto* win : _windows) {
 			// Skip overlays for suppressed windows.
 			if (!IsWindowSuppressed(win)) {
@@ -922,9 +1007,9 @@ void FUCKMan::DrawOverlays(const LayoutMetrics& a_m, bool a_menusHidden)
 				win->RenderOverlay();
 			}
 		}
- 
+
 		_currentRenderingPlugin.clear();
- 
+
 		PopContentScale();
 	}
 	ImGui::End();
@@ -939,9 +1024,9 @@ void FUCKMan::DrawMainWindow(const LayoutMetrics& a_m)
 	};
 
 	ImGui::GetIO().MouseDrawCursor = false;
- 
+
 	const float collapsedH = a_m.titleH * 1.02f;
- 
+
 	if (_pendingWindowRestore) {
 		ClampWindowToScreen(_cfg.windowPos, _cfg.windowSize);
 		ImGui::SetNextWindowPos(_cfg.windowPos, ImGuiCond_Always);
@@ -960,18 +1045,18 @@ void FUCKMan::DrawMainWindow(const LayoutMetrics& a_m)
 			ImGui::SetNextWindowSize(_cfg.windowSize, ImGuiCond_FirstUseEver);
 		}
 	}
- 
+
 	_wasCollapsed = _isCollapsed;
- 
+
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
- 
+
 	std::string windowTitle = std::format("##{}", "$FUCK_Title"_T);
 	bool        wantsOpen   = true;
- 
+
 	ImGuiWindowFlags winFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
 	if (_isCollapsed)
 		winFlags |= ImGuiWindowFlags_NoResize;
- 
+
 	// ImGui only rounds window corners outwards, so with inverted corners the background and border are drawn here
 	const bool themedBg = ImGui::PushThemedWindowBg();
 	const bool visible  = ImGui::Begin(windowTitle.c_str(), &wantsOpen, winFlags);
@@ -979,11 +1064,11 @@ void FUCKMan::DrawMainWindow(const LayoutMetrics& a_m)
 
 	if (visible) {
 		ImGui::ExtendWindowPastBorder();
- 
+
 		if (!_isCollapsed) {
 			_cfg.windowPos  = ImGui::GetWindowPos();
 			_cfg.windowSize = ImGui::GetWindowSize();
- 
+
 			// Auto-save settings on move/resize end
 			if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
 				if (_cfg.windowPos.x != _lastSavedPos.x || _cfg.windowPos.y != _lastSavedPos.y ||
@@ -994,14 +1079,14 @@ void FUCKMan::DrawMainWindow(const LayoutMetrics& a_m)
 				}
 			}
 		}
- 
+
 		// -- Custom Title Bar (unscaled) --
 		{
 			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
 			ImGui::BeginGroup();
- 
+
 			float winWidth = ImGui::GetWindowSize().x;
- 
+
 			// Inverted corners cut into the ends of the title bar, so its icons move in clear of them
 			const float cornerInset = themedBg ? ImGui::GetWindowCornerInset() : 0.0f;
 
@@ -1013,55 +1098,55 @@ void FUCKMan::DrawMainWindow(const LayoutMetrics& a_m)
 				// Calculate exact physical dimensions of the arrow first
 				bool pointsDown = !_isCollapsed;
 				auto ap         = chromeArrow(pointsDown, a_m.titleH);
- 
+
 				float maxIconDim = std::max(ap.drawSize.x, ap.drawSize.y);
 				float btnWidth   = (a_m.titleIconPadX * 2.0f) + maxIconDim;
- 
+
 				ImGui::SetCursorPos({ cornerInset, 0.0f });
 				// Tightly wrap the invisible button around the graphic
 				if (ImGui::InvisibleButton("##CollapseToggle", ImVec2(btnWidth, a_m.titleH))) {
 					_isCollapsed = !_isCollapsed;
 				}
- 
+
 				bool  isHovered = ImGui::IsItemHovered();
 				ImU32 iconColor = isHovered ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
- 
+
 				float iconOffsetX = (maxIconDim - ap.drawSize.x) * 0.5f;
- 
+
 				ImVec2 drawPos = cursorScreen;
 				drawPos.x += a_m.titleIconPadX + iconOffsetX;
 				drawPos.y += ap.offsetY + a_m.titleIconNudgeY;
- 
+
 				ImGui::DrawArrowIcon(ImGui::GetWindowDrawList(), drawPos, ap.drawSize, iconColor,
 					pointsDown ? ImGui::IconDirection::kDown : ImGui::IconDirection::kRight);
 			}
- 
+
 			// 2. Close Button
 			float btnSize = a_m.titleH;
 			float xPos    = winWidth - btnSize - a_m.headerPadding - cornerInset;
- 
+
 			ImGui::SetCursorPos({ xPos, 0.0f });
 			ImVec2 btnCursor = ImGui::GetCursorScreenPos();
- 
+
 			if (ImGui::InvisibleButton("##CloseBtn", ImVec2(btnSize, btnSize))) {
 				wantsOpen = false;
 			}
- 
+
 			{
 				const char* xIcon      = ICON_FA_XMARK;
 				float       uiFontSize = ImGui::GetStyle().FontSizeBase * a_m.uiScale;
- 
+
 				ImGui::PushFont(nullptr, uiFontSize);
 				ImVec2 textSize = ImGui::CalcTextSize(xIcon);
 				ImGui::PopFont();
- 
+
 				ImVec2 textPos = {
 					btnCursor.x + (btnSize - textSize.x) * 0.5f,
 					btnCursor.y + (btnSize - textSize.y) * 0.5f + (1.0f * a_m.uiScale)
 				};
- 
+
 				ImU32 xColor = ImGui::IsItemHovered() ? ImGui::GetColorU32(ImGuiCol_Text) : ImGui::GetColorU32(ImGuiCol_TextDisabled);
- 
+
 				ImGui::GetWindowDrawList()->AddText(
 					ImGui::GetFont(),
 					uiFontSize,
@@ -1069,10 +1154,10 @@ void FUCKMan::DrawMainWindow(const LayoutMetrics& a_m)
 					xColor,
 					xIcon);
 			}
- 
+
 			ImGui::EndGroup();
 			ImGui::PopStyleVar();
- 
+
 			// Double Click Header
 			if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && !ImGui::IsAnyItemHovered()) {
 				ImVec2 mousePos = ImGui::GetMousePos();
@@ -1083,19 +1168,19 @@ void FUCKMan::DrawMainWindow(const LayoutMetrics& a_m)
 				}
 			}
 		}
- 
+
 		// -- Content --
 		if (!_isCollapsed && !_wasCollapsed) {
 			float contentY = a_m.titleH;
 			ImGui::SetCursorPos({ 0, contentY });
- 
+
 			float availHeight = ImGui::GetContentRegionAvail().y;
- 
+
 			// -- Sidebar (unscaled), drawn in FUCK-Sidebar.cpp --
 			auto renderSidebar = [&]() {
 				DrawSidebar({ a_m.uiScale, a_m.iconAspect, a_m.chromeIconBaseH, a_m.sidebarWidth, a_m.sidebarItemH, a_m.sidebarFontSize, a_m.sidebarIndent }, availHeight);
 			};
- 
+
 			// -- Content (scaled) --
 			auto renderContent = [&](float width) {
 				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, a_m.pad);
@@ -1107,13 +1192,13 @@ void FUCKMan::DrawMainWindow(const LayoutMetrics& a_m)
 						_activeTool->Draw();
 					else
 						ImGui::CenteredText("$FUCK_NoToolSelected"_T, true);
- 
+
 					PopContentScale();
 				}
 				ImGui::EndChild();
 				ImGui::PopStyleVar();
 			};
- 
+
 			if (_cfg.sidebarOnRight) {
 				float contentWidth = ImGui::GetContentRegionAvail().x - a_m.sidebarWidth - ImGui::GetStyle().ItemSpacing.x;
 				renderContent(contentWidth);
@@ -1128,7 +1213,7 @@ void FUCKMan::DrawMainWindow(const LayoutMetrics& a_m)
 	}
 	ImGui::End();
 	ImGui::PopStyleVar();
- 
+
 	if (!wantsOpen)
 		Close();
 }

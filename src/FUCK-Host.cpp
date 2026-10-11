@@ -374,7 +374,7 @@ namespace FUCK::Host
 		Settings::GetSingleton()->LoadINI(userPath.c_str(), [userdata, callback](CSimpleIniA& ini) { callback(ini, userdata); }, true);
 	}
 
-		static void LoadPluginKeybindsDefaults_Impl(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*))
+	static void LoadPluginKeybindsDefaults_Impl(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*))
 	{
 		if (!callback || !pluginName)
 			return;
@@ -602,7 +602,7 @@ namespace FUCK::Host
 	// ==================================================
 	static void SetNextWindowPos_Impl(float x, float y, int c, float px, float py) { ImGui::SetNextWindowPos({ x, y }, c, { px, py }); }
 	static void SetNextWindowSize_Impl(float x, float y, int c) { ImGui::SetNextWindowSize({ x, y }, c); }
-	
+
 	// A decorated window's Draw() runs in the host's content child, which can't be moved or sized itself,
 	// so these apply to the window it sits in
 	static ImGuiWindow* s_contentChild = nullptr;
@@ -938,6 +938,7 @@ namespace FUCK::Host
 	static bool StickyHeader_Impl(const char* label, bool* open, int count, int flags) { return ImGui::StickyHeader(label, open, count, flags); }
 
 	static void RefreshTools_Impl() { FUCKMan::GetSingleton()->RefreshTools(); }
+	static bool IsGameHUDHidden_Impl() { return FUCKMan::GetSingleton()->IsGameHUDHidden(); }
 
 	// ==================================================
 	// CreateInterface
@@ -1241,7 +1242,8 @@ namespace FUCK::Host
 			.BeginStickyList   = BeginStickyList_Impl,
 			.EndStickyList     = EndStickyList_Impl,
 			.StickyHeader      = StickyHeader_Impl,
-			.RefreshTools      = RefreshTools_Impl
+			.RefreshTools      = RefreshTools_Impl,
+			.IsGameHUDHidden   = IsGameHUDHidden_Impl
 		};
 		return &api;
 	}

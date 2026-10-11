@@ -125,6 +125,7 @@ public:
 	bool IsIgnoringUserScale() const { return _isIgnoringUserScale; }
 	bool HasWindowWithFlag(FUCK::WindowFlags a_flag) const;
 	bool IsOpen() const { return _isOpen; }
+	bool IsGameHUDHidden() const { return _isGameHUDHidden.load(); }  // the game's own HUD, see RefreshGameHUDState()
 
 	// --- Menu Controls ---
 	void Open();
@@ -303,6 +304,7 @@ private:
 	std::string             ApplyGroupMoves(const std::string& a_path) const;
 	void UpdateGameState();
 	bool IsWindowSuppressed(const FUCK::IWindow* win) const;
+	void RefreshGameHUDState();
 
 	struct MenuListenerEntry
 	{
@@ -343,6 +345,10 @@ private:
 	bool _isGameBlurred    = false;
 	bool _isHudHidden      = false;
 	bool _isVanityBlocked  = false;
+
+	// Whether the game has hidden its own HUD. Read from the HUD's mode on the UI thread, see RefreshGameHUDState()
+	std::atomic<bool> _isGameHUDHidden{ false };
+	std::atomic<bool> _hudReadQueued{ false };
 
 	// API Driven Overrides
 	bool _apiHardPause     = false;
