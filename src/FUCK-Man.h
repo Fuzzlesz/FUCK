@@ -234,6 +234,40 @@ protected:
 	EventResult ProcessEvent(const RE::MenuOpenCloseEvent* a_event, RE::BSTEventSource<RE::MenuOpenCloseEvent>*) override;
 
 private:
+	// Sizes for the chrome and content, worked out at the top of each Draw()
+	struct LayoutMetrics
+	{
+		float  uiScale;
+		float  textH;
+		ImVec2 pad;  // the theme's window padding, at resolution scale
+
+		float iconAspect;
+		float chromeIconBaseH;  // = 20.0f * uiScale  (userScale intentionally excluded for chrome)
+		float headerPadding;
+
+		// Titlebar
+		float titleH;
+		float titleFontSize;
+		float titleIconPadX;
+		float titleIconNudgeY;
+		float titleTextOffsetY;
+
+		// Sidebar
+		float sidebarWidth;
+		float sidebarItemH;
+		float sidebarFontSize;
+		float sidebarIndent;
+	};
+
+	// --- Drawing (FUCK-Man.cpp) ---
+	LayoutMetrics CalcLayoutMetrics() const;
+	void          PushContentScale(const LayoutMetrics& a_m, bool a_ignoreUserScale = false);
+	void          PopContentScale();
+	void          DrawOverlays(const LayoutMetrics& a_m, bool a_menusHidden);
+	void          DrawMainWindow(const LayoutMetrics& a_m);
+
+	// --- Plugin windows (FUCK-Windows.cpp) ---
+	void DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly, bool a_globalMouseClick);
 	void UpdateEditableWindow(WindowState& a_state, const ImVec2& a_pos, const ImVec2& a_size, const ImVec2& a_margin, bool a_scalable, bool a_rotatable);
 	void ResetEditableLayout(WindowState& a_state);
 	bool DrawResetIcon(float a_rowHeight);
