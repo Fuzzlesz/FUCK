@@ -159,6 +159,7 @@ namespace ImGui
 	void PopGamepadTweakSlowDisabled();
 
 	// Navigation
+	bool BeginTabBarEx(const char* str_id, ImGuiTabBarFlags flags = 0);
 	bool BeginTabItemEx(const char* label, ImGuiTabItemFlags flags = 0);
 	bool OutlineButton(const char* label, bool* wasFocused = nullptr);
 	bool CollapsingHeaderIcon(const char* label, int flags = 0);

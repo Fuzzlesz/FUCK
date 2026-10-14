@@ -354,6 +354,29 @@ namespace ImGui
 		drawList->PathStroke(col, 0, tColor);
 	}
 
+	bool BeginTabBarEx(const char* str_id, ImGuiTabBarFlags flags)
+	{
+		ImGuiWindow* window = GetCurrentWindow();
+
+		// BeginTabItemEx() draws tabs as tall as an OutlineButton, centred on ImGui's shorter tab row, so they
+		// reach up above the bar. Make room for that, unless the bar is the first thing in the window
+		if (!window->SkipItems && window->DC.CursorPos.y > window->DC.CursorStartPos.y) {
+			const float padY     = 7.0f * GetDynamicWidgetScale();
+			float       overflow = std::max(0.0f, (GetFontSize() + padY * 2.0f - GetFrameHeight()) * 0.5f);
+
+			const float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize);
+			if (borderSize > 0.0f) {
+				float tColor, tBlack;
+				GetBorderThickness(borderSize, tColor, tBlack);
+				overflow += tBlack * 0.5f;
+			}
+
+			SetCursorPosY(GetCursorPosY() + std::ceil(overflow));
+		}
+
+		return BeginTabBar(str_id, flags | ImGuiTabBarFlags_NoTabListScrollingButtons);
+	}
+
 	bool BeginTabItemEx(const char* label, ImGuiTabItemFlags flags)
 	{
 		ImGuiWindow* window     = GetCurrentWindow();
