@@ -293,10 +293,11 @@ namespace ImGui
 		ImDrawList*  dl       = window->DrawList;
 
 		dl->PushClipRect(bb.Min, bb.Max, false);
-		if (!(window->Flags & ImGuiWindowFlags_NoBackground))
+		if (!(window->Flags & ImGuiWindowFlags_NoBackground)) {
 			AddThemedRectFilled(dl, bb, GetColorU32(isChild ? ImGuiCol_ChildBg : ImGuiCol_WindowBg), rounding);
-		if (window->WindowBorderSize > 0.0f)
-			AddThemedRect(dl, bb, GetColorU32(ImGuiCol_Border), rounding, window->WindowBorderSize);
+			if (window->WindowBorderSize > 0.0f)
+				AddThemedRect(dl, bb, GetColorU32(ImGuiCol_Border), rounding, window->WindowBorderSize);
+		}
 
 		if (window->ScrollbarY)
 			DrawThemedScrollbar(window, ImGuiAxis_Y, cornerR);
