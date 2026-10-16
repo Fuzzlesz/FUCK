@@ -59,7 +59,21 @@ namespace
 
 	SmoothCamAPI::IVSmoothCam2* g_smoothCam = nullptr;
 
-	constexpr const char* kSection = "Camera";
+	// The camera settings and their INI keys. Defaults come from Config, and only values that differ are written
+	const FUCK::INI::Fields<Camera::Config> kConfigFields{ "Camera", {
+		{ "KBMPanSpeed",    &Camera::Config::kbmPanSpeed     },
+		{ "KBMRotSpeed",    &Camera::Config::kbmRotSpeed     },
+		{ "KBMRollSpeed",   &Camera::Config::kbmRollSpeed    },
+		{ "KBMFovSpeed",    &Camera::Config::kbmZoomFovSpeed },
+		{ "GPPanSpeed",     &Camera::Config::gpPanSpeed      },
+		{ "GPZoomSpeed",    &Camera::Config::gpZoomSpeed     },
+		{ "GPRotSpeed",     &Camera::Config::gpRotSpeed      },
+		{ "GPRollSpeed",    &Camera::Config::gpRollSpeed     },
+		{ "GPFovSpeed",     &Camera::Config::gpFovSpeed      },
+		{ "GPCharRotSpeed", &Camera::Config::gpCharRotSpeed  },
+		{ "GPDeadzone",     &Camera::Config::gpDeadzone      },
+		{ "Cinematic",      &Camera::Config::cinematic       },
+	} };
 
 	std::string GetConfigPath()
 	{
@@ -127,46 +141,12 @@ namespace Camera
 
 	void Manager::LoadSettings()
 	{
-		::Settings::LoadINI(GetConfigPath().c_str(), [this](CSimpleIniA& ini) {
-			const Config def;
-
-			_config.kbmPanSpeed     = FUCK::INI::LoadFloat(ini, kSection, "KBMPanSpeed",    def.kbmPanSpeed);
-			_config.kbmRotSpeed     = FUCK::INI::LoadFloat(ini, kSection, "KBMRotSpeed",    def.kbmRotSpeed);
-			_config.kbmRollSpeed    = FUCK::INI::LoadFloat(ini, kSection, "KBMRollSpeed",   def.kbmRollSpeed);
-			_config.kbmZoomFovSpeed = FUCK::INI::LoadFloat(ini, kSection, "KBMFovSpeed",    def.kbmZoomFovSpeed);
-
-			_config.gpPanSpeed      = FUCK::INI::LoadFloat(ini, kSection, "GPPanSpeed",     def.gpPanSpeed);
-			_config.gpZoomSpeed     = FUCK::INI::LoadFloat(ini, kSection, "GPZoomSpeed",    def.gpZoomSpeed);
-			_config.gpRotSpeed      = FUCK::INI::LoadFloat(ini, kSection, "GPRotSpeed",     def.gpRotSpeed);
-			_config.gpRollSpeed     = FUCK::INI::LoadFloat(ini, kSection, "GPRollSpeed",    def.gpRollSpeed);
-			_config.gpFovSpeed      = FUCK::INI::LoadFloat(ini, kSection, "GPFovSpeed",     def.gpFovSpeed);
-			_config.gpCharRotSpeed  = FUCK::INI::LoadFloat(ini, kSection, "GPCharRotSpeed", def.gpCharRotSpeed);
-			_config.gpDeadzone      = FUCK::INI::LoadFloat(ini, kSection, "GPDeadzone",     def.gpDeadzone);
-
-			_config.cinematic       = FUCK::INI::LoadBool(ini, kSection, "Cinematic", def.cinematic);
-		});
+		::Settings::LoadINI(GetConfigPath().c_str(), [this](CSimpleIniA& ini) { kConfigFields.Load(ini, _config); });
 	}
 
 	void Manager::SaveSettings() const
 	{
-		::Settings::LoadINI(GetConfigPath().c_str(), [this](CSimpleIniA& ini) {
-			const Config def;
-
-			FUCK::INI::SaveDouble(ini, kSection, "KBMPanSpeed",    _config.kbmPanSpeed,     def.kbmPanSpeed);
-			FUCK::INI::SaveDouble(ini, kSection, "KBMRotSpeed",    _config.kbmRotSpeed,     def.kbmRotSpeed);
-			FUCK::INI::SaveDouble(ini, kSection, "KBMRollSpeed",   _config.kbmRollSpeed,    def.kbmRollSpeed);
-			FUCK::INI::SaveDouble(ini, kSection, "KBMFovSpeed",    _config.kbmZoomFovSpeed, def.kbmZoomFovSpeed);
-
-			FUCK::INI::SaveDouble(ini, kSection, "GPPanSpeed",     _config.gpPanSpeed,      def.gpPanSpeed);
-			FUCK::INI::SaveDouble(ini, kSection, "GPZoomSpeed",    _config.gpZoomSpeed,     def.gpZoomSpeed);
-			FUCK::INI::SaveDouble(ini, kSection, "GPRotSpeed",     _config.gpRotSpeed,      def.gpRotSpeed);
-			FUCK::INI::SaveDouble(ini, kSection, "GPRollSpeed",    _config.gpRollSpeed,     def.gpRollSpeed);
-			FUCK::INI::SaveDouble(ini, kSection, "GPFovSpeed",     _config.gpFovSpeed,      def.gpFovSpeed);
-			FUCK::INI::SaveDouble(ini, kSection, "GPCharRotSpeed", _config.gpCharRotSpeed,  def.gpCharRotSpeed);
-			FUCK::INI::SaveDouble(ini, kSection, "GPDeadzone",     _config.gpDeadzone,      def.gpDeadzone);
-
-			FUCK::INI::SaveBool(ini, kSection, "Cinematic", _config.cinematic, def.cinematic);
-		}, true);
+		::Settings::LoadINI(GetConfigPath().c_str(), [this](CSimpleIniA& ini) { kConfigFields.Save(ini, _config); }, true);
 	}
 
 	// ==================================================

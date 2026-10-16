@@ -7,24 +7,28 @@
 
 namespace Hotkeys
 {
-	void Manager::LoadHotKeys(const CSimpleIniA& a_ini)
+	namespace
 	{
-		_toggleHotkey.kKey  = FUCK::INI::LoadInt(a_ini, "Hotkeys", "iToggleFUCK_Key",    _defToggle.kKey);
-		_toggleHotkey.kMod1 = FUCK::INI::LoadInt(a_ini, "Hotkeys", "iToggleFUCK_Mod1",   _defToggle.kMod1);
-		_toggleHotkey.kMod2 = FUCK::INI::LoadInt(a_ini, "Hotkeys", "iToggleFUCK_Mod2",   _defToggle.kMod2);
-		_toggleHotkey.gKey  = FUCK::INI::LoadInt(a_ini, "Hotkeys", "iToggleFUCK_GPKey",  _defToggle.gKey);
-		_toggleHotkey.gMod1 = FUCK::INI::LoadInt(a_ini, "Hotkeys", "iToggleFUCK_GPMod1", _defToggle.gMod1);
-		_toggleHotkey.gMod2 = FUCK::INI::LoadInt(a_ini, "Hotkeys", "iToggleFUCK_GPMod2", _defToggle.gMod2);
+		using Hotkey = FUCK::ManagedHotkey;
+
+		const FUCK::INI::Fields<Hotkey> kToggleFields{ "Hotkeys", {
+			{ "iToggleFUCK_Key",    &Hotkey::kKey  },
+			{ "iToggleFUCK_Mod1",   &Hotkey::kMod1 },
+			{ "iToggleFUCK_Mod2",   &Hotkey::kMod2 },
+			{ "iToggleFUCK_GPKey",  &Hotkey::gKey  },
+			{ "iToggleFUCK_GPMod1", &Hotkey::gMod1 },
+			{ "iToggleFUCK_GPMod2", &Hotkey::gMod2 },
+		} };
 	}
 
-	void Manager::SaveHotKeys(CSimpleIniA & a_ini)
+	void Manager::LoadHotKeys(const CSimpleIniA& a_ini)
 	{
-		FUCK::INI::SaveInt(a_ini, "Hotkeys", "iToggleFUCK_Key",    _toggleHotkey.kKey,  _defToggle.kKey);
-		FUCK::INI::SaveInt(a_ini, "Hotkeys", "iToggleFUCK_Mod1",   _toggleHotkey.kMod1, _defToggle.kMod1);
-		FUCK::INI::SaveInt(a_ini, "Hotkeys", "iToggleFUCK_Mod2",   _toggleHotkey.kMod2, _defToggle.kMod2);
-		FUCK::INI::SaveInt(a_ini, "Hotkeys", "iToggleFUCK_GPKey",  _toggleHotkey.gKey,  _defToggle.gKey);
-		FUCK::INI::SaveInt(a_ini, "Hotkeys", "iToggleFUCK_GPMod1", _toggleHotkey.gMod1, _defToggle.gMod1);
-		FUCK::INI::SaveInt(a_ini, "Hotkeys", "iToggleFUCK_GPMod2", _toggleHotkey.gMod2, _defToggle.gMod2);
+		kToggleFields.Load(a_ini, _toggleHotkey, _defToggle);
+	}
+
+	void Manager::SaveHotKeys(CSimpleIniA& a_ini)
+	{
+		kToggleFields.Save(a_ini, _toggleHotkey, _defToggle);
 	}
 
 	bool Manager::ProcessInput(const RE::InputEvent* const* a_event)
