@@ -2,22 +2,22 @@
 
 namespace Input::Keymap
 {
-	inline constexpr std::uint32_t kGPBase = static_cast<std::uint32_t>(SKSE::InputMap::kMacro_GamepadOffset);
-	inline constexpr std::uint32_t kMBBase = static_cast<std::uint32_t>(SKSE::InputMap::kMacro_MouseButtonOffset);
+	// The gamepad, mouse and icon codes are the API's own, FUCK::Keys, so plugins and FUCK can't drift apart
+	using namespace FUCK::Keys;
+
 	// VR wands get their own range: their raw ids (1-36) would otherwise alias
 	// keyboard scan codes in the unified key space (a held trigger, id 33, looked
 	// like a held "F" key). Above kMaxMacros and the custom thumbstick slots.
 	inline constexpr std::uint32_t kVRBase = 512;
 
-	static constexpr std::uint32_t kGP_A     = kGPBase + SKSE::InputMap::kGamepadButtonOffset_A;
-	static constexpr std::uint32_t kGP_L3    = kGPBase + SKSE::InputMap::kGamepadButtonOffset_LEFT_THUMB;
-	static constexpr std::uint32_t kGP_R3    = kGPBase + SKSE::InputMap::kGamepadButtonOffset_RIGHT_THUMB;
-	static constexpr std::uint32_t kGP_Up    = kGPBase + SKSE::InputMap::kGamepadButtonOffset_DPAD_UP;
-	static constexpr std::uint32_t kGP_Down  = kGPBase + SKSE::InputMap::kGamepadButtonOffset_DPAD_DOWN;
-	static constexpr std::uint32_t kGP_Left  = kGPBase + SKSE::InputMap::kGamepadButtonOffset_DPAD_LEFT;
-	static constexpr std::uint32_t kGP_Right = kGPBase + SKSE::InputMap::kGamepadButtonOffset_DPAD_RIGHT;
-	static constexpr std::uint32_t kGP_LT    = kGPBase + SKSE::InputMap::kGamepadButtonOffset_LT;
-	static constexpr std::uint32_t kGP_RT    = kGPBase + SKSE::InputMap::kGamepadButtonOffset_RT;
+	static constexpr std::uint32_t kKB_Q = static_cast<std::uint32_t>(KEY::kQ);
+	static constexpr std::uint32_t kKB_W = static_cast<std::uint32_t>(KEY::kW);
+	static constexpr std::uint32_t kKB_E = static_cast<std::uint32_t>(KEY::kE);
+	static constexpr std::uint32_t kKB_R = static_cast<std::uint32_t>(KEY::kR);
+	static constexpr std::uint32_t kKB_A = static_cast<std::uint32_t>(KEY::kA);
+	static constexpr std::uint32_t kKB_S = static_cast<std::uint32_t>(KEY::kS);
+	static constexpr std::uint32_t kKB_D = static_cast<std::uint32_t>(KEY::kD);
+	static constexpr std::uint32_t kKB_F = static_cast<std::uint32_t>(KEY::kF);
 
 	template <typename T>
 	constexpr std::uint32_t AsKey(T a_enum) noexcept

@@ -1,6 +1,8 @@
 #include "FUCK-Host.h"
 #include "FUCK-Man.h"
 
+#include "Camera/Manager.h"
+
 #include "ImGui/Graphics.h"
 #include "ImGui/IconsFonts.h"
 #include "ImGui/Overlays.h"
@@ -10,6 +12,7 @@
 #include "ImGui/Widgets.h"
 
 #include "System/Favourites.h"
+#include "System/Freeze.h"
 #include "System/Hotkeys.h"
 #include "System/Input.h"
 #include "System/Settings.h"
@@ -503,7 +506,7 @@ namespace FUCK::Host
 		return static_cast<int>(FUCK::InputDevice::kMouseKeyboard);
 	}
 	static const char*      GetKeyName_Impl(std::uint32_t key) { return Input::Manager::GetSingleton()->GetKeyName(key); }
-	static bool             IsGamepadKey_Impl(std::uint32_t k) { return k >= Input::Keymap::kGPBase; }
+	static bool             IsGamepadKey_Impl(std::uint32_t k) { return k >= FUCK::Keys::kGPBase && (k < FUCK::Keys::kIconBase || k == FUCK::Keys::kIcon_Triggers); }
 	static bool             IsBinding_Impl() { return Input::Manager::GetSingleton()->IsBinding(); }
 	static void             AbortBinding_Impl() { Input::Manager::GetSingleton()->AbortBinding(); }
 	static void             StartBinding_Impl(std::uint32_t k, std::int32_t m1, std::int32_t m2, bool disallowModifiers) { Input::Manager::GetSingleton()->StartBinding(k, m1, m2, disallowModifiers); }
@@ -943,6 +946,62 @@ namespace FUCK::Host
 	static void SetWindowAlphaOverride_Impl(const char* pluginName, const char* windowId, float alpha) { FUCKMan::GetSingleton()->SetWindowAlphaOverride(pluginName, windowId, alpha); }
 
 	// ==================================================
+	// Version 7
+	// ==================================================
+	static bool ComboWithKeyBadges_Impl(const char* label, int* current_item, const char* const* items, int items_count, int popup_max_height, const std::uint32_t* badgeKeys, int* hovered)
+	{
+		std::vector<std::string> vecItems;
+		vecItems.reserve(items_count);
+		for (int i = 0; i < items_count; ++i) vecItems.emplace_back(items[i]);
+
+		std::span<const std::uint32_t> badges;
+		if (badgeKeys && items_count > 0)
+			badges = { badgeKeys, static_cast<std::size_t>(items_count) };
+
+		return ImGui::ComboWithFilter(label, current_item, vecItems, popup_max_height, nullptr, nullptr, badges, hovered);
+	}
+
+	static bool BeginCameraSession_Impl(const CameraSessionOptions* options) { return MANAGER(Camera)->BeginSession(options); }
+	static void EndCameraSession_Impl(ICameraClient* client) { MANAGER(Camera)->EndSession(client); }
+	static bool IsCameraSessionActive_Impl(ICameraClient* client) { return MANAGER(Camera)->IsActive(client); }
+	static bool IsCameraSessionPaused_Impl(ICameraClient* client) { return MANAGER(Camera)->IsPaused(client); }
+	static void RevertCamera_Impl(ICameraClient* client) { MANAGER(Camera)->Revert(client); }
+	static void UpdateCamera_Impl(ICameraClient* client, float interval) { MANAGER(Camera)->Update(client, interval); }
+	static void MoveCamera_Impl(const CameraMove* move, InputDevice device, float mult) { MANAGER(Camera)->Move(move, device, mult); }
+	static void ResetCamera_Impl(ICameraClient* client) { MANAGER(Camera)->Reset(client); }
+	static bool IsCameraModified_Impl(ICameraClient* client) { return MANAGER(Camera)->IsModified(client); }
+	static void SetCameraBodyFraming_Impl(ICameraClient* client, bool framed, const CameraScreenRect* rect, float margin) { MANAGER(Camera)->SetBodyFraming(client, framed, rect, margin); }
+	static bool IsCameraBodyFramed_Impl(ICameraClient* client) { return MANAGER(Camera)->IsBodyFramed(client); }
+	static bool GetCameraOffsets_Impl(ICameraClient* client, CameraOffsets* offsets) { return MANAGER(Camera)->GetOffsets(client, offsets); }
+	static bool SetCameraOffsets_Impl(ICameraClient* client, const CameraOffsets* offsets) { return MANAGER(Camera)->SetOffsets(client, offsets); }
+	static bool GetCameraPose_Impl(ICameraClient* client, CameraPose* pose) { return MANAGER(Camera)->GetPose(client, pose); }
+	static bool SetCameraPose_Impl(ICameraClient* client, const CameraPose* pose) { return MANAGER(Camera)->SetPose(client, pose); }
+	static bool GetCameraFov_Impl(float* horizontal, float* vertical)
+	{
+		float h = 0.0f, v = 0.0f;
+		if (!Camera::Core::GetCurrentFov(h, v))
+			return false;
+		if (horizontal)
+			*horizontal = h;
+		if (vertical)
+			*vertical = v;
+		return true;
+	}
+
+	static bool SaveCameraPreset_Impl(ICameraClient* client, const char* name, bool withSubject) { return MANAGER(Camera)->SavePreset(client, name, withSubject); }
+	static bool LoadCameraPreset_Impl(ICameraClient* client, const char* name) { return MANAGER(Camera)->LoadPreset(client, name); }
+	static bool DeleteCameraPreset_Impl(ICameraClient* client, const char* name) { return MANAGER(Camera)->DeletePreset(client, name); }
+	static int  GetCameraPresetCount_Impl(ICameraClient* client) { return MANAGER(Camera)->GetPresetCount(client); }
+	static const char* GetCameraPresetName_Impl(ICameraClient* client, int index) { return MANAGER(Camera)->GetPresetName(client, index); }
+
+	static bool DrawCameraPresets_Impl(ICameraClient* client, float width) { return MANAGER(Camera)->DrawPresets(client, width); }
+	static bool DrawCameraSettings_Impl(int flags) { return MANAGER(Camera)->DrawSettings(static_cast<CameraSettingsFlags>(flags)); }
+	static void DrawCameraHelpMarker_Impl(int flags, const char* extraKBM, const char* extraGP) { MANAGER(Camera)->DrawHelpMarker(static_cast<FUCK::CameraSessionFlags>(flags), extraKBM, extraGP); }
+
+	static void SetActorFrozen_Impl(const char* pluginName, RE::Actor* actor, bool frozen) { MANAGER(Freeze)->SetFrozen(pluginName, actor, frozen); }
+	static bool IsActorFrozen_Impl(RE::Actor* actor) { return MANAGER(Freeze)->IsFrozen(actor); }
+
+	// ==================================================
 	// CreateInterface
 	// ==================================================
 	FUCK_Interface* CreateInterface()
@@ -1247,7 +1306,36 @@ namespace FUCK::Host
 			.RefreshTools           = RefreshTools_Impl,
 			.IsGameHUDHidden        = IsGameHUDHidden_Impl,
 			.EnumerateHUDWidgets    = EnumerateHUDWidgets_Impl,
-			.SetWindowAlphaOverride = SetWindowAlphaOverride_Impl
+			.SetWindowAlphaOverride = SetWindowAlphaOverride_Impl,
+
+			// Version 7
+			.ComboWithKeyBadges    = ComboWithKeyBadges_Impl,
+			.BeginCameraSession    = BeginCameraSession_Impl,
+			.EndCameraSession      = EndCameraSession_Impl,
+			.IsCameraSessionActive = IsCameraSessionActive_Impl,
+			.IsCameraSessionPaused = IsCameraSessionPaused_Impl,
+			.RevertCamera          = RevertCamera_Impl,
+			.UpdateCamera          = UpdateCamera_Impl,
+			.MoveCamera            = MoveCamera_Impl,
+			.ResetCamera           = ResetCamera_Impl,
+			.IsCameraModified      = IsCameraModified_Impl,
+			.SetCameraBodyFraming  = SetCameraBodyFraming_Impl,
+			.IsCameraBodyFramed    = IsCameraBodyFramed_Impl,
+			.GetCameraOffsets      = GetCameraOffsets_Impl,
+			.SetCameraOffsets      = SetCameraOffsets_Impl,
+			.GetCameraPose         = GetCameraPose_Impl,
+			.SetCameraPose         = SetCameraPose_Impl,
+			.GetCameraFov          = GetCameraFov_Impl,
+			.SaveCameraPreset      = SaveCameraPreset_Impl,
+			.LoadCameraPreset      = LoadCameraPreset_Impl,
+			.DeleteCameraPreset    = DeleteCameraPreset_Impl,
+			.GetCameraPresetCount  = GetCameraPresetCount_Impl,
+			.GetCameraPresetName   = GetCameraPresetName_Impl,
+			.DrawCameraPresets     = DrawCameraPresets_Impl,
+			.DrawCameraSettings    = DrawCameraSettings_Impl,
+			.DrawCameraHelpMarker  = DrawCameraHelpMarker_Impl,
+			.SetActorFrozen        = SetActorFrozen_Impl,
+			.IsActorFrozen         = IsActorFrozen_Impl
 		};
 		return &api;
 	}

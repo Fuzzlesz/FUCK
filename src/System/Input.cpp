@@ -4,6 +4,8 @@
 #include "ImGui/Renderer.h"
 #include "ImGui/Util.h"
 
+#include "Camera/Manager.h"
+
 #include "Hotkeys.h"
 #include "Input.h"
 
@@ -477,6 +479,20 @@ namespace Input
 			return fkeys[a_key - AsKey(KEY::kF11)];
 		}
 
+		// Icon-only codes
+		switch (a_key) {
+		case kIcon_MouseMove:
+			return "Mouse";
+		case kIcon_Wheel:
+			return "Wheel";
+		case kIcon_Triggers:
+			return "LT/RT";
+		case kMouse_WheelUp:
+			return "WheelUp";
+		case kMouse_WheelDown:
+			return "WheelDown";
+		}
+
 		// Mouse
 		if (a_key >= kMBBase && a_key < kMBBase + 8) {
 			static const char* mouse[] = {
@@ -504,6 +520,10 @@ namespace Input
 				{ kGPBase + SKSE::InputMap::kGamepadButtonOffset_DPAD_DOWN,      "DDown"  },
 				{ kGPBase + SKSE::InputMap::kGamepadButtonOffset_DPAD_LEFT,      "DLeft"  },
 				{ kGPBase + SKSE::InputMap::kGamepadButtonOffset_DPAD_RIGHT,     "DRight" },
+				{ kGP_LSX,                                                       "LStick" },
+				{ kGP_LSY,                                                       "LStick" },
+				{ kGP_RSX,                                                       "RStick" },
+				{ kGP_RSY,                                                       "RStick" },
 			};
 			auto it = gp.find(a_key);
 			return it != gp.end() ? it->second : "GP?";
@@ -551,6 +571,8 @@ namespace Input
 	{
 		std::unique_lock lock(_dataLock);
 
+		_wheelInBatch = false;
+
 		for (auto event = *a_events; event; event = event->next) {
 			// Only update input device for meaningful events, ignoring micro sensor drift
 			bool meaningful = false;
@@ -580,6 +602,11 @@ namespace Input
 				if (button->HasIDCode()) {
 					auto     key        = button->GetIDCode();
 					uint32_t unifiedKey = Keymap::GetUnifiedKey(button->GetDevice(), key);
+
+					if (button->GetDevice() == RE::INPUT_DEVICE::kMouse &&
+						(key == static_cast<std::uint32_t>(MOUSE::kWheelUp) || key == static_cast<std::uint32_t>(MOUSE::kWheelDown))) {
+						_wheelInBatch = true;
+					}
 
 					if (button->Value() > 0.0f) {
 						_keyStateCache[unifiedKey] = button->Value();
@@ -762,9 +789,12 @@ namespace Input
 		auto&      io             = ImGui::GetIO();
 		const bool cursorMenuOpen = RE::UI::GetSingleton()->IsMenuOpen(RE::CursorMenu::MENU_NAME);
 
+		// The camera reads the mouse through ImGui, so it gets it while the camera's controls are held, even with nothing of FUCK's drawn
+		const bool cameraControls = MANAGER(Camera)->IsBlockingInput();
+
 		const bool isBinding              = IsBinding();
 		const bool passKeyboardAndGamepad = shouldRender && blockInput && !isBinding;
-		const bool passMouse              = shouldRender && (blockInput || forceCursor);
+		const bool passMouse              = (shouldRender || cameraControls) && (blockInput || forceCursor);
 
 		if (a_events && *a_events) {
 			for (auto event = *a_events; event; event = event->next) {

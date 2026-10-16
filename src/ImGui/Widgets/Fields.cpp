@@ -70,8 +70,11 @@ namespace ImGui
 		PopStyleColor();
 	}
 
-	bool ComboWithFilter(const char* label, int* current_item, std::span<const std::string> items, int popup_max_height_in_items, const Set<std::string>* a_favourites, std::string* a_favToggled)
+	bool ComboWithFilter(const char* label, int* current_item, std::span<const std::string> items, int popup_max_height_in_items, const Set<std::string>* a_favourites, std::string* a_favToggled, std::span<const std::uint32_t> a_badgeKeys, int* a_hovered)
 	{
+		if (a_hovered)
+			*a_hovered = -1;
+
 		ImGuiContext& g      = *GImGui;
 		ImGuiWindow*  window = GetCurrentWindow();
 		if (window->SkipItems)
@@ -383,6 +386,30 @@ namespace ImGui
 						bool itemHovered = IsItemHovered();
 						bool itemFocused = IsItemFocused();
 						bool starHovered = false;
+
+						if (a_hovered && (itemHovered || itemFocused)) {
+							*a_hovered = idx;
+						}
+
+						// Badge at the row's end, left of the favourites star when there is one
+						if (idx < static_cast<int>(a_badgeKeys.size()) && a_badgeKeys[idx] != 0) {
+							auto icon = MANAGER(IconFont)->GetIcon(a_badgeKeys[idx]);
+							if (icon && icon->IsLoaded()) {
+								float rowH   = GetItemRectSize().y;
+								float badgeH = std::round(rowH * 0.8f);
+								float badgeW = std::round(badgeH * (icon->imageSize.y > 0.0f ? (icon->imageSize.x / icon->imageSize.y) : 1.0f));
+
+								float starRoom = 0.0f;
+								if (has_favourites) {
+									PushFont(nullptr, GetFontSize() * 0.75f);
+									starRoom = CalcTextSize(ICON_FA_STAR).x + (5.0f * scale);
+									PopFont();
+								}
+
+								ImVec2 badgeMin(GetItemRectMin().x + availW - badgeW - padX - starRoom, GetItemRectMin().y + std::round((rowH - badgeH) * 0.5f));
+								GetWindowDrawList()->AddImage(reinterpret_cast<ImTextureID>(icon->GetSRView()), badgeMin, badgeMin + ImVec2(badgeW, badgeH));
+							}
+						}
 
 						// Show tooltip if the text is too wide to fit in the available combo box space
 						if (itemHovered && (CalcTextSize(items[idx].c_str()).x > availW - padX)) {

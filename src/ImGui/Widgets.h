@@ -119,7 +119,8 @@ namespace ImGui
 
 	// Combo Boxes
 	bool ComboStyled(const char* label, int* current_item, const char* const* items, int items_count, int popup_max_height_in_items = -1);
-	bool ComboWithFilter(const char* label, int* current_item, std::span<const std::string> items, int popup_max_height_in_items = -1, const Set<std::string>* a_favourites = nullptr, std::string* a_favToggled = nullptr);
+	// a_badgeKeys: a key per item whose icon is drawn at the row's end (0 for none). a_hovered: the hovered or focused item while open, else -1
+	bool ComboWithFilter(const char* label, int* current_item, std::span<const std::string> items, int popup_max_height_in_items = -1, const Set<std::string>* a_favourites = nullptr, std::string* a_favToggled = nullptr, std::span<const std::uint32_t> a_badgeKeys = {}, int* a_hovered = nullptr);
 	bool ComboForm(const char* label, RE::FormID* currentFormID, RE::FormType formType);
 	bool ComboFormStr(const char* label, std::string* currentEdid, RE::FormType formType);
 

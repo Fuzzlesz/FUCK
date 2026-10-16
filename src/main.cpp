@@ -1,11 +1,14 @@
 #include "FUCK-Host.h"
 #include "FUCK-Man.h"
 
+#include "Camera/Manager.h"
+
 #include "ImGui/Renderer.h"
 #include "ImGui/Styles.h"
 #include "ImGui/Widgets.h"
 
 #include "System/Console.h"
+#include "System/Freeze.h"
 #include "System/Hooks.h"
 #include "System/Hotkeys.h"
 #include "System/Input.h"
@@ -28,8 +31,13 @@ extern "C" DLLEXPORT void* RequestFUCK()
 void OnInit(SKSE::MessagingInterface::Message* a_msg)
 {
 	switch (a_msg->type) {
+	case SKSE::MessagingInterface::kPostLoad:
+		Camera::Manager::RegisterSmoothCam();
+		break;
+
 	case SKSE::MessagingInterface::kPostPostLoad:
 		ImGui::Renderer::ConnectVRHelper();
+		Camera::Manager::RequestSmoothCam();
 		break;
 
 	case SKSE::MessagingInterface::kDataLoaded:
@@ -39,6 +47,7 @@ void OnInit(SKSE::MessagingInterface::Message* a_msg)
 
 		Translation::Manager::GetSingleton()->BuildTranslationMap();
 		Console::Install();
+		Camera::Manager::InstallLateHooks();
 		ImGui::Styles::GetSingleton()->OnStyleRefresh();
 		MANAGER(Hotkeys)->Enable(true);
 
@@ -47,6 +56,7 @@ void OnInit(SKSE::MessagingInterface::Message* a_msg)
 
 	case SKSE::MessagingInterface::kPreLoadGame:
 		ImGui::ClearFormCaches();
+		MANAGER(Freeze)->ReleaseAll();
 		break;
 	}
 }
@@ -127,6 +137,7 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 	Settings::Core.LoadKeybinds([](auto& ini) {
 		MANAGER(Hotkeys)->LoadHotKeys(ini);
 	});
+	MANAGER(Camera)->LoadSettings();
 
 	SKSE::AllocTrampoline(14 * 3);
 	Hooks::Install();

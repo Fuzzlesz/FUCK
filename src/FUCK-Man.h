@@ -121,6 +121,9 @@ public:
 
 	// --- State Queries ---
 	bool IsInputBlocked() const;
+
+	// Applies pause, HUD and blur requests now, for changes made while nothing FUCK draws may be open
+	void RefreshGameState() { UpdateGameState(); }
 	bool IsCursorForced() const;
 	bool IsIgnoringUserScale() const { return _isIgnoringUserScale; }
 	bool HasWindowWithFlag(FUCK::WindowFlags a_flag) const;

@@ -86,6 +86,9 @@ namespace Input
 		// The game cursor's size against ImGui's own arrow, for ImGuiStyle::MouseCursorScale
 		float GetCursorScale() const { return _cursorScale; }
 
+		// The wheel turned in the input being processed, as it has no held state
+		bool IsWheelInBatch() const { return _wheelInBatch; }
+
 		const char* GetKeyName(std::uint32_t a_key) const;
 
 	private:
@@ -107,6 +110,7 @@ namespace Input
 
 		mutable std::shared_mutex _dataLock;
 		Map<std::uint32_t, float> _keyStateCache;
+		bool                      _wheelInBatch{ false };
 
 		std::vector<Context> _contexts;
 	};

@@ -1,5 +1,7 @@
 #include "FUCK-Man.h"
 
+#include "Camera/Manager.h"
+
 #include "Hooks.h"
 #include "Input.h"
 #include "Journal.h"
@@ -164,6 +166,7 @@ namespace Hooks
 		stl::write_thunk_call<ProcessInputQueue>(inputUnk.address());
 
 		Journal::Install();
+		Camera::Manager::InstallHooks();
 
 		logger::info("Installed Input Hooks");
 	}

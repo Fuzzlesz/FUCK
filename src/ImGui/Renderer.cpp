@@ -1,9 +1,12 @@
 #include "FUCK-Man.h"
 
+#include "Camera/Manager.h"
+
 #include "IconsFonts.h"
 #include "Renderer.h"
 #include "Styles.h"
 
+#include "System\Freeze.h"
 #include "System\Input.h"
 
 #include <d3d11.h>
@@ -138,6 +141,9 @@ namespace ImGui::Renderer
 		{
 			// disable windowing
 			GImGui->NavWindowingTarget = nullptr;
+
+			MANAGER(Camera)->OnFrame();
+			MANAGER(Freeze)->OnFrame();
 
 			// Sync text input state with the game
 			UpdateTextInputState();

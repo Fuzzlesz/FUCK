@@ -2,6 +2,8 @@
 #include "FUCK-Man.h"
 #include "FUCK-Windows.h"
 
+#include "Camera/Manager.h"
+
 #include "ImGui/Audio.h"
 #include "ImGui/IconsFonts.h"
 #include "ImGui/Renderer.h"
@@ -344,7 +346,7 @@ void FUCKMan::RefreshGameHUDState()
 
 void FUCKMan::UpdateGameState()
 {
-	bool targetSoft    = _apiSoftPause;
+	bool targetSoft    = _apiSoftPause || MANAGER(Camera)->IsPausing();
 	bool targetHard    = _apiHardPause;
 	bool targetBlur    = false;
 	bool targetHideHUD = false;
@@ -674,7 +676,7 @@ bool FUCKMan::ShouldRenderPassthrough() const
 
 bool FUCKMan::IsInputBlocked() const
 {
-	if (_isOpen)
+	if (_isOpen || MANAGER(Camera)->IsBlockingInput())
 		return true;
 
 	ImVec2 mouse = ImGui::GetMousePos();

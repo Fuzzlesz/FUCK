@@ -377,8 +377,8 @@ namespace IconFont
 		constexpr uint32_t gpOffset = SKSE::InputMap::kMacro_GamepadOffset;
 		_gamePad.emplace(gpOffset + SKSE::InputMap::kGamepadButtonOffset_START, GamepadIcon{ IconTexture(L"360_Start"sv), IconTexture(L"PS3_Start"sv) });
 		_gamePad.emplace(gpOffset + SKSE::InputMap::kGamepadButtonOffset_BACK, GamepadIcon{ IconTexture(L"360_Back"sv), IconTexture(L"PS3_Back"sv) });
-		_gamePad.emplace(gpOffset + SKSE::InputMap::kGamepadButtonOffset_LEFT_THUMB, GamepadIcon{ IconTexture(L"360_LS"sv), IconTexture(L"PS3_L3"sv) });
-		_gamePad.emplace(gpOffset + SKSE::InputMap::kGamepadButtonOffset_RIGHT_THUMB, GamepadIcon{ IconTexture(L"360_RS"sv), IconTexture(L"PS3_R3"sv) });
+		_gamePad.emplace(gpOffset + SKSE::InputMap::kGamepadButtonOffset_LEFT_THUMB, GamepadIcon{ IconTexture(L"360_L3"sv), IconTexture(L"PS3_L3"sv) });
+		_gamePad.emplace(gpOffset + SKSE::InputMap::kGamepadButtonOffset_RIGHT_THUMB, GamepadIcon{ IconTexture(L"360_R3"sv), IconTexture(L"PS3_R3"sv) });
 		_gamePad.emplace(gpOffset + SKSE::InputMap::kGamepadButtonOffset_LEFT_SHOULDER, GamepadIcon{ IconTexture(L"360_LB"sv), IconTexture(L"PS3_LB"sv) });
 		_gamePad.emplace(gpOffset + SKSE::InputMap::kGamepadButtonOffset_RIGHT_SHOULDER, GamepadIcon{ IconTexture(L"360_RB"sv), IconTexture(L"PS3_RB"sv) });
 		_gamePad.emplace(gpOffset + SKSE::InputMap::kGamepadButtonOffset_A, GamepadIcon{ IconTexture(L"360_A"sv), IconTexture(L"PS3_A"sv) });
@@ -387,6 +387,12 @@ namespace IconFont
 		_gamePad.emplace(gpOffset + SKSE::InputMap::kGamepadButtonOffset_Y, GamepadIcon{ IconTexture(L"360_Y"sv), IconTexture(L"PS3_Y"sv) });
 		_gamePad.emplace(gpOffset + SKSE::InputMap::kGamepadButtonOffset_LT, GamepadIcon{ IconTexture(L"360_LT"sv), IconTexture(L"PS3_LT"sv) });
 		_gamePad.emplace(gpOffset + SKSE::InputMap::kGamepadButtonOffset_RT, GamepadIcon{ IconTexture(L"360_RT"sv), IconTexture(L"PS3_RT"sv) });
+
+		_gamePad.emplace(FUCK::Keys::kGP_LSX, GamepadIcon{ IconTexture(L"360_LS"sv), IconTexture(L"PS3_LS"sv) });
+		_gamePad.emplace(FUCK::Keys::kGP_LSY, GamepadIcon{ IconTexture(L"360_LS"sv), IconTexture(L"PS3_LS"sv) });
+		_gamePad.emplace(FUCK::Keys::kGP_RSX, GamepadIcon{ IconTexture(L"360_RS"sv), IconTexture(L"PS3_RS"sv) });
+		_gamePad.emplace(FUCK::Keys::kGP_RSY, GamepadIcon{ IconTexture(L"360_RS"sv), IconTexture(L"PS3_RS"sv) });
+		_gamePad.emplace(FUCK::Keys::kIcon_Triggers, GamepadIcon{ IconTexture(L"360_LTRT"sv), IconTexture(L"PS3_LTRT"sv) });
 
 		// Mouse
 		_mouse.emplace(256 + MOUSE::kLeftButton, IconTexture(L"Mouse1"sv));
@@ -397,6 +403,10 @@ namespace IconFont
 		_mouse.emplace(256 + MOUSE::kButton5, IconTexture(L"Mouse6"sv));
 		_mouse.emplace(256 + MOUSE::kButton6, IconTexture(L"Mouse7"sv));
 		_mouse.emplace(256 + MOUSE::kButton7, IconTexture(L"Mouse8"sv));
+		_mouse.emplace(256 + MOUSE::kWheelUp, IconTexture(L"WheelUp"sv));
+		_mouse.emplace(256 + MOUSE::kWheelDown, IconTexture(L"WheelDown"sv));
+		_mouse.emplace(FUCK::Keys::kIcon_MouseMove, IconTexture(L"MouseMove"sv));
+		_mouse.emplace(FUCK::Keys::kIcon_Wheel, IconTexture(L"Wheel"sv));
 
 		// Batch load
 		std::for_each(_keyboard.begin(), _keyboard.end(), [](auto& Icon) { Icon.second.Load(); });
@@ -434,7 +444,15 @@ namespace IconFont
 			return &_rightKey;
 		}
 
-		if (key >= gpOffset) {
+		// Icon-only codes are kept with their device's icons
+		if (key >= FUCK::Keys::kIconBase) {
+			if (const auto it = _gamePad.find(key); it != _gamePad.end()) {
+				return GetGamePadIcon(it->second);
+			}
+			if (const auto it = _mouse.find(key); it != _mouse.end()) {
+				return &it->second;
+			}
+		} else if (key >= gpOffset) {
 			if (const auto it = _gamePad.find(key); it != _gamePad.end()) {
 				return GetGamePadIcon(it->second);
 			}
