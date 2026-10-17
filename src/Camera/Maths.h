@@ -139,26 +139,66 @@ namespace Camera::Maths
 		float        depth;
 	};
 
+	// Body framing's shape, tuned on the vanilla skeleton
+	inline constexpr float FRAMING_HEAD_ROOM = 0.15f;  // how far above the head node the top of the head is taken to be, as a share of the node's height off the floor. About 18 units
+	inline constexpr float FRAMING_MARGIN    = 1.15f;  // the room around a framed body, as a scale on its height, when the client doesn't pass its own
+
+	// The body's top and bottom for framing, and its centre
+	struct BodyPoints
+	{
+		RE::NiPoint3 centre;  // halfway up, over the pelvis
+		RE::NiPoint3 top;     // the top of the head
+		RE::NiPoint3 bottom;  // the floor under the pelvis
+	};
+
+	// From the floor to the top of the head, so crouching, which lowers the pelvis more than the head, doesn't cut the head off.
+	// The top follows the head forward when it leans, and the rest is centred over the pelvis, so an idle that steps aside stays in frame
+	inline BodyPoints MakeBodyPoints(const RE::NiPoint3& a_pelvis, const RE::NiPoint3& a_head, float a_floor)
+	{
+		const float top = a_head.z + (a_head.z - a_floor) * FRAMING_HEAD_ROOM;
+		return {
+			{ a_pelvis.x, a_pelvis.y, (a_floor + top) * 0.5f },
+			{ a_head.x, a_head.y, top },
+			{ a_pelvis.x, a_pelvis.y, a_floor }
+		};
+	}
+
 	inline std::optional<BodyFraming> FrameFullBody(
-		const RE::NiPoint3&           a_pelvisPos,
-		const RE::NiPoint3&           a_rootPos,
+		const BodyPoints&             a_body,
 		const RE::NiMatrix3&          a_camRotate,
 		float                         a_tanHalfV,
 		float                         a_tanHalfH,
 		float                         a_margin,
 		const FUCK::CameraScreenRect& a_rect)
 	{
-		// Pelvis to root (floor) is the longer half; margin covers the top of the head
-		float halfHeight = (a_pelvisPos - a_rootPos).Length() * a_margin;
-		if (halfHeight < 1.0f || a_rect.halfHeight < 0.01f)
+		// The area shrunk by the margin, so the body fits inside it with that much room around
+		const float halfHeight = a_rect.halfHeight / std::max(a_margin, 0.01f);
+		if (halfHeight < 0.01f)
 			return std::nullopt;
 
-		// Fit the body to the rect's height, then shift so the pelvis lands on its centre
-		float depth = halfHeight / (a_tanHalfV * a_rect.halfHeight);
+		const auto forward = ForwardAxis(a_camRotate);
+		const auto up      = UpAxis(a_camRotate);
+		const auto right   = RightAxis(a_camRotate);
 
-		RE::NiPoint3 camPos = a_pelvisPos - ForwardAxis(a_camRotate) * depth -
-		                      RightAxis(a_camRotate) * (a_rect.centreX * depth * a_tanHalfH) -
-		                      UpAxis(a_camRotate) * (a_rect.centreY * depth * a_tanHalfV);
+		// How far the top and bottom are from the centre, up the screen and into it, so a head leaning toward the camera counts as nearer, and so bigger
+		const float topUp  = (a_body.top - a_body.centre).Dot(up);
+		const float topFwd = (a_body.top - a_body.centre).Dot(forward);
+		const float botUp  = (a_body.bottom - a_body.centre).Dot(up);
+		const float botFwd = (a_body.bottom - a_body.centre).Dot(forward);
+		if (topUp - botUp < 1.0f)
+			return std::nullopt;
+
+		// Solved in perspective so the top lands on the area's top edge and the bottom on its bottom edge.
+		// For an upright body facing the camera, this is the same as fitting its height
+		const float topEdge = (a_rect.centreY + halfHeight) * a_tanHalfV;
+		const float botEdge = (a_rect.centreY - halfHeight) * a_tanHalfV;
+		const float depth   = ((topUp - botUp) - topEdge * topFwd + botEdge * botFwd) / (topEdge - botEdge);
+		if (depth < 1.0f)
+			return std::nullopt;
+
+		const float lift = topEdge * (topFwd + depth) - topUp;
+
+		RE::NiPoint3 camPos = a_body.centre - forward * depth - up * lift - right * (a_rect.centreX * depth * a_tanHalfH);
 		return BodyFraming{ camPos, depth };
 	}
 

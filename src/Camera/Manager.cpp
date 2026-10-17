@@ -889,21 +889,15 @@ namespace Camera
 		return subject->GetPosition();
 	}
 
-	bool Manager::GetBodyPoints(RE::NiPoint3& a_centre, RE::NiPoint3& a_base)
+	bool Manager::GetBodyPoints(Maths::BodyPoints& a_body)
 	{
 		auto subject = GetSubject();
-		if (!subject)
+		const auto pelvis = subject ? subject->GetNodeByName("NPC Pelvis [Pelv]") : nullptr;
+		const auto head   = subject ? subject->GetNodeByName("NPC Head [Head]") : nullptr;
+		if (!pelvis || !head)
 			return false;
 
-		a_base = subject->GetPosition();
-
-		if (auto pelvis = subject->GetNodeByName("NPC Pelvis [Pelv]")) {
-			a_centre = pelvis->world.translate;
-		} else if (auto head = subject->GetNodeByName("NPC Head [Head]")) {
-			a_centre = head->world.translate + (a_base - head->world.translate) * 0.5f;
-		} else {
-			a_centre = a_base;
-		}
+		a_body = Maths::MakeBodyPoints(pelvis->world.translate, head->world.translate, subject->GetPosition().z);
 		return true;
 	}
 

@@ -36,8 +36,8 @@ namespace Camera
 		// Orbit centre, which zoom speed is also measured against
 		virtual std::optional<RE::NiPoint3> GetPivot() = 0;
 
-		// Body centre and floor point for body framing
-		virtual bool GetBodyPoints(RE::NiPoint3& a_centre, RE::NiPoint3& a_base) = 0;
+		// The body's top, bottom and centre, for body framing
+		virtual bool GetBodyPoints(Maths::BodyPoints& a_body) = 0;
 
 		// Asked only when a scroll is about to zoom, as the check can be costly
 		virtual bool IsScrollBlocked() = 0;

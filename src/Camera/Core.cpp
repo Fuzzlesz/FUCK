@@ -478,11 +478,11 @@ namespace Camera
 		if (frustum.fTop <= 0.01f || frustum.fRight <= 0.01f)
 			return;
 
-		RE::NiPoint3 bodyCentre, bodyBase;
-		if (!_host.GetBodyPoints(bodyCentre, bodyBase))
+		BodyPoints body;
+		if (!_host.GetBodyPoints(body))
 			return;
 
-		auto framing = FrameFullBody(bodyCentre, bodyBase, _originalRotate, frustum.fTop, frustum.fRight, _framingMargin, _framingRect);
+		auto framing = FrameFullBody(body, _originalRotate, frustum.fTop, frustum.fRight, _framingMargin, _framingRect);
 		if (!framing)
 			return;
 
@@ -490,7 +490,7 @@ namespace Camera
 
 		// Stored relative to the base camera so idle animation can't drag the framing around
 		_framingCamDelta   = framing->camPos - _originalTranslate;
-		_framingPivotDelta = bodyCentre - _originalTranslate;
+		_framingPivotDelta = body.centre - _originalTranslate;
 		_framingDistance   = std::max(framing->depth - pivotDepth, 0.0f);
 		_hasFraming        = true;
 	}
@@ -532,6 +532,10 @@ namespace Camera
 
 	void Core::SetBodyFraming(bool a_framed, const FUCK::CameraScreenRect& a_rect, float a_margin)
 	{
+		if (a_margin <= 0.0f) {
+			a_margin = FRAMING_MARGIN;
+		}
+
 		if (a_framed == _isFramed) {
 			// Already framed: a new area re-frames in place and keeps the offsets, e.g. once a menu's layout can be read
 			bool changed = a_rect.centreX != _framingRect.centreX || a_rect.centreY != _framingRect.centreY ||
