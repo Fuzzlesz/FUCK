@@ -427,19 +427,81 @@ namespace FUCK::Host
 	static void* LoadImage_Impl(const char* path, bool resize)
 	{
 		auto* tex = new ImGui::Texture(SKSE::stl::utf8_to_utf16(path).value_or(L""));
-		if (tex->Load(resize))
+		if (tex->Load(resize)) {
+			// The pixels are only needed to make the texture
+			tex->image.reset();
 			return tex;
+		}
 		delete tex;
 		return nullptr;
 	}
+
+	// Requested images, shared with the loader while waiting or loading, so releasing one can't free it under a background thread
+	static std::mutex                                                g_requestedLock;
+	static std::unordered_map<void*, std::shared_ptr<ImGui::Texture>> g_requested;
+
+	static void* RequestImage_Impl(const FUCK::ImageRequest* request)
+	{
+		if (!request || request->size == 0)
+			return nullptr;
+
+		// Read only as much as the caller's version of the struct holds, so newer options keep their defaults
+		FUCK::ImageRequest options{};
+		std::memcpy(&options, request, std::min<std::size_t>(request->size, sizeof(options)));
+		options.size = sizeof(options);
+		if (!options.path || !*options.path)
+			return nullptr;
+
+		auto texture = std::make_shared<ImGui::Texture>(SKSE::stl::utf8_to_utf16(options.path).value_or(L""));
+		const auto cachePath = options.cachePath ? SKSE::stl::utf8_to_utf16(options.cachePath).value_or(L"") : std::wstring{};
+
+		if (options.background) {
+			ImGui::ImageLoader::Queue({ texture, options.scale, cachePath, options.urgent });
+		} else if (!texture->LoadScaled(options.scale, cachePath)) {
+			return nullptr;
+		}
+
+		std::scoped_lock lock(g_requestedLock);
+		g_requested.emplace(texture.get(), texture);
+		return texture.get();
+	}
+
+	static int GetImageState_Impl(void* tex)
+	{
+		if (!tex)
+			return static_cast<int>(FUCK::ImageState::kNone);
+
+		switch (static_cast<ImGui::Texture*>(tex)->state.load()) {
+		case ImGui::Texture::State::kLoading:
+			return static_cast<int>(FUCK::ImageState::kLoading);
+		case ImGui::Texture::State::kFailed:
+			return static_cast<int>(FUCK::ImageState::kFailed);
+		default:
+			return static_cast<int>(FUCK::ImageState::kReady);
+		}
+	}
+
 	static void ReleaseImage_Impl(void* tex)
 	{
-		if (tex)
-			delete static_cast<ImGui::Texture*>(tex);
+		if (!tex)
+			return;
+
+		{
+			std::scoped_lock lock(g_requestedLock);
+			if (auto it = g_requested.find(tex); it != g_requested.end()) {
+				ImGui::ImageLoader::Cancel(it->second.get());
+				g_requested.erase(it);
+				return;
+			}
+		}
+
+		delete static_cast<ImGui::Texture*>(tex);
 	}
+
 	static void GetImageInfo_Impl(void* tex, float* w, float* h)
 	{
-		if (tex) {
+		// Only once it's ready, as a background load sets the size as it finishes
+		if (tex && static_cast<ImGui::Texture*>(tex)->GetSRView()) {
 			auto* t = static_cast<ImGui::Texture*>(tex);
 			if (w)
 				*w = t->size.x;
@@ -1335,7 +1397,9 @@ namespace FUCK::Host
 			.DrawCameraSettings    = DrawCameraSettings_Impl,
 			.DrawCameraHelpMarker  = DrawCameraHelpMarker_Impl,
 			.SetActorFrozen        = SetActorFrozen_Impl,
-			.IsActorFrozen         = IsActorFrozen_Impl
+			.IsActorFrozen         = IsActorFrozen_Impl,
+			.RequestImage          = RequestImage_Impl,
+			.GetImageState         = GetImageState_Impl
 		};
 		return &api;
 	}
