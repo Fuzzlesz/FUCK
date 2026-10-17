@@ -816,7 +816,7 @@ namespace FUCK::Host
 	}
 	static void Stepper_Impl(const char* label, const char* text, bool* outLeft, bool* outRight) { ImGui::Stepper(label, text, outLeft, outRight); }
 
-	static bool BeginTabBar_Impl(const char* s, int f) { return ImGui::BeginTabBarEx(s, f); }
+	static bool BeginTabBar_Impl(const char* s, int f) { return ImGui::BeginTabBar(s, f | ImGuiTabBarFlags_NoTabListScrollingButtons); }
 	static void EndTabBar_Impl() { ImGui::EndTabBar(); }
 	static bool BeginTabItem_Impl(const char* label, int flags) { return ImGui::BeginTabItemEx(label, static_cast<ImGuiTabItemFlags>(flags)); }
 	static void EndTabItem_Impl() { ImGui::EndTabItem(); }
@@ -1062,6 +1062,33 @@ namespace FUCK::Host
 
 	static void SetActorFrozen_Impl(const char* pluginName, RE::Actor* actor, bool frozen) { MANAGER(Freeze)->SetFrozen(pluginName, actor, frozen); }
 	static bool IsActorFrozen_Impl(RE::Actor* actor) { return MANAGER(Freeze)->IsFrozen(actor); }
+
+	static int GetInputCaptureState_Impl()
+	{
+		using enum FUCK::InputCaptureState;
+
+		if (!ImGui::Renderer::initialized.load()) {
+			return static_cast<int>(kNone);
+		}
+
+		const auto  manager = FUCKMan::GetSingleton();
+		const auto  ui      = RE::UI::GetSingleton();
+		const auto& io      = ImGui::GetIO();
+
+		auto state = kNone;
+		if (manager->IsOpen())
+			state |= kMenu;
+		// The console keeps the game's input even then, as FUCK's input hook lets it through
+		if (manager->IsInputBlocked() && !(ui && ui->IsMenuOpen(RE::Console::MENU_NAME)))
+			state |= kGameInput;
+		if (io.WantCaptureKeyboard)
+			state |= kKeyboard;
+		if (io.WantCaptureMouse)
+			state |= kMouse;
+		if (io.WantTextInput)
+			state |= kTextInput;
+		return static_cast<int>(state);
+	}
 
 	// ==================================================
 	// CreateInterface
@@ -1399,7 +1426,8 @@ namespace FUCK::Host
 			.SetActorFrozen        = SetActorFrozen_Impl,
 			.IsActorFrozen         = IsActorFrozen_Impl,
 			.RequestImage          = RequestImage_Impl,
-			.GetImageState         = GetImageState_Impl
+			.GetImageState         = GetImageState_Impl,
+			.GetInputCaptureState  = GetInputCaptureState_Impl
 		};
 		return &api;
 	}
