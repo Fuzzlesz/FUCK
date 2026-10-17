@@ -36,7 +36,7 @@ namespace Freeze
 
 	void Manager::OnFrame()
 	{
-		// Actors unloaded since are dropped, as there's nothing left to hold
+		// Actors that have unloaded are dropped, as there's nothing left to hold
 		std::erase_if(_frozen, [](const auto& a_entry) {
 			const auto actor = a_entry.second.actor.get();
 			if (!actor)
