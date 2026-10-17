@@ -1,4 +1,7 @@
 set(sources ${sources}
+	src/Camera/Core.cpp
+	src/Camera/Manager.cpp
+	src/Camera/Presets.cpp
 	src/FUCK-Host.cpp
 	src/FUCK-Man.cpp
 	src/FUCK-Settings.cpp
@@ -25,6 +28,7 @@ set(sources ${sources}
 	src/PCH.cpp
 	src/System/Console.cpp
 	src/System/Favourites.cpp
+	src/System/Freeze.cpp
 	src/System/Hooks.cpp
 	src/System/Hotkeys.cpp
 	src/System/Input.cpp
