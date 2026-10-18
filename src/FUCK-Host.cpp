@@ -816,7 +816,7 @@ namespace FUCK::Host
 	}
 	static void Stepper_Impl(const char* label, const char* text, bool* outLeft, bool* outRight) { ImGui::Stepper(label, text, outLeft, outRight); }
 
-	static bool BeginTabBar_Impl(const char* s, int f) { return ImGui::BeginTabBar(s, f | ImGuiTabBarFlags_NoTabListScrollingButtons); }
+	static bool BeginTabBar_Impl(const char* s, int f) { return ImGui::BeginTabBarEx(s, f); }
 	static void EndTabBar_Impl() { ImGui::EndTabBar(); }
 	static bool BeginTabItem_Impl(const char* label, int flags) { return ImGui::BeginTabItemEx(label, static_cast<ImGuiTabItemFlags>(flags)); }
 	static void EndTabItem_Impl() { ImGui::EndTabItem(); }
