@@ -52,6 +52,8 @@ namespace Camera
 
 		// kThirdPerson: the heading FUCK turned the subject to, put back on resume in case another session turned it
 		std::optional<float> subjectYaw;
+		// kThirdPerson: the subject's heading as the session began, which Reset turns it back to
+		std::optional<float> startSubjectYaw;
 
 		Presets              presets;
 		std::string          selectedPreset;

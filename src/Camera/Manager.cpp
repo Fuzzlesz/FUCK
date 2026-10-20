@@ -424,6 +424,12 @@ namespace Camera
 			}
 		}
 
+		if (TurnsHeading()) {
+			if (auto subject = GetSubject()) {
+				session.startSubjectYaw = subject->data.angle.z;
+			}
+		}
+
 		if (!IsOffsetBase(session.base))
 			return;
 
@@ -559,6 +565,10 @@ namespace Camera
 		if (IsActive(a_client)) {
 			RevertNode();
 			_current->core.Reset();
+
+			if (TurnsHeading() && _current->startSubjectYaw) {
+				SetSubjectYaw(*_current->startSubjectYaw);
+			}
 		}
 	}
 
