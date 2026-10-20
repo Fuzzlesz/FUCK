@@ -15,6 +15,14 @@ namespace Hooks
 		// Tracks keys swallowed while blocking, held until physically released
 		static inline Set<uint32_t> s_blockedKeys;
 
+		// The camera's gamepad modifier (RB) released this soon is a tap, too quick to have moved the camera
+		static constexpr float kModifierTapSecs = 0.25f;
+
+		static bool IsModifier(RE::ButtonEvent* a_btn)
+		{
+			return Input::Keymap::GetUnifiedKey(a_btn->GetDevice(), a_btn->GetIDCode()) == Input::Keymap::kGP_RB;
+		}
+
 		static bool IsWhitelisted(RE::ButtonEvent* a_btn, bool a_allowGameMenus)
 		{
 			auto userEvents = RE::UserEvents::GetSingleton();
@@ -48,6 +56,14 @@ namespace Hooks
 			if (rd.value == 0.0f) {
 				if (s_blockedKeys.contains(hash)) {
 					s_blockedKeys.erase(hash);
+
+					// A tap of the camera's modifier reaches the game as a press, so a menu's bumper still works
+					if (!a_isBlocking && IsModifier(a_btn) && rd.heldDownSecs < kModifierTapSecs && MANAGER(Camera)->PassesModifierTaps()) {
+						rd.value        = 1.0f;
+						rd.heldDownSecs = 0.0f;
+						return;
+					}
+
 					rd.heldDownSecs = 0.0f;
 				}
 				return;

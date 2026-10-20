@@ -128,6 +128,8 @@ namespace Camera
 
 		// Folded into FUCK's own input blocking and pausing. Input is blocked with kBlockControls, or while the camera's controls are held
 		bool IsBlockingInput() const;
+		// Whether a tap of RB, the camera's gamepad modifier, should reach the game. Not with kBlockControls, as the game then gets nothing
+		bool PassesModifierTaps() const { return _current && _inputAllowed && !(_current->flags & FUCK::CameraSessionFlags::kBlockControls); }
 		bool IsPausing() const { return _current && (_current->flags & FUCK::CameraSessionFlags::kFreezeTime); }
 
 		bool DrawSettings(FUCK::CameraSettingsFlags a_flags);
