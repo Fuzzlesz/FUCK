@@ -82,7 +82,9 @@ namespace
 
 	std::string_view GetName(const Camera::Session& a_session)
 	{
-		return a_session.context.empty() ? "(unnamed)" : a_session.context;
+		if (a_session.context.empty())
+			return "(unnamed)";
+		return a_session.context;
 	}
 
 	// KBM/GP speeds use different units, so each maps to a shared 1-20 display with the default at 10
