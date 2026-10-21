@@ -98,6 +98,7 @@ namespace Camera
 
 		bool HasAnyCamera() const { return IsModified() || _framingBlend > 0.001f; }
 		bool IsModified() const;
+		bool IsFovChanged() const { return std::abs(_targetFovOffset) > 0.01f; }  // the player has changed the FOV from where the session began
 
 		static bool GetCurrentFov(float& a_horizontal, float& a_vertical);
 

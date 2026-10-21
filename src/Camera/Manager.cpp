@@ -453,6 +453,10 @@ namespace Camera
 
 		Preset preset;
 		if (CapturePreset(false, preset) && preset.offset) {
+			// An FOV left alone is kept as unchanged, so the next session opens at the game's FOV even if it has changed since
+			if (!_current->core.IsFovChanged())
+				preset.offset->fov = 0.0f;
+
 			_current->presets.StoreLast(*preset.offset);
 		}
 	}
