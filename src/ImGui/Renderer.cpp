@@ -7,6 +7,7 @@
 #include "Styles.h"
 
 #include "System\Freeze.h"
+#include "System\Physics.h"
 #include "System\Input.h"
 
 #include <d3d11.h>
@@ -144,6 +145,7 @@ namespace ImGui::Renderer
 
 			MANAGER(Camera)->OnFrame();
 			MANAGER(Freeze)->OnFrame();
+			Physics::OnFrame();
 
 			// Sync text input state with the game
 			UpdateTextInputState();

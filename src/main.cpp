@@ -34,7 +34,7 @@ void OnInit(SKSE::MessagingInterface::Message* a_msg)
 	switch (a_msg->type) {
 	case SKSE::MessagingInterface::kPostLoad:
 		Camera::Manager::RegisterSmoothCam();
-		Physics::InstallInner();
+		Physics::OnPostLoad();
 		break;
 
 	case SKSE::MessagingInterface::kPostPostLoad:
@@ -50,7 +50,7 @@ void OnInit(SKSE::MessagingInterface::Message* a_msg)
 		Translation::Manager::GetSingleton()->BuildTranslationMap();
 		Console::Install();
 		Camera::Manager::InstallLateHooks();
-		Physics::InstallOuter();
+		Physics::OnDataLoaded();
 		ImGui::Styles::GetSingleton()->OnStyleRefresh();
 		MANAGER(Hotkeys)->Enable(true);
 
