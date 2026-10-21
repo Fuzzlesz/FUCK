@@ -13,6 +13,7 @@
 #include "System/Hotkeys.h"
 #include "System/Input.h"
 #include "System/Papyrus.h"
+#include "System/Physics.h"
 #include "System/Settings.h"
 
 // ==================================================
@@ -33,6 +34,7 @@ void OnInit(SKSE::MessagingInterface::Message* a_msg)
 	switch (a_msg->type) {
 	case SKSE::MessagingInterface::kPostLoad:
 		Camera::Manager::RegisterSmoothCam();
+		Physics::InstallInner();
 		break;
 
 	case SKSE::MessagingInterface::kPostPostLoad:
@@ -48,6 +50,7 @@ void OnInit(SKSE::MessagingInterface::Message* a_msg)
 		Translation::Manager::GetSingleton()->BuildTranslationMap();
 		Console::Install();
 		Camera::Manager::InstallLateHooks();
+		Physics::InstallOuter();
 		ImGui::Styles::GetSingleton()->OnStyleRefresh();
 		MANAGER(Hotkeys)->Enable(true);
 
@@ -139,7 +142,7 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 	});
 	MANAGER(Camera)->LoadSettings();
 
-	SKSE::AllocTrampoline(14 * 3);
+	SKSE::AllocTrampoline(14 * 5);
 	Hooks::Install();
 	ImGui::Renderer::Install();
 

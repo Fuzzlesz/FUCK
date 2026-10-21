@@ -34,6 +34,7 @@ set(sources ${sources}
 	src/System/Input.cpp
 	src/System/Journal.cpp
 	src/System/Papyrus.cpp
+	src/System/Physics.cpp
 	src/System/Settings.cpp
 	src/System/Translation.cpp
 	src/main.cpp

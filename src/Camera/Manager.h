@@ -131,6 +131,7 @@ namespace Camera
 		// Whether a tap of RB, the camera's gamepad modifier, should reach the game. Not with kBlockControls, as the game then gets nothing
 		bool PassesModifierTaps() const { return _current && _inputAllowed && !(_current->flags & FUCK::CameraSessionFlags::kBlockControls); }
 		bool IsPausing() const { return _current && (_current->flags & FUCK::CameraSessionFlags::kFreezeTime); }
+		bool RunsPhysics() const { return _current && (_current->flags & FUCK::CameraSessionFlags::kRunPhysics); }
 
 		bool DrawSettings(FUCK::CameraSettingsFlags a_flags);
 		void DrawHelpMarker(FUCK::CameraSessionFlags a_flags, const char* a_extraKBM, const char* a_extraGP);
