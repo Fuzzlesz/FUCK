@@ -909,7 +909,13 @@ namespace Camera
 		if (!pelvis || !head)
 			return false;
 
-		a_body = Maths::MakeBodyPoints(pelvis->world.translate, head->world.translate, subject->GetPosition().z);
+		// A rider's position is the saddle, so the floor is taken from the mount, framing the horse beneath them too
+		float floor = subject->GetPosition().z;
+		RE::NiPointer<RE::Actor> mount;
+		if (subject->IsOnMount() && subject->GetMount(mount) && mount)
+			floor = mount->GetPosition().z;
+
+		a_body = Maths::MakeBodyPoints(pelvis->world.translate, head->world.translate, floor);
 		return true;
 	}
 
