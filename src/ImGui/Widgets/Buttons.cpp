@@ -512,7 +512,8 @@ namespace ImGui
 		float scale    = GetDynamicWidgetScale();
 		float rounding = KeepInnerCurve(GetUserStyleVar(USER_STYLE::kButtonRounding));
 
-		ImVec2 textSize = CalcTextSize(label);
+		// Measure only the visible part, RenderTextClipped below hides "##id" as well
+		ImVec2 textSize = CalcTextSize(label, nullptr, true);
 
 		// Tight Vertical padding so it hugs the text
 		float padY = 7.0f * scale;
