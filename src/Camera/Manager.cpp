@@ -417,6 +417,11 @@ namespace Camera
 	{
 		auto& session = *_current;
 
+		auto ui              = RE::UI::GetSingleton();
+		session.turnsHeading = session.base == FUCK::CameraBase::kThirdPerson && !(ui && ui->GameIsPaused());
+		if (session.base == FUCK::CameraBase::kThirdPerson)
+			logger::info("Third-person camera session turns the subject's {}", session.turnsHeading ? "heading, as the game is running" : "3D, as the game is paused");
+
 		// The subject first, as remembered facing and body framing are measured from where it stands
 		if (session.flags & FUCK::CameraSessionFlags::kFaceCamera) {
 			RE::NiPoint3  baseTranslate;
@@ -676,6 +681,7 @@ namespace Camera
 		if (!IsActive(a_client) || !IsOffsetBase(_current->base))
 			return;
 
+		HoldSubjectYaw();
 		RunControls(a_interval);
 		if (IsActive(a_client)) {
 			ApplyNode();
@@ -969,7 +975,23 @@ namespace Camera
 			// The whole branch, so the body follows even when its animation isn't updating, e.g. in a paused menu
 			RE::NiUpdateData ctx;
 			root->Update(ctx);
+
+			if (IsThirdPerson())
+				_current->subjectYaw = Maths::YawOf(root->local.rotate);
 		}
+	}
+
+	// A paused third-person session turns the 3D, which the game can still put back to the heading, e.g. with a position update
+	// queued as the menu opened. It's turned back, so the subject keeps the facing it was given
+	void Manager::HoldSubjectYaw()
+	{
+		if (!IsThirdPerson() || TurnsHeading() || !_current->subjectYaw)
+			return;
+
+		auto subject = GetSubject();
+		auto root    = subject ? subject->Get3D(false) : nullptr;
+		if (root && std::abs(std::remainder(Maths::YawOf(root->local.rotate) - *_current->subjectYaw, 2.0f * std::numbers::pi_v<float>)) > 0.001f)
+			SetSubjectYaw(*_current->subjectYaw);
 	}
 
 	void Manager::SetSubjectYaw(float a_yaw)
@@ -994,6 +1016,9 @@ namespace Camera
 
 		RE::NiUpdateData ctx;
 		root->Update(ctx);
+
+		if (IsThirdPerson())
+			_current->subjectYaw = a_yaw;
 	}
 
 	void Manager::MoveSubject(const SubjectTransform& a_transform)

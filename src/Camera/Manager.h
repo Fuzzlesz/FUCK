@@ -49,8 +49,9 @@ namespace Camera
 		RE::NiPoint3  fixedTranslate;
 		RE::NiMatrix3 fixedRotate;
 		bool          hasFixedBase = false;
+		bool          turnsHeading = false;  // see TurnsHeading()
 
-		// kThirdPerson: the heading FUCK turned the subject to, put back on resume in case another session turned it
+		// kThirdPerson: the facing FUCK turned the subject to, put back on resume in case another session turned it, and held while paused
 		std::optional<float> subjectYaw;
 		// Where the subject faced as the session began, which Reset turns it back to
 		std::optional<float> startSubjectYaw;
@@ -152,9 +153,10 @@ namespace Camera
 		bool                 IsFree() const { return _current && _current->base == FUCK::CameraBase::kFree; }
 		bool                 IsThirdPerson() const { return _current && _current->base == FUCK::CameraBase::kThirdPerson; }
 
-		// The third-person base turns the subject's heading, as the game moves the 3D back to it while time runs.
-		// Elsewhere the 3D turns, so head tracking keeps its target rather than following the camera
-		bool TurnsHeading() const { return IsThirdPerson(); }
+		// The third-person base turns the subject's heading while time runs, as the game moves the 3D back to it then. Paused, and on the
+		// other bases, the 3D turns instead, as the head's aim is solved against the heading: it stays put against the body as it turns,
+		// rather than swinging round to whatever it was looking at (a merchant, held through the barter menu). Decided as the session begins
+		bool TurnsHeading() const { return _current && _current->turnsHeading; }
 
 		void RunControls(float a_interval);
 		void ApplyNode();
@@ -164,6 +166,7 @@ namespace Camera
 		bool ApplyPreset(const Preset& a_preset);
 		void ApplyOffsets(const OffsetPreset& a_offset);
 		void SetSubjectYaw(float a_yaw);
+		void HoldSubjectYaw();
 		void MoveSubject(const SubjectTransform& a_transform);
 		void SetUpStart(const FUCK::CameraSessionOptions& a_options);
 		void RememberCamera();
