@@ -426,11 +426,8 @@ namespace Camera
 			}
 		}
 
-		if (TurnsHeading()) {
-			if (auto subject = GetSubject()) {
-				session.startSubjectYaw = subject->data.angle.z;
-			}
-		}
+		// Where the subject faced as the session began, for a reset to turn it back to
+		session.startSubjectYaw = GetSubjectYaw();
 
 		if (!IsOffsetBase(session.base))
 			return;
@@ -572,15 +569,38 @@ namespace Camera
 			RevertNode();
 			_current->core.Reset();
 
-			if (TurnsHeading() && _current->startSubjectYaw) {
+			if (_current->startSubjectYaw) {
 				SetSubjectYaw(*_current->startSubjectYaw);
 			}
 		}
 	}
 
+	// Where the subject faces: its heading, or its 3D where that's what turns (see TurnsHeading)
+	std::optional<float> Manager::GetSubjectYaw() const
+	{
+		auto subject = GetSubject();
+		if (!subject)
+			return std::nullopt;
+		if (TurnsHeading())
+			return subject->data.angle.z;
+		if (auto root = subject->Get3D(false))
+			return Maths::YawOf(root->local.rotate);
+		return std::nullopt;
+	}
+
 	bool Manager::IsModified(const FUCK::ICameraClient* a_client) const
 	{
-		return IsActive(a_client) && _current->core.IsModified();
+		if (!IsActive(a_client))
+			return false;
+		if (_current->core.IsModified())
+			return true;
+
+		// A turned subject counts too, as Reset turns it back
+		const auto yaw = GetSubjectYaw();
+		if (!yaw || !_current->startSubjectYaw)
+			return false;
+		const float turned = std::remainder(*yaw - *_current->startSubjectYaw, 2.0f * std::numbers::pi_v<float>);
+		return std::abs(turned) > 0.01f;
 	}
 
 	void Manager::SetBodyFraming(FUCK::ICameraClient* a_client, bool a_framed, const FUCK::CameraScreenRect* a_rect, float a_margin)

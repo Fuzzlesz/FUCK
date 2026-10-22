@@ -52,7 +52,7 @@ namespace Camera
 
 		// kThirdPerson: the heading FUCK turned the subject to, put back on resume in case another session turned it
 		std::optional<float> subjectYaw;
-		// kThirdPerson: the subject's heading as the session began, which Reset turns it back to
+		// Where the subject faced as the session began, which Reset turns it back to
 		std::optional<float> startSubjectYaw;
 
 		Presets              presets;
@@ -146,6 +146,7 @@ namespace Camera
 
 		Session*             Find(const FUCK::ICameraClient* a_client) const;
 		RE::Actor*           GetSubject() const;
+		std::optional<float> GetSubjectYaw() const;
 		RE::FreeCameraState* GetFreeState() const;
 		bool                 IsFreeState(const RE::FreeCameraState* a_state) const;
 		bool                 IsFree() const { return _current && _current->base == FUCK::CameraBase::kFree; }
