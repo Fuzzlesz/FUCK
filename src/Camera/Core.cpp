@@ -549,17 +549,25 @@ namespace Camera
 		}
 
 		_isFramed = a_framed;
+		_smoothScrollZoom = 0.0f;
+
+		// Framing the body eases out the moves so the camera settles on it, and turning it off eases back to them
 		if (_isFramed) {
 			_framingRect   = a_rect;
 			_framingMargin = a_margin;
 			_hasFraming    = false;
-		}
 
-		// Ease out manual moves so the camera settles on the new base or body framing
-		_targetCamOffset  = { 0.0f, 0.0f, 0.0f };
-		_targetCamRotZ    = 0.0f;
-		_targetCamRotX    = 0.0f;
-		_smoothScrollZoom = 0.0f;
+			_unframedOffset  = _targetCamOffset;
+			_unframedRotZ    = _targetCamRotZ;
+			_unframedRotX    = _targetCamRotX;
+			_targetCamOffset = { 0.0f, 0.0f, 0.0f };
+			_targetCamRotZ   = 0.0f;
+			_targetCamRotX   = 0.0f;
+		} else {
+			_targetCamOffset = _unframedOffset;
+			_targetCamRotZ   = _unframedRotZ;
+			_targetCamRotX   = _unframedRotX;
+		}
 	}
 
 	bool Core::GetBodyFraming(FUCK::CameraScreenRect& a_rect, float& a_margin) const
@@ -665,6 +673,9 @@ namespace Camera
 		_targetCamRotX       = 0.0f;
 		_targetCamRoll       = 0.0f;
 		_targetFovOffset     = 0.0f;
+		_unframedOffset      = { 0.0f, 0.0f, 0.0f };
+		_unframedRotZ        = 0.0f;
+		_unframedRotX        = 0.0f;
 		_isFramed            = false;
 		_framingProgress     = 0.0f;
 		_framingBlend        = 0.0f;

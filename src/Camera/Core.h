@@ -182,6 +182,11 @@ namespace Camera
 		RE::NiPoint3           _framingCamDelta  { 0.0f, 0.0f, 0.0f };
 		RE::NiPoint3           _framingPivotDelta{ 0.0f, 0.0f, 0.0f };
 
+		// The moves made before framing the body, which turning it off goes back to
+		RE::NiPoint3 _unframedOffset{ 0.0f, 0.0f, 0.0f };
+		float        _unframedRotZ = 0.0f;
+		float        _unframedRotX = 0.0f;
+		
 		float _pendingScroll    = 0.0f;
 		float _smoothScrollZoom = 0.0f;
 		float _smoothScrollFov  = 0.0f;
