@@ -48,6 +48,7 @@ namespace Camera
 		// kThirdPerson: the camera as the session began, used as the base rather than wherever the game puts it, as that follows the subject's heading
 		RE::NiPoint3  fixedTranslate;
 		RE::NiMatrix3 fixedRotate;
+		RE::NiPoint3  fixedSubjectPos;  // where the subject stood then, so the held camera moves with it (see HeldTranslate)
 		bool          hasFixedBase = false;
 		bool          turnsHeading = false;  // see TurnsHeading()
 
@@ -166,6 +167,7 @@ namespace Camera
 		bool ApplyPreset(const Preset& a_preset);
 		void ApplyOffsets(const OffsetPreset& a_offset);
 		void SetSubjectYaw(float a_yaw);
+		RE::NiPoint3 HeldTranslate() const;
 		void HoldSubjectYaw();
 		void MoveSubject(const SubjectTransform& a_transform);
 		void SetUpStart(const FUCK::CameraSessionOptions& a_options);

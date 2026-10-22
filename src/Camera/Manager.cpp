@@ -207,6 +207,8 @@ namespace Camera
 			if (auto node = camera ? camera->cameraRoot.get() : nullptr) {
 				_current->fixedTranslate = node->local.translate;
 				_current->fixedRotate    = node->local.rotate;
+				if (auto subject = GetSubject())
+					_current->fixedSubjectPos = subject->GetPosition();
 				_current->hasFixedBase   = true;
 			}
 		}
@@ -700,8 +702,8 @@ namespace Camera
 
 		auto& session = *_current;
 
-		// The third-person camera follows the subject's heading, which turning changes, so it's held where it was as the session began
-		const auto& baseTranslate = session.hasFixedBase ? session.fixedTranslate : node->local.translate;
+		// The third-person camera follows the subject's heading, which turning changes, so it's held as the session began, moving only as the subject moves
+		const auto  baseTranslate = session.hasFixedBase ? HeldTranslate() : node->local.translate;
 		const auto& baseRotate    = session.hasFixedBase ? session.fixedRotate : node->local.rotate;
 
 		// Without offsets there's nothing to apply, unless the base is held, as the game's camera may have moved from it
@@ -876,6 +878,13 @@ namespace Camera
 		return RE::PlayerCharacter::GetSingleton();
 	}
 
+	// The held third-person camera, moved by however far the subject has moved since, e.g. walking with Skyrim Souls. Its turn stays held
+	RE::NiPoint3 Manager::HeldTranslate() const
+	{
+		auto subject = GetSubject();
+		return subject ? _current->fixedTranslate + (subject->GetPosition() - _current->fixedSubjectPos) : _current->fixedTranslate;
+	}
+
 	bool Manager::GetBasePose(RE::NiPoint3& a_translate, RE::NiMatrix3& a_rotate)
 	{
 		if (!_current)
@@ -890,7 +899,7 @@ namespace Camera
 		}
 
 		if (_current->hasFixedBase) {
-			a_translate = _current->fixedTranslate;
+			a_translate = HeldTranslate();
 			a_rotate    = _current->fixedRotate;
 			return true;
 		}
