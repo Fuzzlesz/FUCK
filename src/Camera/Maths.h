@@ -115,6 +115,28 @@ namespace Camera::Maths
 		}
 	}
 
+	// A camera out in front of a subject heading the given way (from +y towards +x), looking back at the pivot and tilted down by a_pitch.
+	// Body framing then sets how far away. For where the camera it starts from would give too many different views (a dragon's)
+	inline void FrontView(RE::NiPoint3& a_translate, RE::NiMatrix3& a_rotate, const RE::NiPoint3& a_pivot, float a_subjectHeading, float a_pitch)
+	{
+		constexpr float BACK = 300.0f;  // a starting distance, until framing sets it
+
+		const float        c = std::cos(a_pitch);
+		const float        s = std::sin(a_pitch);
+		const RE::NiPoint3 look{ -std::sin(a_subjectHeading), -std::cos(a_subjectHeading), 0.0f };
+		const RE::NiPoint3 right{ look.y, -look.x, 0.0f };
+		const RE::NiPoint3 forward{ look.x * c, look.y * c, -s };
+		const RE::NiPoint3 up{ look.x * s, look.y * s, c };
+
+		// Each axis is a column: right, forward (the way the camera looks), then up the screen
+		for (int row = 0; row < 3; ++row) {
+			a_rotate.entry[row][0] = right[row];
+			a_rotate.entry[row][1] = forward[row];
+			a_rotate.entry[row][2] = up[row];
+		}
+		a_translate = a_pivot - forward * BACK;
+	}
+
 	// A camera beyond the feet of a body lying down, raised and looking down along it with the head toward the top of the screen.
 	// Body framing then sets how far away. False if the body has no length across the floor to look along
 	inline bool LookAlongLyingBody(RE::NiPoint3& a_translate, RE::NiMatrix3& a_rotate, const RE::NiPoint3& a_head, const RE::NiPoint3& a_pelvis)

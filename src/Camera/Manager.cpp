@@ -46,7 +46,8 @@ namespace
 		static inline constexpr std::size_t            idx{ 0x05 };
 	};
 
-	// The third-person camera's update, which places the camera itself every frame while time runs. The horse's camera is one too, with an update of its own
+	// The third-person camera's update, which places the camera itself every frame while time runs. The horse's and dragon's cameras are
+	// third-person cameras too, with updates of their own
 	template <class T>
 	struct ThirdPersonUpdate
 	{
@@ -113,6 +114,7 @@ namespace Camera
 		// Once every plugin has loaded, so this wraps any other mod's hook on the same update (e.g. SmoothCam's) and always runs last
 		stl::write_vfunc<RE::ThirdPersonState, ThirdPersonUpdate<RE::ThirdPersonState>>();
 		stl::write_vfunc<RE::HorseCameraState, ThirdPersonUpdate<RE::HorseCameraState>>();
+		stl::write_vfunc<RE::DragonCameraState, ThirdPersonUpdate<RE::DragonCameraState>>();
 
 		logger::info("Installed Third-Person Camera Hook");
 	}
@@ -971,6 +973,18 @@ namespace Camera
 			Maths::LookAlongLyingBody(session.fixedTranslate, session.fixedRotate, head->world.translate, pelvis->world.translate))
 			return;
 
+		// On a flying mount (a dragon), the camera can start from any height and tilt, so the view is set afresh: in front of where the dragon
+		// faces, a little above, looking down at the rider
+		constexpr float          FLYING_MOUNT_PITCH = 15.0f * Maths::DEG2RAD;
+		RE::NiPointer<RE::Actor> mount;
+		const auto               race  = subject->IsOnMount() && subject->GetMount(mount) && mount ? mount->GetRace() : nullptr;
+		const auto               model = mount ? mount->Get3D(false) : nullptr;
+		if (race && race->data.flags.any(RE::RACE_DATA::Flag::kFlies) && model && head) {
+			const auto forward = Maths::ForwardAxis(model->world.rotate);
+			Maths::FrontView(session.fixedTranslate, session.fixedRotate, head->world.translate, std::atan2(forward.x, forward.y), FLYING_MOUNT_PITCH);
+			return;
+		}
+
 		Maths::TurnToFront(session.fixedTranslate, session.fixedRotate, subject->GetPosition(), subject->GetAngleZ());
 	}
 
@@ -982,7 +996,7 @@ namespace Camera
 		if (!pelvis || !head)
 			return false;
 
-		// Lying down, the body is measured from the feet along its length instead
+		// The feet, also used below for a dragon rider. Lying down, the body is measured from them along its length instead
 		const auto leftFoot  = subject->GetNodeByName("NPC L Foot [Lft ]");
 		const auto rightFoot = subject->GetNodeByName("NPC R Foot [Rft ]");
 		if (FUCK::IsLyingDown(subject) && leftFoot && rightFoot) {
@@ -990,11 +1004,18 @@ namespace Camera
 			return true;
 		}
 
-		// A rider's position is the saddle, so the floor is taken from the mount, framing the horse beneath them too
-		float floor = subject->GetPosition().z;
+		// A rider's position is the saddle, so the floor is taken from the mount, framing the horse beneath them too. A flying mount (a dragon)
+		// is far too big to fit, so the floor is taken this far below the rider's feet instead, showing some of the dragon around them
+		constexpr float FLYING_MOUNT_ROOM = 100.0f;
+		float           floor = subject->GetPosition().z;
 		RE::NiPointer<RE::Actor> mount;
-		if (subject->IsOnMount() && subject->GetMount(mount) && mount)
-			floor = mount->GetPosition().z;
+		if (subject->IsOnMount() && subject->GetMount(mount) && mount) {
+			const auto race = mount->GetRace();
+			if (!race || race->data.flags.none(RE::RACE_DATA::Flag::kFlies))
+				floor = mount->GetPosition().z;
+			else if (leftFoot && rightFoot)
+				floor = std::min(leftFoot->world.translate.z, rightFoot->world.translate.z) - FLYING_MOUNT_ROOM;
+		}
 
 		a_body = Maths::MakeBodyPoints(pelvis->world.translate, head->world.translate, floor);
 		return true;
