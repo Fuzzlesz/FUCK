@@ -95,6 +95,55 @@ namespace Camera::Maths
 	inline RE::NiPoint3 ForwardAxis(const RE::NiMatrix3& a_rot) { return { a_rot.entry[0][1], a_rot.entry[1][1], a_rot.entry[2][1] }; }
 	inline RE::NiPoint3 UpAxis(const RE::NiMatrix3& a_rot) { return { a_rot.entry[0][2], a_rot.entry[1][2], a_rot.entry[2][2] }; }
 
+	// A camera turned round a pivot to the front of a subject heading the given way (from +y towards +x), keeping its height and pitch
+	inline void TurnToFront(RE::NiPoint3& a_translate, RE::NiMatrix3& a_rotate, const RE::NiPoint3& a_pivot, float a_subjectHeading)
+	{
+		const float turn = a_subjectHeading + std::numbers::pi_v<float> - std::atan2(a_rotate.entry[0][1], a_rotate.entry[1][1]);
+		const float c    = std::cos(turn);
+		const float s    = std::sin(turn);
+		const auto  turned = [&](const RE::NiPoint3& a_v) { return RE::NiPoint3{ a_v.x * c + a_v.y * s, a_v.y * c - a_v.x * s, a_v.z }; };
+
+		const RE::NiPoint3 offset = turned(a_translate - a_pivot);
+		a_translate               = { a_pivot.x + offset.x, a_pivot.y + offset.y, a_translate.z };
+
+		// Each axis is a column
+		for (int column = 0; column < 3; ++column) {
+			const auto axis           = turned({ a_rotate.entry[0][column], a_rotate.entry[1][column], a_rotate.entry[2][column] });
+			a_rotate.entry[0][column] = axis.x;
+			a_rotate.entry[1][column] = axis.y;
+			a_rotate.entry[2][column] = axis.z;
+		}
+	}
+
+	// A camera beyond the feet of a body lying down, raised and looking down along it with the head toward the top of the screen.
+	// Body framing then sets how far away. False if the body has no length across the floor to look along
+	inline bool LookAlongLyingBody(RE::NiPoint3& a_translate, RE::NiMatrix3& a_rotate, const RE::NiPoint3& a_head, const RE::NiPoint3& a_pelvis)
+	{
+		constexpr float PITCH = 60.0f * std::numbers::pi_v<float> / 180.0f;  // down from level
+		constexpr float BACK  = 250.0f;                                       // a starting distance, until framing sets it
+
+		const RE::NiPoint3 body   = a_head - a_pelvis;
+		const float        length = std::sqrt(body.x * body.x + body.y * body.y);
+		if (length < 1.0f)
+			return false;
+
+		const float        c = std::cos(PITCH);
+		const float        s = std::sin(PITCH);
+		const RE::NiPoint3 along{ body.x / length, body.y / length, 0.0f };
+		const RE::NiPoint3 right{ along.y, -along.x, 0.0f };
+		const RE::NiPoint3 forward{ along.x * c, along.y * c, -s };
+		const RE::NiPoint3 up{ along.x * s, along.y * s, c };
+
+		// Each axis is a column: right, forward (the way the camera looks), then up the screen
+		for (int row = 0; row < 3; ++row) {
+			a_rotate.entry[row][0] = right[row];
+			a_rotate.entry[row][1] = forward[row];
+			a_rotate.entry[row][2] = up[row];
+		}
+		a_translate = a_pelvis + body * 0.5f - forward * BACK;
+		return true;
+	}
+
 	// Heading of a rotation's forward axis around world Z, matching the free camera's yaw
 	inline float YawOf(const RE::NiMatrix3& a_rot)
 	{
@@ -161,6 +210,15 @@ namespace Camera::Maths
 			{ a_head.x, a_head.y, top },
 			{ a_pelvis.x, a_pelvis.y, a_floor }
 		};
+	}
+
+	// A body lying down, e.g. in a bed, runs from the feet to the top of the head along its length rather than up from the floor,
+	// so a camera looking down on it frames all of it
+	inline BodyPoints MakeLyingBodyPoints(const RE::NiPoint3& a_head, const RE::NiPoint3& a_feet)
+	{
+		const RE::NiPoint3 length = a_head - a_feet;
+		const RE::NiPoint3 top    = a_head + length * FRAMING_HEAD_ROOM;
+		return { (top + a_feet) * 0.5f, top, a_feet };
 	}
 
 	inline std::optional<BodyFraming> FrameFullBody(

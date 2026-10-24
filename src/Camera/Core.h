@@ -85,6 +85,8 @@ namespace Camera
 
 		void SetZoomAcceleration(bool a_enabled) { _zoomAccelEnabled = a_enabled; }
 		void SetKeyboardEnabled(bool a_enabled) { _keyboardEnabled = a_enabled; }
+		void SetFollowPose(bool a_enabled) { _followPose = a_enabled; }
+		void SetTurningEnabled(bool a_enabled) { _turningEnabled = a_enabled; }
 
 		void SetBodyFraming(bool a_framed, const FUCK::CameraScreenRect& a_rect, float a_margin);
 		bool IsBodyFramed() const { return _isFramed; }
@@ -153,7 +155,8 @@ namespace Camera
 		SpeedScales GetSpeedScales();
 		void        UpdateKbmAcceleration(bool a_isTranslating, float a_interval);
 		void        UpdateZoomAcceleration(float a_interval);
-		void        UpdateFraming(const RE::NiPoint3& a_pivot);
+		void        UpdateFraming(const RE::NiPoint3& a_pivot, bool a_ease = false);
+		void        FollowFramedPose(float a_interval);
 
 		Host& _host;
 
@@ -182,11 +185,16 @@ namespace Camera
 		RE::NiPoint3           _framingCamDelta  { 0.0f, 0.0f, 0.0f };
 		RE::NiPoint3           _framingPivotDelta{ 0.0f, 0.0f, 0.0f };
 
+		// kFollowPose: what the framing eases to when the pose changes (see FollowFramedPose), and the body height it was taken at
+		bool                   _followPose        = false;
+		RE::NiPoint3           _framingCamDeltaTo  { 0.0f, 0.0f, 0.0f };
+		RE::NiPoint3           _framingPivotDeltaTo{ 0.0f, 0.0f, 0.0f };
+		float                  _framingDistanceTo = 0.0f;
+		float                  _framingHeight     = 0.0f;
 		// The moves made before framing the body, which turning it off goes back to
 		RE::NiPoint3 _unframedOffset{ 0.0f, 0.0f, 0.0f };
 		float        _unframedRotZ = 0.0f;
 		float        _unframedRotX = 0.0f;
-		
 		float _pendingScroll    = 0.0f;
 		float _smoothScrollZoom = 0.0f;
 		float _smoothScrollFov  = 0.0f;
@@ -197,6 +205,7 @@ namespace Camera
 
 		bool  _zoomAccelEnabled = false;
 		bool  _keyboardEnabled  = true;
+		bool  _turningEnabled   = true;
 		float _zoomAcceleration = 1.0f;
 		bool  _isZooming        = false;  // set by this frame's zoom input, and read once all of the frame's input is handled
 

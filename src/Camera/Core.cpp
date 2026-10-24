@@ -8,18 +8,20 @@ namespace Keys = Input::Keymap;
 namespace
 {
 	// Tuned against the speed sliders' defaults, so changing one changes how the camera feels for every consumer
-	constexpr float MOUSE_WHEEL_MULT      =  0.1f;
-	constexpr float MOUSE_MOVE_MULT       =  0.002f;
-	constexpr float MOUSE_ROT_MULT        =  0.010f;
+	constexpr float MOUSE_WHEEL_MULT    =  0.1f;
+	constexpr float MOUSE_MOVE_MULT     =  0.002f;
+	constexpr float MOUSE_ROT_MULT      =  0.010f;
 
-	constexpr float PITCH_CLAMP_LIMIT     =  1.55f;
-	constexpr float SCROLL_SMOOTH_SPEED   = 15.0f;
-	constexpr float FRAMING_DURATION      =  0.8f;
-	constexpr int   FRAMING_SETTLE_FRAMES =  5;      // how many updates the framing is recalculated for after it's applied instantly, while the subject's pose settles
-	constexpr float ACCEL_RATE            =  1.5f;   // per second held, for pan and zoom acceleration
-	constexpr float ACCEL_MAX             = 15.0f;
-	constexpr float CINEMATIC_SPEED       = 10.0f;
-	constexpr float EPSILON               =  0.001f;
+	constexpr float PITCH_CLAMP_LIMIT   =  1.55f;
+	constexpr float SCROLL_SMOOTH_SPEED = 15.0f;
+	constexpr float FRAMING_DURATION    =  0.8f;
+	constexpr int   FRAMING_SETTLE_FRAMES = 5;      // how many updates the framing is recalculated for after it's applied instantly, while the subject's pose settles
+	constexpr float FRAMING_POSE_CHANGE = 0.05f;    // kFollowPose: how much the body's height must change, as a share, before the framing follows, so idle sway can't
+	constexpr float FRAMING_FOLLOW_SPEED = 4.0f;
+	constexpr float ACCEL_RATE          =  1.5f;   // per second held, for pan and zoom acceleration
+	constexpr float ACCEL_MAX           = 15.0f;
+	constexpr float CINEMATIC_SPEED     = 10.0f;
+	constexpr float EPSILON             =  0.001f;
 
 	float InputAxis(std::uint32_t a_positive, std::uint32_t a_negative)
 	{
@@ -168,6 +170,7 @@ namespace Camera
 		}
 
 		UpdateFramingBlend(a_interval);
+		FollowFramedPose(a_interval);
 
 		if (!a_state.inputAllowed) {
 			ClearInputState();
@@ -389,6 +392,11 @@ namespace Camera
 
 	void Core::HandleSubjectRotation(const FrameInput& a_in, const Config& a_settings, float a_interval)
 	{
+		if (!_turningEnabled) {
+			_wasMouseSubjRot = false;
+			return;
+		}
+
 		// Right-drag, or RB + X/Y on gamepad
 		bool gpY = FUCK::IsInputDown(Keys::kGP_Y);
 		bool gpX = FUCK::IsInputDown(Keys::kGP_X);
@@ -467,7 +475,23 @@ namespace Camera
 			_baseFov = camera->GetRuntimeData2().worldFOV;
 	}
 
-	void Core::UpdateFraming(const RE::NiPoint3& a_pivot)
+	// kFollowPose: a framed body that stands up from a kneel, or sits, is framed again, easing over so the camera doesn't jump
+	void Core::FollowFramedPose(float a_interval)
+	{
+		if (!_isFramed || !_hasFraming)
+			return;
+
+		BodyPoints body;
+		if (_followPose && _host.GetBodyPoints(body) && std::abs(body.top.GetDistance(body.bottom) - _framingHeight) > _framingHeight * FRAMING_POSE_CHANGE)
+			UpdateFraming(_host.GetPivot().value_or(_originalTranslate), true);
+
+		const float t      = SmoothFactor(FRAMING_FOLLOW_SPEED, a_interval);
+		_framingCamDelta   = _framingCamDelta + (_framingCamDeltaTo - _framingCamDelta) * t;
+		_framingPivotDelta = _framingPivotDelta + (_framingPivotDeltaTo - _framingPivotDelta) * t;
+		_framingDistance   = std::lerp(_framingDistance, _framingDistanceTo, t);
+	}
+
+	void Core::UpdateFraming(const RE::NiPoint3& a_pivot, bool a_ease)
 	{
 		// Bail if anything isn't ready yet. It's tried again next frame
 		auto worldCam = RE::Main::WorldRootCamera();
@@ -489,10 +513,17 @@ namespace Camera
 		float pivotDepth = (a_pivot - _originalTranslate).Dot(ForwardAxis(_originalRotate));
 
 		// Stored relative to the base camera so idle animation can't drag the framing around
-		_framingCamDelta   = framing->camPos - _originalTranslate;
-		_framingPivotDelta = body.centre - _originalTranslate;
-		_framingDistance   = std::max(framing->depth - pivotDepth, 0.0f);
-		_hasFraming        = true;
+		_framingCamDeltaTo   = framing->camPos - _originalTranslate;
+		_framingPivotDeltaTo = body.centre - _originalTranslate;
+		_framingDistanceTo   = std::max(framing->depth - pivotDepth, 0.0f);
+		_framingHeight       = body.top.GetDistance(body.bottom);  // along the body, so it holds for one lying down too
+
+		if (!a_ease || !_hasFraming) {
+			_framingCamDelta   = _framingCamDeltaTo;
+			_framingPivotDelta = _framingPivotDeltaTo;
+			_framingDistance   = _framingDistanceTo;
+		}
+		_hasFraming = true;
 	}
 
 	bool Core::Compose(const RE::NiPoint3& a_baseTranslate, const RE::NiMatrix3& a_baseRotate, RE::NiPoint3& a_outTranslate, RE::NiMatrix3& a_outRotate)

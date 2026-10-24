@@ -143,6 +143,7 @@ namespace Camera
 		bool                        GetBasePose(RE::NiPoint3& a_translate, RE::NiMatrix3& a_rotate) override;
 		std::optional<RE::NiPoint3> GetPivot() override;
 		bool                        GetBodyPoints(Maths::BodyPoints& a_body) override;
+		void                        MoveBaseToFront();
 		bool                        IsScrollBlocked() override;
 		void                        RotateSubject(float a_amount) override;
 

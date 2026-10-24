@@ -12,6 +12,7 @@
 namespace
 {
 	// The free camera's own update and pose queries, which a kFree session moves through
+
 	struct FreeCameraUpdate
 	{
 		static void thunk(RE::FreeCameraState* a_this, RE::BSTSmartPointer<RE::TESCameraState>& a_nextState)
@@ -45,10 +46,11 @@ namespace
 		static inline constexpr std::size_t            idx{ 0x05 };
 	};
 
-	// The third-person camera's update, which places the camera itself every frame while time runs
+	// The third-person camera's update, which places the camera itself every frame while time runs. The horse's camera is one too, with an update of its own
+	template <class T>
 	struct ThirdPersonUpdate
 	{
-		static void thunk(RE::ThirdPersonState* a_this, RE::BSTSmartPointer<RE::TESCameraState>& a_nextState)
+		static void thunk(T* a_this, RE::BSTSmartPointer<RE::TESCameraState>& a_nextState)
 		{
 			func(a_this, a_nextState);
 			MANAGER(Camera)->OnThirdPersonUpdate(a_this);
@@ -82,6 +84,7 @@ namespace
 
 	std::string_view GetName(const Camera::Session& a_session)
 	{
+		// Each branch returned on its own, as a ?: of the two would make a temporary copy of the context and point at that
 		if (a_session.context.empty())
 			return "(unnamed)";
 		return a_session.context;
@@ -108,7 +111,8 @@ namespace Camera
 	void Manager::InstallLateHooks()
 	{
 		// Once every plugin has loaded, so this wraps any other mod's hook on the same update (e.g. SmoothCam's) and always runs last
-		stl::write_vfunc<RE::ThirdPersonState, ThirdPersonUpdate>();
+		stl::write_vfunc<RE::ThirdPersonState, ThirdPersonUpdate<RE::ThirdPersonState>>();
+		stl::write_vfunc<RE::HorseCameraState, ThirdPersonUpdate<RE::HorseCameraState>>();
 
 		logger::info("Installed Third-Person Camera Hook");
 	}
@@ -211,6 +215,10 @@ namespace Camera
 					_current->fixedSubjectPos = subject->GetPosition();
 				_current->hasFixedBase   = true;
 			}
+
+			// Moved on the held base only, so the game's own camera is left as it was
+			if (_current->hasFixedBase && (_current->flags & FUCK::CameraSessionFlags::kCameraToFront))
+				MoveBaseToFront();
 		}
 
 		_current->presets.Open(_current->context, _current->base == FUCK::CameraBase::kFree);
@@ -380,6 +388,8 @@ namespace Camera
 
 		a_session.core.SetZoomAcceleration(a_session.flags & FUCK::CameraSessionFlags::kZoomAcceleration);
 		a_session.core.SetKeyboardEnabled(!(a_session.flags & FUCK::CameraSessionFlags::kNoKeyboard));
+		a_session.core.SetFollowPose(a_session.flags & FUCK::CameraSessionFlags::kFollowPose);
+		a_session.core.SetTurningEnabled(!(a_session.flags & FUCK::CameraSessionFlags::kNoTurning));
 
 		FUCKMan::GetSingleton()->RefreshGameState();
 	}
@@ -532,8 +542,10 @@ namespace Camera
 		namespace Keys = Input::Keymap;
 
 		// Blocked while the camera's controls are held, so a menu underneath doesn't act on the same keys. ImGui also only gets the mouse while input is blocked.
-		// A held mouse button or RB blocks on its own, and Ctrl and Shift are then just modifiers. Right-drag and RB turn the subject, so they still block with cameraMoves off
-		bool mouse = !_mouseLocked && (FUCK::IsInputDown(Keys::kMouse_Right) || (_cameraMoves && FUCK::IsInputDown(Keys::kMouse_Middle)));
+		// A held mouse button or RB blocks on its own, and Ctrl and Shift are then just modifiers. Right-drag and RB turn the subject, so they still block with cameraMoves off,
+		// unless the session doesn't turn it
+		const bool turns = !(_current->flags & FUCK::CameraSessionFlags::kNoTurning);
+		bool       mouse = !_mouseLocked && ((turns && FUCK::IsInputDown(Keys::kMouse_Right)) || (_cameraMoves && FUCK::IsInputDown(Keys::kMouse_Middle)));
 		if (mouse || FUCK::IsInputDown(Keys::kGP_RB))
 			return true;
 
@@ -940,6 +952,22 @@ namespace Camera
 		return subject->GetPosition();
 	}
 
+	void Manager::MoveBaseToFront()
+	{
+		auto subject = GetSubject();
+		if (!subject)
+			return;
+
+		auto&      session = *_current;
+		const auto head    = subject->GetNodeByName("NPC Head [Head]");
+		const auto pelvis  = subject->GetNodeByName("NPC Pelvis [Pelv]");
+		if (FUCK::IsLyingDown(subject) && head && pelvis &&
+			Maths::LookAlongLyingBody(session.fixedTranslate, session.fixedRotate, head->world.translate, pelvis->world.translate))
+			return;
+
+		Maths::TurnToFront(session.fixedTranslate, session.fixedRotate, subject->GetPosition(), subject->GetAngleZ());
+	}
+
 	bool Manager::GetBodyPoints(Maths::BodyPoints& a_body)
 	{
 		auto subject = GetSubject();
@@ -947,6 +975,14 @@ namespace Camera
 		const auto head   = subject ? subject->GetNodeByName("NPC Head [Head]") : nullptr;
 		if (!pelvis || !head)
 			return false;
+
+		// Lying down, the body is measured from the feet along its length instead
+		const auto leftFoot  = subject->GetNodeByName("NPC L Foot [Lft ]");
+		const auto rightFoot = subject->GetNodeByName("NPC R Foot [Rft ]");
+		if (FUCK::IsLyingDown(subject) && leftFoot && rightFoot) {
+			a_body = Maths::MakeLyingBodyPoints(head->world.translate, (leftFoot->world.translate + rightFoot->world.translate) * 0.5f);
+			return true;
+		}
 
 		// A rider's position is the saddle, so the floor is taken from the mount, framing the horse beneath them too
 		float floor = subject->GetPosition().z;
