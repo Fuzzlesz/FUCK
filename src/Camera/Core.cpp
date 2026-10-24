@@ -8,20 +8,20 @@ namespace Keys = Input::Keymap;
 namespace
 {
 	// Tuned against the speed sliders' defaults, so changing one changes how the camera feels for every consumer
-	constexpr float MOUSE_WHEEL_MULT    =  0.1f;
-	constexpr float MOUSE_MOVE_MULT     =  0.002f;
-	constexpr float MOUSE_ROT_MULT      =  0.010f;
+	constexpr float MOUSE_WHEEL_MULT      =  0.1f;
+	constexpr float MOUSE_MOVE_MULT       =  0.002f;
+	constexpr float MOUSE_ROT_MULT        =  0.010f;
 
-	constexpr float PITCH_CLAMP_LIMIT   =  1.55f;
-	constexpr float SCROLL_SMOOTH_SPEED = 15.0f;
-	constexpr float FRAMING_DURATION    =  0.8f;
-	constexpr int   FRAMING_SETTLE_FRAMES = 5;      // how many updates the framing is recalculated for after it's applied instantly, while the subject's pose settles
-	constexpr float FRAMING_POSE_CHANGE = 0.05f;    // kFollowPose: how much the body's height must change, as a share, before the framing follows, so idle sway can't
-	constexpr float FRAMING_FOLLOW_SPEED = 4.0f;
-	constexpr float ACCEL_RATE          =  1.5f;   // per second held, for pan and zoom acceleration
-	constexpr float ACCEL_MAX           = 15.0f;
-	constexpr float CINEMATIC_SPEED     = 10.0f;
-	constexpr float EPSILON             =  0.001f;
+	constexpr float PITCH_CLAMP_LIMIT     =  1.55f;
+	constexpr float SCROLL_SMOOTH_SPEED   = 15.0f;
+	constexpr float FRAMING_DURATION      =  0.8f;
+	constexpr int   FRAMING_SETTLE_FRAMES =  5;      // how many updates the framing is recalculated for after it's applied instantly, while the subject's pose settles
+	constexpr float FRAMING_POSE_CHANGE   =  0.05f;    // kFollowPose: how much the body's height must change, as a share, before the framing follows, so idle sway can't
+	constexpr float FRAMING_FOLLOW_SPEED  =  4.0f;
+	constexpr float ACCEL_RATE            =  1.5f;   // per second held, for pan and zoom acceleration
+	constexpr float ACCEL_MAX             = 15.0f;
+	constexpr float CINEMATIC_SPEED       = 10.0f;
+	constexpr float EPSILON               =  0.001f;
 
 	float InputAxis(std::uint32_t a_positive, std::uint32_t a_negative)
 	{
