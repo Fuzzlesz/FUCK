@@ -434,7 +434,7 @@ namespace Camera
 		if (session.base == FUCK::CameraBase::kThirdPerson)
 			logger::info("Third-person camera session turns the subject's {}", session.turnsHeading ? "heading, as the game is running" : "3D, as the game is paused");
 
-		// The subject first, as remembered facing and body framing are measured from where it stands
+		// The subject first, as body framing is measured from where it stands
 		if (session.flags & FUCK::CameraSessionFlags::kFaceCamera) {
 			RE::NiPoint3  baseTranslate;
 			RE::NiMatrix3 baseRotate;
@@ -452,7 +452,10 @@ namespace Camera
 		// Where the last session in this context left the camera, else the starting framing. Either lands at once rather than easing in
 		const auto& last = session.presets.GetLast();
 		if ((session.flags & FUCK::CameraSessionFlags::kRememberCamera) && last) {
-			ApplyOffsets(*last);
+			// The camera only, not how the subject faced
+			auto offset = *last;
+			offset.facingYaw.reset();
+			ApplyOffsets(offset);
 			session.core.Settle();
 		} else if (a_options.startFramed) {
 			session.core.SetBodyFraming(true, a_options.framingRect, a_options.framingMargin);
@@ -470,6 +473,9 @@ namespace Camera
 			// An FOV left alone is kept as unchanged, so the next session opens at the game's FOV even if it has changed since
 			if (!_current->core.IsFovChanged())
 				preset.offset->fov = 0.0f;
+
+			// The camera only, so the subject faces however the session starts them (kFaceCamera, or as they stand)
+			preset.offset->facingYaw.reset();
 
 			_current->presets.StoreLast(*preset.offset);
 		}
