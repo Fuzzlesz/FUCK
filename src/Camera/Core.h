@@ -83,6 +83,9 @@ namespace Camera
 		// Puts the player's FOV back for the session taking over, and keeps the offsets to carry on from when resumed
 		void Pause();
 
+		// Sets the session's FOV again, for after the game's update, where another mod may have changed it
+		void ApplyFov();
+
 		void SetZoomAcceleration(bool a_enabled) { _zoomAccelEnabled = a_enabled; }
 		void SetKeyboardEnabled(bool a_enabled) { _keyboardEnabled = a_enabled; }
 		void SetFollowPose(bool a_enabled) { _followPose = a_enabled; }
@@ -145,7 +148,6 @@ namespace Camera
 		void HandleGamepad(const FrameInput& a_in, const Config& a_settings, float a_interval);
 		void HandleSubjectRotation(const FrameInput& a_in, const Config& a_settings, float a_interval);
 		void UpdateCinematic(bool a_enabled, float a_interval);
-		void ApplyFov();
 		void CaptureBaseFov();
 		void ClearMotion();
 		void ClampPitch();

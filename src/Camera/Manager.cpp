@@ -219,8 +219,12 @@ namespace Camera
 			}
 
 			// Moved on the held base only, so the game's own camera is left as it was
-			if (_current->hasFixedBase && (_current->flags & FUCK::CameraSessionFlags::kCameraToFront))
-				MoveBaseToFront();
+			if (_current->hasFixedBase) {
+				if (_current->flags & FUCK::CameraSessionFlags::kCameraToFront)
+					MoveBaseToFront();
+				else if (_current->flags & FUCK::CameraSessionFlags::kFreshBase)
+					MoveBaseBehind();
+			}
 		}
 
 		_current->presets.Open(_current->context, _current->base == FUCK::CameraBase::kFree);
@@ -503,13 +507,17 @@ namespace Camera
 				// As Show Player in Inventory does, so SmoothCam's interpolation carries on smoothly once it's given back
 				g_smoothCam->RequestInterpolatorUpdates(handle, true);
 				_holdsSmoothCam = true;
+				_smoothCamRefused = false;
 				logger::info("Camera: took control from SmoothCam");
-			} else {
-				logger::warn("Camera: SmoothCam refused control ({})", std::to_underlying(result));
+			} else if (!_smoothCamRefused) {
+				// Once until it's given, as it's asked every frame
+				_smoothCamRefused = true;
+				logger::warn("Camera: SmoothCam refused control ({}), asking again each frame", std::to_underlying(result));
 			}
 		} else {
 			g_smoothCam->ReleaseCameraControl(handle);
 			_holdsSmoothCam = false;
+			_smoothCamRefused = false;
 			logger::info("Camera: gave control back to SmoothCam");
 		}
 	}
@@ -705,6 +713,10 @@ namespace Camera
 		if (!IsActive(a_client) || !IsOffsetBase(_current->base))
 			return;
 
+		// SmoothCam refuses while another plugin has the camera (a conversation camera still letting go as the session begins), so it's asked
+		// each frame until it's given, as SmoothCam places the camera itself till then
+		UpdateSmoothCam();
+
 		HoldSubjectYaw();
 		RunControls(a_interval);
 		if (IsActive(a_client)) {
@@ -778,9 +790,11 @@ namespace Camera
 		if (!camera || camera->currentState.get() != a_state)
 			return;
 
-		// The game has just placed the camera, replacing anything FUCK applied, so this is the new base
+		// The game has just placed the camera, replacing anything FUCK applied, so this is the new base. The FOV's set again too, as a mod can
+		// change it during the game's update (ACC eases its own)
 		_current->nodeModified = false;
 		ApplyNode();
+		_current->core.ApplyFov();
 	}
 
 	// ==================================================
@@ -962,6 +976,9 @@ namespace Camera
 		return subject->GetPosition();
 	}
 
+	// How far down a fresh base (kFreshBase) looks at the body, about what the game's camera does when the player looks level
+	constexpr float FRESH_PITCH = 6.0f * Maths::DEG2RAD;
+
 	void Manager::MoveBaseToFront()
 	{
 		auto subject = GetSubject();
@@ -987,7 +1004,29 @@ namespace Camera
 			return;
 		}
 
+		// Afresh at the front (kFreshBase), or the camera swung round to it, keeping its height and tilt
+		if (session.flags & FUCK::CameraSessionFlags::kFreshBase) {
+			Maths::FrontView(session.fixedTranslate, session.fixedRotate, BodyMiddle(*subject), subject->GetAngleZ(), FRESH_PITCH);
+			return;
+		}
 		Maths::TurnToFront(session.fixedTranslate, session.fixedRotate, subject->GetPosition(), subject->GetAngleZ());
+	}
+
+	// kFreshBase without kCameraToFront: afresh behind the subject, a front view turned round
+	void Manager::MoveBaseBehind()
+	{
+		if (auto subject = GetSubject())
+			Maths::FrontView(_current->fixedTranslate, _current->fixedRotate, BodyMiddle(*subject), subject->GetAngleZ() + std::numbers::pi_v<float>, FRESH_PITCH);
+	}
+
+	// Halfway between the head and the pelvis, which a fresh base looks at until framing places the body
+	RE::NiPoint3 Manager::BodyMiddle(RE::Actor& a_subject)
+	{
+		const auto head   = a_subject.GetNodeByName("NPC Head [Head]");
+		const auto pelvis = a_subject.GetNodeByName("NPC Pelvis [Pelv]");
+		if (head && pelvis)
+			return (head->world.translate + pelvis->world.translate) * 0.5f;
+		return a_subject.GetPosition() + RE::NiPoint3{ 0.0f, 0.0f, 90.0f };
 	}
 
 	bool Manager::GetBodyPoints(Maths::BodyPoints& a_body)

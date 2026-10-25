@@ -144,6 +144,8 @@ namespace Camera
 		std::optional<RE::NiPoint3> GetPivot() override;
 		bool                        GetBodyPoints(Maths::BodyPoints& a_body) override;
 		void                        MoveBaseToFront();
+		void                        MoveBaseBehind();
+		static RE::NiPoint3         BodyMiddle(RE::Actor& a_subject);
 		bool                        IsScrollBlocked() override;
 		void                        RotateSubject(float a_amount) override;
 
@@ -203,5 +205,6 @@ namespace Camera
 		float _saveButtonW   = 0.0f;
 
 		bool _holdsSmoothCam = false;
+		bool _smoothCamRefused = false;  // refused since last asked, so the refusal's logged once
 	};
 }
