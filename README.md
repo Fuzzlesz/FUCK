@@ -1,6 +1,10 @@
 # FUCK.dll
 https://www.nexusmods.com/skyrimspecialedition/mods/181603
 
+# API REPO
+https://github.com/Fuzzlesz/FUCK_API
+
+
 ## Requirements
 * [CMake](https://cmake.org/)
   * Add this to your `PATH`
