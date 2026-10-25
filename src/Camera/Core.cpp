@@ -8,20 +8,23 @@ namespace Keys = Input::Keymap;
 namespace
 {
 	// Tuned against the speed sliders' defaults, so changing one changes how the camera feels for every consumer
-	constexpr float MOUSE_WHEEL_MULT      =  0.1f;
-	constexpr float MOUSE_MOVE_MULT       =  0.002f;
-	constexpr float MOUSE_ROT_MULT        =  0.010f;
+	constexpr float MOUSE_WHEEL_MULT          =  0.1f;
+	constexpr float MOUSE_MOVE_MULT           =  0.002f;
+	constexpr float MOUSE_ROT_MULT            =  0.010f;
 
-	constexpr float PITCH_CLAMP_LIMIT     =  1.55f;
-	constexpr float SCROLL_SMOOTH_SPEED   = 15.0f;
-	constexpr float FRAMING_DURATION      =  0.8f;
-	constexpr int   FRAMING_SETTLE_FRAMES =  5;      // how many updates the framing is recalculated for after it's applied instantly, while the subject's pose settles
-	constexpr float FRAMING_POSE_CHANGE   =  0.05f;    // kFollowPose: how much the body's height must change, as a share, before the framing follows, so idle sway can't
-	constexpr float FRAMING_FOLLOW_SPEED  =  4.0f;
-	constexpr float ACCEL_RATE            =  1.5f;   // per second held, for pan and zoom acceleration
-	constexpr float ACCEL_MAX             = 15.0f;
-	constexpr float CINEMATIC_SPEED       = 10.0f;
-	constexpr float EPSILON               =  0.001f;
+	constexpr float PITCH_CLAMP_LIMIT         =  1.55f;
+	constexpr float SCROLL_SMOOTH_SPEED       = 15.0f;
+	constexpr float FRAMING_DURATION          =  0.8f;
+	constexpr int   FRAMING_SETTLE_FRAMES     =  5;      // how many updates the framing is recalculated for after it's applied instantly, while the subject's pose settles
+	constexpr float FRAMING_POSE_CHANGE       =  0.05f;  // kFollowPose: how much the body's height must change, as a share, before the framing follows, so idle sway can't
+	constexpr float FRAMING_FOLLOW_SPEED      =  4.0f;
+	constexpr float FRAMING_POSE_STILL        =  0.02f;  // kFollowPose: how little the body's height may change between frames, as a share, to count as holding still
+	constexpr float FRAMING_POSE_HOLD         =  0.4f;   // kFollowPose: seconds a changed pose must hold still before it's framed, so an animation (an equip, a draw) plays out first
+	constexpr float FRAMING_POSE_HOLD_SMALLER =  1.5f;   // and before it's framed smaller, as swapping a drawn weapon puts it away for a moment before drawing the next
+	constexpr float ACCEL_RATE                =  1.5f;   // per second held, for pan and zoom acceleration
+	constexpr float ACCEL_MAX                 = 15.0f;
+	constexpr float CINEMATIC_SPEED           = 10.0f;
+	constexpr float EPSILON                   =  0.001f;
 
 	float InputAxis(std::uint32_t a_positive, std::uint32_t a_negative)
 	{
@@ -481,9 +484,18 @@ namespace Camera
 		if (!_isFramed || !_hasFraming)
 			return;
 
+		// Only once a changed pose has held still for a moment, so an animation (an equip, a draw) is framed where it ends, not part way
 		BodyPoints body;
-		if (_followPose && _host.GetBodyPoints(body) && std::abs(body.top.GetDistance(body.bottom) - _framingHeight) > _framingHeight * FRAMING_POSE_CHANGE)
-			UpdateFraming(_host.GetPivot().value_or(_originalTranslate), true);
+		if (_followPose && _host.GetBodyPoints(body)) {
+			const float height = body.top.GetDistance(body.bottom);
+			const bool  still  = std::abs(height - _poseHeight) <= _poseHeight * FRAMING_POSE_STILL;
+			_poseHeight        = height;
+			_poseStillFor      = still ? _poseStillFor + a_interval : 0.0f;
+			const float hold = height < _framingHeight ? FRAMING_POSE_HOLD_SMALLER : FRAMING_POSE_HOLD;
+			if (_poseStillFor >= hold && std::abs(height - _framingHeight) > _framingHeight * FRAMING_POSE_CHANGE) {
+				UpdateFraming(_host.GetPivot().value_or(_originalTranslate), true);
+			}
+		}
 
 		const float t      = SmoothFactor(FRAMING_FOLLOW_SPEED, a_interval);
 		_framingCamDelta   = _framingCamDelta + (_framingCamDeltaTo - _framingCamDelta) * t;

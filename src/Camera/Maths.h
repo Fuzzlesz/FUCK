@@ -243,10 +243,20 @@ namespace Camera::Maths
 		return { (top + a_feet) * 0.5f, top, a_feet };
 	}
 
-	// kFrameUpperBody: the same body from a point on the spine up, keeping the top of the head where the whole body has it
+	// kFrameUpperBody lying down: the same body from a point on the spine up, along the body as it lies
 	inline BodyPoints UpperBodyPoints(const BodyPoints& a_body, const RE::NiPoint3& a_spine)
 	{
 		return { (a_body.top + a_spine) * 0.5f, a_body.top, a_spine };
+	}
+
+	// kFrameUpperBody upright: a column over a_over as tall as a_length, its top where the whole body has the top of the head. The length
+	// is taken along the spine, which bending doesn't change, and the column stands over the pelvis, so leaning in (crouching, sneaking,
+	// a drawn weapon or spell) neither shrinks nor moves the frame, only shows in it
+	inline BodyPoints UpperBodyColumn(const BodyPoints& a_body, const RE::NiPoint3& a_over, float a_length)
+	{
+		const RE::NiPoint3 top{ a_over.x, a_over.y, a_body.top.z };
+		const RE::NiPoint3 bottom{ a_over.x, a_over.y, a_body.top.z - a_length };
+		return { (top + bottom) * 0.5f, top, bottom };
 	}
 
 	inline std::optional<BodyFraming> FrameFullBody(

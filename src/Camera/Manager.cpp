@@ -1034,20 +1034,53 @@ namespace Camera
 		if (!GetWholeBodyPoints(a_body))
 			return false;
 
-		// kFrameUpperBody: from the waist up, which leaves the legs of one seated out of the frame. A rider from half their
-		// torso's length below the saddle, taking in the horse's back, so the camera keeps lower and back from the horse's head and neck
-		if (_current && (_current->flags & FUCK::CameraSessionFlags::kFrameUpperBody)) {
-			auto subject = GetSubject();
-			const auto spine  = subject ? subject->GetNodeByName("NPC Spine [Spn0]") : nullptr;
-			const auto pelvis = subject ? subject->GetNodeByName("NPC Pelvis [Pelv]") : nullptr;
-			const auto head   = subject ? subject->GetNodeByName("NPC Head [Head]") : nullptr;
-			if (subject && subject->IsOnMount() && pelvis && head) {
-				const RE::NiPoint3 saddle = pelvis->world.translate;
-				a_body = Maths::UpperBodyPoints(a_body, saddle - RE::NiPoint3{ 0.0f, 0.0f, (head->world.translate.z - saddle.z) * 0.5f });
-			} else if (spine) {
-				a_body = Maths::UpperBodyPoints(a_body, spine->world.translate);
-			}
+		// kFrameUpperBody: from just below the waist up, which leaves the legs of one seated out of the frame. A rider from half as far again
+		// below the saddle, taking in the horse's back, so the camera keeps lower and back from the horse's head and neck
+		if (!_current || !(_current->flags & FUCK::CameraSessionFlags::kFrameUpperBody))
+			return true;
+
+		auto subject = GetSubject();
+		if (FUCK::IsLyingDown(subject)) {
+			if (auto waist = subject->GetNodeByName("NPC Spine [Spn0]"))
+				a_body = Maths::UpperBodyPoints(a_body, waist->world.translate);
+			return true;
 		}
+
+		// down the spine from the head to the waist, or to the saddle for a rider, plus the room above the head
+		std::vector<const char*> chain{ "NPC Head [Head]", "NPC Neck [Neck]", "NPC Spine2 [Spn2]", "NPC Spine1 [Spn1]", "NPC Spine [Spn0]" };
+		const bool riding = subject->IsOnMount();
+		if (riding)
+			chain.push_back("NPC Pelvis [Pelv]");
+
+		float length = 0.0f;
+		RE::NiAVObject* last = nullptr;
+		for (const auto name : chain) {
+			auto bone = subject->GetNodeByName(name);
+			if (!bone)
+				return true;
+			if (last)
+				length += last->world.translate.GetDistance(bone->world.translate);
+			last = bone;
+		}
+		const auto head = subject->GetNodeByName("NPC Head [Head]");
+		// some room below the waist too, and more with a weapon or spell drawn, as the arms and what they hold reach out and down. A rider
+		// half as far again below the saddle
+		constexpr float BELOW_WAIST = 1.15f;
+		constexpr float BELOW_WAIST_READY = 1.3f;
+		constexpr float BELOW_SADDLE = 1.5f;
+		const auto state = subject->AsActorState();
+		const bool ready = state && state->IsWeaponDrawn();
+		length += a_body.top.z - head->world.translate.z;
+		length *= riding ? BELOW_SADDLE : (ready ? BELOW_WAIST_READY : BELOW_WAIST);
+
+		// sneaking, the whole body is hardly taller than the upper body, so all of it is framed, which shows the stance rather than cutting it
+		// off at the knees. Gone by the state rather than the pose, so an equip or draw animation dipping the body doesn't switch it
+		if (!riding && subject->IsSneaking())
+			return true;
+
+		// over where they stand, which no stance or idle moves, so the frame doesn't shift with every weapon or catch a lean part way. A
+		// drawn weapon gets more room instead. A rider over the saddle, as their position is
+		a_body = Maths::UpperBodyColumn(a_body, subject->GetPosition(), length);
 		return true;
 	}
 
