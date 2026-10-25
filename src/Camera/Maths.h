@@ -243,6 +243,12 @@ namespace Camera::Maths
 		return { (top + a_feet) * 0.5f, top, a_feet };
 	}
 
+	// kFrameUpperBody: the same body from a point on the spine up, keeping the top of the head where the whole body has it
+	inline BodyPoints UpperBodyPoints(const BodyPoints& a_body, const RE::NiPoint3& a_spine)
+	{
+		return { (a_body.top + a_spine) * 0.5f, a_body.top, a_spine };
+	}
+
 	inline std::optional<BodyFraming> FrameFullBody(
 		const BodyPoints&             a_body,
 		const RE::NiMatrix3&          a_camRotate,

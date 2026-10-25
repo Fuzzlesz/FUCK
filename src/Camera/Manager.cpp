@@ -1031,6 +1031,28 @@ namespace Camera
 
 	bool Manager::GetBodyPoints(Maths::BodyPoints& a_body)
 	{
+		if (!GetWholeBodyPoints(a_body))
+			return false;
+
+		// kFrameUpperBody: from the waist up, which leaves the legs of one seated out of the frame. A rider from half their
+		// torso's length below the saddle, taking in the horse's back, so the camera keeps lower and back from the horse's head and neck
+		if (_current && (_current->flags & FUCK::CameraSessionFlags::kFrameUpperBody)) {
+			auto subject = GetSubject();
+			const auto spine  = subject ? subject->GetNodeByName("NPC Spine [Spn0]") : nullptr;
+			const auto pelvis = subject ? subject->GetNodeByName("NPC Pelvis [Pelv]") : nullptr;
+			const auto head   = subject ? subject->GetNodeByName("NPC Head [Head]") : nullptr;
+			if (subject && subject->IsOnMount() && pelvis && head) {
+				const RE::NiPoint3 saddle = pelvis->world.translate;
+				a_body = Maths::UpperBodyPoints(a_body, saddle - RE::NiPoint3{ 0.0f, 0.0f, (head->world.translate.z - saddle.z) * 0.5f });
+			} else if (spine) {
+				a_body = Maths::UpperBodyPoints(a_body, spine->world.translate);
+			}
+		}
+		return true;
+	}
+
+	bool Manager::GetWholeBodyPoints(Maths::BodyPoints& a_body)
+	{
 		auto subject = GetSubject();
 		const auto pelvis = subject ? subject->GetNodeByName("NPC Pelvis [Pelv]") : nullptr;
 		const auto head   = subject ? subject->GetNodeByName("NPC Head [Head]") : nullptr;
