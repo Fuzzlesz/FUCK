@@ -134,6 +134,8 @@ namespace Camera
 		bool PassesModifierTaps() const { return _current && _inputAllowed && !(_current->flags & FUCK::CameraSessionFlags::kBlockControls); }
 		bool IsPausing() const { return _current && (_current->flags & FUCK::CameraSessionFlags::kFreezeTime); }
 		bool RunsPhysics() const { return _current && (_current->flags & FUCK::CameraSessionFlags::kRunPhysics); }
+		// Any session holds off the idle vanity camera, which would take the camera from it
+		bool BlocksVanity() const { return _current != nullptr; }
 
 		bool DrawSettings(FUCK::CameraSettingsFlags a_flags);
 		void DrawHelpMarker(FUCK::CameraSessionFlags a_flags, const char* a_extraKBM, const char* a_extraGP);

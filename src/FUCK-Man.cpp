@@ -370,7 +370,7 @@ void FUCKMan::UpdateGameState()
 	bool targetHard    = _apiHardPause;
 	bool targetBlur    = false;
 	bool targetHideHUD = false;
-	bool targetVanity  = _isVanityBlocked;
+	bool targetVanity  = _isVanityBlocked || MANAGER(Camera)->BlocksVanity();
 
 	// Main menu state.
 	if (_isOpen) {
