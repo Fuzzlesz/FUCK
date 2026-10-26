@@ -1132,8 +1132,11 @@ namespace Camera
 			RE::NiMatrix3 deltaMat;
 			deltaMat.SetEulerAnglesXYZ(0.0f, 0.0f, -a_amount);
 
+			// The heading turns on from where it was last set, as the 3D only catches up with it over the game's next updates, so turning
+			// from the 3D lost part of each step
 			if (TurnsHeading()) {
-				SetSubjectYaw(Maths::YawOf(deltaMat * root->local.rotate));
+				const float step = std::remainder(Maths::YawOf(deltaMat * root->local.rotate) - Maths::YawOf(root->local.rotate), 2.0f * std::numbers::pi_v<float>);
+				SetSubjectYaw(_current->subjectYaw.value_or(subject->GetAngleZ()) + step);
 				return;
 			}
 
