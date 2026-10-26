@@ -195,6 +195,7 @@ namespace Camera
 		float                  _framingHeight     = 0.0f;
 		float                  _poseHeight        = 0.0f;  // kFollowPose: the body's height last frame
 		float                  _poseStillFor      = 0.0f;  // kFollowPose: seconds it's held still
+		float                  _cameraDistance    = 0.0f;  // camera to pivot as last composed, which speeds scale by
 		// The moves made before framing the body, which turning it off goes back to
 		RE::NiPoint3 _unframedOffset{ 0.0f, 0.0f, 0.0f };
 		float        _unframedRotZ = 0.0f;

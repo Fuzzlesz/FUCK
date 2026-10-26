@@ -24,6 +24,7 @@ namespace
 	constexpr float ACCEL_RATE                =  1.5f;   // per second held, for pan and zoom acceleration
 	constexpr float ACCEL_MAX                 = 15.0f;
 	constexpr float CINEMATIC_SPEED           = 10.0f;
+	constexpr float REFERENCE_DISTANCE        = 43.0f;   // camera to pivot where speeds are as set: RaceMenu's face view
 	constexpr float SUBJECT_TURN_SNAP         =  0.001f; // radians of an eased turn left, under which it's finished at once
 	constexpr float EPSILON                   =  0.001f;
 
@@ -86,21 +87,12 @@ namespace Camera
 
 	float Core::GetDistanceScale()
 	{
-		// Current camera-to-pivot distance relative to the base camera's
-		RE::NiPoint3  baseTranslate;
-		RE::NiMatrix3 baseRotate;
-		auto          pivot = _host.GetPivot();
-		if (!pivot || !_host.GetBasePose(baseTranslate, baseRotate))
+		// How far the camera is from what it orbits, against one distance for every session, so moving covers the same share of the
+		// screen at any range, in any menu. Without a pivot (orbiting in place) speeds stay as set
+		if (_cameraDistance <= 0.0f)
 			return 1.0f;
 
-		float scale    = 1.0f;
-		float baseDist = baseTranslate.GetDistance(*pivot);
-		if (baseDist > 1.0f) {
-			float zoomIn = _camOffset.y - _framingDistance * _framingBlend;  // +Y moves toward the subject
-			scale        = std::max(baseDist - zoomIn, 1.0f) / baseDist;
-		}
-
-		return std::clamp(scale, 0.1f, 10.0f);
+		return std::clamp(_cameraDistance / REFERENCE_DISTANCE, 0.1f, 25.0f);
 	}
 
 	Core::SpeedScales Core::GetSpeedScales()
@@ -108,7 +100,7 @@ namespace Camera
 		SpeedScales scales;
 
 		// Pan faster when zoomed out / wide FOV so the subject crosses the screen at a consistent rate
-		scales.pan = std::clamp(GetDistanceScale() * GetFovScale(), 0.1f, 10.0f);
+		scales.pan = std::clamp(GetDistanceScale() * GetFovScale(), 0.1f, 25.0f);
 
 		// Zoom by distance only, so each step covers the same share of the way to the subject at any range
 		scales.zoom = GetDistanceScale();
@@ -559,7 +551,8 @@ namespace Camera
 		_originalTranslate = a_baseTranslate;
 		_originalRotate    = a_baseRotate;
 
-		RE::NiPoint3 pivot = _host.GetPivot().value_or(_originalTranslate);
+		const auto   hostPivot = _host.GetPivot();
+		RE::NiPoint3 pivot     = hostPivot.value_or(_originalTranslate);
 
 		if (_isFramed && !_hasFraming) {
 			UpdateFraming(pivot);
@@ -580,6 +573,7 @@ namespace Camera
 		RE::NiPoint3 finalOffset = orbitedRotate * (pitchMat * _camOffset);
 		a_outTranslate           = orbitedTranslate + finalOffset;
 		a_outRotate              = orbitedRotate * pitchMat * rollMat;
+		_cameraDistance          = hostPivot ? a_outTranslate.GetDistance(pivot) : 0.0f;
 		return true;
 	}
 
