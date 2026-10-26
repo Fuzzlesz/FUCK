@@ -124,6 +124,7 @@ namespace ImGui
 			SetCursorPosY(startY);
 
 			drawContent();
+			const ImGuiID contentId = g.LastItemData.ID;
 
 			// Explicitly register the furthest X bound so AutoResize windows don't clip
 			SetCursorPosX(maxX);
@@ -134,6 +135,11 @@ namespace ImGui
 
 			PopID();
 			EndGroup();
+
+			// The group reports the widget inside as its item, so a tooltip's hover delay keeps one ID (the group's ID otherwise changes
+			// while the widget is held, restarting the delay, so the tooltip blinks on every click)
+			if (contentId != 0)
+				g.LastItemData.ID = contentId;
 		}
 	}
 
