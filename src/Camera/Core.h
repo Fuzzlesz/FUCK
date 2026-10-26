@@ -206,6 +206,7 @@ namespace Camera
 		float _kbmAcceleration  = 1.0f;
 		bool  _lockoutGPSubjRot = false;
 		bool  _wasMouseSubjRot  = false;
+		float _pendingSubjectTurn = 0.0f;  // the part of a turn still to ease in
 
 		bool  _zoomAccelEnabled = false;
 		bool  _keyboardEnabled  = true;

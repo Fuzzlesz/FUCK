@@ -24,6 +24,7 @@ namespace
 	constexpr float ACCEL_RATE                =  1.5f;   // per second held, for pan and zoom acceleration
 	constexpr float ACCEL_MAX                 = 15.0f;
 	constexpr float CINEMATIC_SPEED           = 10.0f;
+	constexpr float SUBJECT_TURN_SNAP         =  0.001f; // radians of an eased turn left, under which it's finished at once
 	constexpr float EPSILON                   =  0.001f;
 
 	float InputAxis(std::uint32_t a_positive, std::uint32_t a_negative)
@@ -265,13 +266,14 @@ namespace Camera
 	void Core::ClearInputState()
 	{
 		// Drop anything queued up so it doesn't fire the moment the lock lifts
-		_pendingScroll    = 0.0f;
-		_smoothScrollZoom = 0.0f;
-		_smoothScrollFov  = 0.0f;
-		_kbmAcceleration  = 1.0f;
-		_zoomAcceleration = 1.0f;
-		_isZooming        = false;
-		_wasMouseSubjRot  = false;
+		_pendingScroll      = 0.0f;
+		_smoothScrollZoom   = 0.0f;
+		_smoothScrollFov    = 0.0f;
+		_kbmAcceleration    = 1.0f;
+		_zoomAcceleration   = 1.0f;
+		_isZooming          = false;
+		_wasMouseSubjRot    = false;
+		_pendingSubjectTurn = 0.0f;
 
 		// Wait for X/Y to be released, so buttons pressed while locked don't turn the subject afterwards
 		_lockoutGPSubjRot = true;
@@ -396,7 +398,8 @@ namespace Camera
 	void Core::HandleSubjectRotation(const FrameInput& a_in, const Config& a_settings, float a_interval)
 	{
 		if (!_turningEnabled) {
-			_wasMouseSubjRot = false;
+			_wasMouseSubjRot    = false;
+			_pendingSubjectTurn = 0.0f;
 			return;
 		}
 
@@ -430,8 +433,15 @@ namespace Camera
 
 		_wasMouseSubjRot = allowMouseRot;
 
-		if (rotAmount != 0.0f) {
-			_host.RotateSubject(rotAmount);
+		// Eased like the camera when cinematic, so the body (and any physics on it) doesn't jerk with each mouse step
+		_pendingSubjectTurn += rotAmount;
+		float step = a_settings.cinematic ? _pendingSubjectTurn * SmoothFactor(CINEMATIC_SPEED, a_interval) : _pendingSubjectTurn;
+		if (std::abs(_pendingSubjectTurn - step) < SUBJECT_TURN_SNAP)
+			step = _pendingSubjectTurn;
+		_pendingSubjectTurn -= step;
+
+		if (step != 0.0f) {
+			_host.RotateSubject(step);
 		}
 	}
 
@@ -726,5 +736,6 @@ namespace Camera
 		_hasFraming          = false;
 		_smoothScrollZoom    = 0.0f;
 		_smoothScrollFov     = 0.0f;
+		_pendingSubjectTurn  = 0.0f;
 	}
 }
