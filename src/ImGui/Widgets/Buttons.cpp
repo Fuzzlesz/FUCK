@@ -41,7 +41,13 @@ namespace ImGui
 			float fullAvailX = GetContentRegionAvail().x;
 			auto& style      = Styles::GetSingleton()->user;
 
-			float rightPaneStart = startX + (fullAvailX * style.widgetSplit) + g.Style.ItemInnerSpacing.x;
+			// The split is measured from where the region starts rather than the cursor, so an indented row's widget lines up with those
+			// above it, the indent coming out of the gap after its label
+			ImGuiWindow* window      = GetCurrentWindow();
+			float        regionStart = window->WorkRect.Min.x - window->Pos.x + window->Scroll.x;
+			float        regionWidth = (startX + fullAvailX) - regionStart;
+
+			float rightPaneStart = regionStart + (regionWidth * style.widgetSplit) + g.Style.ItemInnerSpacing.x;
 			float rightPaneEnd   = startX + fullAvailX;
 
 			// If you used SetNextItemWidth(-x), shrink the right pane bounds
