@@ -1078,9 +1078,15 @@ namespace Camera
 		if (!riding && subject->IsSneaking())
 			return true;
 
-		// over where they stand, which no stance or idle moves, so the frame doesn't shift with every weapon or catch a lean part way. A
-		// drawn weapon gets more room instead. A rider over the saddle, as their position is
-		a_body = Maths::UpperBodyColumn(a_body, subject->GetPosition(), length);
+		// the player's over where they stand, which no stance or idle moves, so the frame doesn't shift with every weapon or catch a lean part
+		// way (a drawn weapon gets more room instead; a rider's position is the saddle). Anyone else's over their body, between the head and
+		// pelvis, as an NPC's work idle (a smith at the anvil) bends them well away from where they stand, and they don't change weapons
+		RE::NiPoint3 over = subject->GetPosition();
+		if (!subject->IsPlayerRef()) {
+			if (auto pelvis = subject->GetNodeByName("NPC Pelvis [Pelv]"))
+				over = (head->world.translate + pelvis->world.translate) * 0.5f;
+		}
+		a_body = Maths::UpperBodyColumn(a_body, over, length);
 		return true;
 	}
 
