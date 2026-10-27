@@ -151,6 +151,7 @@ namespace Camera
 		static RE::NiPoint3         BodyMiddle(RE::Actor& a_subject);
 		bool                        IsScrollBlocked() override;
 		void                        RotateSubject(float a_amount) override;
+		void                        ResetSubject() override;
 
 		Session*             Find(const FUCK::ICameraClient* a_client) const;
 		RE::Actor*           GetSubject() const;

@@ -1152,6 +1152,12 @@ namespace Camera
 		}
 	}
 
+	void Manager::ResetSubject()
+	{
+		if (_current && _current->startSubjectYaw)
+			SetSubjectYaw(*_current->startSubjectYaw);
+	}
+
 	// A paused third-person session turns the 3D, which the game can still put back to the heading, e.g. with a position update
 	// queued as the menu opened. It's turned back, so the subject keeps the facing it was given
 	void Manager::HoldSubjectYaw()

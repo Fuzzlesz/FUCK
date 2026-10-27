@@ -27,6 +27,8 @@ namespace
 	constexpr float REFERENCE_DISTANCE        = 43.0f;   // camera to pivot where speeds are as set: RaceMenu's face view
 	constexpr float SUBJECT_TURN_SNAP         =  0.001f; // radians of an eased turn left, under which it's finished at once
 	constexpr float EPSILON                   =  0.001f;
+	constexpr float DOUBLE_CLICK_TIME         =  0.35f;  // seconds between middle clicks that reset the camera
+	constexpr float DOUBLE_CLICK_TRAVEL       =  8.0f;   // pixels the mouse may move between them, so a drag doesn't count
 
 	float InputAxis(std::uint32_t a_positive, std::uint32_t a_negative)
 	{
@@ -215,6 +217,9 @@ namespace Camera
 	{
 		FrameInput in = GatherInput(a_state);
 
+		if (HandleResetGesture(in, a_interval))
+			return;
+
 		// With cameraMoves off only turning works, so scrolls are dropped now rather than zooming once it's back on
 		if (!a_state.cameraMoves) {
 			_pendingScroll = 0.0f;
@@ -230,6 +235,53 @@ namespace Camera
 		}
 
 		HandleSubjectRotation(in, a_settings, a_interval);
+	}
+
+	bool Core::HandleResetGesture(const FrameInput& a_in, float a_interval)
+	{
+		// A double middle click, not over UI the client or FUCK owns, and not after the mouse has wandered off
+		const ImVec2 delta = FUCK::GetMouseDelta();
+		_sinceMiddleClick += a_interval;
+		_middleClickTravel += std::abs(delta.x) + std::abs(delta.y);
+
+		const bool middlePressed = a_in.mmbDown && !_wasMiddleDown;
+		_wasMiddleDown           = a_in.mmbDown;
+
+		bool reset = false;
+		if (middlePressed && !a_in.isUIHovered && !a_in.isPopupOpen && !a_in.mouseLocked) {
+			reset             = _sinceMiddleClick < DOUBLE_CLICK_TIME && _middleClickTravel < DOUBLE_CLICK_TRAVEL;
+			_sinceMiddleClick = reset ? DOUBLE_CLICK_TIME : 0.0f;  // a third click starts afresh
+			_middleClickTravel = 0.0f;
+		}
+
+		// RB + R3, while RB holds the game's input, so the menu doesn't see the click
+		const bool r3Down = FUCK::IsInputDown(Keys::kGP_R3);
+		if (r3Down && !_wasR3Down && a_in.isGlobalGP)
+			reset = true;
+		_wasR3Down = r3Down;
+
+		if (reset)
+			ResetMoves();
+		return reset;
+	}
+
+	void Core::ResetMoves()
+	{
+		// Framed or not as the session began
+		if (_isFramed != _startedFramed)
+			SetBodyFraming(_startedFramed, _framingRect, _framingMargin);
+
+		_targetCamOffset    = { 0.0f, 0.0f, 0.0f };
+		_targetCamRotZ      = 0.0f;
+		_targetCamRotX      = 0.0f;
+		_targetCamRoll      = 0.0f;
+		_targetFovOffset    = 0.0f;
+		_pendingScroll      = 0.0f;
+		_smoothScrollZoom   = 0.0f;
+		_smoothScrollFov    = 0.0f;
+		_pendingSubjectTurn = 0.0f;
+
+		_host.ResetSubject();
 	}
 
 	void Core::ClampPitch()
@@ -693,6 +745,7 @@ namespace Camera
 
 		_framingProgress = _isFramed ? 1.0f : 0.0f;
 		_framingBlend    = _framingProgress;
+		_startedFramed   = _isFramed;
 
 		// Framed instantly, so the framing is recalculated over the next few frames while the subject's pose catches up, e.g. after turning to face the camera
 		_framingSettleFrames = _isFramed ? FRAMING_SETTLE_FRAMES : 0;

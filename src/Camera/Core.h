@@ -43,6 +43,9 @@ namespace Camera
 		virtual bool IsScrollBlocked() = 0;
 
 		virtual void RotateSubject(float a_amount) = 0;
+
+		// Turns the subject back to how it faced as the session began
+		virtual void ResetSubject() = 0;
 	};
 
 	// Where the offsets are heading, for presets
@@ -73,6 +76,9 @@ namespace Camera
 
 		// Restores the FOV and clears everything
 		void Reset();
+
+		// The reset gesture: back to the starting view, framed or not as it began, easing there when cinematic
+		void ResetMoves();
 
 		// Clears offsets and framing at once, keeping only roll and FOV, for when the base itself has been moved
 		void SnapTo(float a_roll, float a_fov);
@@ -147,6 +153,7 @@ namespace Camera
 		void HandleKeyboard(const FrameInput& a_in, const Config& a_settings, float a_interval);
 		void HandleGamepad(const FrameInput& a_in, const Config& a_settings, float a_interval);
 		void HandleSubjectRotation(const FrameInput& a_in, const Config& a_settings, float a_interval);
+		bool HandleResetGesture(const FrameInput& a_in, float a_interval);
 		void UpdateCinematic(bool a_enabled, float a_interval);
 		void CaptureBaseFov();
 		void ClearMotion();
@@ -196,6 +203,7 @@ namespace Camera
 		float                  _poseHeight        = 0.0f;  // kFollowPose: the body's height last frame
 		float                  _poseStillFor      = 0.0f;  // kFollowPose: seconds it's held still
 		float                  _cameraDistance    = 0.0f;  // camera to pivot as last composed, which speeds scale by
+		bool                   _startedFramed     = false; // the session opened framed, which the reset gesture goes back to
 		// The moves made before framing the body, which turning it off goes back to
 		RE::NiPoint3 _unframedOffset{ 0.0f, 0.0f, 0.0f };
 		float        _unframedRotZ = 0.0f;
@@ -208,6 +216,12 @@ namespace Camera
 		bool  _lockoutGPSubjRot = false;
 		bool  _wasMouseSubjRot  = false;
 		float _pendingSubjectTurn = 0.0f;  // the part of a turn still to ease in
+
+		// The reset gesture: a double middle click, or RB + R3
+		float _sinceMiddleClick  = 0.0f;  // seconds since middle mouse last went down
+		float _middleClickTravel = 0.0f;  // how far the mouse has moved since
+		bool  _wasMiddleDown     = false;
+		bool  _wasR3Down         = false;
 
 		bool  _zoomAccelEnabled = false;
 		bool  _keyboardEnabled  = true;
