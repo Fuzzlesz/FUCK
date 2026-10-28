@@ -220,6 +220,11 @@ namespace Camera::Maths
 		RE::NiPoint3 centre;  // halfway up, over the pelvis
 		RE::NiPoint3 top;     // the top of the head
 		RE::NiPoint3 bottom;  // the floor under the pelvis
+
+		// Two bodies framed together: the middle of each, which the framing fits across the area too
+		RE::NiPoint3 sideA;
+		RE::NiPoint3 sideB;
+		bool         pair = false;
 	};
 
 	// From the floor to the top of the head, so crouching, which lowers the pelvis more than the head, doesn't cut the head off.
@@ -259,6 +264,20 @@ namespace Camera::Maths
 		return { (top + bottom) * 0.5f, top, bottom };
 	}
 
+	// Two bodies as one: from the lower floor to the higher top, over the point between them
+	inline BodyPoints PairBodyPoints(const BodyPoints& a_one, const BodyPoints& a_two)
+	{
+		const RE::NiPoint3 over   = (a_one.centre + a_two.centre) * 0.5f;
+		const float        top    = std::max(a_one.top.z, a_two.top.z);
+		const float        bottom = std::min(a_one.bottom.z, a_two.bottom.z);
+
+		BodyPoints pair{ { over.x, over.y, (top + bottom) * 0.5f }, { over.x, over.y, top }, { over.x, over.y, bottom } };
+		pair.sideA = a_one.centre;
+		pair.sideB = a_two.centre;
+		pair.pair  = true;
+		return pair;
+	}
+
 	inline std::optional<BodyFraming> FrameFullBody(
 		const BodyPoints&             a_body,
 		const RE::NiMatrix3&          a_camRotate,
@@ -288,11 +307,23 @@ namespace Camera::Maths
 		// For an upright body facing the camera, this is the same as fitting its height
 		const float topEdge = (a_rect.centreY + halfHeight) * a_tanHalfV;
 		const float botEdge = (a_rect.centreY - halfHeight) * a_tanHalfV;
-		const float depth   = ((topUp - botUp) - topEdge * topFwd + botEdge * botFwd) / (topEdge - botEdge);
+		float depth = ((topUp - botUp) - topEdge * topFwd + botEdge * botFwd) / (topEdge - botEdge);
 		if (depth < 1.0f)
 			return std::nullopt;
 
-		const float lift = topEdge * (topFwd + depth) - topUp;
+		float lift = topEdge * (topFwd + depth) - topUp;
+
+		// A pair also needs both bodies, shoulders and all, across an area as wide as it's tall, so the camera may stand further back. Then
+		// centred up the area, rather than filling it top to bottom
+		if (a_body.pair) {
+			constexpr float SHOULDERS = 30.0f;
+			const float     across    = halfHeight * a_tanHalfV;
+			for (const auto& side : { a_body.sideA, a_body.sideB }) {
+				const auto offset = side - a_body.centre;
+				depth = std::max(depth, (std::abs(offset.Dot(right)) + SHOULDERS) / across - offset.Dot(forward));
+			}
+			lift = a_rect.centreY * a_tanHalfV * ((topFwd + botFwd) * 0.5f + depth) - (topUp + botUp) * 0.5f;
+		}
 
 		RE::NiPoint3 camPos = a_body.centre - forward * depth - up * lift - right * (a_rect.centreX * depth * a_tanHalfH);
 		return BodyFraming{ camPos, depth };

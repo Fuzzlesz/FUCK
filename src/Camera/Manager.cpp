@@ -197,6 +197,7 @@ namespace Camera
 		session->flags      = opts.flags;
 		session->hasSubject = opts.subject != nullptr;
 		session->subject    = session->hasSubject ? opts.subject->GetHandle() : RE::ActorHandle{};
+		session->alsoFramed = opts.alsoFramed ? opts.alsoFramed->GetHandle() : RE::ActorHandle{};
 
 		auto camera = RE::PlayerCamera::GetSingleton();
 		if (camera && camera->currentState) {
@@ -1029,9 +1030,22 @@ namespace Camera
 		return a_subject.GetPosition() + RE::NiPoint3{ 0.0f, 0.0f, 90.0f };
 	}
 
+	// The subject, and anyone framed beside them, measured the same way. They're left out while they've no 3D
 	bool Manager::GetBodyPoints(Maths::BodyPoints& a_body)
 	{
-		if (!GetWholeBodyPoints(a_body))
+		if (!GetBodyPointsOf(GetSubject(), a_body))
+			return false;
+
+		Maths::BodyPoints also;
+		const auto        other = _current ? _current->alsoFramed.get() : RE::NiPointer<RE::Actor>{};
+		if (other && GetBodyPointsOf(other.get(), also))
+			a_body = Maths::PairBodyPoints(a_body, also);
+		return true;
+	}
+
+	bool Manager::GetBodyPointsOf(RE::Actor* a_actor, Maths::BodyPoints& a_body)
+	{
+		if (!GetWholeBodyPoints(a_actor, a_body))
 			return false;
 
 		// kFrameUpperBody: from just below the waist up, which leaves the legs of one seated out of the frame. A rider from half as far again
@@ -1039,7 +1053,7 @@ namespace Camera
 		if (!_current || !(_current->flags & FUCK::CameraSessionFlags::kFrameUpperBody))
 			return true;
 
-		auto subject = GetSubject();
+		auto subject = a_actor;
 		if (FUCK::IsLyingDown(subject)) {
 			if (auto waist = subject->GetNodeByName("NPC Spine [Spn0]"))
 				a_body = Maths::UpperBodyPoints(a_body, waist->world.translate);
@@ -1090,9 +1104,9 @@ namespace Camera
 		return true;
 	}
 
-	bool Manager::GetWholeBodyPoints(Maths::BodyPoints& a_body)
+	bool Manager::GetWholeBodyPoints(RE::Actor* a_actor, Maths::BodyPoints& a_body)
 	{
-		auto subject = GetSubject();
+		auto subject = a_actor;
 		const auto pelvis = subject ? subject->GetNodeByName("NPC Pelvis [Pelv]") : nullptr;
 		const auto head   = subject ? subject->GetNodeByName("NPC Head [Head]") : nullptr;
 		if (!pelvis || !head)

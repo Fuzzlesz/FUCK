@@ -23,6 +23,7 @@ namespace Camera
 		FUCK::CameraSessionFlags flags = FUCK::CameraSessionFlags::kNone;
 		RE::ActorHandle          subject;
 		bool                     hasSubject = false;
+		RE::ActorHandle          alsoFramed;  // framed beside the subject (CameraSessionOptions::alsoFramed)
 
 		bool            paused        = false;
 		RE::CameraState startingState = RE::CameraState::kThirdPerson;  // the camera it began over, which must be back before it resumes
@@ -145,7 +146,8 @@ namespace Camera
 		bool                        GetBasePose(RE::NiPoint3& a_translate, RE::NiMatrix3& a_rotate) override;
 		std::optional<RE::NiPoint3> GetPivot() override;
 		bool                        GetBodyPoints(Maths::BodyPoints& a_body) override;
-		bool                        GetWholeBodyPoints(Maths::BodyPoints& a_body);
+		bool                        GetBodyPointsOf(RE::Actor* a_actor, Maths::BodyPoints& a_body);
+		bool                        GetWholeBodyPoints(RE::Actor* a_actor, Maths::BodyPoints& a_body);
 		void                        MoveBaseToFront();
 		void                        MoveBaseBehind();
 		static RE::NiPoint3         BodyMiddle(RE::Actor& a_subject);
