@@ -299,6 +299,7 @@ namespace Camera
 		RememberCamera();
 
 		RevertNode();
+		RestoreMovement(session);
 		session.core.Pause();
 		session.freeFinal.valid = false;
 		session.paused          = true;
@@ -406,6 +407,7 @@ namespace Camera
 		if (&a_session == _current) {
 			RevertNode();
 		}
+		RestoreMovement(a_session);
 
 		// A paused session already gave the FOV back, and it may be another session's by now
 		if (!a_session.paused) {
@@ -719,6 +721,7 @@ namespace Camera
 		UpdateSmoothCam();
 
 		HoldSubjectYaw();
+		TurnPlayerToView(a_interval);
 		RunControls(a_interval);
 		if (IsActive(a_client)) {
 			ApplyNode();
@@ -796,6 +799,62 @@ namespace Camera
 		_current->nodeModified = false;
 		ApplyNode();
 		_current->core.ApplyFov();
+		MatchMovementToView(a_state);
+	}
+
+	// With the game running (Skyrim Souls), the player walks the way the game's own camera looks, which the held view has left behind. Its
+	// look round the player is turned to the view's, so forward is into the screen. Only while it looks round freely (weapon sheathed), as
+	// otherwise it stays behind the player (see TurnPlayerToView)
+	void Manager::MatchMovementToView(RE::ThirdPersonState* a_state)
+	{
+		if (!TurnsHeading() || !_current->hasFixedBase || a_state->id != RE::CameraState::kThirdPerson || !a_state->freeRotationEnabled)
+			return;
+
+		auto camera = RE::PlayerCamera::GetSingleton();
+		auto node   = camera ? camera->cameraRoot.get() : nullptr;
+		auto player = RE::PlayerCharacter::GetSingleton();
+		if (!node || !player)
+			return;
+
+		if (!_current->gameFreeRotation)
+			_current->gameFreeRotation = a_state->freeRotation.x;
+		a_state->freeRotation.x = std::remainder(Maths::YawOf(node->world.rotate) - player->GetAngleZ(), 2.0f * std::numbers::pi_v<float>);
+	}
+
+	// With a weapon drawn the player faces the way the game's camera looks and walks relative to that, so while they're moving they're turned
+	// to the view's heading instead, easing round, and face into the screen as they would behind the camera. TDM can solve this. Standing still they're left be
+	void Manager::TurnPlayerToView(float a_interval)
+	{
+		constexpr float TURN_SPEED = 12.0f;
+
+		auto camera   = RE::PlayerCamera::GetSingleton();
+		auto state    = camera && camera->currentState ? camera->currentState.get() : nullptr;
+		auto node     = camera ? camera->cameraRoot.get() : nullptr;
+		auto player   = RE::PlayerCharacter::GetSingleton();
+		auto controls = RE::PlayerControls::GetSingleton();
+		if (!TurnsHeading() || !_current->hasFixedBase || !state || state->id != RE::CameraState::kThirdPerson || !node || !player || !controls)
+			return;
+		if (static_cast<RE::ThirdPersonState*>(state)->freeRotationEnabled || controls->data.moveInputVec.Length() < 0.01f)
+			return;
+
+		const float turn = std::remainder(Maths::YawOf(node->world.rotate) - player->GetAngleZ(), 2.0f * std::numbers::pi_v<float>);
+		player->data.angle.z += turn * Maths::SmoothFactor(TURN_SPEED, a_interval);
+		player->Update3DPosition(true);
+		if (GetSubject() == player)
+			_current->subjectYaw = player->data.angle.z;
+	}
+
+	// The game's camera back behind the player as it was, rather than left looking the way the view did
+	void Manager::RestoreMovement(Session& a_session)
+	{
+		if (!a_session.gameFreeRotation)
+			return;
+
+		auto camera = RE::PlayerCamera::GetSingleton();
+		auto state  = camera && camera->currentState ? camera->currentState.get() : nullptr;
+		if (state && state->id == RE::CameraState::kThirdPerson)
+			static_cast<RE::ThirdPersonState*>(state)->freeRotation.x = *a_session.gameFreeRotation;
+		a_session.gameFreeRotation.reset();
 	}
 
 	// ==================================================

@@ -53,6 +53,9 @@ namespace Camera
 		bool          hasFixedBase = false;
 		bool          turnsHeading = false;  // see TurnsHeading()
 
+		// The game camera's own look round the player before it was turned to the view, put back after (see MatchMovementToView)
+		std::optional<float> gameFreeRotation;
+
 		// kThirdPerson: the facing FUCK turned the subject to, put back on resume in case another session turned it, and held while paused
 		std::optional<float> subjectYaw;
 		// Where the subject faced as the session began, which Reset turns it back to
@@ -117,6 +120,9 @@ namespace Camera
 
 		// kThirdPerson: called after the third-person camera's own update, which only runs while time does
 		void OnThirdPersonUpdate(RE::ThirdPersonState* a_state);
+		void MatchMovementToView(RE::ThirdPersonState* a_state);
+		void TurnPlayerToView(float a_interval);
+		void RestoreMovement(Session& a_session);
 
 		// Presets, kept per session context
 		bool        SavePreset(FUCK::ICameraClient* a_client, const char* a_name, bool a_withSubject);

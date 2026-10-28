@@ -21,6 +21,7 @@ namespace
 	constexpr float FRAMING_POSE_STILL        =  0.02f;  // kFollowPose: how little the body's height may change between frames, as a share, to count as holding still
 	constexpr float FRAMING_POSE_HOLD         =  0.4f;   // kFollowPose: seconds a changed pose must hold still before it's framed, so an animation (an equip, a draw) plays out first
 	constexpr float FRAMING_POSE_HOLD_SMALLER =  1.5f;   // and before it's framed smaller, as swapping a drawn weapon puts it away for a moment before drawing the next
+	constexpr float FRAMING_PAIR_CHANGE       =  0.1f;   // how much the space between two framed together must change, as a share, before the framing follows
 	constexpr float ACCEL_RATE                =  1.5f;   // per second held, for pan and zoom acceleration
 	constexpr float ACCEL_MAX                 = 15.0f;
 	constexpr float CINEMATIC_SPEED           = 10.0f;
@@ -540,7 +541,8 @@ namespace Camera
 
 		// Only once a changed pose has held still for a moment, so an animation (an equip, a draw) is framed where it ends, not part way
 		BodyPoints body;
-		if (_followPose && _host.GetBodyPoints(body)) {
+		const bool measured = _host.GetBodyPoints(body);
+		if (_followPose && measured) {
 			const float height = body.top.GetDistance(body.bottom);
 			const bool  still  = std::abs(height - _poseHeight) <= _poseHeight * FRAMING_POSE_STILL;
 			_poseHeight        = height;
@@ -549,6 +551,11 @@ namespace Camera
 			if (_poseStillFor >= hold && std::abs(height - _framingHeight) > _framingHeight * FRAMING_POSE_CHANGE) {
 				UpdateFraming(_host.GetPivot().value_or(_originalTranslate), true);
 			}
+		}
+
+		// Two framed together are framed again as they draw closer or apart, e.g. one following the other
+		if (measured && body.pair && std::abs(body.sideA.GetDistance(body.sideB) - _framingSpread) > _framingSpread * FRAMING_PAIR_CHANGE) {
+			UpdateFraming(_host.GetPivot().value_or(_originalTranslate), true);
 		}
 
 		const float t      = SmoothFactor(FRAMING_FOLLOW_SPEED, a_interval);
@@ -583,6 +590,7 @@ namespace Camera
 		_framingPivotDeltaTo = body.centre - _originalTranslate;
 		_framingDistanceTo   = std::max(framing->depth - pivotDepth, 0.0f);
 		_framingHeight       = body.top.GetDistance(body.bottom);  // along the body, so it holds for one lying down too
+		_framingSpread       = body.pair ? body.sideA.GetDistance(body.sideB) : 0.0f;
 
 		if (!a_ease || !_hasFraming) {
 			_framingCamDelta   = _framingCamDeltaTo;
