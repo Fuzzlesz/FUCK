@@ -6,7 +6,7 @@ namespace Camera
 {
 	struct Config
 	{
-		float kbmPanSpeed     = 15.0f;
+		float kbmPanSpeed     = 8.0f;
 		float kbmRotSpeed     = 1.5f;
 		float kbmRollSpeed    = 1.5f;
 		float kbmZoomFovSpeed = 30.0f;
@@ -202,6 +202,7 @@ namespace Camera
 		float                  _framingHeight     = 0.0f;
 		float                  _poseHeight        = 0.0f;  // kFollowPose: the body's height last frame
 		float                  _poseStillFor      = 0.0f;  // kFollowPose: seconds it's held still
+		float                  _framingSpread     = 0.0f;  // the space between two framed together, as framed
 		float                  _cameraDistance    = 0.0f;  // camera to pivot as last composed, which speeds scale by
 		bool                   _startedFramed     = false; // the session opened framed, which the reset gesture goes back to
 		// The moves made before framing the body, which turning it off goes back to
