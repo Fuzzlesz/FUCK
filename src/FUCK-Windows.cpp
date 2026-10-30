@@ -456,14 +456,14 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 			// whether or not it's being edited. Editable windows are resized by their scale handles, not their edges
 			flags |= ImGuiWindowFlags_NoResize;
 			FUCK::SetNextWindowSize({ targetSize.x + editMargin.x * 2.0f, targetSize.y + editMargin.y * 2.0f }, ImGuiCond_Always);
+		} else if (isCollapsed) {
+			// Held at the width it had open, auto-sized or not. Collapsed, an auto-sized window has only its title bar to fit, and the
+			// close button sits a little in from the right edge it's placed by, so each frame it would fit a little narrower
+			ImGui::SetNextWindowSizeConstraints(ImVec2(targetSize.x, 0.0f), ImVec2(targetSize.x, FLT_MAX));
 		} else if (!autoResize) {
-			if (isCollapsed) {
-				ImGui::SetNextWindowSizeConstraints(ImVec2(targetSize.x, 0.0f), ImVec2(targetSize.x, FLT_MAX));
-			} else {
-				ImVec2    sz       = ((winState.size.x != -1.0f) ? winState.size : targetSize);
-				ImGuiCond sizeCond = (wasCollapsed || noResize) ? ImGuiCond_Always : ImGuiCond_FirstUseEver;
-				FUCK::SetNextWindowSize(sz, sizeCond);
-			}
+			ImVec2    sz       = ((winState.size.x != -1.0f) ? winState.size : targetSize);
+			ImGuiCond sizeCond = (wasCollapsed || noResize) ? ImGuiCond_Always : ImGuiCond_FirstUseEver;
+			FUCK::SetNextWindowSize(sz, sizeCond);
 		}
 
 		// --- Host Chrome Interaction Protection ---
@@ -647,6 +647,15 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 				ImGui::GetWindowDrawList()->AddText(baseFont, a_m.titleFontSize,
 					FUCK::GetCursorScreenPos(), ImGui::GetColorU32(ImGuiCol_Text), title);
 
+				// The title is drawn rather than laid out, so it doesn't count towards the window's content. An auto-sized
+				// window would otherwise fit to its body alone and could cut the title off, or run it under the close button
+				if (autoResize) {
+					const float  titleW = baseFont->CalcTextSizeA(a_m.titleFontSize, FLT_MAX, 0.0f, title).x;
+					const float  needed = cornerInset + iconW + titleW + a_m.titleH + a_m.headerPadding + cornerInset;
+					ImGuiWindow* window = ImGui::GetCurrentWindow();
+					window->DC.CursorMaxPos.x = std::max(window->DC.CursorMaxPos.x, window->Pos.x + needed);
+				}
+
 				// 3. Close Button
 				const float btnSize = a_m.titleH;
 				const float btnX    = winWidth - btnSize - a_m.headerPadding - cornerInset;
@@ -708,9 +717,19 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 					ImGuiChildFlags  childFlags  = ImGuiChildFlags_AlwaysUseWindowPadding;
 					ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoBackground;
 
+					// A (0, 0) child fills what's left of the window, so on its own it takes the window's size rather than
+					// giving it one, and an auto-sized window never sees the consumer's content, staying as small as it
+					// started. Sized to its content instead, the window then fits around it
+					if (autoResize)
+						childFlags |= ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY;
+
 					// Themed for its scrollbar, which would otherwise run into the window's bottom corner
 					if (ImGui::BeginChildThemed("##Content", ImVec2(0, 0), childFlags, windowFlags)) {
-						ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
+						// Items fill the body's width. Not in an auto-sized one, where the width comes from the items, so
+						// filling it would hold the body at whatever width it first had. Those take ImGui's own default,
+						// and a consumer wanting set widths sets them
+						if (!autoResize)
+							ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
 						PushContentScale(a_m, ignoreUserScale);
 						_currentRenderingPlugin = win->PluginName();
 
@@ -721,7 +740,8 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 
 						_currentRenderingPlugin.clear();
 						PopContentScale();
-						ImGui::PopItemWidth();
+						if (!autoResize)
+							ImGui::PopItemWidth();
 					}
 					ImGui::EndChild();
 
