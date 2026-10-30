@@ -68,7 +68,12 @@ namespace ImGui
 		auto& style          = Styles::GetSingleton()->user;
 
 		if (hasLabel) {
-			rightPaneStart = startX + (fullAvailX * style.widgetSplit) + GetStyle().ItemInnerSpacing.x;
+			// Split from where the region starts rather than the cursor, as AlignedWidgetLayout does, so an indented row's widget lines
+			// up with the rows above it and with far-aligned widgets (checkboxes) beside it, the indent coming out of the label's gap
+			ImGuiWindow* window      = GetCurrentWindow();
+			float        regionStart = window->WorkRect.Min.x - window->Pos.x + window->Scroll.x;
+			float        regionWidth = (startX + fullAvailX) - regionStart;
+			rightPaneStart           = std::max(startX, regionStart + (regionWidth * style.widgetSplit) + GetStyle().ItemInnerSpacing.x);
 
 			float targetHeight = GetFrameHeight();
 			float textH        = GetTextLineHeight();
