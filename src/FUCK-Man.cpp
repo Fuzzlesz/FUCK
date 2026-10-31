@@ -291,11 +291,11 @@ bool FUCKMan::IsWindowSuppressed(const FUCK::IWindow* win) const
 // The vanilla HUD's modes in which it shows as normal. The same set SkyUI widgets show in by default
 static bool IsGameplayHUDMode(std::string_view a_mode)
 {
-	return a_mode == "All" ||
+	return a_mode == "All"         ||
 	       a_mode == "StealthMode" ||
-	       a_mode == "Favor" ||
-	       a_mode == "Swimming" ||
-	       a_mode == "HorseMode" ||
+	       a_mode == "Favor"       ||
+	       a_mode == "Swimming"    ||
+	       a_mode == "HorseMode"   ||
 	       a_mode == "WarHorseMode";
 }
 
