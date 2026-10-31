@@ -937,8 +937,7 @@ namespace Camera
 		a_pose->position = pose.translate;
 		Maths::AnglesFromRotation(pose.rotate, a_pose->pitch, a_pose->yaw, a_pose->roll);
 
-		auto camera = RE::PlayerCamera::GetSingleton();
-		a_pose->fov = camera ? camera->GetRuntimeData2().worldFOV : 0.0f;
+		a_pose->fov = Core::GetScreenFov();
 		return true;
 	}
 

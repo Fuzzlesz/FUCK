@@ -55,6 +55,45 @@ bool Camera::Config::HasCustomSpeeds() const
 	       differs(gpDeadzone,      def.gpDeadzone);
 }
 
+namespace
+{
+	// added to worldFOV by the game, as sprinting and bow zoom do. FUCK's FOV goes here, leaving worldFOV as the player set it
+	float& WorldFovModifier()
+	{
+		static REL::Relocation<float*> modifier{ RELOCATION_ID(527997, 414942) };
+		return *modifier;
+	}
+
+	// the first or third-person camera's FOV control, whose z the modifier's taken from each frame while the game runs (Improved Camera
+	// adds its own zoom to it), so FUCK's goes there too. none for other cameras
+	float* FovControlZ()
+	{
+		auto camera = RE::PlayerCamera::GetSingleton();
+		if (!camera || !camera->currentState)
+			return nullptr;
+
+		const auto& states = camera->GetRuntimeData().cameraStates;
+		switch (camera->currentState->id) {
+		case RE::CameraState::kFirstPerson:
+			if (auto state = static_cast<RE::FirstPersonState*>(states[RE::CameraState::kFirstPerson].get())) {
+				if (auto node = state->firstPersonFOVControl)
+					return &node->local.translate.z;
+			}
+			return nullptr;
+		case RE::CameraState::kThirdPerson:
+		case RE::CameraState::kMount:
+		case RE::CameraState::kDragon:
+			if (auto state = static_cast<RE::ThirdPersonState*>(states[RE::CameraState::kThirdPerson].get())) {
+				if (auto node = state->thirdPersonFOVControl)
+					return &node->local.translate.z;
+			}
+			return nullptr;
+		default:
+			return nullptr;
+		}
+	}
+}
+
 namespace Camera
 {
 	bool Core::IsModified() const
@@ -77,6 +116,12 @@ namespace Camera
 		a_vertical   = FovFromTanHalf(frustum.fTop);
 		a_horizontal = FovFromTanHalf(frustum.fRight);
 		return true;
+	}
+
+	float Core::GetScreenFov()
+	{
+		auto camera = RE::PlayerCamera::GetSingleton();
+		return camera ? camera->GetRuntimeData2().worldFOV + WorldFovModifier() : 0.0f;
 	}
 
 	float Core::GetFovScale() const
@@ -520,7 +565,14 @@ namespace Camera
 		CaptureBaseFov();
 
 		if (_baseFov != 0.0f)
-			camera->GetRuntimeData2().worldFOV = _baseFov + _fovOffset;
+			SetFovModifier(_fovOffset);
+	}
+
+	void Core::SetFovModifier(float a_offset)
+	{
+		WorldFovModifier() = _baseModifier + a_offset;
+		if (auto z = FovControlZ())
+			*z = _baseControlZ + a_offset;
 	}
 
 	void Core::CaptureBaseFov()
@@ -529,8 +581,12 @@ namespace Camera
 		if (_baseFov != 0.0f)
 			return;
 
-		if (auto camera = RE::PlayerCamera::GetSingleton())
-			_baseFov = camera->GetRuntimeData2().worldFOV;
+		if (auto camera = RE::PlayerCamera::GetSingleton()) {
+			const auto z  = FovControlZ();
+			_baseControlZ = z ? *z : 0.0f;
+			_baseModifier = WorldFovModifier();
+			_baseFov      = camera->GetRuntimeData2().worldFOV + _baseModifier;
+		}
 	}
 
 	// kFollowPose: a framed body that stands up from a kneel, or sits, is framed again, easing over so the camera doesn't jump
@@ -717,10 +773,8 @@ namespace Camera
 
 	void Core::Reset()
 	{
-		if (auto camera = RE::PlayerCamera::GetSingleton()) {
-			if (_baseFov != 0.0f)
-				camera->GetRuntimeData2().worldFOV = _baseFov;
-		}
+		if (_baseFov != 0.0f)
+			SetFovModifier(0.0f);
 
 		ClearMotion();
 		_baseFov = 0.0f;
@@ -761,10 +815,8 @@ namespace Camera
 
 	void Core::Pause()
 	{
-		if (auto camera = RE::PlayerCamera::GetSingleton()) {
-			if (_baseFov != 0.0f)
-				camera->GetRuntimeData2().worldFOV = _baseFov;
-		}
+		if (_baseFov != 0.0f)
+			SetFovModifier(0.0f);
 
 		ClearInputState();
 	}

@@ -91,6 +91,7 @@ namespace Camera
 
 		// Sets the session's FOV again, for after the game's update, where another mod may have changed it
 		void ApplyFov();
+		void SetFovModifier(float a_offset);
 
 		void SetZoomAcceleration(bool a_enabled) { _zoomAccelEnabled = a_enabled; }
 		void SetKeyboardEnabled(bool a_enabled) { _keyboardEnabled = a_enabled; }
@@ -112,6 +113,7 @@ namespace Camera
 		bool IsFovChanged() const { return std::abs(_targetFovOffset) > 0.01f; }  // the player has changed the FOV from where the session began
 
 		static bool GetCurrentFov(float& a_horizontal, float& a_vertical);
+		static float GetScreenFov();  // worldFOV with the game's modifier, the FOV on screen
 
 	private:
 		struct SpeedScales
@@ -181,7 +183,9 @@ namespace Camera
 		float        _targetCamRoll   = 0.0f;
 		float        _targetFovOffset = 0.0f;
 
-		float _baseFov = 0.0f;  // player's FOV, restored on reset
+		float _baseFov      = 0.0f;  // the FOV on screen as the session began
+		float _baseModifier = 0.0f;  // the game's FOV modifier then, restored on reset
+		float _baseControlZ = 0.0f;  // and its camera's FOV control
 
 		float                  _framingProgress   = 0.0f;  // linear swoop progress, eased into _framingBlend
 		float                  _framingBlend      = 0.0f;  // 0 = base view, 1 = body
