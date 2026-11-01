@@ -100,7 +100,7 @@ namespace Camera
 	{
 		return std::abs(_camOffset.x) > 0.01f || std::abs(_camOffset.y) > 0.01f || std::abs(_camOffset.z) > 0.01f ||
 		       std::abs(_camRotZ) > 0.001f    || std::abs(_camRotX) > 0.001f || std::abs(_camRoll) > 0.001f       ||
-		       std::abs(_fovOffset) > 0.01f   || _isFramed;
+		       std::abs(_fovOffset) > 0.01f   || _isFramed != _startedFramed;  // framed or not as it began isn't a change
 	}
 
 	bool Core::GetCurrentFov(float& a_horizontal, float& a_vertical)
@@ -837,6 +837,7 @@ namespace Camera
 		_unframedRotZ        = 0.0f;
 		_unframedRotX        = 0.0f;
 		_isFramed            = false;
+		_startedFramed       = false;
 		_framingProgress     = 0.0f;
 		_framingBlend        = 0.0f;
 		_framingDistance     = 0.0f;
