@@ -56,6 +56,35 @@ namespace ImGui
 			SavedKey _slow;
 		};
 
+		// Adds to a value of any of the drag's types, kept in its range (a range of 0 to 0 is none)
+		bool AddClamped(ImGuiDataType type, void* data, const void* min, const void* max, float delta)
+		{
+			auto add = [&](auto* v) {
+				using T = std::remove_pointer_t<decltype(v)>;
+				*v += static_cast<T>(delta);
+				if (min && max) {
+					T lo = *static_cast<const T*>(min);
+					T hi = *static_cast<const T*>(max);
+					if (lo < hi)
+						*v = ImClamp(*v, lo, hi);
+				}
+				return true;
+			};
+
+			switch (type) {
+			case ImGuiDataType_Float:
+				return add(static_cast<float*>(data));
+			case ImGuiDataType_Double:
+				return add(static_cast<double*>(data));
+			case ImGuiDataType_S32:
+				return add(static_cast<int32_t*>(data));
+			case ImGuiDataType_U32:
+				return add(static_cast<uint32_t*>(data));
+			default:
+				return false;
+			}
+		}
+
 		// Helper function for adjusting hovered sliders with WASD
 		bool ApplyWASDNudge(ImGuiDataType type, void* data, const void* min, const void* max, float speed)
 		{
@@ -77,35 +106,7 @@ namespace ImGui
 			float stepSmall = (speed > 0.0f) ? speed : 1.0f;
 			float stepLarge = stepSmall * 10.0f;
 
-			float totalMove = (moveX * stepSmall) + (moveY * stepLarge);
-
-			auto ClampedAdd = [](auto* v, float delta, const void* mn, const void* mx) {
-				using T = std::remove_pointer_t<decltype(v)>;
-				*v += static_cast<T>(delta);
-				if (mn && mx) {
-					T lo = *static_cast<const T*>(mn);
-					T hi = *static_cast<const T*>(mx);
-					if (lo < hi)
-						*v = ImClamp(*v, lo, hi);
-				}
-			};
-
-			switch (type) {
-			case ImGuiDataType_Float:
-				ClampedAdd(static_cast<float*>(data), totalMove, min, max);
-				return true;
-			case ImGuiDataType_Double:
-				ClampedAdd(static_cast<double*>(data), totalMove, min, max);
-				return true;
-			case ImGuiDataType_S32:
-				ClampedAdd(static_cast<int32_t*>(data), totalMove, min, max);
-				return true;
-			case ImGuiDataType_U32:
-				ClampedAdd(static_cast<uint32_t*>(data), totalMove, min, max);
-				return true;
-			default:
-				return false;
-			}
+			return AddClamped(type, data, min, max, (moveX * stepSmall) + (moveY * stepLarge));
 		}
 	}
 
@@ -126,8 +127,29 @@ namespace ImGui
 		bool h                    = ItemHoverable(bb, id, g.LastItemData.ItemFlags);
 		bool temp_input_is_active = temp_input_allowed && TempInputIsActive(id);
 
+		// The stepper's arrows at either end. Clicking one steps the value, held to repeat, and the rest of the box drags it
+		const auto   arrow     = MANAGER(IconFont)->GetStepperRight();
+		const float  scale     = GetDynamicWidgetScale();
+		const float  aspect    = arrow && arrow->imageSize.y > 0.0f ? arrow->imageSize.x / arrow->imageSize.y : 1.0f;
+		const float  arrowH    = std::min(20.0f * scale, bb.GetHeight() - 4.0f);
+		const ImVec2 arrowSize(arrowH * aspect, arrowH);
+		const float  inset     = 6.0f * scale;
+		const float  arrowZone = arrow ? inset * 2.0f + arrowSize.x : 0.0f;
+
+		int hoveredArrow = 0;  // -1 left, 1 right
+		if (h && arrow && g.ActiveId != id && MANAGER(Input)->CanNavigateWithMouse()) {
+			const float mouseX = g.IO.MousePos.x;
+			hoveredArrow       = mouseX < bb.Min.x + arrowZone ? -1 : mouseX > bb.Max.x - arrowZone ? 1 : 0;
+		}
+
+		bool changed = false;
+		if (hoveredArrow != 0 && !temp_input_is_active && IsMouseClicked(0, ImGuiInputFlags_Repeat, id)) {
+			SetFocusID(id, window);
+			changed = AddClamped(type, data, min, max, static_cast<float>(hoveredArrow) * (speed > 0.0f ? speed : 1.0f));
+		}
+
 		if (!temp_input_is_active) {
-			const bool mouse_clicked = h && IsMouseClicked(0, ImGuiInputFlags_None, id);
+			const bool mouse_clicked = h && hoveredArrow == 0 && IsMouseClicked(0, ImGuiInputFlags_None, id);
 			const bool make_active   = (mouse_clicked || g.NavActivateId == id);
 
 			if (make_active && temp_input_allowed) {
@@ -148,7 +170,6 @@ namespace ImGui
 			return TempInputScalar(bb, id, label, type, data, fmt, min, max);
 		}
 
-		bool changed = false;
 		if (h && !temp_input_is_active && MANAGER(Input)->IsInputKBM()) {
 			if (ApplyWASDNudge(type, data, min, max, speed)) {
 				changed = true;
@@ -163,6 +184,13 @@ namespace ImGui
 		else
 			RenderFrame(bb.Min, bb.Max, frameCol, true, GetFrameRounding());
 		DrawWidgetBorder(window->DrawList, bb, active || h || IsWidgetFocused(id), GetFrameRounding());
+
+		if (arrow && (active || h || IsWidgetFocused(id))) {
+			const ImU32 dim = GetUserStyleColorU32(USER_STYLE::kIconDisabled);
+			const float y   = std::floor(bb.Min.y + (bb.GetHeight() - arrowH) * 0.5f);
+			DrawArrowIcon(window->DrawList, { std::floor(bb.Min.x + inset), y }, arrowSize, hoveredArrow != 1 ? IM_COL32_WHITE : dim, IconDirection::kLeft);
+			DrawArrowIcon(window->DrawList, { std::floor(bb.Max.x - inset - arrowSize.x), y }, arrowSize, hoveredArrow != -1 ? IM_COL32_WHITE : dim, IconDirection::kRight);
+		}
 
 		{
 			ScopedGamepadTweakMask tweakMask;
