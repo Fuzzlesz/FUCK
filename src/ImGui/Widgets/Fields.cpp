@@ -88,7 +88,7 @@ namespace ImGui
 
 		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize) * currentFontScale;
 		float padX       = std::floor(std::max(GetStyle().FramePadding.x, borderSize + (8.0f * scale)));
-		float padY       = std::floor(7.0f * scale);
+		float padY       = 7.0f * GetDynamicWidgetScale();  // a button's, so it's the same height
 
 		auto CalcListHeight = [&](int items_count) -> float {
 			if (items_count <= 0)
@@ -500,7 +500,7 @@ namespace ImGui
 
 		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize) * currentFontScale;
 		float padX       = std::floor(std::max(GetStyle().FramePadding.x, borderSize + (8.0f * scale)));
-		float padY       = std::floor(7.0f * scale);
+		float padY       = 7.0f * GetDynamicWidgetScale();  // a button's, so it's the same height
 
 		auto CalcListHeight = [&](int num_items) -> float {
 			if (num_items <= 0)

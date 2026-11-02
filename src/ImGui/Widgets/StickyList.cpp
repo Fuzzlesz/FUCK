@@ -39,7 +39,7 @@ namespace ImGui
 		// Matches the height CollapsingHeaderIcon gives itself
 		float CalcHeaderHeight(const char* a_label)
 		{
-			return CalcTextSize(a_label).y + 7.0f * GetDynamicWidgetScale() * 2.0f;
+			return std::max(GetFrameHeight(), CalcTextSize(a_label).y + 14.0f * GetDynamicWidgetScale());
 		}
 
 		// Matches CollapsingHeaderIcon's side padding

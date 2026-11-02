@@ -41,10 +41,9 @@ namespace ImGui
 		bool is_open = window->DC.StateStorage->GetInt(id, (flags & ImGuiTreeNodeFlags_DefaultOpen) != 0);
 		bool is_leaf = (flags & ImGuiTreeNodeFlags_Leaf) != 0;
 
-		// Calculate total layout size using same padY as combo boxes
+		// Use the same row height as OutlineButton
 		float scale       = GetDynamicWidgetScale();
-		float padY        = 7.0f * scale;
-		float frameHeight = CalcTextSize(label).y + padY * 2.0f;
+		float frameHeight = std::max(GetFrameHeight(), CalcTextSize(label).y + 14.0f * scale);
 
 		ImVec2 pos = window->DC.CursorPos;
 		ImRect bb(pos, pos + ImVec2(GetContentRegionAvail().x, frameHeight));

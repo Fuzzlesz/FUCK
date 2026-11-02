@@ -137,8 +137,6 @@ namespace ImGui
 			SetCursorPosY(startY);
 			ItemSize(ImVec2(0.0f, actualTargetH));
 
-			Dummy(ImVec2(0.0f, 0.0f));
-
 			PopID();
 			EndGroup();
 
@@ -173,7 +171,7 @@ namespace ImGui
 		float iconH   = visualH;
 		float iconW   = iconH * (icon->imageSize.y > 0.0f ? (icon->imageSize.x / icon->imageSize.y) : 1.0f);
 
-		float layoutH       = GetFrameHeight();
+		float layoutH       = std::max(GetFrameHeight(), GetFontSize() + 14.0f * scale);  // a button's height, so rows stack alike
 		float actualLayoutH = std::max(layoutH, iconH);
 		float offY          = std::floor((actualLayoutH - iconH) * 0.5f);
 
@@ -223,7 +221,7 @@ namespace ImGui
 		float visualH = std::round(36.0f * scale * userIconScale);
 		float visualW = visualH * 1.35f;
 
-		float layoutH       = GetFrameHeight();
+		float layoutH       = std::max(GetFrameHeight(), GetFontSize() + 14.0f * scale);
 		float actualLayoutH = std::max(layoutH, visualH);
 		float offY          = std::floor((actualLayoutH - visualH) * 0.5f);
 
@@ -573,7 +571,7 @@ namespace ImGui
 		std::string idStr   = std::format("##BTN_{}", label);
 
 		// Calculate actual layout height, supporting oversized icons
-		float layoutH       = GetFrameHeight();
+		float layoutH       = std::max(GetFrameHeight(), GetFontSize() + 14.0f * GetDynamicWidgetScale());
 		float actualLayoutH = std::max(layoutH, size.y);
 		float offY          = std::floor((actualLayoutH - size.y) * 0.5f);
 
@@ -616,7 +614,7 @@ namespace ImGui
 		float scale = GetDynamicWidgetScale();
 
 		ImGuiContext& g       = *GImGui;
-		const float   layoutH = GetFrameHeight();
+		const float   layoutH = std::max(GetFrameHeight(), GetFontSize() + 14.0f * scale);
 		const float   spacing = std::max(1.0f, std::floor(g.Style.ItemInnerSpacing.x * 0.5f));
 
 		const float baseFrameH = 38.0f * scale;
