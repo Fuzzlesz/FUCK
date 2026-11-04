@@ -564,8 +564,12 @@ namespace Camera
 
 		CaptureBaseFov();
 
-		if (_baseFov != 0.0f)
-			SetFovModifier(_fovOffset);
+		// The FOV on screen is held, so a mod changing worldFOV mid-session (a conversation camera easing in its zoom) doesn't change
+		// the view: whatever it moves worldFOV by, the modifier takes back
+		if (_baseFov != 0.0f) {
+			const float drift = (_baseFov - _baseModifier) - camera->GetRuntimeData2().worldFOV;
+			SetFovModifier(_fovOffset + drift);
+		}
 	}
 
 	void Core::SetFovModifier(float a_offset)
