@@ -1016,6 +1016,12 @@ namespace Camera
 		return true;
 	}
 
+	std::optional<RE::NiPoint3> Manager::GetAnchor()
+	{
+		auto subject = GetSubject();
+		return subject ? std::optional{ subject->GetPosition() } : std::nullopt;
+	}
+
 	std::optional<RE::NiPoint3> Manager::GetPivot()
 	{
 		if (_current && (_current->flags & FUCK::CameraSessionFlags::kPivotAtCamera)) {

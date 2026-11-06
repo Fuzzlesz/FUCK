@@ -39,6 +39,9 @@ namespace Camera
 		// The body's top, bottom and centre, for body framing
 		virtual bool GetBodyPoints(Maths::BodyPoints& a_body) = 0;
 
+		// Where the subject stands, which body framing is kept relative to
+		virtual std::optional<RE::NiPoint3> GetAnchor() = 0;
+
 		// Asked only when a scroll is about to zoom, as the check can be costly
 		virtual bool IsScrollBlocked() = 0;
 

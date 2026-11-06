@@ -645,9 +645,10 @@ namespace Camera
 
 		float pivotDepth = (a_pivot - _originalTranslate).Dot(ForwardAxis(_originalRotate));
 
-		// Stored relative to the base camera so idle animation can't drag the framing around
-		_framingCamDeltaTo   = framing->camPos - _originalTranslate;
-		_framingPivotDeltaTo = body.centre - _originalTranslate;
+		// Relative to where the subject stands, so neither idle animation nor the game's camera easing on can drag it around
+		const auto anchor    = _host.GetAnchor().value_or(_originalTranslate);
+		_framingCamDeltaTo   = framing->camPos - anchor;
+		_framingPivotDeltaTo = body.centre - anchor;
 		_framingDistanceTo   = std::max(framing->depth - pivotDepth, 0.0f);
 		_framingHeight       = body.top.GetDistance(body.bottom);  // along the body, so it holds for one lying down too
 		_framingSpread       = body.pair ? body.sideA.GetDistance(body.sideB) : 0.0f;
@@ -680,9 +681,10 @@ namespace Camera
 
 		RE::NiPoint3 camBase = _originalTranslate;
 		if (_hasFraming && _framingBlend > 0.0f) {
-			RE::NiPoint3 bodyPivot = _originalTranslate + _framingPivotDelta;
+			const auto   anchor    = _host.GetAnchor().value_or(_originalTranslate);
+			RE::NiPoint3 bodyPivot = anchor + _framingPivotDelta;
 			pivot                  = pivot + (bodyPivot - pivot) * _framingBlend;
-			camBase                = _originalTranslate + _framingCamDelta * _framingBlend;
+			camBase                = _originalTranslate + (anchor + _framingCamDelta - _originalTranslate) * _framingBlend;
 		}
 
 		RE::NiPoint3  orbitedTranslate = OrbitAroundZ(pivot, camBase, _camRotZ);

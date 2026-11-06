@@ -151,6 +151,7 @@ namespace Camera
 		// Host
 		bool                        GetBasePose(RE::NiPoint3& a_translate, RE::NiMatrix3& a_rotate) override;
 		std::optional<RE::NiPoint3> GetPivot() override;
+		std::optional<RE::NiPoint3> GetAnchor() override;
 		bool                        GetBodyPoints(Maths::BodyPoints& a_body) override;
 		bool                        GetBodyPointsOf(RE::Actor* a_actor, Maths::BodyPoints& a_body);
 		bool                        GetWholeBodyPoints(RE::Actor* a_actor, Maths::BodyPoints& a_body);
