@@ -1,15 +1,18 @@
 #include "System/Physics.h"
 
 #include "Camera/Manager.h"
+#include "System/Freeze.h"
 
 namespace Physics
 {
 	namespace
 	{
-		// Whether the camera session wants physics, and the game is paused so they'd otherwise stop
+		// Whether the camera session wants physics, and the game is paused so they'd otherwise stop. Not while an actor is frozen, as
+		// their physics would carry on moving while they hold still
 		bool IsWanted(RE::UI* a_ui, RE::Main* a_main)
 		{
-			return MANAGER(Camera)->RunsPhysics() && (a_ui->GameIsPaused() || a_main->GetRuntimeData().freezeTime);
+			return MANAGER(Camera)->RunsPhysics() && !MANAGER(Freeze)->IsAnyFrozen() &&
+			       (a_ui->GameIsPaused() || a_main->GetRuntimeData().freezeTime);
 		}
 
 		// ==================================================

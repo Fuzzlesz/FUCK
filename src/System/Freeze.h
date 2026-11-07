@@ -9,6 +9,7 @@ namespace Freeze
 	public:
 		void SetFrozen(const char* a_pluginName, RE::Actor* a_actor, bool a_frozen);
 		bool IsFrozen(RE::Actor* a_actor) const;
+		bool IsAnyFrozen() const { return !_frozen.empty(); }
 
 		// Keeps frozen faces' eyes open and still, as the game would otherwise go on blinking
 		void OnFrame();
