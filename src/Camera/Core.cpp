@@ -100,7 +100,7 @@ namespace Camera
 	{
 		return std::abs(_camOffset.x) > 0.01f || std::abs(_camOffset.y) > 0.01f || std::abs(_camOffset.z) > 0.01f ||
 		       std::abs(_camRotZ) > 0.001f    || std::abs(_camRotX) > 0.001f || std::abs(_camRoll) > 0.001f       ||
-		       std::abs(_fovOffset) > 0.01f   || _isFramed != _startedFramed;  // framed or not as it began isn't a change
+		       std::abs(_fovOffset - _startFovOffset) > 0.01f || _isFramed != _startedFramed;  // framed or not as it began isn't a change
 	}
 
 	bool Core::GetCurrentFov(float& a_horizontal, float& a_vertical)
@@ -321,7 +321,7 @@ namespace Camera
 		_targetCamRotZ      = 0.0f;
 		_targetCamRotX      = 0.0f;
 		_targetCamRoll      = 0.0f;
-		_targetFovOffset    = 0.0f;
+		_targetFovOffset    = _startFovOffset;
 		_pendingScroll      = 0.0f;
 		_smoothScrollZoom   = 0.0f;
 		_smoothScrollFov    = 0.0f;
@@ -569,6 +569,7 @@ namespace Camera
 		if (_baseFov != 0.0f) {
 			const float drift = (_baseFov - _baseModifier) - camera->GetRuntimeData2().worldFOV;
 			SetFovModifier(_fovOffset + drift);
+			_appliedFovOffset = _fovOffset;
 		}
 	}
 
@@ -639,7 +640,11 @@ namespace Camera
 		if (!_host.GetBodyPoints(body))
 			return;
 
-		auto framing = FrameFullBody(body, _originalRotate, frustum.fTop, frustum.fRight, _framingMargin, _framingRect);
+		// Measured at the FOV the session opened at, so changing it zooms on the framing rather than moving the camera to keep the body its
+		// size, which a narrow FOV would carry out through the walls. The view in use is at the FOV last applied
+		const float lens = _baseFov > 0.0f ? FovScale(_baseFov + _appliedFovOffset, _baseFov + _startFovOffset) : 1.0f;
+
+		auto framing = FrameFullBody(body, _originalRotate, frustum.fTop * lens, frustum.fRight * lens, _framingMargin, _framingRect);
 		if (!framing)
 			return;
 
@@ -760,6 +765,15 @@ namespace Camera
 		return offsets;
 	}
 
+	void Core::SetStartFov(float a_fov)
+	{
+		CaptureBaseFov();
+		if (a_fov > 0.0f && _baseFov != 0.0f) {
+			_startFovOffset  = a_fov - _baseFov;
+			_targetFovOffset = _startFovOffset;
+		}
+	}
+
 	void Core::SetTargetOffsets(const Offsets& a_offsets)
 	{
 		_targetCamOffset = a_offsets.translate;
@@ -839,6 +853,8 @@ namespace Camera
 		_targetCamRotX       = 0.0f;
 		_targetCamRoll       = 0.0f;
 		_targetFovOffset     = 0.0f;
+		_startFovOffset      = 0.0f;
+		_appliedFovOffset    = 0.0f;
 		_unframedOffset      = { 0.0f, 0.0f, 0.0f };
 		_unframedRotZ        = 0.0f;
 		_unframedRotX        = 0.0f;

@@ -89,6 +89,10 @@ namespace Camera
 		// Lands on the target offsets and finishes any framing swoop at once, e.g. for a session opening where it was left
 		void Settle();
 
+		// The FOV the session opens at, and the reset gesture goes back to, rather than the player's
+		void  SetStartFov(float a_fov);
+		float GetStartFov() const { return _startFovOffset != 0.0f ? _baseFov + _startFovOffset : 0.0f; }
+
 		// Puts the player's FOV back for the session taking over, and keeps the offsets to carry on from when resumed
 		void Pause();
 
@@ -113,7 +117,7 @@ namespace Camera
 
 		bool HasAnyCamera() const { return IsModified() || _framingBlend > 0.001f; }
 		bool IsModified() const;
-		bool IsFovChanged() const { return std::abs(_targetFovOffset) > 0.01f; }  // the player has changed the FOV from where the session began
+		bool IsFovChanged() const { return std::abs(_targetFovOffset - _startFovOffset) > 0.01f; }  // the player has changed the FOV from where the session began
 
 		static bool GetCurrentFov(float& a_horizontal, float& a_vertical);
 		static float GetScreenFov();  // worldFOV with the game's modifier, the FOV on screen
@@ -189,6 +193,9 @@ namespace Camera
 		float _baseFov      = 0.0f;  // the FOV on screen as the session began
 		float _baseModifier = 0.0f;  // the game's FOV modifier then, restored on reset
 		float _baseControlZ = 0.0f;  // and its camera's FOV control
+
+		float _startFovOffset   = 0.0f;  // where the FOV starts (SetStartFov), from the player's
+		float _appliedFovOffset = 0.0f;  // the FOV offset last given to the game, which the view in use is at
 
 		float                  _framingProgress   = 0.0f;  // linear swoop progress, eased into _framingBlend
 		float                  _framingBlend      = 0.0f;  // 0 = base view, 1 = body

@@ -458,6 +458,10 @@ namespace Camera
 		if (!IsOffsetBase(session.base))
 			return;
 
+		// The FOV it opens at, if the client gave one, which a remembered FOV still wins over
+		if (a_options.startFov > 0.0f)
+			session.core.SetStartFov(a_options.startFov);
+
 		// Where the last session in this context left the camera, else the starting framing. Either lands at once rather than easing in
 		const auto& last = session.presets.GetLast();
 		if ((session.flags & FUCK::CameraSessionFlags::kRememberCamera) && last) {
@@ -607,7 +611,14 @@ namespace Camera
 	{
 		if (IsActive(a_client)) {
 			RevertNode();
+			const float startFov = _current->core.GetStartFov();
 			_current->core.Reset();
+
+			// Back to the FOV the session opened at, not the game's
+			if (startFov > 0.0f) {
+				_current->core.SetStartFov(startFov);
+				_current->core.Settle();
+			}
 
 			if (_current->startSubjectYaw) {
 				SetSubjectYaw(*_current->startSubjectYaw);
