@@ -202,6 +202,26 @@ public:
 		}
 	}
 
+	// --- Settings Listeners ---
+	using SettingsCallback = void (*)(const char*, const char*, bool, void*);
+
+	void AddSettingsListener(void* userdata, SettingsCallback callback) { _settingsListeners.push_back({ userdata, callback }); }
+
+	void RemoveSettingsListener(void* userdata)
+	{
+		std::erase_if(_settingsListeners, [userdata](const SettingsListenerEntry& e) { return e.userdata == userdata; });
+	}
+
+	// After a plugin's INI or keybinds are saved, by it or another plugin (savedBy, nullptr when unknown)
+	void DispatchSettingsSaved(const char* pluginName, const char* savedBy, bool keybinds)
+	{
+		// Copy so listeners can safely remove themselves during the callback
+		auto listenersCopy = _settingsListeners;
+		for (auto& e : listenersCopy) {
+			e.callback(pluginName, savedBy, keybinds, e.userdata);
+		}
+	}
+
 	// --- Window Event Listeners ---
 	struct WindowListenerEntry
 	{
@@ -332,6 +352,14 @@ private:
 	};
 
 	std::vector<MenuListenerEntry> _menuListeners;
+
+	struct SettingsListenerEntry
+	{
+		void*            userdata;
+		SettingsCallback callback;
+	};
+	std::vector<SettingsListenerEntry> _settingsListeners;
+
 	std::vector<FUCK::ITool*>      _tools;
 	std::vector<FUCK::IWindow*>    _windows;
 	std::set<std::string>          _pausedMenus;

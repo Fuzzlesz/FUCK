@@ -338,13 +338,21 @@ namespace FUCK::Host
 		});
 	}
 
-	static void SavePluginINI_Impl(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*))
+	// Saves a plugin's INI or keybinds, then tells the settings listeners, so its owner can reload when another plugin saved it
+	static void SavePluginFile(const char* pluginName, const char* savedBy, bool keybinds, void* userdata, void (*callback)(CSimpleIniA&, void*))
 	{
 		if (!callback || !pluginName)
 			return;
-		std::string userPath = std::format(R"(Data\FUCKs\{}\settings_user.ini)", pluginName);
+		std::string userPath = keybinds ? std::format(R"(Data\FUCKs\{}\keybinds_user.ini)", pluginName) :
+		                                  std::format(R"(Data\FUCKs\{}\settings_user.ini)", pluginName);
 
 		Settings::GetSingleton()->LoadINI(userPath.c_str(), [userdata, callback](CSimpleIniA& ini) { callback(ini, userdata); }, true);
+		FUCKMan::GetSingleton()->DispatchSettingsSaved(pluginName, savedBy, keybinds);
+	}
+
+	static void SavePluginINI_Impl(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*))
+	{
+		SavePluginFile(pluginName, nullptr, false, userdata, callback);
 	}
 
 	static void LoadPluginINIDefaults_Impl(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*))
@@ -372,11 +380,7 @@ namespace FUCK::Host
 
 	static void SavePluginKeybinds_Impl(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*))
 	{
-		if (!callback || !pluginName)
-			return;
-		std::string userPath = std::format(R"(Data\FUCKs\{}\keybinds_user.ini)", pluginName);
-
-		Settings::GetSingleton()->LoadINI(userPath.c_str(), [userdata, callback](CSimpleIniA& ini) { callback(ini, userdata); }, true);
+		SavePluginFile(pluginName, nullptr, true, userdata, callback);
 	}
 
 	static void LoadPluginKeybindsDefaults_Impl(const char* pluginName, void* userdata, void (*callback)(CSimpleIniA&, void*))
@@ -1114,6 +1118,12 @@ namespace FUCK::Host
 	static void SetAutoVanityBlockedBy_Impl(const char* pluginName, bool blocked) { FUCKMan::GetSingleton()->SetVanityBlockedBy(pluginName, blocked); }
 	static void SetHardPauseBy_Impl(const char* pluginName, bool paused) { FUCKMan::GetSingleton()->SetHardPauseBy(pluginName, paused); }
 	static void SetSoftPauseBy_Impl(const char* pluginName, bool paused) { FUCKMan::GetSingleton()->SetSoftPauseBy(pluginName, paused); }
+	static void SavePluginSettings_Impl(const char* pluginName, const char* savedBy, bool keybinds, void* userdata, void (*callback)(CSimpleIniA&, void*))
+	{
+		SavePluginFile(pluginName, savedBy, keybinds, userdata, callback);
+	}
+	static void AddSettingsListener_Impl(void* userdata, void (*callback)(const char*, const char*, bool, void*)) { FUCKMan::GetSingleton()->AddSettingsListener(userdata, callback); }
+	static void RemoveSettingsListener_Impl(void* userdata) { FUCKMan::GetSingleton()->RemoveSettingsListener(userdata); }
 	static void MoveCameraEx_Impl(const CameraMoveEx* move, InputDevice device, float mult)
 	{
 		if (!move)
@@ -1475,7 +1485,10 @@ namespace FUCK::Host
 			.SetAutoVanityBlockedBy = SetAutoVanityBlockedBy_Impl,
 			.SetHardPauseBy         = SetHardPauseBy_Impl,
 			.SetSoftPauseBy         = SetSoftPauseBy_Impl,
-			.MoveCameraEx           = MoveCameraEx_Impl
+			.MoveCameraEx           = MoveCameraEx_Impl,
+			.SavePluginSettings     = SavePluginSettings_Impl,
+			.AddSettingsListener    = AddSettingsListener_Impl,
+			.RemoveSettingsListener = RemoveSettingsListener_Impl
 		};
 		return &api;
 	}
