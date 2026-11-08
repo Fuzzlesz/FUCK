@@ -61,6 +61,9 @@ namespace Camera
 		// Where the subject faced as the session began, which Reset turns it back to
 		std::optional<float> startSubjectYaw;
 
+		// A pose to land on at the next update: SetCameraPose() on the offset bases, or kStartFromView
+		std::optional<FUCK::CameraPose> pendingPose;
+
 		// kHoldHeadStill: whose head is held, and whether it tracked before
 		RE::ActorHandle heldHead;
 		bool            heldHeadTracked = false;
@@ -172,6 +175,7 @@ namespace Camera
 		RE::Actor*           GetSubject() const;
 		std::optional<float> GetSubjectYaw() const;
 		RE::FreeCameraState* GetFreeState() const;
+		void                 ApplyFreePose(RE::FreeCameraState* a_state, const FUCK::CameraPose& a_pose);
 		bool                 IsFreeState(const RE::FreeCameraState* a_state) const;
 		bool                 IsFree() const { return _current && _current->base == FUCK::CameraBase::kFree; }
 		bool                 IsThirdPerson() const { return _current && _current->base == FUCK::CameraBase::kThirdPerson; }

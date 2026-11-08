@@ -189,6 +189,24 @@ namespace Camera::Maths
 		a_roll             = std::atan2(right.Dot(UpAxis(unrolled)), right.Dot(RightAxis(unrolled)));
 	}
 
+	// A pose's rotation, the inverse of AnglesFromRotation
+	inline RE::NiMatrix3 RotationFromAngles(float a_pitch, float a_yaw, float a_roll)
+	{
+		RE::NiMatrix3 unrolled;
+		unrolled.EulerAnglesToAxesZXY(a_pitch, 0.0f, a_yaw);
+		return unrolled * MakeRoll(a_roll);
+	}
+
+	inline RE::NiMatrix3 Transposed(const RE::NiMatrix3& a_rot)
+	{
+		RE::NiMatrix3 m;
+		for (int row = 0; row < 3; ++row) {
+			for (int col = 0; col < 3; ++col)
+				m.entry[row][col] = a_rot.entry[col][row];
+		}
+		return m;
+	}
+
 	inline RE::NiPoint3 OrbitAroundZ(const RE::NiPoint3& a_pivot, const RE::NiPoint3& a_point, float a_yaw)
 	{
 		float c = std::cos(a_yaw);

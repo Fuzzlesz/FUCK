@@ -183,6 +183,19 @@ namespace Camera
 			}
 		}
 
+		// kStartFromView: the view as the session shown now has it, before it lets go
+		std::optional<FUCK::CameraPose> startView;
+		auto camera = RE::PlayerCamera::GetSingleton();
+		if (_current && (opts.flags & FUCK::CameraSessionFlags::kStartFromView)) {
+			if (auto root = camera ? camera->cameraRoot.get() : nullptr) {
+				FUCK::CameraPose view;
+				view.position = root->local.translate;
+				Maths::AnglesFromRotation(root->local.rotate, view.pitch, view.yaw, view.roll);
+				view.fov  = Core::GetScreenFov();
+				startView = view;
+			}
+		}
+
 		if (_current) {
 			if (_current->flags & FUCK::CameraSessionFlags::kResumable) {
 				PauseCurrent();
@@ -199,8 +212,8 @@ namespace Camera
 		session->hasSubject = opts.subject != nullptr;
 		session->subject    = session->hasSubject ? opts.subject->GetHandle() : RE::ActorHandle{};
 		session->alsoFramed = opts.alsoFramed ? opts.alsoFramed->GetHandle() : RE::ActorHandle{};
+		session->pendingPose = startView;
 
-		auto camera = RE::PlayerCamera::GetSingleton();
 		if (camera && camera->currentState) {
 			session->startingState = camera->currentState->id;
 		}
@@ -621,6 +634,7 @@ namespace Camera
 	{
 		if (IsActive(a_client)) {
 			RevertNode();
+			_current->pendingPose.reset();
 			const float startFov = _current->core.GetStartFov();
 			_current->core.Reset();
 
@@ -852,10 +866,19 @@ namespace Camera
 		const auto  baseTranslate = session.hasFixedBase ? HeldTranslate() : node->local.translate;
 		const auto& baseRotate    = session.hasFixedBase ? session.fixedRotate : node->local.rotate;
 
-		// Without offsets there's nothing to apply, unless the base is held, as the game's camera may have moved from it
+		if (session.pendingPose) {
+			const auto& pose = *session.pendingPose;
+			session.core.SolvePose(baseTranslate, baseRotate, pose.position, Maths::RotationFromAngles(pose.pitch, pose.yaw, pose.roll), pose.fov);
+			session.pendingPose.reset();
+		}
+
+		// Without offsets there's nothing to apply, unless the base is held, as the game's camera may have moved from it, or the client moves it
 		RE::NiPoint3  translate;
 		RE::NiMatrix3 rotate;
-		if (!session.core.Compose(baseTranslate, baseRotate, translate, rotate) && !session.hasFixedBase)
+		const bool    composed   = session.core.Compose(baseTranslate, baseRotate, translate, rotate);
+		const auto    composedAt = translate;
+		session.client->OnCameraFinalPosition(translate);
+		if (!composed && !session.hasFixedBase && translate == composedAt)
 			return;
 
 		session.nodeOriginalTranslate = node->local.translate;
@@ -993,6 +1016,10 @@ namespace Camera
 		}
 
 		auto& session = *_current;
+		if (session.pendingPose) {
+			ApplyFreePose(a_state, *session.pendingPose);
+			session.pendingPose.reset();
+		}
 
 		// The pose the free camera would show on its own, before FUCK's moves
 		FreeCameraGetTranslation::func(a_state, session.freeBase.translate);
@@ -1037,8 +1064,27 @@ namespace Camera
 
 	bool Manager::GetPose(const FUCK::ICameraClient* a_client, FUCK::CameraPose* a_pose) const
 	{
-		if (!a_pose || !IsActive(a_client) || _current->base != FUCK::CameraBase::kFree)
+		if (!a_pose || !IsActive(a_client))
 			return false;
+
+		// One still to land is where it's heading
+		if (_current->pendingPose) {
+			*a_pose = *_current->pendingPose;
+			return true;
+		}
+
+		if (IsOffsetBase(_current->base)) {
+			auto camera = RE::PlayerCamera::GetSingleton();
+			auto node   = camera ? camera->cameraRoot.get() : nullptr;
+			if (!node)
+				return false;
+
+			const bool applied = _current->nodeModified;
+			a_pose->position   = applied ? _current->nodeAppliedTranslate : node->local.translate;
+			Maths::AnglesFromRotation(applied ? _current->nodeAppliedRotate : node->local.rotate, a_pose->pitch, a_pose->yaw, a_pose->roll);
+			a_pose->fov = Core::GetScreenFov();
+			return true;
+		}
 
 		const auto& pose = _current->freeFinal.valid ? _current->freeFinal : _current->freeBase;
 		if (!pose.valid)
@@ -1053,22 +1099,33 @@ namespace Camera
 
 	bool Manager::SetPose(FUCK::ICameraClient* a_client, const FUCK::CameraPose* a_pose)
 	{
-		if (!a_pose || !IsActive(a_client) || _current->base != FUCK::CameraBase::kFree)
+		if (!a_pose || !IsActive(a_client))
 			return false;
+
+		// Offset bases land on it at the next update, solved against the base as it is then
+		if (IsOffsetBase(_current->base)) {
+			_current->pendingPose = *a_pose;
+			return true;
+		}
 
 		auto state = GetFreeState();
 		if (!state)
 			return false;
 
+		ApplyFreePose(state, *a_pose);
+		return true;
+	}
+
+	void Manager::ApplyFreePose(RE::FreeCameraState* a_state, const FUCK::CameraPose& a_pose)
+	{
 		// The free camera holds position, pitch and yaw itself, while roll and FOV are FUCK's
-		state->translation = a_pose->position;
-		state->rotation.x  = a_pose->pitch;
-		state->rotation.y  = a_pose->yaw;
-		_current->core.SnapTo(a_pose->roll, a_pose->fov);
+		a_state->translation = a_pose.position;
+		a_state->rotation.x  = a_pose.pitch;
+		a_state->rotation.y  = a_pose.yaw;
+		_current->core.SnapTo(a_pose.roll, a_pose.fov);
 
 		// Shown as set until the next update recalculates the final pose
 		_current->freeFinal.valid = false;
-		return true;
 	}
 
 	// ==================================================

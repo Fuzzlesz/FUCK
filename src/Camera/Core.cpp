@@ -824,6 +824,52 @@ namespace Camera
 		_targetFovOffset = fovOffset;
 	}
 
+	void Core::SolvePose(const RE::NiPoint3& a_baseTranslate, const RE::NiMatrix3& a_baseRotate, const RE::NiPoint3& a_translate, const RE::NiMatrix3& a_rotate, float a_fov)
+	{
+		ClearMotion();
+		_isFramed   = false;
+		_hasFraming = false;
+
+		// The orbit turns the base round world Z until its right axis is square to the pose's forward, so pitch and roll about the camera's
+		// own axes make up the rest. Of the two turns that do, the one facing the pose's way
+		const RE::NiPoint3 right   = RightAxis(a_baseRotate);
+		const RE::NiPoint3 forward = ForwardAxis(a_rotate);
+		const float        along   = right.x * forward.x + right.y * forward.y;
+		const float        across  = right.x * forward.y - right.y * forward.x;
+		const float        length  = std::sqrt(along * along + across * across);
+
+		float orbit = _camRotZ;
+		if (length > EPSILON) {
+			const float turn   = std::atan2(across, along);
+			const float spread = std::acos(std::clamp(-right.z * forward.z / length, -1.0f, 1.0f));
+			const auto  facing = [&](float a_orbit) {
+				const auto ahead = ForwardAxis(MakeYaw(a_orbit) * a_baseRotate);
+				return ahead.x * forward.x + ahead.y * forward.y;
+			};
+			orbit = facing(turn + spread) >= facing(turn - spread) ? turn + spread : turn - spread;
+		}
+
+		const RE::NiMatrix3 turned = MakeYaw(orbit) * a_baseRotate;
+		const RE::NiMatrix3 local  = Transposed(turned) * a_rotate;
+		const float         pitch  = std::atan2(local.entry[2][1], local.entry[1][1]);
+		const float         roll   = std::atan2(-local.entry[0][2], local.entry[0][0]);
+
+		const RE::NiPoint3 pivot   = _host.GetPivot().value_or(a_baseTranslate);
+		const RE::NiPoint3 orbited = OrbitAroundZ(pivot, a_baseTranslate, orbit);
+
+		_targetCamRotZ   = orbit;
+		_targetCamRotX   = pitch;
+		_targetCamRoll   = roll;
+		_targetCamOffset = Transposed(MakePitch(pitch)) * (Transposed(turned) * (a_translate - orbited));
+
+		// A pose without a FOV keeps the current one
+		CaptureBaseFov();
+		if (a_fov > 0.0f && _baseFov != 0.0f)
+			_targetFovOffset = a_fov - _baseFov;
+
+		Land();
+	}
+
 	void Core::Settle()
 	{
 		Land();

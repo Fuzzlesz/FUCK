@@ -86,6 +86,9 @@ namespace Camera
 		// Clears offsets and framing at once, keeping only roll and FOV, for when the base itself has been moved
 		void SnapTo(float a_roll, float a_fov);
 
+		// Offset bases: the offsets putting the camera at a pose (in the base's space) from this base, unframed and landed at once
+		void SolvePose(const RE::NiPoint3& a_baseTranslate, const RE::NiMatrix3& a_baseRotate, const RE::NiPoint3& a_translate, const RE::NiMatrix3& a_rotate, float a_fov);
+
 		// Lands on the target offsets and finishes any framing swoop at once, e.g. for a session opening where it was left
 		void Settle();
 
