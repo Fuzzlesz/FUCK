@@ -7,11 +7,11 @@ namespace Physics
 {
 	namespace
 	{
-		// Whether the camera session wants physics, and the game is paused so they'd otherwise stop. Not while an actor is frozen, as
-		// their physics would carry on moving while they hold still
+		// Whether the camera session wants physics, and the game is paused so they'd otherwise stop. Not while a freeze holds them, as a
+		// frozen actor's physics would carry on moving while they hold still
 		bool IsWanted(RE::UI* a_ui, RE::Main* a_main)
 		{
-			return MANAGER(Camera)->RunsPhysics() && !MANAGER(Freeze)->IsAnyFrozen() &&
+			return MANAGER(Camera)->RunsPhysics() && !MANAGER(Freeze)->HoldsPhysics() &&
 			       (a_ui->GameIsPaused() || a_main->GetRuntimeData().freezeTime);
 		}
 

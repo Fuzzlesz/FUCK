@@ -2,7 +2,7 @@
 
 namespace Freeze
 {
-	void Manager::SetFrozen(const char* a_pluginName, RE::Actor* a_actor, bool a_frozen)
+	void Manager::SetFrozen(const char* a_pluginName, RE::Actor* a_actor, bool a_frozen, bool a_holdPhysics)
 	{
 		if (!a_actor)
 			return;
@@ -17,7 +17,7 @@ namespace Freeze
 				hold.actor = handle;
 				Apply(a_actor, true);
 			}
-			hold.plugins.insert(plugin);
+			hold.plugins[plugin] = a_holdPhysics;
 			return;
 		}
 
@@ -29,6 +29,13 @@ namespace Freeze
 		Apply(a_actor, false);
 	}
 
+	bool Manager::HoldsPhysics() const
+	{
+		return std::ranges::any_of(_frozen, [](const auto& a_entry) {
+			return std::ranges::any_of(a_entry.second.plugins, [](const auto& a_plugin) { return a_plugin.second; });
+		});
+	}
+
 	bool Manager::IsFrozen(RE::Actor* a_actor) const
 	{
 		return a_actor && _frozen.contains(a_actor->GetHandle().native_handle());
@@ -37,7 +44,7 @@ namespace Freeze
 	void Manager::OnFrame()
 	{
 		// Actors that have unloaded are dropped, as there's nothing left to hold
-		std::erase_if(_frozen, [](const auto& a_entry) {
+		erase_if(_frozen, [](const auto& a_entry) {
 			const auto actor = a_entry.second.actor.get();
 			if (!actor)
 				return true;

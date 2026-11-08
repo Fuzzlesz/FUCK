@@ -7,9 +7,10 @@ namespace Freeze
 	class Manager final : public REX::Singleton<Manager>
 	{
 	public:
-		void SetFrozen(const char* a_pluginName, RE::Actor* a_actor, bool a_frozen);
+		// a_holdPhysics: FSMP and CBPC stay paused with the game while it's held, as they can't be held for one actor alone
+		void SetFrozen(const char* a_pluginName, RE::Actor* a_actor, bool a_frozen, bool a_holdPhysics = true);
 		bool IsFrozen(RE::Actor* a_actor) const;
-		bool IsAnyFrozen() const { return !_frozen.empty(); }
+		bool HoldsPhysics() const;
 
 		// Keeps frozen faces' eyes open and still, as the game would otherwise go on blinking
 		void OnFrame();
@@ -24,9 +25,9 @@ namespace Freeze
 		struct Hold
 		{
 			RE::ActorHandle       actor;
-			std::set<std::string> plugins;  // the plugins holding it, so it's let go once none is left
+			StringMap<bool> plugins;  // the plugins holding it, and whether each holds physics, so it's let go once none is left
 		};
 
-		std::unordered_map<std::uint32_t, Hold> _frozen;  // by the actor's handle
+		Map<std::uint32_t, Hold> _frozen;  // by the actor's handle
 	};
 }
