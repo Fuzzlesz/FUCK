@@ -366,11 +366,11 @@ void FUCKMan::RefreshGameHUDState()
 
 void FUCKMan::UpdateGameState()
 {
-	bool targetSoft    = _apiSoftPause || MANAGER(Camera)->IsPausing();
-	bool targetHard    = _apiHardPause;
+	bool targetSoft    = _apiSoftPause || !_apiSoftPausers.empty() || MANAGER(Camera)->IsPausing();
+	bool targetHard    = _apiHardPause || !_apiHardPausers.empty();
 	bool targetBlur    = false;
 	bool targetHideHUD = false;
-	bool targetVanity  = _isVanityBlocked || MANAGER(Camera)->BlocksVanity();
+	bool targetVanity  = _isVanityBlocked || !_apiVanityBlockers.empty() || MANAGER(Camera)->BlocksVanity();
 
 	// Main menu state.
 	if (_isOpen) {
@@ -604,6 +604,23 @@ void FUCKMan::SaveKeybinds()
 void FUCKMan::SetVanityBlocked(bool blocked) { _isVanityBlocked = blocked; }
 void FUCKMan::SetManualHardPause(bool paused) { _apiHardPause = paused; }
 void FUCKMan::SetManualSoftPause(bool paused) { _apiSoftPause = paused; }
+
+namespace
+{
+	void SetAsk(Set<std::string>& a_plugins, const char* a_plugin, bool a_on)
+	{
+		if (!a_plugin)
+			return;
+		if (a_on)
+			a_plugins.emplace(a_plugin);
+		else
+			a_plugins.erase(a_plugin);
+	}
+}
+
+void FUCKMan::SetVanityBlockedBy(const char* plugin, bool blocked) { SetAsk(_apiVanityBlockers, plugin, blocked); }
+void FUCKMan::SetHardPauseBy(const char* plugin, bool paused) { SetAsk(_apiHardPausers, plugin, paused); }
+void FUCKMan::SetSoftPauseBy(const char* plugin, bool paused) { SetAsk(_apiSoftPausers, plugin, paused); }
 void FUCKMan::SetForceCursor(bool force) { _forceCursor = force; }
 void FUCKMan::SuspendRendering(bool suspend) { _suspendRendering = suspend; }
 

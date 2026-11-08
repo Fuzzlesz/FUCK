@@ -181,7 +181,7 @@ namespace Camera
 		_isZooming = false;
 	}
 
-	void Core::Move(const FUCK::CameraMove& a_move, const Config& a_settings, bool a_isGamepad, float a_mult, float a_interval)
+	void Core::Move(const FUCK::CameraMoveEx& a_move, const Config& a_settings, bool a_isGamepad, float a_mult, float a_interval)
 	{
 		a_interval = std::min(a_interval, 0.1f);
 
@@ -192,16 +192,23 @@ namespace Camera
 		SpeedScales scale = GetSpeedScales();
 		float       step  = a_mult * a_interval;
 
-		float panSpeed   = (a_isGamepad ? a_settings.gpPanSpeed : a_settings.kbmPanSpeed * _kbmAcceleration) * scale.pan * step;
+		float panSpeed   = (a_isGamepad ? a_settings.gpPanSpeed  : a_settings.kbmPanSpeed      * _kbmAcceleration) * scale.pan * step;
 		float zoomSpeed  = (a_isGamepad ? a_settings.gpZoomSpeed : a_settings.kbmZoomFovSpeed) * scale.zoom * _zoomAcceleration * step;
-		float orbitSpeed = (a_isGamepad ? a_settings.gpRotSpeed : a_settings.kbmRotSpeed) * scale.rot * step;
+		float orbitSpeed = (a_isGamepad ? a_settings.gpRotSpeed  : a_settings.kbmRotSpeed)     * scale.rot * step;
+		float rollSpeed  = (a_isGamepad ? a_settings.gpRollSpeed : a_settings.kbmRollSpeed)    * step;
+		float fovSpeed   = (a_isGamepad ? a_settings.gpFovSpeed  : a_settings.kbmZoomFovSpeed) * step;
 
 		_targetCamOffset.x += a_move.panX  * panSpeed;
 		_targetCamOffset.z += a_move.panZ  * panSpeed;
 		_targetCamOffset.y += a_move.zoom  * zoomSpeed;
 		_targetCamRotZ     += a_move.orbit * orbitSpeed;
+		_targetCamRotX     += a_move.pitch * orbitSpeed;
+		_targetCamRoll     += a_move.roll  * rollSpeed;
+		_targetFovOffset   += a_move.fov   * fovSpeed;
 
 		_isZooming |= a_move.zoom != 0.0f;
+		if (a_move.pitch != 0.0f)
+			ClampPitch();
 	}
 
 	void Core::Update(const FUCK::CameraControlState& a_state, const Config& a_settings, float a_interval)
@@ -252,7 +259,7 @@ namespace Camera
 		bool disableGP     = in.isGamepad && a_state.gamepadBlocked;
 		bool isGlobalMouse = in.mmbDown && !in.isItemActive && !in.mouseLocked && !in.isUIHovered;
 
-		in.isGlobalKBM  = in.ctrlDown && !in.isItemActive;
+		in.isGlobalKBM  = (in.ctrlDown || _noModifier) && !in.isItemActive;
 		in.isGlobalGP   = in.rbDown && !in.isItemActive && !disableGP;
 		in.isCameraMode = in.isGlobalKBM || in.isGlobalGP || isGlobalMouse;
 
@@ -371,7 +378,7 @@ namespace Camera
 
 	void Core::HandleMouse(const FrameInput& a_in, const Config& a_settings, float a_interval)
 	{
-		if (a_in.ctrlDown && !a_in.isUIHovered && !a_in.isPopupOpen) {
+		if ((a_in.ctrlDown || _noModifier) && !a_in.isUIHovered && !a_in.isPopupOpen) {
 			if (_pendingScroll != 0.0f && !_host.IsScrollBlocked()) {
 				float amount = _pendingScroll * (a_settings.kbmZoomFovSpeed * MOUSE_WHEEL_MULT);
 				if (a_in.shiftDown) {

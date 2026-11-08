@@ -72,7 +72,7 @@ namespace Camera
 
 		// Moves the camera at the device's speed settings, scaled by distance and FOV like the built-in controls.
 		// Call before Update, as Update settles this frame's movement
-		void Move(const FUCK::CameraMove& a_move, const Config& a_settings, bool a_isGamepad, float a_mult, float a_interval);
+		void Move(const FUCK::CameraMoveEx& a_move, const Config& a_settings, bool a_isGamepad, float a_mult, float a_interval);
 
 		// The base camera moved by the current offsets and framing. Returns false, leaving the base as is, if there are none
 		bool Compose(const RE::NiPoint3& a_baseTranslate, const RE::NiMatrix3& a_baseRotate, RE::NiPoint3& a_outTranslate, RE::NiMatrix3& a_outRotate);
@@ -108,6 +108,7 @@ namespace Camera
 
 		void SetZoomAcceleration(bool a_enabled) { _zoomAccelEnabled = a_enabled; }
 		void SetKeyboardEnabled(bool a_enabled) { _keyboardEnabled = a_enabled; }
+		void SetNoModifier(bool a_enabled) { _noModifier = a_enabled; }
 		void SetFollowPose(bool a_enabled) { _followPose = a_enabled; }
 		void SetTurningEnabled(bool a_enabled) { _turningEnabled = a_enabled; }
 
@@ -246,6 +247,7 @@ namespace Camera
 
 		bool  _zoomAccelEnabled = false;
 		bool  _keyboardEnabled  = true;
+		bool  _noModifier       = false;  // kNoModifier: the keys and wheel without Ctrl
 		bool  _turningEnabled   = true;
 		float _zoomAcceleration = 1.0f;
 		bool  _isZooming        = false;  // set by this frame's zoom input, and read once all of the frame's input is handled

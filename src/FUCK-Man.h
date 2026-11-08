@@ -175,6 +175,9 @@ public:
 	void SuspendRendering(bool suspend);
 	void SetManualHardPause(bool paused);
 	void SetManualSoftPause(bool paused);
+	void SetVanityBlockedBy(const char* plugin, bool blocked);  // Counted per plugin (API v8+)
+	void SetHardPauseBy(const char* plugin, bool paused);
+	void SetSoftPauseBy(const char* plugin, bool paused);
 	void SetForceCursor(bool force);
 
 	// --- Menu Event Listeners ---
@@ -369,6 +372,9 @@ private:
 	// API Driven Overrides
 	bool _apiHardPause     = false;
 	bool _apiSoftPause     = false;
+	Set<std::string> _apiVanityBlockers;  // API v8's, beside v7's single switches
+	Set<std::string> _apiHardPausers;
+	Set<std::string> _apiSoftPausers;
 	bool _forceCursor      = false;
 	bool _suspendRendering = false;
 

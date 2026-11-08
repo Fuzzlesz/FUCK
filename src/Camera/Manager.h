@@ -102,7 +102,7 @@ namespace Camera
 		void Revert(FUCK::ICameraClient* a_client);
 		void Update(FUCK::ICameraClient* a_client, float a_interval);
 
-		void Move(const FUCK::CameraMove* a_move, FUCK::InputDevice a_device, float a_mult);
+		void Move(const FUCK::CameraMoveEx& a_move, FUCK::InputDevice a_device, float a_mult);
 
 		void Reset(FUCK::ICameraClient* a_client);
 		bool IsModified(const FUCK::ICameraClient* a_client) const;

@@ -1031,7 +1031,11 @@ namespace FUCK::Host
 	static bool IsCameraSessionPaused_Impl(ICameraClient* client) { return MANAGER(Camera)->IsPaused(client); }
 	static void RevertCamera_Impl(ICameraClient* client) { MANAGER(Camera)->Revert(client); }
 	static void UpdateCamera_Impl(ICameraClient* client, float interval) { MANAGER(Camera)->Update(client, interval); }
-	static void MoveCamera_Impl(const CameraMove* move, InputDevice device, float mult) { MANAGER(Camera)->Move(move, device, mult); }
+	static void MoveCamera_Impl(const CameraMove* move, InputDevice device, float mult)
+	{
+		if (move)
+			MANAGER(Camera)->Move({ .panX = move->panX, .panZ = move->panZ, .zoom = move->zoom, .orbit = move->orbit }, device, mult);
+	}
 	static void ResetCamera_Impl(ICameraClient* client) { MANAGER(Camera)->Reset(client); }
 	static bool IsCameraModified_Impl(ICameraClient* client) { return MANAGER(Camera)->IsModified(client); }
 	static void SetCameraBodyFraming_Impl(ICameraClient* client, bool framed, const CameraScreenRect* rect, float margin) { MANAGER(Camera)->SetBodyFraming(client, framed, rect, margin); }
@@ -1107,6 +1111,20 @@ namespace FUCK::Host
 	static bool SetCameraSubject_Impl(ICameraClient* client, RE::Actor* subject, RE::Actor* alsoFramed) { return MANAGER(Camera)->SetSubject(client, subject, alsoFramed); }
 	static bool IsCameraSubject_Impl(RE::Actor* actor) { return MANAGER(Camera)->IsSubject(actor); }
 	static void SetItemPreviewHidden_Impl(const char* pluginName, bool preview, bool card) { ItemPreview::SetHidden(pluginName, preview, card); }
+	static void SetAutoVanityBlockedBy_Impl(const char* pluginName, bool blocked) { FUCKMan::GetSingleton()->SetVanityBlockedBy(pluginName, blocked); }
+	static void SetHardPauseBy_Impl(const char* pluginName, bool paused) { FUCKMan::GetSingleton()->SetHardPauseBy(pluginName, paused); }
+	static void SetSoftPauseBy_Impl(const char* pluginName, bool paused) { FUCKMan::GetSingleton()->SetSoftPauseBy(pluginName, paused); }
+	static void MoveCameraEx_Impl(const CameraMoveEx* move, InputDevice device, float mult)
+	{
+		if (!move)
+			return;
+
+		// Only what the caller's struct holds, so an older or newer one reads safely
+		CameraMoveEx copy;
+		std::memcpy(&copy, move, std::min<std::size_t>(move->size, sizeof(copy)));
+		copy.size = sizeof(copy);
+		MANAGER(Camera)->Move(copy, device, mult);
+	}
 
 	// ==================================================
 	// CreateInterface
@@ -1448,12 +1466,16 @@ namespace FUCK::Host
 			.GetInputCaptureState  = GetInputCaptureState_Impl,
 
 			// Version 8
-			.IsLineClear          = IsLineClear_Impl,
-			.UpdateObstructions   = UpdateObstructions_Impl,
-			.ClearObstructions    = ClearObstructions_Impl,
-			.SetCameraSubject     = SetCameraSubject_Impl,
-			.IsCameraSubject      = IsCameraSubject_Impl,
-			.SetItemPreviewHidden = SetItemPreviewHidden_Impl
+			.IsLineClear            = IsLineClear_Impl,
+			.UpdateObstructions     = UpdateObstructions_Impl,
+			.ClearObstructions      = ClearObstructions_Impl,
+			.SetCameraSubject       = SetCameraSubject_Impl,
+			.IsCameraSubject        = IsCameraSubject_Impl,
+			.SetItemPreviewHidden   = SetItemPreviewHidden_Impl,
+			.SetAutoVanityBlockedBy = SetAutoVanityBlockedBy_Impl,
+			.SetHardPauseBy         = SetHardPauseBy_Impl,
+			.SetSoftPauseBy         = SetSoftPauseBy_Impl,
+			.MoveCameraEx           = MoveCameraEx_Impl
 		};
 		return &api;
 	}

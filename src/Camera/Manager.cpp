@@ -403,6 +403,7 @@ namespace Camera
 
 		a_session.core.SetZoomAcceleration(a_session.flags & FUCK::CameraSessionFlags::kZoomAcceleration);
 		a_session.core.SetKeyboardEnabled(!(a_session.flags & FUCK::CameraSessionFlags::kNoKeyboard));
+		a_session.core.SetNoModifier(a_session.flags & FUCK::CameraSessionFlags::kNoModifier);
 		a_session.core.SetFollowPose(a_session.flags & FUCK::CameraSessionFlags::kFollowPose);
 		a_session.core.SetTurningEnabled(!(a_session.flags & FUCK::CameraSessionFlags::kNoTurning));
 
@@ -584,15 +585,17 @@ namespace Camera
 		if (!_cameraMoves)
 			return false;
 
-		// Ctrl only when used with the camera's keys or the wheel, so other mods' Ctrl shortcuts still reach the game
-		if (!FUCK::IsModifierPressed(FUCK::Modifier::kCtrl))
+		// Ctrl only when used with the camera's keys or the wheel, so other mods' Ctrl shortcuts still reach the game. With kNoModifier the keys
+		// and wheel block on their own
+		const bool ctrl = FUCK::IsModifierPressed(FUCK::Modifier::kCtrl);
+		if (!ctrl && !(_current->flags & FUCK::CameraSessionFlags::kNoModifier))
 			return false;
 
 		if (Input::Manager::GetSingleton()->IsWheelInBatch())
 			return true;
 
 		// Ctrl+1-9 too when they load presets
-		if (_current->flags & FUCK::CameraSessionFlags::kPresetHotkeys) {
+		if (ctrl && (_current->flags & FUCK::CameraSessionFlags::kPresetHotkeys)) {
 			for (int number = 0; number < 9; ++number) {
 				if (FUCK::IsInputDown(static_cast<std::uint32_t>(KEY::kNum1) + number))
 					return true;
@@ -606,12 +609,12 @@ namespace Camera
 		return std::ranges::any_of(cameraKeys, [](std::uint32_t a_key) { return FUCK::IsInputDown(a_key); });
 	}
 
-	void Manager::Move(const FUCK::CameraMove* a_move, FUCK::InputDevice a_device, float a_mult)
+	void Manager::Move(const FUCK::CameraMoveEx& a_move, FUCK::InputDevice a_device, float a_mult)
 	{
-		if (!_isUpdating || !a_move || !_current)
+		if (!_isUpdating || !_current)
 			return;
 
-		_current->core.Move(*a_move, _config, a_device == FUCK::InputDevice::kGamepad, a_mult, _updateInterval);
+		_current->core.Move(a_move, _config, a_device == FUCK::InputDevice::kGamepad, a_mult, _updateInterval);
 	}
 
 	void Manager::Reset(FUCK::ICameraClient* a_client)
@@ -1817,7 +1820,10 @@ namespace Camera
 		bool isGamepad = FUCK::GetInputDevice() == FUCK::InputDevice::kGamepad;
 		bool keyboard  = !(a_flags & FUCK::CameraSessionFlags::kNoKeyboard);
 
-		const char* controls = isGamepad ? "$FUCK_Camera_Help_GP"_T : keyboard ? "$FUCK_Camera_Help_KBM"_T : "$FUCK_Camera_Help_Mouse"_T;
+		bool        noMod    = a_flags & FUCK::CameraSessionFlags::kNoModifier;
+		const char* controls = isGamepad ? "$FUCK_Camera_Help_GP"_T :
+		                       keyboard  ? (noMod ? "$FUCK_Camera_Help_KBM_NoMod"_T   : "$FUCK_Camera_Help_KBM"_T) :
+		                                   (noMod ? "$FUCK_Camera_Help_Mouse_NoMod"_T : "$FUCK_Camera_Help_Mouse"_T);
 		const char* extra     = isGamepad ? a_extraGP : a_extraKBM;
 
 		if (!extra || extra[0] == '\0') {
