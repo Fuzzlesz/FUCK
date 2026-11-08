@@ -103,6 +103,7 @@ namespace Camera
 		void Reset(FUCK::ICameraClient* a_client);
 		bool IsModified(const FUCK::ICameraClient* a_client) const;
 		void SetBodyFraming(FUCK::ICameraClient* a_client, bool a_framed, const FUCK::CameraScreenRect* a_rect, float a_margin);
+		bool SetSubject(FUCK::ICameraClient* a_client, RE::Actor* a_subject, RE::Actor* a_alsoFramed);
 		bool IsBodyFramed(const FUCK::ICameraClient* a_client) const;
 
 		// Offset bases only
@@ -176,6 +177,7 @@ namespace Camera
 		bool TurnsHeading() const { return _current && _current->turnsHeading; }
 
 		void RunControls(float a_interval);
+		void LandIfInstant();  // kInstantMoves, after a move the client asked for
 		void UpdateObstructions(float a_interval);  // kHideObstructions, once the camera's placed
 		void ApplyNode();
 		void RevertNode();

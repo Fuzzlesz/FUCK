@@ -661,7 +661,34 @@ namespace Camera
 	{
 		if (IsActive(a_client) && a_rect) {
 			_current->core.SetBodyFraming(a_framed, *a_rect, a_margin);
+			LandIfInstant();
 		}
+	}
+
+	bool Manager::SetSubject(FUCK::ICameraClient* a_client, RE::Actor* a_subject, RE::Actor* a_alsoFramed)
+	{
+		if (!IsActive(a_client))
+			return false;
+
+		// The one shown before goes back to how they faced
+		auto& session = *_current;
+		auto  before  = RE::NiPointer<RE::Actor>(GetSubject());
+		ResetSubject();
+
+		session.subject    = a_subject ? a_subject->GetHandle() : RE::ActorHandle{};
+		session.hasSubject = a_subject != nullptr;
+		session.alsoFramed = a_alsoFramed ? a_alsoFramed->GetHandle() : RE::ActorHandle{};
+		session.subjectYaw.reset();
+
+		// The held third-person camera stays where it is, then follows the new subject as it followed the last
+		auto after = GetSubject();
+		if (before && after) {
+			session.fixedSubjectPos = session.fixedSubjectPos + (after->GetPosition() - before->GetPosition());
+		}
+
+		session.startSubjectYaw = GetSubjectYaw();
+		session.core.Reframe(session.flags & FUCK::CameraSessionFlags::kInstantMoves);
+		return true;
 	}
 
 	bool Manager::IsBodyFramed(const FUCK::ICameraClient* a_client) const
@@ -695,7 +722,14 @@ namespace Camera
 		targets.roll      = a_offsets->roll;
 		targets.fov       = a_offsets->fov;
 		_current->core.SetTargetOffsets(targets);
+		LandIfInstant();
 		return true;
+	}
+
+	void Manager::LandIfInstant()
+	{
+		if (_current->flags & FUCK::CameraSessionFlags::kInstantMoves)
+			_current->core.Land();
 	}
 
 	void Manager::OnFrame()
@@ -1429,7 +1463,11 @@ namespace Camera
 			return false;
 
 		auto preset = _current->presets.Find(a_name);
-		return preset && ApplyPreset(*preset);
+		if (!preset || !ApplyPreset(*preset))
+			return false;
+
+		LandIfInstant();
+		return true;
 	}
 
 	bool Manager::ApplyPreset(const Preset& a_preset)

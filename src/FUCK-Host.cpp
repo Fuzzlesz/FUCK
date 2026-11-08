@@ -1103,6 +1103,7 @@ namespace FUCK::Host
 		Obstructions::Update(Obstructions::OwnerOf(pluginName), interval, subject, alsoFramed, upperBody);
 	}
 	static void ClearObstructions_Impl(const char* pluginName) { Obstructions::Restore(Obstructions::OwnerOf(pluginName)); }
+	static bool SetCameraSubject_Impl(ICameraClient* client, RE::Actor* subject, RE::Actor* alsoFramed) { return MANAGER(Camera)->SetSubject(client, subject, alsoFramed); }
 
 	// ==================================================
 	// CreateInterface
@@ -1446,7 +1447,8 @@ namespace FUCK::Host
 			// Version 8
 			.IsLineClear        = IsLineClear_Impl,
 			.UpdateObstructions = UpdateObstructions_Impl,
-			.ClearObstructions  = ClearObstructions_Impl
+			.ClearObstructions  = ClearObstructions_Impl,
+			.SetCameraSubject   = SetCameraSubject_Impl
 		};
 		return &api;
 	}

@@ -89,6 +89,12 @@ namespace Camera
 		// Lands on the target offsets and finishes any framing swoop at once, e.g. for a session opening where it was left
 		void Settle();
 
+		// The same, without moving where the session began (what Reset goes back to), for a cut the client asks for
+		void Land();
+
+		// Frames the body again, e.g. for another subject, at once or easing over
+		void Reframe(bool a_instant);
+
 		// The FOV the session opens at, and the reset gesture goes back to, rather than the player's
 		void  SetStartFov(float a_fov);
 		float GetStartFov() const { return _startFovOffset != 0.0f ? _baseFov + _startFovOffset : 0.0f; }

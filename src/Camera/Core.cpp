@@ -819,6 +819,15 @@ namespace Camera
 
 	void Core::Settle()
 	{
+		Land();
+		_startedFramed = _isFramed;
+
+		// Framed instantly, so the framing is recalculated over the next few frames while the subject's pose catches up, e.g. after turning to face the camera
+		_framingSettleFrames = _isFramed ? FRAMING_SETTLE_FRAMES : 0;
+	}
+
+	void Core::Land()
+	{
 		_camOffset = _targetCamOffset;
 		_camRotZ   = _targetCamRotZ;
 		_camRotX   = _targetCamRotX;
@@ -827,10 +836,19 @@ namespace Camera
 
 		_framingProgress = _isFramed ? 1.0f : 0.0f;
 		_framingBlend    = _framingProgress;
-		_startedFramed   = _isFramed;
+	}
 
-		// Framed instantly, so the framing is recalculated over the next few frames while the subject's pose catches up, e.g. after turning to face the camera
-		_framingSettleFrames = _isFramed ? FRAMING_SETTLE_FRAMES : 0;
+	void Core::Reframe(bool a_instant)
+	{
+		if (!_isFramed)
+			return;
+
+		// Measured afresh next update, which lands at once, or measured now and eased over
+		if (a_instant) {
+			_hasFraming = false;
+		} else {
+			UpdateFraming(_host.GetPivot().value_or(_originalTranslate), true);
+		}
 	}
 
 	void Core::Pause()
