@@ -61,6 +61,10 @@ namespace Camera
 		// Where the subject faced as the session began, which Reset turns it back to
 		std::optional<float> startSubjectYaw;
 
+		// kHoldHeadStill: whose head is held, and whether it tracked before
+		RE::ActorHandle heldHead;
+		bool            heldHeadTracked = false;
+
 		Presets              presets;
 		std::string          selectedPreset;
 		char                 presetName[64] = {};
@@ -104,6 +108,7 @@ namespace Camera
 		bool IsModified(const FUCK::ICameraClient* a_client) const;
 		void SetBodyFraming(FUCK::ICameraClient* a_client, bool a_framed, const FUCK::CameraScreenRect* a_rect, float a_margin);
 		bool SetSubject(FUCK::ICameraClient* a_client, RE::Actor* a_subject, RE::Actor* a_alsoFramed);
+		bool IsSubject(const RE::Actor* a_actor) const;  // the active session's subject, or framed beside them
 		bool IsBodyFramed(const FUCK::ICameraClient* a_client) const;
 
 		// Offset bases only
@@ -177,8 +182,10 @@ namespace Camera
 		bool TurnsHeading() const { return _current && _current->turnsHeading; }
 
 		void RunControls(float a_interval);
-		void LandIfInstant();  // kInstantMoves, after a move the client asked for
+		void LandIfInstant();                       // kInstantMoves, after a move the client asked for
 		void UpdateObstructions(float a_interval);  // kHideObstructions, once the camera's placed
+		void HoldHead();                            // kHoldHeadStill, each update
+		void ReleaseHead(Session& a_session);
 		void ApplyNode();
 		void RevertNode();
 		void UpdatePresetHotkeys(bool a_allowed);
@@ -205,7 +212,7 @@ namespace Camera
 		Config _config;
 
 		std::vector<std::unique_ptr<Session>> _sessions;            // oldest first. The last is current unless it's waiting to resume
-		Session*                              _current = nullptr;  // the running session, if any
+		Session*                              _current = nullptr ;  // the running session, if any
 
 		bool  _isUpdating     = false;  // inside the client's OnCameraUpdate(), the only time MoveCamera() applies
 		float _updateInterval = 0.0f;

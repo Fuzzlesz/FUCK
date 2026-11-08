@@ -231,6 +231,7 @@ namespace Camera
 
 		_current->presets.Open(_current->context, _current->base == FUCK::CameraBase::kFree);
 		SetUpStart(opts);
+		HoldHead();
 		UpdateSmoothCam();
 
 		logger::info("Camera session began: {}", GetName(*_current));
@@ -278,6 +279,7 @@ namespace Camera
 		auto client = _current->client;
 
 		Obstructions::Restore(client);
+		ReleaseHead(*_current);
 		RememberCamera();
 		LeaveBase(*_current);
 
@@ -300,6 +302,7 @@ namespace Camera
 		// Remembered now, as the newer session owns the base camera until this one resumes
 		RememberCamera();
 		Obstructions::Restore(session.client);
+		ReleaseHead(session);
 
 		RevertNode();
 		RestoreMovement(session);
@@ -353,6 +356,7 @@ namespace Camera
 		if (session.subjectYaw) {
 			SetSubjectYaw(*session.subjectYaw);
 		}
+		HoldHead();
 
 		FUCKMan::GetSingleton()->RefreshGameState();
 
@@ -687,8 +691,16 @@ namespace Camera
 		}
 
 		session.startSubjectYaw = GetSubjectYaw();
+		HoldHead();
 		session.core.Reframe(session.flags & FUCK::CameraSessionFlags::kInstantMoves);
 		return true;
+	}
+
+	bool Manager::IsSubject(const RE::Actor* a_actor) const
+	{
+		if (!_current || !a_actor)
+			return false;
+		return GetSubject() == a_actor || _current->alsoFramed.get().get() == a_actor;
 	}
 
 	bool Manager::IsBodyFramed(const FUCK::ICameraClient* a_client) const
@@ -732,6 +744,41 @@ namespace Camera
 			_current->core.Land();
 	}
 
+	// The game's own switch (what papyrus SetHeadTracking sets), with any target dropped. Each update, as a head reloading (hair with
+	// physics) can pick a target up again
+	void Manager::HoldHead()
+	{
+		auto& session = *_current;
+		auto  subject = GetSubject();
+		if (!(session.flags & FUCK::CameraSessionFlags::kHoldHeadStill) || !subject)
+			return;
+
+		if (session.heldHead.get().get() != subject) {
+			ReleaseHead(session);
+			session.heldHead        = subject->GetHandle();
+			session.heldHeadTracked = subject->AsActorState()->actorState2.headTracking;
+		}
+
+		subject->AsActorState()->actorState2.headTracking = false;
+		auto process = subject->GetActorRuntimeData().currentProcess;
+		auto high    = process ? process->high : nullptr;
+		if (!high)
+			return;
+
+		using HeadTrack = RE::HighProcessData::HEAD_TRACK_TYPE;
+		for (std::uint32_t i = 0; i < HeadTrack::kTotal; ++i) {
+			if (high->headTrackTarget[i])
+				high->ClearHeadtrackTarget(static_cast<HeadTrack>(i), false);
+		}
+	}
+
+	void Manager::ReleaseHead(Session& a_session)
+	{
+		if (auto actor = a_session.heldHead.get())
+			actor->AsActorState()->actorState2.headTracking = a_session.heldHeadTracked;
+		a_session.heldHead = {};
+	}
+
 	void Manager::OnFrame()
 	{
 		// Set again by DrawPresets() if the list is still open over an entry this frame
@@ -769,6 +816,7 @@ namespace Camera
 		UpdateSmoothCam();
 
 		HoldSubjectYaw();
+		HoldHead();
 		TurnPlayerToView(a_interval);
 		RunControls(a_interval);
 		if (IsActive(a_client)) {
@@ -953,6 +1001,7 @@ namespace Camera
 		auto  timer    = RE::BSTimer::GetSingleton();
 		float interval = timer ? timer->realTimeDelta : 0.0f;
 
+		HoldHead();
 		RunControls(interval);
 		if (!IsFreeState(a_state)) {
 			session.freeFinal.valid = false;

@@ -36,6 +36,7 @@ set(headers ${headers}
 	src/System/Hotkeys.h
 	src/System/Input.h
 	src/System/InputMap.h
+	src/System/ItemPreview.h
 	src/System/Journal.h
 	src/System/Obstructions.h
 	src/System/Papyrus.h

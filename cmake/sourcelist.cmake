@@ -32,6 +32,7 @@ set(sources ${sources}
 	src/System/Hooks.cpp
 	src/System/Hotkeys.cpp
 	src/System/Input.cpp
+	src/System/ItemPreview.cpp
 	src/System/Journal.cpp
 	src/System/Obstructions.cpp
 	src/System/Papyrus.cpp

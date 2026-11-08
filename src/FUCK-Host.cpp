@@ -14,6 +14,7 @@
 #include "System/Favourites.h"
 #include "System/Freeze.h"
 #include "System/Hotkeys.h"
+#include "System/ItemPreview.h"
 #include "System/Obstructions.h"
 #include "System/Input.h"
 #include "System/Settings.h"
@@ -1104,6 +1105,8 @@ namespace FUCK::Host
 	}
 	static void ClearObstructions_Impl(const char* pluginName) { Obstructions::Restore(Obstructions::OwnerOf(pluginName)); }
 	static bool SetCameraSubject_Impl(ICameraClient* client, RE::Actor* subject, RE::Actor* alsoFramed) { return MANAGER(Camera)->SetSubject(client, subject, alsoFramed); }
+	static bool IsCameraSubject_Impl(RE::Actor* actor) { return MANAGER(Camera)->IsSubject(actor); }
+	static void SetItemPreviewHidden_Impl(const char* pluginName, bool hidden) { ItemPreview::SetHidden(pluginName, hidden); }
 
 	// ==================================================
 	// CreateInterface
@@ -1445,10 +1448,12 @@ namespace FUCK::Host
 			.GetInputCaptureState  = GetInputCaptureState_Impl,
 
 			// Version 8
-			.IsLineClear        = IsLineClear_Impl,
-			.UpdateObstructions = UpdateObstructions_Impl,
-			.ClearObstructions  = ClearObstructions_Impl,
-			.SetCameraSubject   = SetCameraSubject_Impl
+			.IsLineClear          = IsLineClear_Impl,
+			.UpdateObstructions   = UpdateObstructions_Impl,
+			.ClearObstructions    = ClearObstructions_Impl,
+			.SetCameraSubject     = SetCameraSubject_Impl,
+			.IsCameraSubject      = IsCameraSubject_Impl,
+			.SetItemPreviewHidden = SetItemPreviewHidden_Impl
 		};
 		return &api;
 	}
