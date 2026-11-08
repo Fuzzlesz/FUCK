@@ -1,7 +1,5 @@
 #include "System/Obstructions.h"
 
-#include <unordered_set>
-
 // The hiding and the reference walk follow Menu Studio's declutter, thank you to its author
 namespace
 {
@@ -479,8 +477,8 @@ namespace
 	// already hidden
 	struct SightHits
 	{
-		std::unordered_set<const RE::TESObjectREFR*> hits;
-		std::unordered_set<const RE::TESObjectREFR*> wide;
+		Set<const RE::TESObjectREFR*> hits;
+		Set<const RE::TESObjectREFR*> wide;
 		std::vector<RE::TESObjectREFR*> all;  // both, once each, to check what stands further off than the search reaches
 	};
 
@@ -504,8 +502,8 @@ namespace
 		filter.SetSystemGroup(RE::bhkCollisionFilter::GetSingleton()->GetNewSystemGroup());
 		filter.SetCollisionLayer(RAY_LAYER);
 
-		std::unordered_set<const RE::TESObjectREFR*> either;
-		const auto add = [&](std::unordered_set<const RE::TESObjectREFR*>& found, RE::TESObjectREFR* ref) {
+		Set<const RE::TESObjectREFR*> either;
+		const auto add = [&](Set<const RE::TESObjectREFR*>& found, RE::TESObjectREFR* ref) {
 			if (ref && found.insert(ref).second && either.insert(ref).second) {
 				sight.all.push_back(ref);
 			}
@@ -748,13 +746,13 @@ namespace
 			mount.reset();
 		}
 
-		std::unordered_set<const RE::TESObjectREFR*> wasHidden;
+		Set<const RE::TESObjectREFR*> wasHidden;
 		for (const auto& entry : hidden) {
 			if (const auto ref = entry.ref.get()) {
 				wasHidden.insert(ref.get());
 			}
 		}
-		std::unordered_set<const RE::NiAVObject*> wasHiddenFlame;
+		Set<const RE::NiAVObject*> wasHiddenFlame;
 		for (const auto& entry : hiddenFlames) {
 			wasHiddenFlame.insert(entry.drawn.get());
 		}
@@ -764,7 +762,7 @@ namespace
 		std::vector<RE::TESObjectREFR*> blocking;
 		std::vector<Piece> pieces;
 		std::vector<RE::NiAVObject*> flames;
-		std::unordered_set<const RE::TESObjectREFR*> visited;
+		Set<const RE::TESObjectREFR*> visited;
 		const auto visit = [&](RE::TESObjectREFR& ref) {
 			// The one shown, their horse, whoever's framed with them, and anyone they hold stay
 			if (!visited.insert(&ref).second || &ref == subject || &ref == mount.get() || &ref == alsoFramed || ref.IsDisabled() ||
@@ -838,7 +836,7 @@ namespace
 			}
 		}
 
-		const std::unordered_set<const RE::TESObjectREFR*> blockingSet(blocking.begin(), blocking.end());
+		const Set<const RE::TESObjectREFR*> blockingSet(blocking.begin(), blocking.end());
 		std::erase_if(hidden, [&](Hidden& entry) {
 			const auto ref = entry.ref.get();
 			if (ref && (!Settled(entry.clearFor, blockingSet.contains(ref.get()), elapsed) || !settling)) {

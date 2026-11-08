@@ -2,18 +2,17 @@
 
 namespace
 {
-	using Plugins = std::set<std::string, std::less<>>;
+	using Plugins = Set<std::string>;
 
 	Plugins previewHiders;
 	Plugins cardHiders;
 
 	void SetAsk(Plugins& a_plugins, const char* a_plugin, bool a_hidden)
 	{
-		if (a_hidden) {
+		if (a_hidden)
 			a_plugins.emplace(a_plugin);
-		} else if (auto it = a_plugins.find(a_plugin); it != a_plugins.end()) {
-			a_plugins.erase(it);
-		}
+		else
+			a_plugins.erase(a_plugin);
 	}
 
 	bool IsItemLoaded()
