@@ -14,6 +14,7 @@
 #include "System/Favourites.h"
 #include "System/Freeze.h"
 #include "System/Hotkeys.h"
+#include "System/Obstructions.h"
 #include "System/Input.h"
 #include "System/Settings.h"
 #include "System/Utils.h"
@@ -1091,6 +1092,19 @@ namespace FUCK::Host
 	}
 
 	// ==================================================
+	// Version 8
+	// ==================================================
+	static bool IsLineClear_Impl(RE::TESObjectREFR* around, const RE::NiPoint3* from, const RE::NiPoint3* to, const RE::TESObjectREFR* const* ignore, std::uint32_t count)
+	{
+		return !from || !to || Obstructions::IsLineClear(around, *from, *to, std::span(ignore, ignore ? count : 0));
+	}
+	static void UpdateObstructions_Impl(const char* pluginName, RE::Actor* subject, RE::Actor* alsoFramed, float interval, bool upperBody)
+	{
+		Obstructions::Update(Obstructions::OwnerOf(pluginName), interval, subject, alsoFramed, upperBody);
+	}
+	static void ClearObstructions_Impl(const char* pluginName) { Obstructions::Restore(Obstructions::OwnerOf(pluginName)); }
+
+	// ==================================================
 	// CreateInterface
 	// ==================================================
 	FUCK_Interface* CreateInterface()
@@ -1427,7 +1441,12 @@ namespace FUCK::Host
 			.IsActorFrozen         = IsActorFrozen_Impl,
 			.RequestImage          = RequestImage_Impl,
 			.GetImageState         = GetImageState_Impl,
-			.GetInputCaptureState  = GetInputCaptureState_Impl
+			.GetInputCaptureState  = GetInputCaptureState_Impl,
+
+			// Version 8
+			.IsLineClear        = IsLineClear_Impl,
+			.UpdateObstructions = UpdateObstructions_Impl,
+			.ClearObstructions  = ClearObstructions_Impl
 		};
 		return &api;
 	}

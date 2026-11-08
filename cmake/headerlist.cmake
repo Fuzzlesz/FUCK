@@ -37,6 +37,7 @@ set(headers ${headers}
 	src/System/Input.h
 	src/System/InputMap.h
 	src/System/Journal.h
+	src/System/Obstructions.h
 	src/System/Papyrus.h
 	src/System/Physics.h
 	src/System/Settings.h

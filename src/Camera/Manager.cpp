@@ -4,6 +4,7 @@
 #include "ImGui/Widgets.h"
 #include "System/Input.h"
 #include "System/InputMap.h"
+#include "System/Obstructions.h"
 #include "System/Settings.h"
 
 #define SMOOTHCAM_API_COMMONLIB
@@ -276,6 +277,7 @@ namespace Camera
 
 		auto client = _current->client;
 
+		Obstructions::Restore(client);
 		RememberCamera();
 		LeaveBase(*_current);
 
@@ -297,6 +299,7 @@ namespace Camera
 
 		// Remembered now, as the newer session owns the base camera until this one resumes
 		RememberCamera();
+		Obstructions::Restore(session.client);
 
 		RevertNode();
 		RestoreMovement(session);
@@ -736,6 +739,15 @@ namespace Camera
 		RunControls(a_interval);
 		if (IsActive(a_client)) {
 			ApplyNode();
+			UpdateObstructions(a_interval);
+		}
+	}
+
+	void Manager::UpdateObstructions(float a_interval)
+	{
+		if (_current->flags & FUCK::CameraSessionFlags::kHideObstructions) {
+			Obstructions::Update(_current->client, a_interval, GetSubject(), _current->alsoFramed.get().get(),
+				_current->flags & FUCK::CameraSessionFlags::kFrameUpperBody);
 		}
 	}
 
@@ -916,6 +928,7 @@ namespace Camera
 		session.core.Compose(session.freeBase.translate, session.freeBase.rotate, session.freeFinal.translate, session.freeFinal.rotate);
 		session.freeFinal.quat  = RE::NiQuaternion(session.freeFinal.rotate);
 		session.freeFinal.valid = true;
+		UpdateObstructions(interval);
 	}
 
 	void Manager::OverrideFreeRotation(const RE::FreeCameraState* a_state, RE::NiQuaternion& a_rotation) const

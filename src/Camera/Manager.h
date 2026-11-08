@@ -176,6 +176,7 @@ namespace Camera
 		bool TurnsHeading() const { return _current && _current->turnsHeading; }
 
 		void RunControls(float a_interval);
+		void UpdateObstructions(float a_interval);  // kHideObstructions, once the camera's placed
 		void ApplyNode();
 		void RevertNode();
 		void UpdatePresetHotkeys(bool a_allowed);
