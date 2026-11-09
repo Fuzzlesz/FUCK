@@ -123,7 +123,6 @@ void ThemeEditorWindow::Draw()
 	if (FUCK::CollapsingHeader("$FUCK_Styles_Cat_ColoursWidgets"_T)) {
 		ColorPick("$FUCK_Styles_FrameBG"_T,        style->user.frameBG_Widget);
 		ColorPick("$FUCK_Styles_FrameBGActive"_T,  style->user.frameBG_WidgetActive);
-		ColorPick("$FUCK_Styles_ButtonColor"_T,    style->user.button);
 		ColorPick("$FUCK_Styles_SeparatorColor"_T, style->user.separator);
 		FUCK::Separator();
 		ColorPick("$FUCK_Styles_TextBoxBG"_T,      style->user.comboBoxTextBox);

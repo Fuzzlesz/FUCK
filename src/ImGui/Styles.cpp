@@ -368,7 +368,6 @@ namespace ImGui
 		// Colours - Widgets
 		SET_VALUE(frameBG_Widget, "Widget", "rBackgroundColor");
 		SET_VALUE(frameBG_WidgetActive, "Widget", "rBackgroundActiveColor");
-		SET_VALUE(button, "ComboBox", "rArrowButtonColor");
 		SET_VALUE(separator, "Widget", "rSeparatorColor");
 		SET_VALUE(tab, "Widget", "rTabColor");
 		SET_VALUE(tabHovered, "Widget", "rTabActiveColor");
@@ -447,7 +446,6 @@ namespace ImGui
 		// Colours - Widgets
 		GET_VALUE(frameBG_Widget, "Widget", "rBackgroundColor");
 		GET_VALUE(frameBG_WidgetActive, "Widget", "rBackgroundActiveColor");
-		GET_VALUE(button, "ComboBox", "rArrowButtonColor");
 		GET_VALUE(separator, "Widget", "rSeparatorColor");
 		GET_VALUE(tab, "Widget", "rTabColor");
 		GET_VALUE(tabHovered, "Widget", "rTabActiveColor");
@@ -566,7 +564,7 @@ namespace ImGui
 		colors[ImGuiCol_FrameBgHovered] = user.frameBG_WidgetActive;
 		colors[ImGuiCol_FrameBgActive]  = user.frameBG_WidgetActive;
 
-		colors[ImGuiCol_Button]        = user.button;
+		colors[ImGuiCol_Button]        = user.comboBoxTextBox;
 		colors[ImGuiCol_ButtonHovered] = user.frameBG_WidgetActive;
 		colors[ImGuiCol_ButtonActive]  = user.widgetBorderActive;
 

@@ -65,7 +65,6 @@ namespace ImGui
 			// --------------------------------------------------
 			ImVec4 frameBG_Widget{ 1.0f, 1.0f, 1.0f, 0.063f };
 			ImVec4 frameBG_WidgetActive{ 1.0f, 1.0f, 1.0f, 0.2f };
-			ImVec4 button{ 0.0f, 0.0f, 0.0f, 1.0f };
 			ImVec4 separator{ 0.25f, 0.25f, 0.25f, 1.0f };
 			ImVec4 tab{ 0.0f, 0.0f, 0.0f, 0.0f };
 			ImVec4 tabHovered{ 0.0f, 0.0f, 0.0f, 1.0f };
