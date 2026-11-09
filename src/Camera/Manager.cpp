@@ -713,6 +713,36 @@ namespace Camera
 		return true;
 	}
 
+	// Turns the subject to face the camera where it is now, eased like the user's turns, or at once with kInstantMoves
+	bool Manager::FaceSubject(FUCK::ICameraClient* a_client)
+	{
+		if (!IsActive(a_client))
+			return false;
+
+		auto       camera  = RE::PlayerCamera::GetSingleton();
+		auto       root    = camera ? camera->cameraRoot.get() : nullptr;
+		auto       subject = GetSubject();
+		const auto yaw     = GetSubjectYaw();
+		if (!root || !subject || !yaw)
+			return false;
+
+		const auto to = root->world.translate - subject->GetPosition();
+		if (to.x == 0.0f && to.y == 0.0f)
+			return false;
+
+		// RotateSubject's amount turns the yaw one way or the other, as its matrix has it, so that's measured
+		RE::NiMatrix3 probe;
+		probe.SetEulerAnglesXYZ(0.0f, 0.0f, -1.0f);
+		const float sign = Maths::YawOf(probe) > 0.0f ? 1.0f : -1.0f;
+		const float turn = std::remainder(std::atan2(to.x, to.y) - *yaw, 2.0f * std::numbers::pi_v<float>) * sign;
+
+		if (_current->flags & FUCK::CameraSessionFlags::kInstantMoves)
+			RotateSubject(turn);
+		else
+			_current->core.TurnSubject(turn);
+		return true;
+	}
+
 	bool Manager::IsSubject(const RE::Actor* a_actor) const
 	{
 		if (!_current || !a_actor)
@@ -1879,7 +1909,7 @@ namespace Camera
 
 		bool        noMod    = a_flags & FUCK::CameraSessionFlags::kNoModifier;
 		const char* controls = isGamepad ? "$FUCK_Camera_Help_GP"_T :
-		                       keyboard  ? (noMod ? "$FUCK_Camera_Help_KBM_NoMod"_T   : "$FUCK_Camera_Help_KBM"_T) :
+		                       keyboard  ? (noMod ? "$FUCK_Camera_Help_KBM_NoMod"_T : "$FUCK_Camera_Help_KBM"_T) :
 		                                   (noMod ? "$FUCK_Camera_Help_Mouse_NoMod"_T : "$FUCK_Camera_Help_Mouse"_T);
 		const char* extra     = isGamepad ? a_extraGP : a_extraKBM;
 

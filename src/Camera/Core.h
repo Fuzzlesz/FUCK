@@ -112,6 +112,9 @@ namespace Camera
 		void SetZoomAcceleration(bool a_enabled) { _zoomAccelEnabled = a_enabled; }
 		void SetKeyboardEnabled(bool a_enabled) { _keyboardEnabled = a_enabled; }
 		void SetNoModifier(bool a_enabled) { _noModifier = a_enabled; }
+
+		// A turn of the subject the client asked for (FaceCameraSubject), eased like the user's turns whatever the input
+		void TurnSubject(float a_amount) { _pendingClientTurn += a_amount; }
 		void SetFollowPose(bool a_enabled) { _followPose = a_enabled; }
 		void SetTurningEnabled(bool a_enabled) { _turningEnabled = a_enabled; }
 
@@ -241,6 +244,7 @@ namespace Camera
 		bool  _lockoutGPSubjRot = false;
 		bool  _wasMouseSubjRot  = false;
 		float _pendingSubjectTurn = 0.0f;  // the part of a turn still to ease in
+		float _pendingClientTurn  = 0.0f;  // the same for a turn the client asked for
 
 		// The reset gesture: a double middle click, or RB + R3
 		float _sinceMiddleClick  = 0.0f;  // seconds since middle mouse last went down

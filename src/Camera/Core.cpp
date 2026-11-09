@@ -229,6 +229,14 @@ namespace Camera
 			HandleControls(a_state, a_settings, a_interval);
 		}
 
+		if (_pendingClientTurn != 0.0f) {
+			float step = a_settings.cinematic ? _pendingClientTurn * SmoothFactor(CINEMATIC_SPEED, a_interval) : _pendingClientTurn;
+			if (std::abs(_pendingClientTurn - step) < SUBJECT_TURN_SNAP)
+				step = _pendingClientTurn;
+			_pendingClientTurn -= step;
+			_host.RotateSubject(step);
+		}
+
 		UpdateZoomAcceleration(a_interval);
 		UpdateCinematic(a_settings.cinematic, a_interval);
 		ApplyFov();
@@ -333,6 +341,7 @@ namespace Camera
 		_smoothScrollZoom   = 0.0f;
 		_smoothScrollFov    = 0.0f;
 		_pendingSubjectTurn = 0.0f;
+		_pendingClientTurn  = 0.0f;
 
 		_host.ResetSubject();
 	}
@@ -938,5 +947,6 @@ namespace Camera
 		_smoothScrollZoom    = 0.0f;
 		_smoothScrollFov     = 0.0f;
 		_pendingSubjectTurn  = 0.0f;
+		_pendingClientTurn   = 0.0f;
 	}
 }
