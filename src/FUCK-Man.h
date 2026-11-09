@@ -35,7 +35,7 @@ public:
 	struct FUCKConfig
 	{
 		ImVec2               windowPos{ 130.0f, 75.0f };
-		ImVec2               windowSize{ 1120.0f, 800.0f };
+		ImVec2               windowSize{ 1120.0f, 880.0f };
 		PauseType            globalPauseType{ PauseType::kNone };
 		float                userScale{ 1.0f };
 		bool                 sidebarOnRight{ false };
