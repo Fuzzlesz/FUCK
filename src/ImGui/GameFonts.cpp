@@ -344,6 +344,7 @@ namespace GameFonts
 			std::vector<std::uint32_t> loca;
 			std::int32_t         xMin = INT32_MAX, yMin = INT32_MAX, xMax = INT32_MIN, yMax = INT32_MIN;
 			std::uint16_t        maxPoints = 0, maxContours = 0;
+			std::int32_t         xHeight = 0, capHeight = 0;
 
 			// FreeType places each glyph by its left edge, so the edges are kept to give each letter its spacing
 			std::vector<std::int32_t> bearings(count, 0);
@@ -376,6 +377,10 @@ namespace GameFonts
 					gyMax = std::max(gyMax, point.y);
 				}
 				bearings[g + 1] = gxMin;
+				if (g < a_font.codes.size() && a_font.codes[g] == 'x')
+					xHeight = gyMax;
+				else if (g < a_font.codes.size() && a_font.codes[g] == 'H')
+					capHeight = gyMax;
 				xMin        = std::min(xMin, gxMin);
 				yMin        = std::min(yMin, gyMin);
 				xMax        = std::max(xMax, gxMax);
@@ -526,7 +531,7 @@ namespace GameFonts
 			os2.U16(5);
 			os2.Zeros(2 + 20 + 2);  // Embedding, and the subscript, superscript, strikeout, and family class values
 			os2.Zeros(10 + 16);     // PANOSE and the Unicode ranges
-			os2.U32(0x4E4F4E45);    // The vendor ID, "NONE"
+			os2.U32(0x4E4F4E45);  // The vendor ID, "NONE"
 			os2.U16(a_font.bold ? 0x20 : 0x40);
 			os2.U16(glyphOf.empty() ? 0 : glyphOf.begin()->first);
 			os2.U16(glyphOf.empty() ? 0 : glyphOf.rbegin()->first);
@@ -537,7 +542,10 @@ namespace GameFonts
 			os2.U16(static_cast<std::uint32_t>(std::max(0, descent)));
 			os2.U32(1);
 			os2.U32(0);
-			os2.Zeros(10);  // x height, cap height, default and break characters, and max context
+			// The x and cap heights, from the x and the H. Icons are centred on the text by the cap height
+			os2.S16(xHeight);
+			os2.S16(capHeight);
+			os2.Zeros(6);  // The default and break characters, and max context
 
 			// The family and full name, both the font's own name
 			std::vector<std::uint8_t> name;
@@ -603,6 +611,18 @@ namespace GameFonts
 			return std::move(file.bytes);
 		}
 
+		float MeasureWidth(const SwfFont& a_font)
+		{
+			float width = 0.0f;
+			for (char c = 'a'; c <= 'z'; ++c) {
+				const auto it = std::ranges::find(a_font.codes, static_cast<std::uint16_t>(c));
+				if (it == a_font.codes.end())
+					return 0.0f;
+				width += a_font.advances[it - a_font.codes.begin()];
+			}
+			return width / (UNITS_PER_EM * UNIT_SCALE);
+		}
+
 		std::vector<ImWchar> BuildRanges(const SwfFont& a_font)
 		{
 			std::vector<std::uint16_t> codes(a_font.codes.begin(), a_font.codes.end());
@@ -663,7 +683,7 @@ namespace GameFonts
 
 					try {
 						if (auto font = FindFont(movie, *mapping)) {
-							fonts[i] = { font->name, BuildTrueType(*font), BuildRanges(*font) };
+							fonts[i] = { font->name, BuildTrueType(*font), BuildRanges(*font), MeasureWidth(*font) };
 							logger::info("Game fonts: {} is '{}'{} from {}, {} glyphs", FACE_NAMES[i], font->name, font->bold ? " (bold)" : "", library, font->glyphs.size());
 							break;
 						}

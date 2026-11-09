@@ -146,6 +146,7 @@ public:
 	void ResetSettings();
 
 	void LoadWorkspace();
+	void ApplyDefaultWindow();  // The main window's default place and size, for the screen and the font
 	// Asks for the workspace to be written. The write waits until nothing has asked for half a second, or the menu
 	// closes, so a burst of changes is one write. Files whose contents haven't changed aren't written at all
 	void SaveWorkspace();

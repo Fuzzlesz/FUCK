@@ -13,9 +13,10 @@ namespace GameFonts
 
 	struct Font
 	{
-		std::string                name;    // The font's name in its library
-		std::vector<std::uint8_t>  ttf;     // Empty if the font couldn't be found
-		std::vector<ImWchar>       ranges;  // Every character the font has, for ImGui to load
+		std::string                name;               // The font's name in its library
+		std::vector<std::uint8_t>  ttf;                // Empty if the font couldn't be found
+		std::vector<ImWchar>       ranges;             // Every character the font has, for ImGui to load
+		float                      widthPerEm = 0.0f;  // How wide a to z run per em, for comparing fonts' widths. 0 without all of them
 	};
 
 	// Gives every game font the built-in typeface's ascent to descent per em. ImGui sizes a font by that span while the game sizes it by

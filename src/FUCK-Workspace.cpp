@@ -106,6 +106,15 @@ static void WriteJsonIfChanged(const T& a_data, const std::string& a_path)
 	s_workspaceFiles[a_path] = std::move(buffer);
 }
 
+// Scaled for the screen, and widened for a font whose text runs wider than the built-in typeface's
+void FUCKMan::ApplyDefaultWindow()
+{
+	const float scale = ImGui::Renderer::GetResolutionScale();
+	const float widen = MANAGER(IconFont)->GetTextWidthScale();
+	_cfg.windowPos    = { _def.windowPos.x * scale, _def.windowPos.y * scale };
+	_cfg.windowSize   = { _def.windowSize.x * scale * widen, _def.windowSize.y * scale };
+}
+
 void FUCKMan::LoadWorkspace()
 {
 	float scale            = ImGui::Renderer::GetResolutionScale();
@@ -154,10 +163,9 @@ void FUCKMan::LoadWorkspace()
 	}
 
 	if (!mainWindowLoaded) {
-		_cfg.windowPos  = { _def.windowPos.x * scale, _def.windowPos.y * scale };
-		_cfg.windowSize = { _def.windowSize.x * scale, _def.windowSize.y * scale };
-		_lastSavedPos   = _cfg.windowPos;
-		_lastSavedSize  = _cfg.windowSize;
+		ApplyDefaultWindow();
+		_lastSavedPos  = _cfg.windowPos;
+		_lastSavedSize = _cfg.windowSize;
 	}
 
 	// Load per-plugin tool states and window geometries.

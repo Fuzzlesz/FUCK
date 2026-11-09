@@ -12,24 +12,32 @@
 #include "System/Utils.h"
 
 #include "API/IconsFontAwesome6.h"
+#include "API/IconsGameIcons.h"
 
 namespace IconFont
 {
 	namespace
 	{
-		// The range Font Awesome's icons are drawn from. The main typeface is kept out of it, as many typefaces have
-		// glyphs of their own in the same private-use area, and those would be drawn in place of the icons
-		const ImWchar kIconRanges[] = { ICON_MIN_FA, ICON_MAX_16_FA, 0 };
+		// The ranges each icon set is drawn from. The main typeface is kept out of them, as many typefaces have glyphs of their own
+		// in the same private-use area, and those would be drawn in place of the icons. The two sets share codes, so a font has one or
+		// the other
+		const ImWchar kIconRanges[]     = { ICON_MIN_FA, ICON_MAX_16_FA, 0 };
+		const ImWchar kGameIconRanges[] = { ICON_MIN_GI, ICON_MAX_16_GI, 0 };
 
-		// A typeface's ascent and descent as fractions of its em, descent negative, read as FreeType reads them
+		// A typeface's ascent, descent, and cap height as fractions of its em, descent negative, read as FreeType reads them. The loaders
+		// size a typeface so its ascent to descent spans the font size, so the fractions of the font size below hold at every size
 		struct VMetrics
 		{
-			float ascent  =  0.8f;
-			float descent = -0.2f;
+			float ascent    = 0.8f;
+			float descent   = -0.2f;
+			float capHeight = 0.7f;
 
-			// Where the baseline falls in a line, as a fraction of the line's height from the top. The loaders size a
-			// typeface so its ascent to descent spans the font size, so this is the same at every size
-			float Baseline() const { return ascent / (ascent - descent); }
+			// How far the middle of the capitals sits above the baseline, as a fraction of the font size
+			float CapMiddle() const { return capHeight * 0.5f / (ascent - descent); }
+
+			// How far the middle of the ascent to descent sits above the baseline, as a fraction of the font size. Icon fonts draw each
+			// icon across that span, so it's the middle of their icons
+			float SpanMiddle() const { return (ascent + descent) * 0.5f / (ascent - descent); }
 		};
 
 		std::uint16_t ReadU16(const std::uint8_t* a_p) { return static_cast<std::uint16_t>((a_p[0] << 8) | a_p[1]); }
@@ -39,7 +47,8 @@ namespace IconFont
 			return (static_cast<std::uint32_t>(a_p[0]) << 24) | (static_cast<std::uint32_t>(a_p[1]) << 16) | (static_cast<std::uint32_t>(a_p[2]) << 8) | a_p[3];
 		}
 
-		// Reads the vertical metrics from a TrueType/OpenType file in memory: 'hhea', or 'OS/2' when 'hhea' has none
+		// Reads the vertical metrics from a TrueType/OpenType file in memory: 'hhea', or 'OS/2' when 'hhea' has none, and the cap height
+		// from 'OS/2' where it gives one
 		std::optional<VMetrics> ReadVMetrics(const void* a_data, int a_size)
 		{
 			const auto* data = static_cast<const std::uint8_t*>(a_data);
@@ -99,7 +108,21 @@ namespace IconFont
 			if (ascent <= descent)
 				return std::nullopt;
 
-			return VMetrics{ static_cast<float>(ascent) / unitsPerEm, static_cast<float>(descent) / unitsPerEm };
+			VMetrics metrics{ static_cast<float>(ascent) / unitsPerEm, static_cast<float>(descent) / unitsPerEm };
+			if (os2.data && os2.length >= 90 && ReadU16(os2.data) >= 2) {
+				if (const int capHeight = ReadS16(os2.data + 88); capHeight > 0)
+					metrics.capHeight = static_cast<float>(capHeight) / unitsPerEm;
+			}
+			return metrics;
+		}
+
+		std::optional<VMetrics> ReadVMetrics(const std::string& a_path)
+		{
+			std::ifstream file(a_path, std::ios::binary);
+			if (!file)
+				return std::nullopt;
+			const std::vector<char> data{ std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>() };
+			return ReadVMetrics(data.data(), static_cast<int>(data.size()));
 		}
 
 		// The built-in typeface's metrics. Icons are placed against the line as they are with it, whichever typeface
@@ -200,7 +223,7 @@ namespace IconFont
 		const auto& reference = GetReferenceMetrics();
 		GameFonts::SetLineHeight(reference.ascent - reference.descent);
 
-		// The text the typeface is used for. The icons come from Font Awesome alone
+		// The text the typeface is used for. The icons come from their own fonts
 		ImVector<ImWchar>        ranges;
 		ImFontGlyphRangesBuilder builder;
 		if (auto scaleform = RE::BSScaleformManager::GetSingleton()) {
@@ -223,6 +246,16 @@ namespace IconFont
 		_lightFont = otherFace(GameFonts::Face::kLight);
 		_boldFont  = otherFace(GameFonts::Face::kBold);
 
+		// The regular font again with the game-icons.net set, where its font has been installed
+		_gameIconsFont = nullptr;
+		if (std::filesystem::exists(ResolveFontPath(FONT_ICON_FILE_NAME_GI)))
+			_gameIconsFont = LoadFontIconSet(_baseFontSize, _baseIconSize, ranges, GameFonts::Face::kMedium, IconSet::kGameIcons);
+
+		// Compared with vanilla's Futura Condensed, the built-in typeface, whose a to z runs 8.946 em
+		constexpr float BUILT_IN_WIDTH_PER_EM = 8.946f;
+		const auto&     medium                = GameFonts::Get(GameFonts::Face::kMedium);
+		_textWidthScale = _gameFont && medium.widthPerEm > 0.0f ? std::clamp(medium.widthPerEm / BUILT_IN_WIDTH_PER_EM, 1.0f, 1.5f) : 1.0f;
+
 		io.FontDefault                 = _regularFont;
 		ImGui::GetStyle().FontSizeBase = _regularFont->LegacySize;
 
@@ -232,15 +265,18 @@ namespace IconFont
 		ImGui_ImplDX11_CreateDeviceObjects();
 	}
 
-	ImFont* Manager::LoadFontIconSet(float a_fontSize, float a_iconSize, const ImVector<ImWchar>& a_ranges, GameFonts::Face a_face) const
+	ImFont* Manager::LoadFontIconSet(float a_fontSize, float a_iconSize, const ImVector<ImWchar>& a_ranges, GameFonts::Face a_face, IconSet a_icons) const
 	{
 		const auto& io = ImGui::GetIO();
 
 		ImFont* font = nullptr;
 
+		const bool     gameIcons  = a_icons == IconSet::kGameIcons;
+		const ImWchar* iconRanges = gameIcons ? kGameIconRanges : kIconRanges;
+
 		// The typeface never supplies the icons, even where it has glyphs of its own in their range
 		ImFontConfig main_cfg;
-		main_cfg.GlyphExcludeRanges = kIconRanges;
+		main_cfg.GlyphExcludeRanges = iconRanges;
 
 		// The game's own font, or the chosen typeface without it
 		const auto* game = _gameFont ? &GameFonts::Get(a_face) : nullptr;
@@ -263,21 +299,18 @@ namespace IconFont
 		icon_config.PixelSnapH  = false;
 		icon_config.OversampleH = icon_config.OversampleV = 1;
 
-		// Force all FontAwesome icons to be monospaced by locking their advance width
+		// Force all icons to be monospaced by locking their advance width
 		icon_config.GlyphMinAdvanceX = a_iconSize;
 		icon_config.GlyphMaxAdvanceX = a_iconSize;
 
-		// Merged glyphs sit on the typeface's baseline, and where the baseline falls in the line depends on the
-		// typeface's ascent and descent. So the icons are moved to keep the place in the line they have with the
-		// built-in typeface, rather than shifting up or down with each typeface
-		if (font && font->Sources.Size > 0) {
-			if (auto metrics = ReadVMetrics(font->Sources[0]->FontData, font->Sources[0]->FontDataSize)) {
-				icon_config.GlyphOffset.y = std::round((GetReferenceMetrics().Baseline() - metrics->Baseline()) * a_fontSize);
-			}
-		}
+		// Merged icons sit on the typeface's baseline, which leaves them higher or lower against the text depending on the typeface
+		// and the icon font. So each icon's middle is moved to the middle of the text's capitals, centring it on the text in any typeface
+		const std::string iconPath = ResolveFontPath(gameIcons ? FONT_ICON_FILE_NAME_GI : FONT_ICON_FILE_NAME_FAS);
+		const VMetrics    text     = font->Sources.Size > 0 ? ReadVMetrics(font->Sources[0]->FontData, font->Sources[0]->FontDataSize).value_or(VMetrics{}) : VMetrics{};
+		const VMetrics    icons    = ReadVMetrics(iconPath).value_or(VMetrics{ 0.875f, -0.125f });  // Font Awesome's, should the file not read
+		icon_config.GlyphOffset.y  = icons.SpanMiddle() * a_iconSize - text.CapMiddle() * a_fontSize;
 
-		std::string faPath = ResolveFontPath(FONT_ICON_FILE_NAME_FAS);
-		io.Fonts->AddFontFromFileTTF(faPath.c_str(), a_iconSize, &icon_config, kIconRanges);
+		io.Fonts->AddFontFromFileTTF(iconPath.c_str(), a_iconSize, &icon_config, iconRanges);
 		return font;
 	}
 

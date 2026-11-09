@@ -62,6 +62,8 @@ namespace FUCK::Host
 			return mgr->GetLightFont();
 		case FUCK::Font::kBold:
 			return mgr->GetBoldFont();
+		case FUCK::Font::kGameIcons:
+			return mgr->GetGameIconsFont();
 		default:
 			return mgr->GetRegularFont();
 		}

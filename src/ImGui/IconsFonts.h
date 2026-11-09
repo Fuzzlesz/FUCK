@@ -21,6 +21,12 @@ namespace IconFont
 	class Manager final : public REX::Singleton<Manager>
 	{
 	public:
+		enum class IconSet
+		{
+			kFontAwesome,
+			kGameIcons
+		};
+
 		struct GamepadIcon
 		{
 			IconTexture xbox;
@@ -41,13 +47,21 @@ namespace IconFont
 		void SetGameFont(bool a_use);
 		bool GetGameFont() const { return _gameFont; }
 
+		// How much wider the regular font's text runs than the built-in typeface's, from 1 to 1.5, so the main window can open wider for
+		// a wide font. 1 for a typeface chosen from the list, as it can't be measured
+		float GetTextWidthScale() const { return _textWidthScale; }
+
 		ImFont* GetLargeFont() const;
 		ImFont* GetRegularFont() const;
 
 		// The game font's light and bold faces. Where the typeface has no separate face, as with the built-in one or a theme with a single
 		// font, these return the regular font
 		ImFont* GetLightFont() const { return _lightFont ? _lightFont : _regularFont; }
-		ImFont* GetBoldFont()  const { return _boldFont ?  _boldFont  : _regularFont; }
+		ImFont* GetBoldFont() const { return _boldFont ? _boldFont : _regularFont; }
+
+		// The regular font with the game-icons.net icons in place of Font Awesome's, as the two share codes. The regular font when
+		// game-icons.ttf isn't installed
+		ImFont* GetGameIconsFont() const { return _gameIconsFont ? _gameIconsFont : _regularFont; }
 
 		const IconTexture* GetStepperRight() const;
 		const IconTexture* GetCheckbox() const;
@@ -59,7 +73,7 @@ namespace IconFont
 		const IconTexture* GetGamePadIcon(const GamepadIcon& a_icons) const;
 
 	private:
-		ImFont* LoadFontIconSet(float a_fontSize, float a_iconSize, const ImVector<ImWchar>& a_ranges, GameFonts::Face a_face = GameFonts::Face::kMedium) const;
+		ImFont* LoadFontIconSet(float a_fontSize, float a_iconSize, const ImVector<ImWchar>& a_ranges, GameFonts::Face a_face = GameFonts::Face::kMedium, IconSet a_icons = IconSet::kFontAwesome) const;
 		// Internal helper that actually clears the atlas
 		void RebuildFontAtlas();
 
@@ -71,16 +85,18 @@ namespace IconFont
 
 		std::string _fontName{ "Default" };
 		bool        _gameFont{ true };
+		float       _textWidthScale{ 1.0f };
 
 		float _baseFontSize{ 30.0f };       // was 24.0f
-		float _baseIconSize{ 26.0f };       // was 20.0f
+		float _baseIconSize{ 24.0f };       // was 26.0f
 		float _baseLargeFontSize{ 34.0f };  // was 26.0f
-		float _baseLargeIconSize{ 31.0f };  // was 24.0f
+		float _baseLargeIconSize{ 29.0f };  // was 31.0f
 
 		ImFont* _largeFont{ nullptr };
 		ImFont* _regularFont{ nullptr };
 		ImFont* _lightFont{ nullptr };
 		ImFont* _boldFont{ nullptr };
+		ImFont* _gameIconsFont{ nullptr };
 
 		IconTexture _stepperRight{ L"StepperRight"sv };
 		IconTexture _checkbox{ L"Checkbox"sv };

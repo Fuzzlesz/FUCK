@@ -3,6 +3,7 @@ set(headers ${headers}
 	src/API/FUCK_Camera.h
 	src/API/FUCK_ColorPalette.h
 	src/API/IconsFontAwesome6.h
+	src/API/IconsGameIcons.h
 	src/Camera/Core.h
 	src/Camera/Manager.h
 	src/Camera/Maths.h

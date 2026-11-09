@@ -552,6 +552,7 @@ bool FUCKMan::ProcessAsyncInput(const RE::InputEvent* const* a_event)
 void FUCKMan::ResetSettings()
 {
 	_cfg = _def;
+	ApplyDefaultWindow();
 
 	auto hotkeys = MANAGER(Hotkeys);
 	hotkeys->GetToggleHotkey().Clear();
