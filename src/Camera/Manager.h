@@ -61,8 +61,9 @@ namespace Camera
 		// Where the subject faced as the session began, which Reset turns it back to
 		std::optional<float> startSubjectYaw;
 
-		// A pose to land on at the next update: SetCameraPose() on the offset bases, or kStartFromView
+		// A pose to land on at the next update: SetCameraPose() on the offset bases, or kStartFromView, which eases on into the session's start
 		std::optional<FUCK::CameraPose> pendingPose;
+		bool                            pendingPoseEases = false;
 
 		// kHoldHeadStill: whose head is held, and whether it tracked before
 		RE::ActorHandle heldHead;
@@ -226,6 +227,12 @@ namespace Camera
 		bool _inputAllowed  = true;
 		bool _mouseLocked   = false;
 		bool _cameraMoves   = true;
+
+		bool GetShownView(FUCK::CameraPose& a_view) const;
+
+		// The view on screen as the last frame was drawn, for kStartFromView, so a client moving the camera before it begins doesn't change it
+		std::optional<FUCK::CameraPose>       _shownView;
+		std::chrono::steady_clock::time_point _shownViewAt;
 
 		// The applet's frame state, shared as only the current session draws it
 		bool  _presetHovered = false;  // the list is open over an entry, so Ctrl+1-9 assigns rather than loads

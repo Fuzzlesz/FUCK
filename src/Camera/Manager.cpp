@@ -183,17 +183,16 @@ namespace Camera
 			}
 		}
 
-		// kStartFromView: the view as the session shown now has it, before it lets go
+		// kStartFromView: the view on screen. A session's as it holds it, else the game's own (a conversation camera's) as the last frame
+		// drew it, as the client may already have moved the game's camera or changed its FOV to set up its base
+		constexpr auto                  SHOWN_VIEW_AGE = std::chrono::milliseconds(500);
 		std::optional<FUCK::CameraPose> startView;
 		auto camera = RE::PlayerCamera::GetSingleton();
-		if (_current && (opts.flags & FUCK::CameraSessionFlags::kStartFromView)) {
-			if (auto root = camera ? camera->cameraRoot.get() : nullptr) {
-				FUCK::CameraPose view;
-				view.position = root->local.translate;
-				Maths::AnglesFromRotation(root->local.rotate, view.pitch, view.yaw, view.roll);
-				view.fov  = Core::GetScreenFov();
+		if (opts.flags & FUCK::CameraSessionFlags::kStartFromView) {
+			if (FUCK::CameraPose view; _current && GetShownView(view))
 				startView = view;
-			}
+			else if (_shownView && std::chrono::steady_clock::now() - _shownViewAt < SHOWN_VIEW_AGE)
+				startView = _shownView;
 		}
 
 		if (_current) {
@@ -204,15 +203,16 @@ namespace Camera
 			}
 		}
 
-		auto session        = std::make_unique<Session>(*this);
-		session->client     = opts.client;
-		session->context    = opts.context ? opts.context : "";
-		session->base       = opts.base;
-		session->flags      = opts.flags;
-		session->hasSubject = opts.subject != nullptr;
-		session->subject    = session->hasSubject ? opts.subject->GetHandle() : RE::ActorHandle{};
-		session->alsoFramed = opts.alsoFramed ? opts.alsoFramed->GetHandle() : RE::ActorHandle{};
-		session->pendingPose = startView;
+		auto session              = std::make_unique<Session>(*this);
+		session->client           = opts.client;
+		session->context          = opts.context ? opts.context : "";
+		session->base             = opts.base;
+		session->flags            = opts.flags;
+		session->hasSubject       = opts.subject != nullptr;
+		session->subject          = session->hasSubject ? opts.subject->GetHandle() : RE::ActorHandle{};
+		session->alsoFramed       = opts.alsoFramed ? opts.alsoFramed->GetHandle() : RE::ActorHandle{};
+		session->pendingPose      = startView;
+		session->pendingPoseEases = startView.has_value();
 
 		if (camera && camera->currentState) {
 			session->startingState = camera->currentState->id;
@@ -734,7 +734,7 @@ namespace Camera
 		if (to.x == 0.0f && to.y == 0.0f)
 			return false;
 
-		// RotateSubject's amount turns the yaw one way or the other, as its matrix has it, so that's measured
+		// Which way RotateSubject turns the yaw depends on its matrix, so it's measured rather than assumed
 		RE::NiMatrix3 probe;
 		probe.SetEulerAnglesXYZ(0.0f, 0.0f, -1.0f);
 		const float sign   = Maths::YawOf(probe) > 0.0f ? 1.0f : -1.0f;
@@ -835,6 +835,11 @@ namespace Camera
 
 	void Manager::OnFrame()
 	{
+		if (FUCK::CameraPose view; GetShownView(view)) {
+			_shownView   = view;
+			_shownViewAt = std::chrono::steady_clock::now();
+		}
+
 		// Set again by DrawPresets() if the list is still open over an entry this frame
 		_presetHovered = false;
 
@@ -905,8 +910,13 @@ namespace Camera
 
 		if (session.pendingPose) {
 			const auto& pose = *session.pendingPose;
-			session.core.SolvePose(baseTranslate, baseRotate, pose.position, Maths::RotationFromAngles(pose.pitch, pose.yaw, pose.roll), pose.fov);
+			session.core.SolvePose(baseTranslate, baseRotate, pose.position, Maths::RotationFromAngles(pose.pitch, pose.yaw, pose.roll), pose.fov,
+			                       session.pendingPoseEases);
 			session.pendingPose.reset();
+
+			// The FOV was applied earlier this frame, before the pose landed, so it's applied again to show the pose's own on this frame
+			session.core.ApplyFov();
+			session.pendingPoseEases = false;
 		}
 
 		// Without offsets there's nothing to apply, unless the base is held, as the game's camera may have moved from it, or the client moves it
@@ -1099,6 +1109,25 @@ namespace Camera
 		_current->client->OnCameraFinalPosition(a_translation);
 	}
 
+	// The view on screen. A session on an offset base gives it as it last applied it, with its own FOV, as the game's camera may have been
+	// put back or moved since. Otherwise the game's camera as it is
+	bool Manager::GetShownView(FUCK::CameraPose& a_view) const
+	{
+		auto camera = RE::PlayerCamera::GetSingleton();
+		auto node   = camera ? camera->cameraRoot.get() : nullptr;
+		if (!node)
+			return false;
+
+		const bool session = _current && IsOffsetBase(_current->base);
+		const bool applied = session && _current->nodeModified;
+		a_view.position   = applied ? _current->nodeAppliedTranslate : node->local.translate;
+		Maths::AnglesFromRotation(applied ? _current->nodeAppliedRotate : node->local.rotate, a_view.pitch, a_view.yaw, a_view.roll);
+
+		const float held = session ? _current->core.GetAppliedFov() : 0.0f;
+		a_view.fov       = held > 0.0f ? held : Core::GetScreenFov();
+		return true;
+	}
+
 	bool Manager::GetPose(const FUCK::ICameraClient* a_client, FUCK::CameraPose* a_pose) const
 	{
 		if (!a_pose || !IsActive(a_client))
@@ -1110,18 +1139,8 @@ namespace Camera
 			return true;
 		}
 
-		if (IsOffsetBase(_current->base)) {
-			auto camera = RE::PlayerCamera::GetSingleton();
-			auto node   = camera ? camera->cameraRoot.get() : nullptr;
-			if (!node)
-				return false;
-
-			const bool applied = _current->nodeModified;
-			a_pose->position   = applied ? _current->nodeAppliedTranslate : node->local.translate;
-			Maths::AnglesFromRotation(applied ? _current->nodeAppliedRotate : node->local.rotate, a_pose->pitch, a_pose->yaw, a_pose->roll);
-			a_pose->fov = Core::GetScreenFov();
-			return true;
-		}
+		if (IsOffsetBase(_current->base))
+			return GetShownView(*a_pose);
 
 		const auto& pose = _current->freeFinal.valid ? _current->freeFinal : _current->freeBase;
 		if (!pose.valid)
@@ -1141,7 +1160,8 @@ namespace Camera
 
 		// Offset bases land on it at the next update, solved against the base as it is then
 		if (IsOffsetBase(_current->base)) {
-			_current->pendingPose = *a_pose;
+			_current->pendingPose      = *a_pose;
+			_current->pendingPoseEases = false;
 			return true;
 		}
 

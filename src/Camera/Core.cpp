@@ -230,7 +230,26 @@ namespace Camera
 
 		UpdateZoomAcceleration(a_interval);
 		UpdateCinematic(a_settings.cinematic, a_interval);
+		FollowHandover();
 		ApplyFov();
+	}
+
+	// A handover into framing moves as one, the view it began at giving way as the framing comes in. Eased on their own, the offsets would
+	// reach the base view well before the framing does, so the camera would stop there on the way
+	void Core::FollowHandover()
+	{
+		if (!_handover)
+			return;
+
+		const float keep = 1.0f - _framingBlend;
+		_camOffset       = _handover->offset * keep;
+		_camRotZ         = _handover->rotZ * keep;
+		_camRotX         = _handover->rotX * keep;
+		_camRoll         = _handover->roll * keep;
+		_fovOffset       = std::lerp(_handover->fov, _targetFovOffset, _framingBlend);
+
+		if (!_isFramed || _framingProgress >= 1.0f)
+			_handover.reset();
 	}
 
 	Core::FrameInput Core::GatherInput(const FUCK::CameraControlState& a_state) const
@@ -319,6 +338,8 @@ namespace Camera
 
 	void Core::ResetMoves()
 	{
+		_handover.reset();
+
 		// Framed or not as the session began
 		if (_isFramed != _startedFramed)
 			SetBodyFraming(_startedFramed, _framingRect, _framingMargin);
@@ -813,11 +834,16 @@ namespace Camera
 		_targetFovOffset = fovOffset;
 	}
 
-	void Core::SolvePose(const RE::NiPoint3& a_baseTranslate, const RE::NiMatrix3& a_baseRotate, const RE::NiPoint3& a_translate, const RE::NiMatrix3& a_rotate, float a_fov)
+	void Core::SolvePose(const RE::NiPoint3& a_baseTranslate, const RE::NiMatrix3& a_baseRotate, const RE::NiPoint3& a_translate, const RE::NiMatrix3& a_rotate, float a_fov, bool a_easeToStart)
 	{
+		// How the session began is kept, so a reset goes back to its starting FOV and framing rather than to this pose
+		const float startFovOffset = _startFovOffset;
+		const bool  startedFramed  = _startedFramed;
 		ClearMotion();
-		_isFramed   = false;
-		_hasFraming = false;
+		_startFovOffset = startFovOffset;
+		_startedFramed  = startedFramed;
+		_isFramed       = false;
+		_hasFraming     = false;
 
 		// The orbit turns the base round world Z until its right axis is square to the pose's forward, so pitch and roll about the camera's
 		// own axes make up the rest. Of the two turns that do, the one facing the pose's way
@@ -857,6 +883,22 @@ namespace Camera
 			_targetFovOffset = a_fov - _baseFov;
 
 		Land();
+
+		if (!a_easeToStart)
+			return;
+
+		// Shown at the pose, then easing into the session's start: its FOV, the game's unless startFov set one, and with startFramed its
+		// framing, which the pose gives way to as it comes in (FollowHandover). Without framing the camera stays at the pose. The framing is
+		// from the base camera, as a session framed from its start is, so turning it off goes there rather than back to the pose
+		_targetFovOffset = _startFovOffset;
+		if (_startedFramed) {
+			_handover        = Handover{ _camOffset, _camRotZ, _camRotX, _camRoll, _fovOffset };
+			_targetCamOffset = { 0.0f, 0.0f, 0.0f };
+			_targetCamRotZ   = 0.0f;
+			_targetCamRotX   = 0.0f;
+			_targetCamRoll   = 0.0f;
+			SetBodyFraming(true, _framingRect, _framingMargin);
+		}
 	}
 
 	void Core::Settle()
@@ -923,6 +965,7 @@ namespace Camera
 		_framingProgress     = 0.0f;
 		_framingBlend        = 0.0f;
 		_framingDistance     = 0.0f;
+		_handover.reset();
 		_hasFraming          = false;
 		_smoothScrollZoom    = 0.0f;
 		_smoothScrollFov     = 0.0f;

@@ -86,8 +86,9 @@ namespace Camera
 		// Clears offsets and framing at once, keeping only roll and FOV, for when the base itself has been moved
 		void SnapTo(float a_roll, float a_fov);
 
-		// Offset bases: the offsets putting the camera at a pose (in the base's space) from this base, unframed and landed at once
-		void SolvePose(const RE::NiPoint3& a_baseTranslate, const RE::NiMatrix3& a_baseRotate, const RE::NiPoint3& a_translate, const RE::NiMatrix3& a_rotate, float a_fov);
+		// Offset bases: the offsets putting the camera at a pose (in the base's space) from this base, unframed and landed at once. With
+		// a_easeToStart it then eases into the session's start: its starting FOV, and its framing where it starts framed
+		void SolvePose(const RE::NiPoint3& a_baseTranslate, const RE::NiMatrix3& a_baseRotate, const RE::NiPoint3& a_translate, const RE::NiMatrix3& a_rotate, float a_fov, bool a_easeToStart = false);
 
 		// Lands on the target offsets and finishes any framing swoop at once, e.g. for a session opening where it was left
 		void Settle();
@@ -101,6 +102,7 @@ namespace Camera
 		// The FOV the session opens at, and the reset gesture goes back to, rather than the player's
 		void  SetStartFov(float a_fov);
 		float GetStartFov() const { return _startFovOffset != 0.0f ? _baseFov + _startFovOffset : 0.0f; }
+		float GetAppliedFov() const { return _baseFov > 0.0f ? _baseFov + _appliedFovOffset : 0.0f; }  // the FOV last given to the game, 0 before any
 
 		// Puts the player's FOV back for the session taking over, and keeps the offsets to carry on from when resumed
 		void Pause();
@@ -174,6 +176,7 @@ namespace Camera
 		void HandleSubjectRotation(const FrameInput& a_in, const Config& a_settings, float a_interval);
 		bool HandleResetGesture(const FrameInput& a_in, float a_interval);
 		void UpdateCinematic(bool a_enabled, float a_interval);
+		void FollowHandover();
 		void CaptureBaseFov();
 		void ClearMotion();
 		void ClampPitch();
@@ -206,6 +209,17 @@ namespace Camera
 
 		float _startFovOffset   = 0.0f;  // where the FOV starts (SetStartFov), from the player's
 		float _appliedFovOffset = 0.0f;  // the FOV offset last given to the game, which the view in use is at
+
+		// A handover easing into framing (SolvePose with a_easeToStart): the offsets and FOV it began at, which give way as the framing comes in
+		struct Handover
+		{
+			RE::NiPoint3 offset;
+			float        rotZ = 0.0f;
+			float        rotX = 0.0f;
+			float        roll = 0.0f;
+			float        fov  = 0.0f;
+		};
+		std::optional<Handover> _handover;
 
 		float                  _framingProgress   = 0.0f;  // linear swoop progress, eased into _framingBlend
 		float                  _framingBlend      = 0.0f;  // 0 = base view, 1 = body
