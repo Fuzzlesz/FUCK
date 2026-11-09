@@ -889,8 +889,13 @@ namespace FUCK::Host
 
 		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImGui::GetUserStyleColorVec4(ImGui::USER_STYLE::kComboBoxTextBox));
 		ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetUserStyleColorVec4(ImGui::USER_STYLE::kComboBoxText));
+		ImGui::PushStyleColor(ImGuiCol_NavCursor, ImVec4(0, 0, 0, 0));
 		bool res = ImGui::InputTextMultiline(label, buf, buf_size, size, flags);
-		ImGui::PopStyleColor(2);
+		ImGui::PopStyleColor(3);
+
+		// Focus shows on the border, as on the other fields, drags, and sliders, rather than ImGui's nav cursor
+		const ImRect bb(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
+		ImGui::DrawWidgetBorder(ImGui::GetWindowDrawList(), bb, ImGui::IsItemHovered() || ImGui::IsItemActive() || ImGui::IsWidgetFocused(ImGui::GetItemID()), ImGui::GetStyle().FrameRounding);
 		return res;
 	}
 

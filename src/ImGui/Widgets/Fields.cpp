@@ -167,12 +167,15 @@ namespace ImGui
 		PushStyleColor(ImGuiCol_Text, GetUserStyleColorVec4(USER_STYLE::kComboBoxText));
 		PushStyleColor(ImGuiCol_PopupBg, textBoxColor);
 
+		// Focus shows on the border, as on drags and sliders, rather than ImGui's nav cursor
+		PushStyleColor(ImGuiCol_NavCursor, ImVec4(0, 0, 0, 0));
+
 		PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(popupPad, popupPad));
 
 		bool isOpen = BeginCombo(idStr.c_str(), nullptr, ImGuiComboFlags_NoArrowButton | ImGuiComboFlags_HeightLarge);
 
 		PopStyleVar(4);
-		PopStyleColor(5);
+		PopStyleColor(6);
 
 		// Detect if opened Upwards
 		bool opensUp = false;
@@ -539,6 +542,9 @@ namespace ImGui
 		PushStyleColor(ImGuiCol_Text, GetUserStyleColorVec4(USER_STYLE::kComboBoxText));
 		PushStyleColor(ImGuiCol_PopupBg, GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
 
+		// Focus shows on the border, as on drags and sliders, rather than ImGui's nav cursor
+		PushStyleColor(ImGuiCol_NavCursor, ImVec4(0, 0, 0, 0));
+
 		ImDrawList* parentDrawList = GetWindowDrawList();
 
 		// Strip ## hidden tags from the preview text so it displays cleanly when closed
@@ -558,7 +564,7 @@ namespace ImGui
 		bool isOpen = BeginCombo(idStr.c_str(), nullptr, ImGuiComboFlags_NoArrowButton);
 
 		PopStyleVar(3);
-		PopStyleColor(6);
+		PopStyleColor(7);
 
 		// Detect if opened Upwards
 		bool opensUp = false;
@@ -638,13 +644,14 @@ namespace ImGui
 		PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0, 0, 0, 0));
 		PushStyleColor(ImGuiCol_FrameBgActive,  ImVec4(0, 0, 0, 0));
 		PushStyleColor(ImGuiCol_Text,           GetUserStyleColorVec4(USER_STYLE::kComboBoxText));
+		PushStyleColor(ImGuiCol_NavCursor,      ImVec4(0, 0, 0, 0));  // Focus shows on the border, as on drags and sliders
 
 		bool res = InputText(idStr.c_str(), buf, buf_size, flags);
 
 		ImRect bb(GetItemRectMin(), GetItemRectMax());
 		DrawWidgetBorder(GetWindowDrawList(), bb, IsItemHovered() || IsItemActive() || IsWidgetFocused(GetID(idStr.c_str())), GetFrameRounding());
 
-		PopStyleColor(4);
+		PopStyleColor(5);
 		PopStyleVar(3);
 
 		if (IsItemActivated())
