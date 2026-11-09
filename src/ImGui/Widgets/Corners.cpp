@@ -20,11 +20,22 @@ namespace ImGui::WidgetsDetail
 			dl->AddRect(bb.Min, bb.Max, col, 0.0f, 0, thickness);
 			return;
 		}
+
+		// Drawn half its thickness inside the edges, as AddRect() draws, so a window clipped to its own rect keeps all of its border. The
+		// corners stay on the fill's curves, widened by the same, each trimmed at both ends to meet the edges where they've moved in
+		const float inset = thickness * 0.5f;
+		const float r     = rounding + inset;
+		const float trim  = std::asin(std::min(1.0f, inset / r));
+		auto        arc   = [&](ImVec2 a_center, float a_from, float a_to) {
+			const float dir = a_to > a_from ? 1.0f : -1.0f;
+			PathInvertedCorner(dl, a_center, r, a_from + dir * trim, a_to - dir * trim);
+		};
+
 		dl->PathClear();
-		PathInvertedCorner(dl, { bb.Min.x, bb.Min.y }, rounding, IM_PI / 2, 0.0f);
-		PathInvertedCorner(dl, { bb.Max.x, bb.Min.y }, rounding, IM_PI, IM_PI / 2);
-		PathInvertedCorner(dl, { bb.Max.x, bb.Max.y }, rounding, 3.0f * IM_PI / 2, IM_PI);
-		PathInvertedCorner(dl, { bb.Min.x, bb.Max.y }, rounding, 0.0f, -IM_PI / 2);
+		arc({ bb.Min.x, bb.Min.y }, IM_PI / 2, 0.0f);
+		arc({ bb.Max.x, bb.Min.y }, IM_PI, IM_PI / 2);
+		arc({ bb.Max.x, bb.Max.y }, 3.0f * IM_PI / 2, IM_PI);
+		arc({ bb.Min.x, bb.Max.y }, 0.0f, -IM_PI / 2);
 		dl->PathStroke(col, ImDrawFlags_Closed, thickness);
 	}
 
@@ -258,16 +269,19 @@ namespace ImGui
 		}
 	}
 
-	bool PushThemedWindowBg(bool a_child)
+	bool PushThemedWindowBg(ThemedWindow a_kind)
 	{
 		// A child that isn't rounded itself is still taken over inside a rounded window, so its scrollbar can stay
 		// clear of the window's corners. Its square corners are drawn as ImGui would
 		const ImGuiStyle& style    = GetStyle();
-		const float       rounding = a_child ? std::max(style.ChildRounding, style.WindowRounding) : style.WindowRounding;
+		const float       rounding = a_kind == ThemedWindow::kChild ? std::max(style.ChildRounding, style.WindowRounding) :
+		                             a_kind == ThemedWindow::kPopup ? style.PopupRounding :
+		                                                              style.WindowRounding;
 		if (!UseInvertedCorners() || rounding <= 0.0f)
 			return false;
 
-		PushStyleColor(a_child ? ImGuiCol_ChildBg : ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
+		const ImGuiCol bg = a_kind == ThemedWindow::kChild ? ImGuiCol_ChildBg : a_kind == ThemedWindow::kPopup ? ImGuiCol_PopupBg : ImGuiCol_WindowBg;
+		PushStyleColor(bg, ImVec4(0, 0, 0, 0));
 		for (ImGuiCol col : s_themedWindowCols)
 			PushStyleColor(col, ImVec4(0, 0, 0, 0));
 		return true;
@@ -287,14 +301,17 @@ namespace ImGui
 		// the draw list to the inside of the window, so open it back up to the whole window.
 		// A child's rounding and border size are already its own, from ChildRounding and ChildBorderSize
 		const bool   isChild  = (window->Flags & ImGuiWindowFlags_ChildWindow) != 0;
-		const ImRect bb       = window->Rect();
+		const bool   isPopup  = !isChild && (window->Flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0;
+		// On whole pixels, as an auto-sized window such as a tooltip can end part way through one, which the clip below would cut its
+		// right and bottom borders at
+		const ImRect bb       = { ImFloor(window->Pos), ImFloor(window->Pos + window->Size) };
 		const float  rounding = window->WindowRounding;
 		const float  cornerR  = CapInvertedRounding(bb, rounding);
 		ImDrawList*  dl       = window->DrawList;
 
 		dl->PushClipRect(bb.Min, bb.Max, false);
 		if (!(window->Flags & ImGuiWindowFlags_NoBackground)) {
-			AddThemedRectFilled(dl, bb, GetColorU32(isChild ? ImGuiCol_ChildBg : ImGuiCol_WindowBg), rounding);
+			AddThemedRectFilled(dl, bb, GetColorU32(isChild ? ImGuiCol_ChildBg : isPopup ? ImGuiCol_PopupBg : ImGuiCol_WindowBg), rounding);
 			if (window->WindowBorderSize > 0.0f)
 				AddThemedRect(dl, bb, GetColorU32(ImGuiCol_Border), rounding, window->WindowBorderSize);
 		}
@@ -313,8 +330,16 @@ namespace ImGui
 
 	bool BeginChildThemed(const char* a_id, const ImVec2& a_size, ImGuiChildFlags a_childFlags, ImGuiWindowFlags a_windowFlags)
 	{
-		const bool themed  = PushThemedWindowBg(true);
+		const bool themed  = PushThemedWindowBg(ThemedWindow::kChild);
 		const bool visible = BeginChild(a_id, a_size, a_childFlags, a_windowFlags);
+		PopThemedWindowBg(themed);
+		return visible;
+	}
+
+	bool BeginTooltipThemed()
+	{
+		const bool themed  = PushThemedWindowBg(ThemedWindow::kPopup);
+		const bool visible = BeginTooltip();
 		PopThemedWindowBg(themed);
 		return visible;
 	}

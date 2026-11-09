@@ -880,7 +880,7 @@ namespace FUCK::Host
 
 	static void PushItemWidth_Impl(float item_width) { ImGui::PushItemWidth(item_width); }
 	static void PopItemWidth_Impl() { ImGui::PopItemWidth(); }
-	static bool BeginTooltip_Impl() { return ImGui::BeginTooltip(); }
+	static bool BeginTooltip_Impl() { return ImGui::BeginTooltipThemed(); }
 	static void EndTooltip_Impl() { ImGui::EndTooltip(); }
 	static void SetScrollHereY_Impl(float center_y_ratio) { ImGui::SetScrollHereY(center_y_ratio); }
 

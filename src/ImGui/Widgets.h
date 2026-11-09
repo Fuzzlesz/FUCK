@@ -102,14 +102,24 @@ namespace ImGui
 	void AddThemedRectFilled(ImDrawList* a_drawList, const ImRect& a_bb, ImU32 a_col, float a_rounding, ImDrawFlags a_flags = ImDrawFlags_None);
 	void AddThemedRect(ImDrawList* a_drawList, const ImRect& a_bb, ImU32 a_col, float a_rounding, float a_thickness = 1.0f);
 
-	// ImGui only rounds a window's corners outwards. With inverted corners, call PushThemedWindowBg() just before Begin()
-	// (or BeginChild(), with a_child) and PopThemedWindowBg() straight after it, whatever it returned. ImGui then leaves
-	// the background, border and resize grip out, and they're drawn inverted instead. Returns false when there's nothing to invert
-	bool PushThemedWindowBg(bool a_child = false);
+	enum class ThemedWindow
+	{
+		kWindow,
+		kChild,
+		kPopup  // Popups and tooltips, which take the popup rounding and background
+	};
+
+	// ImGui only rounds a window's corners outwards. With inverted corners, call PushThemedWindowBg() just before Begin(), BeginChild(),
+	// or a popup's or tooltip's begin, with the kind of window it is, and PopThemedWindowBg() straight after it, whatever it returned. ImGui
+	// then leaves the background, border and resize grip out, and they're drawn inverted instead. Returns false when there's nothing to invert
+	bool PushThemedWindowBg(ThemedWindow a_kind = ThemedWindow::kWindow);
 	void PopThemedWindowBg(bool a_pushed);
 
 	// BeginChild() whose corners follow the theme. Pair with EndChild() as usual
 	bool BeginChildThemed(const char* a_id, const ImVec2& a_size = ImVec2(0, 0), ImGuiChildFlags a_childFlags = ImGuiChildFlags_None, ImGuiWindowFlags a_windowFlags = ImGuiWindowFlags_None);
+
+	// BeginTooltip() whose corners follow the theme. Pair with EndTooltip() as usual
+	bool BeginTooltipThemed();
 
 	// How far inverted corners cut into the current window's edges, so things along them can move in clear. 0 otherwise
 	float GetWindowCornerInset();

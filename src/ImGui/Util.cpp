@@ -326,7 +326,7 @@ namespace ImGui
 				}
 			}
 
-			if (BeginTooltip()) {
+			if (BeginTooltipThemed()) {
 				PushTextWrapPos(GetFontSize() * 35.0f);
 				DrawFormattedText(desc);
 				PopTextWrapPos();
@@ -388,7 +388,7 @@ namespace ImGui
 				}
 			}
 
-			if (BeginTooltip()) {
+			if (BeginTooltipThemed()) {
 				DrawFormattedText(fmt);
 				EndTooltip();
 			}
