@@ -57,6 +57,42 @@ namespace ImGui
 		return GetFont() == fonts->GetRegularFont() ? fonts->GetLightFont() : GetFont();
 	}
 
+	// Whether the mouse is over a row, or the gamepad or keyboard's focus is on something in it, so its label lights up
+	bool IsRowLit(const ImRect& a_row)
+	{
+		ImGuiContext& g      = *GImGui;
+		ImGuiWindow*  window = g.CurrentWindow;
+		if (!window || (window->Flags & ImGuiWindowFlags_NoInputs) || (g.CurrentItemFlags & ImGuiItemFlags_Disabled))
+			return false;
+
+		// Not while something elsewhere is held, such as a slider being dragged past this row
+		const bool free = g.ActiveId == 0 || g.ActiveId == g.HoveredId;
+		if (free && g.HoveredWindow == window && IsMouseHoveringRect(a_row.Min, a_row.Max, false))
+			return true;
+
+		return g.NavCursorVisible && g.NavWindow == window && g.NavId != 0 && a_row.Overlaps(WindowRectRelToAbs(window, window->NavRectRel[g.NavLayer]));
+	}
+
+	// Labels are dimmed at rest and lit while their row is, as the game's menus do. A share of the text colour, so it suits any style
+	ImU32 GetLabelColour(bool a_lit)
+	{
+		constexpr float REST_ALPHA = 0.7f;
+		return GetColorU32(ImGuiCol_Text, a_lit ? 1.0f : REST_ALPHA);
+	}
+
+	// A faint band behind a lit row, strongest at its middle and fading out to either end, in the text colour so it suits any style
+	void DrawRowHighlight(const ImRect& a_row)
+	{
+		constexpr float PEAK_ALPHA = 0.06f;
+		const ImU32     clear      = GetColorU32(ImGuiCol_Text, 0.0f);
+		const ImU32     peak       = GetColorU32(ImGuiCol_Text, PEAK_ALPHA);
+		const float     middle     = std::floor((a_row.Min.x + a_row.Max.x) * 0.5f);
+
+		auto* drawList = GetWindowDrawList();
+		drawList->AddRectFilledMultiColor(a_row.Min, { middle, a_row.Max.y }, clear, peak, peak, clear);
+		drawList->AddRectFilledMultiColor({ middle, a_row.Min.y }, a_row.Max, peak, clear, clear, peak);
+	}
+
 	void LeftAlignedTextImpl(const char* label)
 	{
 		float fullAvailX = GetContentRegionAvail().x;
@@ -88,7 +124,13 @@ namespace ImGui
 			// 0.5f uses ImGui's native FramePadding identically to AlignTextToFramePadding()
 			float offY = style.labelAlign.y == 0.5f ? GetStyle().FramePadding.y : (targetHeight - textH) * style.labelAlign.y;
 
-			ImU32 textColor = GetColorU32(ImGuiCol_Text);
+			// The row runs from the label to the end of the region, the widget's width not being known yet
+			const ImVec2 rowMin = GetCursorScreenPos();
+			const ImRect row(rowMin, { rowMin.x + fullAvailX, rowMin.y + targetHeight });
+			const bool   lit = IsRowLit(row);
+			if (lit)
+				DrawRowHighlight(row);
+			ImU32 textColor = GetLabelColour(lit);
 
 			// Calculate exact screen position
 			ImVec2 screenPos = GetCursorScreenPos();

@@ -28,8 +28,10 @@ namespace ImGui
 			return result;
 		}
 
+		// Lays out a label and a widget on one row. drawContent is given the whole row, so a widget can take clicks anywhere along it.
+		// labelLit keeps the label lit, as a hotkey with kAlwaysHighlight has it
 		template <typename TDrawFunc>
-		void AlignedWidgetLayout(const char* label, bool alignFar, bool labelLeft, float contentWidth, TDrawFunc drawContent, float targetHeight = -1.0f)
+		void AlignedWidgetLayout(const char* label, bool alignFar, bool labelLeft, float contentWidth, TDrawFunc drawContent, float targetHeight = -1.0f, bool labelLit = false)
 		{
 			BeginGroup();
 			PushID(label);
@@ -74,16 +76,9 @@ namespace ImGui
 			float textH         = GetTextLineHeight();
 			float offY          = std::floor((actualTargetH - textH) * style.labelAlign.y);
 
-			ImU32 textColor = GetColorU32(ImGuiCol_Text);
-
-			// Natively draw the label to the screen without disrupting ImGui's internal cursor bounds.
-			// This prevents SameLine() and ItemSize() desyncs.
-			auto DrawLabel = [&](float xPos) {
-				ImVec2 screenPos = GetCursorScreenPos();
-				screenPos.x      = std::floor(screenPos.x + (xPos - startX));
-				screenPos.y      = std::floor(screenPos.y + std::max(0.0f, offY));
-				GetWindowDrawList()->AddText(labelFont, GetFontSize(), screenPos, textColor, labelView.data(), labelView.data() + labelView.size());
-			};
+			// Positions in the row as screen coordinates, the cursor still being at the row's start
+			const ImVec2 rowScreen = GetCursorScreenPos();
+			auto         ScreenX   = [&](float a_x) { return std::floor(rowScreen.x + (a_x - startX)); };
 
 			// Tighter gap globally for near-aligned widgets to closely mimic vanilla grouping
 			float scale = GetDynamicWidgetScale();
@@ -95,6 +90,7 @@ namespace ImGui
 			float labelSpacer = style.labelAlign.x * 50.0f * scale;
 
 			float widgetX = startX;
+			float labelX  = startX;
 			float maxX    = startX;
 
 			if (alignFar) {
@@ -103,11 +99,11 @@ namespace ImGui
 				float splitPoint      = rightPaneCenter - (contentWidth * 0.5f);
 
 				if (labelLeft) {
-					DrawLabel(startX);
+					labelX  = startX;
 					widgetX = splitPoint;
 				} else {
 					widgetX = startX;
-					DrawLabel((splitPoint + contentWidth) - labelWidth);
+					labelX  = (splitPoint + contentWidth) - labelWidth;
 				}
 				maxX = rightPaneEnd;
 			} else {
@@ -116,21 +112,29 @@ namespace ImGui
 				float trailingPadding = 16.0f * scale;
 
 				if (labelLeft) {
-					DrawLabel(startX);
+					labelX  = startX;
 					widgetX = startX + labelWidth + nearSpacing + labelSpacer;
 					maxX    = widgetX + contentWidth + trailingPadding;
 				} else {
-					widgetX      = startX;
-					float labelX = startX + contentWidth + nearSpacing + labelSpacer;
-					DrawLabel(labelX);
-					maxX = labelX + labelWidth + trailingPadding;
+					widgetX = startX;
+					labelX  = startX + contentWidth + nearSpacing + labelSpacer;
+					maxX    = labelX + labelWidth + trailingPadding;
 				}
 			}
+
+			// The label is drawn straight to the list, so ImGui's cursor and item bounds aren't disturbed (SameLine() and ItemSize() stay
+			// in step). It's lit, with a faint band behind the row, while the row is under the mouse or holds the focus
+			const ImRect row({ ScreenX(startX), rowScreen.y }, { ScreenX(maxX), rowScreen.y + actualTargetH });
+			const bool   rowLit = IsRowLit(row);
+			if (rowLit)
+				DrawRowHighlight(row);
+			const ImVec2 labelPos(ScreenX(labelX), std::floor(rowScreen.y + std::max(0.0f, offY)));
+			GetWindowDrawList()->AddText(labelFont, GetFontSize(), labelPos, GetLabelColour(rowLit || labelLit), labelView.data(), labelView.data() + labelView.size());
 
 			SetCursorPosX(widgetX);
 			SetCursorPosY(startY);
 
-			drawContent();
+			drawContent(row);
 			const ImGuiID contentId = g.LastItemData.ID;
 
 			// Explicitly register the furthest X bound so AutoResize windows don't clip
@@ -176,27 +180,28 @@ namespace ImGui
 		float actualLayoutH = std::max(layoutH, iconH);
 		float offY          = std::floor((actualLayoutH - iconH) * 0.5f);
 
-		auto DrawContent = [&]() {
+		auto DrawContent = [&](const ImRect& a_row) {
 			ImGuiWindow* window = GetCurrentWindow();
 			if (window->SkipItems)
 				return;
 			ImGuiID id = window->GetID(idStr.c_str());
 			ImVec2  p  = window->DC.CursorPos;
 
-			// Register the full layout height as the hitbox
+			// Laid out at the icon's size, and clicked anywhere along the row, label included
 			ImRect bb(p, p + ImVec2(iconW, actualLayoutH));
 			ItemSize(bb);
-			if (!ItemAdd(bb, id))
+			if (!ItemAdd(a_row, id))
 				return;
 
 			bool hovered, held;
-			bool pressed = ButtonBehavior(bb, id, &hovered, &held);
+			bool pressed = ButtonBehavior(a_row, id, &hovered, &held);
 			if (pressed) {
 				*a_toggle = !*a_toggle;
 				selected  = true;
 			}
 
-			ImVec4 tint = GetHighlightTint(*a_toggle, hovered || IsWidgetFocused(id), false);
+			// Always at full brightness, ticked or not, as the label is what lights up
+			ImVec4 tint = GetHighlightTint(*a_toggle, true, false);
 			void*  tex  = *a_toggle ? iconFilled->srView.Get() : icon->srView.Get();
 
 			ImVec2 drawPos(std::floor(p.x), std::floor(p.y + offY));
@@ -226,7 +231,7 @@ namespace ImGui
 		float actualLayoutH = std::max(layoutH, visualH);
 		float offY          = std::floor((actualLayoutH - visualH) * 0.5f);
 
-		auto DrawContent = [&]() {
+		auto DrawContent = [&](const ImRect& a_row) {
 			ImGuiWindow* window = GetCurrentWindow();
 			if (window->SkipItems)
 				return;
@@ -234,14 +239,14 @@ namespace ImGui
 			const ImGuiID id = window->GetID(idStr.c_str());
 			ImVec2        p  = window->DC.CursorPos;
 
-			// Hitbox matches actualLayoutH to play nice with other widgets
+			// Laid out at the toggle's size, and clicked anywhere along the row, label included
 			ImRect bb(p, p + ImVec2(visualW, actualLayoutH));
 			ItemSize(bb);
-			if (!ItemAdd(bb, id))
+			if (!ItemAdd(a_row, id))
 				return;
 
 			bool hovered, held;
-			if (ButtonBehavior(bb, id, &hovered, &held)) {
+			if (ButtonBehavior(a_row, id, &hovered, &held)) {
 				*v      = !*v;
 				pressed = true;
 				MarkItemEdited(id);
@@ -576,24 +581,26 @@ namespace ImGui
 		float actualLayoutH = std::max(layoutH, size.y);
 		float offY          = std::floor((actualLayoutH - size.y) * 0.5f);
 
-		auto DrawContent = [&]() {
+		auto DrawContent = [&](const ImRect& a_row) {
 			ImGuiWindow* window = GetCurrentWindow();
 			if (window->SkipItems)
 				return;
 			ImGuiID id = window->GetID(idStr.c_str());
 			ImVec2  p  = window->DC.CursorPos;
 
+			// Laid out at the icon's size, and clicked anywhere along the row, label included
 			ImRect bb(p, p + ImVec2(size.x, actualLayoutH));
 			ItemSize(bb);
-			if (!ItemAdd(bb, id))
+			if (!ItemAdd(a_row, id))
 				return;
 
 			bool hovered, held;
-			bool pressed = ButtonBehavior(bb, id, &hovered, &held);
+			bool pressed = ButtonBehavior(a_row, id, &hovered, &held);
 			if (pressed)
 				clicked = true;
 
-			ImVec4 tint = GetHighlightTint(true, hovered || IsWidgetFocused(id), false);
+			// Always at full brightness, as the label is what lights up
+			ImVec4 tint = GetHighlightTint(true, true, false);
 
 			ImVec2 drawPos(std::floor(p.x), std::floor(p.y + offY));
 			window->DrawList->AddImage((ImTextureID)tex, drawPos, drawPos + size, ImVec2(0, 0), ImVec2(1, 1), ColorConvertFloat4ToU32(tint));
@@ -694,27 +701,28 @@ namespace ImGui
 		// Scale frame height to accommodate the largest rendered item
 		float actualLayoutH = std::max(layoutH, maxItemH);
 
-		auto DrawContent = [&]() {
+		auto DrawContent = [&](const ImRect& a_row) {
 			ImGuiWindow* window = GetCurrentWindow();
 			if (window->SkipItems)
 				return;
 			ImGuiID id = window->GetID(baseId.c_str());
 			ImVec2  p  = window->DC.CursorPos;
 
-			// If alignFar is true, the hitbox stretches backwards to encompass the modifiers properly
+			// If alignFar is true, the keys stretch backwards to take in the modifiers
 			float  leftEdge = alignFar ? p.x - (totalWidth - anchorWidth) : p.x;
 			ImRect bb(ImVec2(leftEdge, p.y), ImVec2(leftEdge + totalWidth, p.y + actualLayoutH));
 
+			// Clicked anywhere along the row, label included, so clicking the label starts rebinding as MCM Helper's hotkeys do
+			ImRect hit = a_row;
+			hit.Add(bb);
 			ItemSize(bb);
-			if (!ItemAdd(bb, id))
+			if (!ItemAdd(hit, id))
 				return;
 
 			bool hovered, held;
-			bool pressed = ButtonBehavior(bb, id, &hovered, &held);
+			bool pressed = ButtonBehavior(hit, id, &hovered, &held);
 			if (pressed)
 				clicked = true;
-
-			bool isFocused = IsWidgetFocused(id);
 
 			// Determine the starting X coordinate:
 			// For right-aligned layouts, the anchor key starts at p.x.
@@ -737,7 +745,7 @@ namespace ImGui
 				if (item.type == RenderItem::kIcon) {
 					ImVec4 flashCol = GetUserStyleColorVec4(USER_STYLE::kWidgetFlash);
 					flashCol.w      = 0.4f + (0.6f * (float)fabs(sin(GetTime() * 5.0f)));
-					ImVec4 tint     = flashing ? flashCol : GetHighlightTint(true, hovered || isFocused || alwaysHighlight, false);
+					ImVec4 tint     = flashing ? flashCol : GetHighlightTint(true, true, false);
 
 					// Draw graphic natively
 					window->DrawList->AddImage((ImTextureID)item.icon->srView.Get(), drawPos, drawPos + item.size, ImVec2(0, 0), ImVec2(1, 1), ColorConvertFloat4ToU32(tint));
@@ -752,7 +760,7 @@ namespace ImGui
 			SetCursorPosY(p.y);
 		};
 
-		AlignedWidgetLayout(label, alignFar, labelLeft, contentWidth, DrawContent, actualLayoutH);
+		AlignedWidgetLayout(label, alignFar, labelLeft, contentWidth, DrawContent, actualLayoutH, alwaysHighlight);
 
 		if (clicked)
 			PlayAudio(Audio::kFocus);

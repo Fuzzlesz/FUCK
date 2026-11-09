@@ -7,6 +7,9 @@ namespace ImGui
 
 	void        LeftAlignedTextImpl(const char* label);
 	ImFont*     GetLabelFont();
+	bool        IsRowLit(const ImRect& a_row);
+	ImU32       GetLabelColour(bool a_lit);
+	void        DrawRowHighlight(const ImRect& a_row);
 	std::string LeftAlignedText(const char* label);
 	void        CenteredText(const char* label, bool vertical = false);
 	void        TextColoredWrapped(const ImVec4& col, std::string_view text);
