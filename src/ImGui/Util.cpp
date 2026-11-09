@@ -50,6 +50,13 @@ namespace ImGui
 		window->DrawList->AddRectFilled(bb.Min, bb.Max, GetUserStyleColorU32(USER_STYLE::kSeparator));
 	}
 
+	// Labels use the light face, as the game's menus do, but only while FUCK's own font is current, so a font a plugin pushed is kept
+	ImFont* GetLabelFont()
+	{
+		auto fonts = MANAGER(IconFont);
+		return GetFont() == fonts->GetRegularFont() ? fonts->GetLightFont() : GetFont();
+	}
+
 	void LeftAlignedTextImpl(const char* label)
 	{
 		float fullAvailX = GetContentRegionAvail().x;
@@ -88,7 +95,7 @@ namespace ImGui
 			screenPos.y += std::max(0.0f, offY);
 
 			// Draw text directly to bypass layout engine interference and protect multi-widgets
-			GetWindowDrawList()->AddText(GetFont(), GetFontSize(), screenPos, textColor, labelView.data(), labelView.data() + labelView.size());
+			GetWindowDrawList()->AddText(GetLabelFont(), GetFontSize(), screenPos, textColor, labelView.data(), labelView.data() + labelView.size());
 		}
 
 		// Advance cursor to the start of the right pane safely

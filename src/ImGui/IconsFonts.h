@@ -1,5 +1,6 @@
 #pragma once
 
+#include "GameFonts.h"
 #include "Graphics.h"
 
 namespace IconFont
@@ -43,6 +44,11 @@ namespace IconFont
 		ImFont* GetLargeFont() const;
 		ImFont* GetRegularFont() const;
 
+		// The game font's light and bold faces. Where the typeface has no separate face, as with the built-in one or a theme with a single
+		// font, these return the regular font
+		ImFont* GetLightFont() const { return _lightFont ? _lightFont : _regularFont; }
+		ImFont* GetBoldFont()  const { return _boldFont ?  _boldFont  : _regularFont; }
+
 		const IconTexture* GetStepperRight() const;
 		const IconTexture* GetCheckbox() const;
 		const IconTexture* GetCheckboxFilled() const;
@@ -53,7 +59,7 @@ namespace IconFont
 		const IconTexture* GetGamePadIcon(const GamepadIcon& a_icons) const;
 
 	private:
-		ImFont* LoadFontIconSet(float a_fontSize, float a_iconSize, const ImVector<ImWchar>& a_ranges) const;
+		ImFont* LoadFontIconSet(float a_fontSize, float a_iconSize, const ImVector<ImWchar>& a_ranges, GameFonts::Face a_face = GameFonts::Face::kMedium) const;
 		// Internal helper that actually clears the atlas
 		void RebuildFontAtlas();
 
@@ -73,6 +79,8 @@ namespace IconFont
 
 		ImFont* _largeFont{ nullptr };
 		ImFont* _regularFont{ nullptr };
+		ImFont* _lightFont{ nullptr };
+		ImFont* _boldFont{ nullptr };
 
 		IconTexture _stepperRight{ L"StepperRight"sv };
 		IconTexture _checkbox{ L"Checkbox"sv };

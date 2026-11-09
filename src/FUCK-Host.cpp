@@ -55,7 +55,16 @@ namespace FUCK::Host
 	static ImFont* GetFont_Impl(FUCK::Font f)
 	{
 		auto mgr = IconFont::Manager::GetSingleton();
-		return (f == FUCK::Font::kLarge) ? mgr->GetLargeFont() : mgr->GetRegularFont();
+		switch (f) {
+		case FUCK::Font::kLarge:
+			return mgr->GetLargeFont();
+		case FUCK::Font::kLight:
+			return mgr->GetLightFont();
+		case FUCK::Font::kBold:
+			return mgr->GetBoldFont();
+		default:
+			return mgr->GetRegularFont();
+		}
 	}
 	static void PushFont_Impl(ImFont* f, float size)
 	{

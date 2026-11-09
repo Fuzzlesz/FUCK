@@ -3,7 +3,6 @@
 #include "ImGui/Backend/imgui_default.h"
 
 #include "IconsFonts.h"
-#include "GameFonts.h"
 #include "Renderer.h"
 #include "Styles.h"
 #include "Util.h"
@@ -214,6 +213,16 @@ namespace IconFont
 		_regularFont = LoadFontIconSet(_baseFontSize, _baseIconSize, ranges);
 		_largeFont   = LoadFontIconSet(_baseLargeFontSize, _baseLargeIconSize, ranges);
 
+		// The game font's light and bold faces, loaded only when they're separate fonts rather than the regular one again
+		auto otherFace = [&](GameFonts::Face a_face) -> ImFont* {
+			const auto& face = GameFonts::Get(a_face);
+			if (!_gameFont || face.ttf.empty() || face.ttf == GameFonts::Get(GameFonts::Face::kMedium).ttf)
+				return nullptr;
+			return LoadFontIconSet(_baseFontSize, _baseIconSize, ranges, a_face);
+		};
+		_lightFont = otherFace(GameFonts::Face::kLight);
+		_boldFont  = otherFace(GameFonts::Face::kBold);
+
 		io.FontDefault                 = _regularFont;
 		ImGui::GetStyle().FontSizeBase = _regularFont->LegacySize;
 
@@ -223,7 +232,7 @@ namespace IconFont
 		ImGui_ImplDX11_CreateDeviceObjects();
 	}
 
-	ImFont* Manager::LoadFontIconSet(float a_fontSize, float a_iconSize, const ImVector<ImWchar>& a_ranges) const
+	ImFont* Manager::LoadFontIconSet(float a_fontSize, float a_iconSize, const ImVector<ImWchar>& a_ranges, GameFonts::Face a_face) const
 	{
 		const auto& io = ImGui::GetIO();
 
@@ -233,8 +242,8 @@ namespace IconFont
 		ImFontConfig main_cfg;
 		main_cfg.GlyphExcludeRanges = kIconRanges;
 
-		// The game's own, as its menus draw it, with every character it has, else the typeface chosen
-		const auto* game = _gameFont ? &GameFonts::Get(GameFonts::Face::kMedium) : nullptr;
+		// The game's own font, or the chosen typeface without it
+		const auto* game = _gameFont ? &GameFonts::Get(a_face) : nullptr;
 		if (game && !game->ttf.empty()) {
 			main_cfg.FontDataOwnedByAtlas = false;
 			font                          = io.Fonts->AddFontFromMemoryTTF(const_cast<std::uint8_t*>(game->ttf.data()), static_cast<int>(game->ttf.size()), a_fontSize, &main_cfg, game->ranges.data());

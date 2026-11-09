@@ -66,7 +66,8 @@ namespace ImGui
 			if (doubleHash != std::string_view::npos)
 				labelView = labelView.substr(0, doubleHash);
 
-			float labelWidth = CalcTextSize(labelView.data(), labelView.data() + labelView.size()).x;
+			ImFont* labelFont  = GetLabelFont();
+			float   labelWidth = labelFont->CalcTextSizeA(GetFontSize(), FLT_MAX, 0.0f, labelView.data(), labelView.data() + labelView.size()).x;
 
 			// Calculate true dynamic centering, supporting widgets (like Icons) that are taller than a standard frame
 			float actualTargetH = targetHeight > 0.0f ? targetHeight : GetFrameHeight();
@@ -81,7 +82,7 @@ namespace ImGui
 				ImVec2 screenPos = GetCursorScreenPos();
 				screenPos.x      = std::floor(screenPos.x + (xPos - startX));
 				screenPos.y      = std::floor(screenPos.y + std::max(0.0f, offY));
-				GetWindowDrawList()->AddText(GetFont(), GetFontSize(), screenPos, textColor, labelView.data(), labelView.data() + labelView.size());
+				GetWindowDrawList()->AddText(labelFont, GetFontSize(), screenPos, textColor, labelView.data(), labelView.data() + labelView.size());
 			};
 
 			// Tighter gap globally for near-aligned widgets to closely mimic vanilla grouping
