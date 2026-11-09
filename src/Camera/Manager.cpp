@@ -713,8 +713,12 @@ namespace Camera
 		return true;
 	}
 
-	// Turns the subject to face the camera where it is now, eased like the user's turns, or at once with kInstantMoves
-	bool Manager::FaceSubject(FUCK::ICameraClient* a_client)
+	// How far down a fresh base (kFreshBase) looks at the body, about what the game's camera does when the player looks level
+	constexpr float FRESH_PITCH = 6.0f * Maths::DEG2RAD;
+
+	// Turns the subject to face the camera where it is now. a_afresh also sets the held third-person view afresh in front of them, level
+	// as kFreshBase does, and frames them again
+	bool Manager::FaceSubject(FUCK::ICameraClient* a_client, bool a_afresh)
 	{
 		if (!IsActive(a_client))
 			return false;
@@ -733,13 +737,16 @@ namespace Camera
 		// RotateSubject's amount turns the yaw one way or the other, as its matrix has it, so that's measured
 		RE::NiMatrix3 probe;
 		probe.SetEulerAnglesXYZ(0.0f, 0.0f, -1.0f);
-		const float sign = Maths::YawOf(probe) > 0.0f ? 1.0f : -1.0f;
-		const float turn = std::remainder(std::atan2(to.x, to.y) - *yaw, 2.0f * std::numbers::pi_v<float>) * sign;
+		const float sign   = Maths::YawOf(probe) > 0.0f ? 1.0f : -1.0f;
+		const float facing = std::atan2(to.x, to.y);
+		RotateSubject(std::remainder(facing - *yaw, 2.0f * std::numbers::pi_v<float>) * sign);
 
-		if (_current->flags & FUCK::CameraSessionFlags::kInstantMoves)
-			RotateSubject(turn);
-		else
-			_current->core.TurnSubject(turn);
+		auto& session = *_current;
+		if (a_afresh && session.hasFixedBase) {
+			Maths::FrontView(session.fixedTranslate, session.fixedRotate, BodyMiddle(*subject), facing, FRESH_PITCH);
+			session.fixedSubjectPos = subject->GetPosition();
+			session.core.Reframe(true);
+		}
 		return true;
 	}
 
@@ -1237,9 +1244,6 @@ namespace Camera
 
 		return subject->GetPosition();
 	}
-
-	// How far down a fresh base (kFreshBase) looks at the body, about what the game's camera does when the player looks level
-	constexpr float FRESH_PITCH = 6.0f * Maths::DEG2RAD;
 
 	void Manager::MoveBaseToFront()
 	{

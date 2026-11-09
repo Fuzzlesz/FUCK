@@ -26,7 +26,6 @@ namespace
 	constexpr float ACCEL_MAX                 = 15.0f;
 	constexpr float CINEMATIC_SPEED           = 10.0f;
 	constexpr float REFERENCE_DISTANCE        = 43.0f;   // camera to pivot where speeds are as set: RaceMenu's face view
-	constexpr float SUBJECT_TURN_SNAP         =  0.001f; // radians of an eased turn left, under which it's finished at once
 	constexpr float EPSILON                   =  0.001f;
 	constexpr float DOUBLE_CLICK_TIME         =  0.35f;  // seconds between middle clicks that reset the camera
 	constexpr float DOUBLE_CLICK_TRAVEL       =  8.0f;   // pixels the mouse may move between them, so a drag doesn't count
@@ -229,14 +228,6 @@ namespace Camera
 			HandleControls(a_state, a_settings, a_interval);
 		}
 
-		if (_pendingClientTurn != 0.0f) {
-			float step = a_settings.cinematic ? _pendingClientTurn * SmoothFactor(CINEMATIC_SPEED, a_interval) : _pendingClientTurn;
-			if (std::abs(_pendingClientTurn - step) < SUBJECT_TURN_SNAP)
-				step = _pendingClientTurn;
-			_pendingClientTurn -= step;
-			_host.RotateSubject(step);
-		}
-
 		UpdateZoomAcceleration(a_interval);
 		UpdateCinematic(a_settings.cinematic, a_interval);
 		ApplyFov();
@@ -340,8 +331,6 @@ namespace Camera
 		_pendingScroll      = 0.0f;
 		_smoothScrollZoom   = 0.0f;
 		_smoothScrollFov    = 0.0f;
-		_pendingSubjectTurn = 0.0f;
-		_pendingClientTurn  = 0.0f;
 
 		_host.ResetSubject();
 	}
@@ -379,7 +368,6 @@ namespace Camera
 		_zoomAcceleration   = 1.0f;
 		_isZooming          = false;
 		_wasMouseSubjRot    = false;
-		_pendingSubjectTurn = 0.0f;
 
 		// Wait for X/Y to be released, so buttons pressed while locked don't turn the subject afterwards
 		_lockoutGPSubjRot = true;
@@ -504,8 +492,7 @@ namespace Camera
 	void Core::HandleSubjectRotation(const FrameInput& a_in, const Config& a_settings, float a_interval)
 	{
 		if (!_turningEnabled) {
-			_wasMouseSubjRot    = false;
-			_pendingSubjectTurn = 0.0f;
+			_wasMouseSubjRot = false;
 			return;
 		}
 
@@ -539,15 +526,8 @@ namespace Camera
 
 		_wasMouseSubjRot = allowMouseRot;
 
-		// Eased like the camera when cinematic, so the body (and any physics on it) doesn't jerk with each mouse step
-		_pendingSubjectTurn += rotAmount;
-		float step = a_settings.cinematic ? _pendingSubjectTurn * SmoothFactor(CINEMATIC_SPEED, a_interval) : _pendingSubjectTurn;
-		if (std::abs(_pendingSubjectTurn - step) < SUBJECT_TURN_SNAP)
-			step = _pendingSubjectTurn;
-		_pendingSubjectTurn -= step;
-
-		if (step != 0.0f) {
-			_host.RotateSubject(step);
+		if (rotAmount != 0.0f) {
+			_host.RotateSubject(rotAmount);
 		}
 	}
 
@@ -946,7 +926,5 @@ namespace Camera
 		_hasFraming          = false;
 		_smoothScrollZoom    = 0.0f;
 		_smoothScrollFov     = 0.0f;
-		_pendingSubjectTurn  = 0.0f;
-		_pendingClientTurn   = 0.0f;
 	}
 }

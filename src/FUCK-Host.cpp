@@ -1124,7 +1124,7 @@ namespace FUCK::Host
 	}
 	static void AddSettingsListener_Impl(void* userdata, void (*callback)(const char*, const char*, bool, void*)) { FUCKMan::GetSingleton()->AddSettingsListener(userdata, callback); }
 	static void RemoveSettingsListener_Impl(void* userdata) { FUCKMan::GetSingleton()->RemoveSettingsListener(userdata); }
-	static bool FaceCameraSubject_Impl(ICameraClient* client) { return MANAGER(Camera)->FaceSubject(client); }
+	static bool FaceCameraSubject_Impl(ICameraClient* client, bool afresh) { return MANAGER(Camera)->FaceSubject(client, afresh); }
 	static void SetActorFrozenEx_Impl(const char* pluginName, RE::Actor* actor, bool frozen, bool holdPhysics) { MANAGER(Freeze)->SetFrozen(pluginName, actor, frozen, holdPhysics); }
 	static void MoveCameraEx_Impl(const CameraMoveEx* move, InputDevice device, float mult)
 	{

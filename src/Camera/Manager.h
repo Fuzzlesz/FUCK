@@ -112,7 +112,7 @@ namespace Camera
 		void SetBodyFraming(FUCK::ICameraClient* a_client, bool a_framed, const FUCK::CameraScreenRect* a_rect, float a_margin);
 		bool SetSubject(FUCK::ICameraClient* a_client, RE::Actor* a_subject, RE::Actor* a_alsoFramed);
 		bool IsSubject(const RE::Actor* a_actor) const;  // the active session's subject, or framed beside them
-		bool FaceSubject(FUCK::ICameraClient* a_client);
+		bool FaceSubject(FUCK::ICameraClient* a_client, bool a_afresh);
 		bool IsBodyFramed(const FUCK::ICameraClient* a_client) const;
 
 		// Offset bases only
