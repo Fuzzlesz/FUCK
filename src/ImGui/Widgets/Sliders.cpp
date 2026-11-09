@@ -287,10 +287,10 @@ namespace ImGui
 		track.Min.y = centerY - (trackH * 0.5f);
 		track.Max.y = track.Min.y + trackH;
 
-		window->DrawList->AddRectFilled(track.Min, track.Max, GetColorU32(active ? ImGuiCol_FrameBgActive : h ? ImGuiCol_FrameBgHovered :
-																												ImGuiCol_FrameBg),
-			0.0f);
-		DrawWidgetBorder(window->DrawList, track, IsWidgetFocused(id) || active || h, 0.0f);
+		// Rounded like a full frame, scaled to the rail's height, so its corners match the other widgets' in either style
+		const float trackRounding = GetFrameRounding() * (trackH / bb.GetHeight());
+		AddThemedRectFilled(window->DrawList, track, GetColorU32(active ? ImGuiCol_FrameBgActive : h ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), trackRounding);
+		DrawWidgetBorder(window->DrawList, track, IsWidgetFocused(id) || active || h, trackRounding);
 
 		if (grab.Max.x > grab.Min.x) {
 			float scale     = GetDynamicWidgetScale();
@@ -400,10 +400,10 @@ namespace ImGui
 		track.Min.x = centerX - (trackW * 0.5f);
 		track.Max.x = track.Min.x + trackW;
 
-		window->DrawList->AddRectFilled(track.Min, track.Max, GetColorU32(active ? ImGuiCol_FrameBgActive : h ? ImGuiCol_FrameBgHovered :
-																												ImGuiCol_FrameBg),
-			0.0f);
-		DrawWidgetBorder(window->DrawList, track, IsWidgetFocused(id) || active || h, 0.0f);
+		// Rounded like a full frame, scaled to the rail's width, so its corners match the other widgets' in either style
+		const float trackRounding = GetFrameRounding() * (trackW / bb.GetWidth());
+		AddThemedRectFilled(window->DrawList, track, GetColorU32(active ? ImGuiCol_FrameBgActive : h ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), trackRounding);
+		DrawWidgetBorder(window->DrawList, track, IsWidgetFocused(id) || active || h, trackRounding);
 
 		if (grab.Max.y > grab.Min.y) {
 			float scale      = GetDynamicWidgetScale();
