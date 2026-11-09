@@ -18,6 +18,7 @@ set(headers ${headers}
 	src/ImGui/Audio.h
 	src/ImGui/Backend/imgui_default.h
 	src/ImGui/Backend/imgui_impl_skyrim.h
+	src/ImGui/GameFonts.h
 	src/ImGui/Graphics.h
 	src/ImGui/IconsFonts.h
 	src/ImGui/Overlays.h

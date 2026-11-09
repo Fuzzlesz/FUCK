@@ -3,6 +3,7 @@
 #include "ImGui/Backend/imgui_default.h"
 
 #include "IconsFonts.h"
+#include "GameFonts.h"
 #include "Renderer.h"
 #include "Styles.h"
 #include "Util.h"
@@ -24,7 +25,7 @@ namespace IconFont
 		// A typeface's ascent and descent as fractions of its em, descent negative, read as FreeType reads them
 		struct VMetrics
 		{
-			float ascent  = 0.8f;
+			float ascent  =  0.8f;
 			float descent = -0.2f;
 
 			// Where the baseline falls in a line, as a fraction of the line's height from the top. The loaders size a
@@ -163,6 +164,14 @@ namespace IconFont
 		}
 	}
 
+	void Manager::SetGameFont(bool a_use)
+	{
+		if (_gameFont != a_use) {
+			_gameFont = a_use;
+			ReloadFonts();
+		}
+	}
+
 	void Manager::ReloadFonts()
 	{
 		_pendingReload = true;
@@ -188,8 +197,9 @@ namespace IconFont
 		io.Fonts->SetFontLoader(ImGuiFreeType::GetFontLoader());
 		io.Fonts->FontLoaderFlags = ImGuiFreeTypeLoaderFlags_NoHinting;
 
-		// Before the fonts that are kept, as it adds and removes a font of its own
-		GetReferenceMetrics();
+		// Read before the fonts that are kept, as it adds and removes a font of its own. The game's fonts are then sized against it
+		const auto& reference = GetReferenceMetrics();
+		GameFonts::SetLineHeight(reference.ascent - reference.descent);
 
 		// The text the typeface is used for. The icons come from Font Awesome alone
 		ImVector<ImWchar>        ranges;
@@ -223,10 +233,14 @@ namespace IconFont
 		ImFontConfig main_cfg;
 		main_cfg.GlyphExcludeRanges = kIconRanges;
 
-		if (_fontName == "Default") {
+		// The game's own, as its menus draw it, with every character it has, else the typeface chosen
+		const auto* game = _gameFont ? &GameFonts::Get(GameFonts::Face::kMedium) : nullptr;
+		if (game && !game->ttf.empty()) {
 			main_cfg.FontDataOwnedByAtlas = false;
-			font                          = io.Fonts->AddFontFromMemoryCompressedBase85TTF(
-                GetDefaultFontData(), a_fontSize, &main_cfg, a_ranges.Data);
+			font                          = io.Fonts->AddFontFromMemoryTTF(const_cast<std::uint8_t*>(game->ttf.data()), static_cast<int>(game->ttf.size()), a_fontSize, &main_cfg, game->ranges.data());
+		} else if (_fontName == "Default") {
+			main_cfg.FontDataOwnedByAtlas = false;
+			font                          = io.Fonts->AddFontFromMemoryCompressedBase85TTF(GetDefaultFontData(), a_fontSize, &main_cfg, a_ranges.Data);
 		} else {
 			std::string fullPath = ResolveFontPath(_fontName);
 			font                 = io.Fonts->AddFontFromFileTTF(fullPath.c_str(), a_fontSize, &main_cfg, a_ranges.Data);

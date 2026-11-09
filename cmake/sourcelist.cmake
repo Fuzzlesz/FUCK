@@ -11,6 +11,7 @@ set(sources ${sources}
 	src/FUCK-Workspace.cpp
 	src/ImGui/Audio.cpp
 	src/ImGui/Backend/imgui_impl_skyrim.cpp
+	src/ImGui/GameFonts.cpp
 	src/ImGui/Graphics.cpp
 	src/ImGui/IconsFonts.cpp
 	src/ImGui/Overlays.cpp

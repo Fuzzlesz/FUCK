@@ -213,6 +213,18 @@ void SettingsTool::Draw()
 				}
 			}
 
+			// Uses the game's font in place of the typeface, so FUCK matches the user's UI mod or language. The typeface list is greyed out while it's on
+			auto* iconFonts = MANAGER(IconFont);
+			bool  gameFont  = iconFonts->GetGameFont();
+			if (FUCK::Checkbox("$FUCK_Styles_GameFont"_T, &gameFont, true, true)) {
+				iconFonts->SetGameFont(gameFont);
+				Settings::GetSingleton()->Save(FileType::kStyle, [&](CSimpleIniA& ini) {
+					ini.SetBoolValue("Style", "bGameFont", gameFont);
+				});
+			}
+			FUCK::SetTooltip("$FUCK_Styles_GameFontTT"_T);
+
+			FUCK::BeginDisabled(gameFont);
 			FUCK::SetNextItemWidth(-1);
 			if (FUCK::Combo("$FUCK_Styles_Typeface"_T, &currentFontIdx, fontPtrs.data(), (int)fontPtrs.size())) {
 				if (currentFontIdx >= 0 && currentFontIdx < fonts.size()) {
@@ -223,6 +235,7 @@ void SettingsTool::Draw()
 					});
 				}
 			}
+			FUCK::EndDisabled();
 			FUCK::Spacing(2);
 
 			if (FUCK::SliderFloat("$FUCK_Settings_UIScale"_T, &manager->_cfg.userScale, 0.5f, 2.0f, "%.2f")) {

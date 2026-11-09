@@ -235,13 +235,16 @@ namespace ImGui
 	{
 		std::string lastPreset = "";
 		std::string userFont   = "Default";
+		bool        gameFont   = true;
 
 		Settings::GetSingleton()->Load(FileType::kStyle, [&](auto& ini) {
 			lastPreset = ini.GetValue("Style", "sLastPreset", "");
 			userFont   = ini.GetValue("Style", "sFont", "Default");
+			gameFont   = ini.GetBoolValue("Style", "bGameFont", true);
 		});
 
 		FUCKMan::GetSingleton()->SetCurrentFont(userFont);
+		MANAGER(IconFont)->SetGameFont(gameFont);
 
 		ResetToDefaults(false);
 		GetPresets();

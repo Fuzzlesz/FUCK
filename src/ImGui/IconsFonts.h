@@ -36,6 +36,10 @@ namespace IconFont
 		void        SetFontName(const std::string& a_fontName);
 		std::string GetFontName() const { return _fontName; }
 
+		// Uses the game's own font (GameFonts) in place of the chosen typeface, whenever it can be read
+		void SetGameFont(bool a_use);
+		bool GetGameFont() const { return _gameFont; }
+
 		ImFont* GetLargeFont() const;
 		ImFont* GetRegularFont() const;
 
@@ -60,6 +64,7 @@ namespace IconFont
 		bool _pendingReload{ false };  // Flag for deferred reload
 
 		std::string _fontName{ "Default" };
+		bool        _gameFont{ true };
 
 		float _baseFontSize{ 30.0f };       // was 24.0f
 		float _baseIconSize{ 26.0f };       // was 20.0f
