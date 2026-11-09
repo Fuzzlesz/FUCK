@@ -90,22 +90,6 @@ namespace Hooks::Journal
 		return found;
 	}
 
-	// Whether the entry is one of the older System page's own, which the game is handed by their places in the list
-	static bool IsSystemPageEntry(RE::GFxValue& a_entry)
-	{
-		static constexpr std::array<std::string_view, 9> own{ "$QUICKSAVE", "$SAVE", "$LOAD", "$MOD MANAGER", "$SETTINGS", "$MOD CONFIGURATION", "$CONTROLS", "$HELP", "$QUIT" };
-
-		RE::GFxValue text;
-		if (!a_entry.IsObject() || !a_entry.GetMember("text", &text) || !text.IsString())
-			return false;
-		const std::string_view str(text.GetString());
-
-		// The entry when it took $HELP's place, as it holds that place for the game
-		if (str == InjectedName() && !a_entry.HasMember("fuck_inserted"))
-			return true;
-		return std::ranges::find(own, str) != own.end();
-	}
-
 	// Mods that rebuild the list, as Native System Menu Framework and STB System Page do, stamp each entry with its place when they find
 	// it and hand the page that place on a press. Native System Menu Framework also keeps the list as it found it, and shows a copy
 	constexpr std::array<const char*, 2> kPlaceStamps{ "__nsmf_vidx", "__stb_vidx" };
@@ -304,8 +288,8 @@ namespace Hooks::Journal
 	static FUCKSettingsPressHandler g_fuckSettingsPressHandler;
 
 	// The older System page hands the game its buttons by their places in the list, for it to disable Save and the like when they can't
-	// be used. So every entry that isn't the page's own is taken out while it does, other mods' as well as this one, leaving each
-	// button where the game expects it, and they're put back where they were
+	// be used. So the entry is taken out while it does, leaving the list as it was before it went in. Only this entry: the game reads
+	// every place it's handed, and taking out others, whose own buttons may be missing or renamed, can leave a place past the end
 	class RefreshButtonsHandler : public RE::GFxFunctionHandler
 	{
 	public:
@@ -314,24 +298,15 @@ namespace Hooks::Journal
 			if (!a_params.thisPtr)
 				return;
 
-			RE::GFxValue                                        listObj, entryList;
-			std::vector<std::pair<std::uint32_t, RE::GFxValue>> added;
-			if (GetTargetList(*a_params.thisPtr, false, listObj, entryList)) {
-				for (std::uint32_t i = entryList.GetArraySize(); i-- > 0;) {
-					RE::GFxValue element;
-					if (entryList.GetElement(i, &element) && !IsSystemPageEntry(element)) {
-						added.emplace_back(i, element);
-						SpliceEntry(entryList, i, nullptr);
-					}
-				}
-			}
+			RE::GFxValue       listObj, entryList, entry;
+			const std::int32_t ours = GetTargetList(*a_params.thisPtr, false, listObj, entryList) ? FindInsertedEntry(entryList) : -1;
+			if (ours >= 0 && entryList.GetElement(static_cast<std::uint32_t>(ours), &entry))
+				SpliceEntry(entryList, static_cast<std::uint32_t>(ours), nullptr);
 
 			a_params.thisPtr->Invoke("fuck_orig_RefreshSystemButtons", a_params.retVal, a_params.args, a_params.argCount);
 
-			if (!added.empty()) {
-				// Taken out from the bottom up, so put back from the top down
-				for (auto it = added.rbegin(); it != added.rend(); ++it)
-					SpliceEntry(entryList, it->first, &it->second);
+			if (ours >= 0 && entry.IsObject()) {
+				SpliceEntry(entryList, static_cast<std::uint32_t>(ours), &entry);
 				listObj.Invoke("InvalidateData", nullptr, nullptr, 0);
 			}
 		}
