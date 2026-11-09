@@ -916,8 +916,13 @@ namespace FUCK::Host
 	static bool BeginPopupModal_Impl(const char* name, bool* p_open, int /*flags*/)
 	{
 		// "flags" is currently ignored for the same reason.
-		// Enforcing NoResize globally for modals to remove grab handle that doesn't work.
-		return ImGui::BeginPopupModal(name, p_open, ImGuiWindowFlags_NoResize);
+		// Modals size to their contents every frame, as plain popups do, so they never need a scrollbar or the resize grip, which
+		// didn't work. The title bar is padded like a button, so it fits its title as the rest of FUCK's frames fit their text
+		const float scale = ImGui::GetDynamicWidgetScale();
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(ImGui::GetStyle().FramePadding.x + 4.0f * scale, 7.0f * scale));
+		const bool open = ImGui::BeginPopupModal(name, p_open, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize);
+		ImGui::PopStyleVar();
+		return open;
 	}
 	static bool IsWindowAppearing_Impl() { return ImGui::IsWindowAppearing(); }
 	static void PushTextWrapPos_Impl(float wrap_pos_x) { ImGui::PushTextWrapPos(wrap_pos_x); }

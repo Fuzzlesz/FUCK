@@ -727,9 +727,10 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 					if (ImGui::BeginChildThemed("##Content", ImVec2(0, 0), childFlags, windowFlags)) {
 						// Items fill the body's width. Not in an auto-sized one, where the width comes from the items, so
 						// filling it would hold the body at whatever width it first had. Those take ImGui's own default,
-						// and a consumer wanting set widths sets them
+						// and a consumer wanting set widths sets them. The width is set as the body's own rather than pushed, so
+						// a width the consumer pushes is the only one on the stack, which is how labelled widgets know to keep it
 						if (!autoResize)
-							ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
+							ImGui::GetCurrentWindow()->DC.ItemWidth = ImGui::GetContentRegionAvail().x;
 						PushContentScale(a_m, ignoreUserScale);
 						_currentRenderingPlugin = win->PluginName();
 
@@ -740,8 +741,6 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 
 						_currentRenderingPlugin.clear();
 						PopContentScale();
-						if (!autoResize)
-							ImGui::PopItemWidth();
 					}
 					ImGui::EndChild();
 

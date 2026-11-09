@@ -143,9 +143,14 @@ namespace ImGui
 		// Advance cursor to the start of the right pane safely
 		SetCursorPos(ImVec2(rightPaneStart, startY));
 
+		// A width given for this item, or pushed for a run of them, is kept, so several widgets can share a line. Beside a label a
+		// pushed width is held to the right pane, as one pushed for a whole body would otherwise run past its edge
+		const float rightPaneAvail = std::max(1.0f, (startX + fullAvailX) - rightPaneStart);
 		if (!(GImGui->NextItemData.HasFlags & ImGuiNextItemDataFlags_HasWidth)) {
-			float rightPaneAvail = (startX + fullAvailX) - rightPaneStart;
-			SetNextItemWidth(std::max(1.0f, rightPaneAvail));
+			if (GetCurrentWindow()->DC.ItemWidthStack.Size == 0)
+				SetNextItemWidth(rightPaneAvail);
+			else if (hasLabel)
+				SetNextItemWidth(std::min(CalcItemWidth(), rightPaneAvail));
 		}
 	}
 
