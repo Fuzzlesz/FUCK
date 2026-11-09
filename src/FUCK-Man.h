@@ -39,7 +39,7 @@ public:
 		PauseType            globalPauseType{ PauseType::kNone };
 		float                userScale{ 1.0f };
 		bool                 sidebarOnRight{ false };
-		InjectSystemMenuType injectSystemMenu{ InjectSystemMenuType::kControllerOnly };
+		InjectSystemMenuType injectSystemMenu{ InjectSystemMenuType::kYes };
 		bool                 replaceHelpMenu{ false };
 		bool                 injectSettingsSubmenu{ false };
 		bool                 showSidebarFilter{ true };
