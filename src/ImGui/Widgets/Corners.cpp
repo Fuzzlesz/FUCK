@@ -297,9 +297,10 @@ namespace ImGui
 		if (window->SkipItems)
 			return;
 
-		// Drawn before anything else in the window, so its contents go on top. Begin() has already clipped
-		// the draw list to the inside of the window, so open it back up to the whole window.
-		// A child's rounding and border size are already its own, from ChildRounding and ChildBorderSize
+		// Drawn before anything else in the window, so its contents go on top. Begin() has already clipped the draw list to the inside of
+		// the window, so it's opened back up to the whole window. A child stays within what its parent shows, so a child scrolled part way
+		// out of view isn't drawn over its parent's border. A child's rounding and border size are already its own, from ChildRounding
+		// and ChildBorderSize
 		const bool   isChild  = (window->Flags & ImGuiWindowFlags_ChildWindow) != 0;
 		const bool   isPopup  = !isChild && (window->Flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0;
 		// On whole pixels, as an auto-sized window such as a tooltip can end part way through one, which the clip below would cut its
@@ -309,7 +310,10 @@ namespace ImGui
 		const float  cornerR  = CapInvertedRounding(bb, rounding);
 		ImDrawList*  dl       = window->DrawList;
 
-		dl->PushClipRect(bb.Min, bb.Max, false);
+		ImRect clip = bb;
+		if (isChild && !(window->Flags & ImGuiWindowFlags_Popup) && window->ParentWindow)
+			clip.ClipWithFull(window->ParentWindow->ClipRect);
+		dl->PushClipRect(clip.Min, clip.Max, false);
 		if (!(window->Flags & ImGuiWindowFlags_NoBackground)) {
 			AddThemedRectFilled(dl, bb, GetColorU32(isChild ? ImGuiCol_ChildBg : isPopup ? ImGuiCol_PopupBg : ImGuiCol_WindowBg), rounding);
 			if (window->WindowBorderSize > 0.0f)
