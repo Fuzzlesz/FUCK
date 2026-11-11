@@ -288,11 +288,15 @@ namespace Hooks::Journal
 	static FUCKSettingsPressHandler g_fuckSettingsPressHandler;
 
 	// The older System page hands the game its buttons by their places in the list, for it to disable Save and the like when they can't
-	// be used. So the entry is taken out while it does, leaving the list as it was before it went in. Only this entry: the game reads
-	// every place it's handed, and taking out others, whose own buttons may be missing or renamed, can leave a place past the end
-	class RefreshButtonsHandler : public RE::GFxFunctionHandler
+	// be used, from both RefreshSystemButtons and UpdatePermissions. So the entry is taken out while either runs, leaving the list as it
+	// was before it went in. Only this entry: the game reads every place it's handed, and taking out others, whose own buttons may be
+	// missing or renamed, can leave a place past the end
+	class ButtonPlacesHandler : public RE::GFxFunctionHandler
 	{
 	public:
+		ButtonPlacesHandler(const char* a_function, const char* a_original) :
+			function(a_function), original(a_original) {}
+
 		void Call(Params& a_params) override
 		{
 			if (!a_params.thisPtr)
@@ -303,15 +307,64 @@ namespace Hooks::Journal
 			if (ours >= 0 && entryList.GetElement(static_cast<std::uint32_t>(ours), &entry))
 				SpliceEntry(entryList, static_cast<std::uint32_t>(ours), nullptr);
 
-			a_params.thisPtr->Invoke("fuck_orig_RefreshSystemButtons", a_params.retVal, a_params.args, a_params.argCount);
+			a_params.thisPtr->Invoke(original, a_params.retVal, a_params.args, a_params.argCount);
 
 			if (ours >= 0 && entry.IsObject()) {
 				SpliceEntry(entryList, static_cast<std::uint32_t>(ours), &entry);
 				listObj.Invoke("InvalidateData", nullptr, nullptr, 0);
 			}
 		}
+
+		const char* function;  // The page's function
+		const char* original;  // Where the page's own is kept
 	};
-	static RefreshButtonsHandler g_refreshButtonsHandler;
+	static ButtonPlacesHandler g_buttonPlacesHandlers[] = {
+		{ "RefreshSystemButtons", "fuck_orig_RefreshSystemButtons" },
+		{ "UpdatePermissions", "fuck_orig_UpdatePermissions" }
+	};
+
+	// The game greys out Save and the like on the buttons the System page hands it, and crashes on one that isn't there, as when another
+	// mod has hidden an entry and the page reads past the end of its list. So an empty object stands in for any that's missing, on either
+	// version of the page and whichever script hands them over
+	static RE::FxDelegateHandler::CallbackFn* s_setSaveDisabled = nullptr;
+
+	static void SetSaveDisabled(const RE::FxDelegateArgs& a_params)
+	{
+		// Should another mod's hook lead back here, the call stops rather than going round again
+		static bool running = false;
+		if (running || !s_setSaveDisabled)
+			return;
+		running = true;
+
+		const auto count    = a_params.GetArgCount();
+		bool       complete = true;
+		for (std::uint32_t i = 0; i < count && complete; ++i)
+			complete = !a_params[i].IsUndefined() && !a_params[i].IsNull();
+
+		if (complete) {
+			s_setSaveDisabled(a_params);
+		} else if (auto movie = a_params.GetMovie()) {
+			std::vector<RE::GFxValue> args(count);
+			for (std::uint32_t i = 0; i < count; ++i) {
+				args[i] = a_params[i];
+				if (args[i].IsUndefined() || args[i].IsNull())
+					movie->CreateObject(&args[i]);
+			}
+			const RE::FxDelegateArgs filled(RE::GFxValue(), a_params.GetHandler(), movie, args.data(), count);
+			s_setSaveDisabled(filled);
+		}
+		running = false;
+	}
+
+	// Once each time the Journal opens, as it's made afresh with the game's own callback
+	static void GuardSaveButtons(RE::FxDelegate* a_delegate)
+	{
+		auto defn = a_delegate ? a_delegate->callbacks.Get(RE::GString("SetSaveDisabled")) : nullptr;
+		if (defn && defn->callback && defn->callback != &SetSaveDisabled) {
+			s_setSaveDisabled = defn->callback;
+			defn->callback    = &SetSaveDisabled;
+		}
+	}
 
 	// --- Helper: Duplicates the visual MovieClips and expands the mask boundary
 	static void UpdateListVisuals(RE::GFxMovieView* a_movieView, RE::GFxValue& a_listObj, std::uint32_t a_numItems, bool a_updateHeight)
@@ -456,12 +509,14 @@ namespace Hooks::Journal
 				a_movieView->CreateFunction(&hookSet, &g_fuckSettingsPressHandler);
 				page.SetMember("onSettingsCategoryPress", hookSet);
 			}
-			RE::GFxValue origRefresh;
-			if (!isSafeMenu && page.GetMember("RefreshSystemButtons", &origRefresh) && !origRefresh.IsUndefined()) {
-				page.SetMember("fuck_orig_RefreshSystemButtons", origRefresh);
-				RE::GFxValue hookRefresh;
-				a_movieView->CreateFunction(&hookRefresh, &g_refreshButtonsHandler);
-				page.SetMember("RefreshSystemButtons", hookRefresh);
+			for (auto& handler : g_buttonPlacesHandlers) {
+				RE::GFxValue original;
+				if (!isSafeMenu && page.GetMember(handler.function, &original) && !original.IsUndefined()) {
+					page.SetMember(handler.original, original);
+					RE::GFxValue hook;
+					a_movieView->CreateFunction(&hook, &handler);
+					page.SetMember(handler.function, hook);
+				}
 			}
 			page.SetMember("fuck_hooked", RE::GFxValue(true));
 		}
@@ -554,6 +609,7 @@ namespace Hooks::Journal
 			if (a_message.type == RE::UI_MESSAGE_TYPE::kUpdate && a_this->uiMovie) {
 				if (!s_journalMenuOpen) {
 					s_journalMenuOpen = true;
+					GuardSaveButtons(a_this->fxDelegate.get());
 
 					const auto injectType     = FUCKMan::GetSingleton()->GetInjectSystemMenu();
 					const bool controllerOnly = injectType == FUCKMan::InjectSystemMenuType::kControllerOnly;
