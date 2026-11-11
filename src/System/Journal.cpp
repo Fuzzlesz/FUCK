@@ -5,12 +5,13 @@
 
 namespace Hooks::Journal
 {
-	static bool        s_fuckButtonInjected = false;
-	static std::string s_injectedMenuName   = "";
-
 	constexpr const char* kSystemPagePath = "_root.QuestJournalFader.Menu_mc.SystemFader.Page_mc";
 
-	// --- Helper: Safely locates the target list whether we are in Vanilla, SkyUI, or heavily modded setups
+	// --- The Entry ---
+	// The System page's lists and the entry FUCK adds to them
+	static std::string s_injectedMenuName;
+
+	// The main list, or the Settings list with a_injectSettings, wherever the page keeps it
 	static bool GetTargetList(RE::GFxValue& a_page, bool a_injectSettings, RE::GFxValue& a_listObj, RE::GFxValue& a_entryList)
 	{
 		const char* targetList = a_injectSettings ? "SettingsList" : "CategoryList";
@@ -90,57 +91,9 @@ namespace Hooks::Journal
 		return found;
 	}
 
-	// Mods that rebuild the list, as Native System Menu Framework and STB System Page do, stamp each entry with its place when they find
-	// it and hand the page that place on a press. Native System Menu Framework also keeps the list as it found it, and shows a copy
-	constexpr std::array<const char*, 2> kPlaceStamps{ "__nsmf_vidx", "__stb_vidx" };
-	constexpr const char*                kKeptListMember = "__nsmf_vanillaEntries";
-
-	// The list a stamp's places were counted in
-	static RE::GFxValue GetStampedList(RE::GFxValue& a_listObj, RE::GFxValue& a_entryList, const char* a_stamp)
+	static void SetInjectedName(const char* a_name)
 	{
-		RE::GFxValue kept;
-		if (std::string_view(a_stamp) == kPlaceStamps[0] && a_listObj.GetMember(kKeptListMember, &kept) && kept.IsArray())
-			return kept;
-		return a_entryList;
-	}
-
-	// On the older page, where the entry was in the list when a mod stamped it, the stamps below it count it. They're lowered by one and
-	// its own stamp taken away, so every stamp is the page's own place
-	static void CorrectPlaceStamps(RE::GFxValue& a_listObj, RE::GFxValue& a_entryList)
-	{
-		const std::int32_t ours = FindInsertedEntry(a_entryList);
-		RE::GFxValue       entry;
-		if (ours < 0 || !a_entryList.GetElement(static_cast<std::uint32_t>(ours), &entry))
-			return;
-
-		for (const char* stamp : kPlaceStamps) {
-			RE::GFxValue oursAt;
-			if (!entry.GetMember(stamp, &oursAt) || !oursAt.IsNumber())
-				continue;
-			entry.DeleteMember(stamp);
-
-			RE::GFxValue        stamped = GetStampedList(a_listObj, a_entryList, stamp);
-			const std::uint32_t size    = stamped.GetArraySize();
-			for (std::uint32_t i = 0; i < size; ++i) {
-				RE::GFxValue element, place;
-				if (stamped.GetElement(i, &element) && element.IsObject() && element.GetMember(stamp, &place) && place.IsNumber() &&
-					place.GetNumber() > oursAt.GetNumber())
-					element.SetMember(stamp, RE::GFxValue(place.GetNumber() - 1.0));
-			}
-		}
-	}
-
-	// Has the newer page work out its buttons' places again. Where Native System Menu Framework shows a copy of the list, it hands the
-	// page places in the list it kept, so they're worked out in that one
-	static void RefreshIndices(RE::GFxValue& a_page, RE::GFxValue& a_listObj)
-	{
-		RE::GFxValue kept, shown;
-		const bool   swap = a_listObj.GetMember(kKeptListMember, &kept) && kept.IsArray() && a_listObj.GetMember("entryList", &shown);
-		if (swap)
-			a_listObj.SetMember("entryList", kept);
-		a_page.Invoke("UpdateIndices", nullptr, nullptr, 0);
-		if (swap)
-			a_listObj.SetMember("entryList", shown);
+		s_injectedMenuName = a_name ? a_name : "";
 	}
 
 	// --- Row Interaction Handlers ---
@@ -226,66 +179,149 @@ namespace Hooks::Journal
 		return true;
 	}
 
-	// --- Menu Action Interceptors ---
-	// Anything that isn't the entry goes on to the page's own handler as it came, arguments or none, as other mods call these to have the
-	// page do its part, such as Native System Menu Framework running the settings press with nothing before filling its own tabs
-	class FUCKMainPressHandler : public RE::GFxFunctionHandler
+	// --- Duplicates the visual MovieClips and expands the mask boundary
+	static void UpdateListVisuals(RE::GFxMovieView* a_movieView, RE::GFxValue& a_listObj, std::uint32_t a_numItems, bool a_updateHeight)
 	{
-	public:
-		void Call(Params& a_params) override
-		{
-			if (!a_params.thisPtr || OpenIfEntryPressed(a_params))
-				return;
+		RE::GFxValue maxShownV;
+		if (a_listObj.GetMember("iMaxItemsShown", &maxShownV) && maxShownV.IsNumber()) {
+			std::uint32_t curClips = static_cast<std::uint32_t>(maxShownV.GetNumber());
 
-			RE::GFxValue listObj, entryList, entry, index;
-			if (a_params.argCount >= 1 && a_params.args && GetTargetList(*a_params.thisPtr, false, listObj, entryList)) {
-				RE::GFxValue& eventObj = a_params.args[0];
-				eventObj.GetMember("entry", &entry);
-				if (eventObj.GetMember("index", &index) && index.IsNumber()) {
-					if (a_params.thisPtr->HasMember("UpdateIndices")) {
-						// The newer page matches the index against places it worked out, which another mod may have worked out again
-						// since, so they're worked out once more now
-						RefreshIndices(*a_params.thisPtr, listObj);
-					} else {
-						// The older page acts on a button by its place in the list. A button another mod stamped is passed on with its
-						// stamp, corrected for the entry, which is what that mod passes on too, so either can run first
-						CorrectPlaceStamps(listObj, entryList);
-						bool stamped = false;
-						for (const char* stamp : kPlaceStamps) {
-							RE::GFxValue place;
-							if (entry.IsObject() && entry.GetMember(stamp, &place) && place.IsNumber()) {
-								eventObj.SetMember("index", place);
-								stamped = true;
-								break;
-							}
-						}
+			double       entryH = 0.0;
+			RE::GFxValue e0, h;
+			if (a_listObj.GetMember("Entry0", &e0) && e0.GetMember("_height", &h) && h.IsNumber()) {
+				entryH = h.GetNumber();
+			}
 
-						// Otherwise a button below the entry is passed on with one place fewer. Whether it's below is judged by where the
-						// button sits rather than by the index, which another mod's entry may already have lowered the same way, so each
-						// mod takes off only its own place, in whichever order they're called
-						const std::int32_t ours    = stamped ? -1 : FindInsertedEntry(entryList);
-						const std::int32_t clicked = ours >= 0 ? FindEntryObject(entryList, entry) : -1;
-						if (ours >= 0 && clicked > ours)
-							eventObj.SetMember("index", RE::GFxValue(index.GetNumber() - 1.0));
+			if (curClips > 0 && a_numItems > curClips) {
+				for (std::uint32_t i = curClips; i < a_numItems; ++i) {
+					const std::string srcName = "Entry" + std::to_string(i - 1);
+					RE::GFxValue      src;
+					if (!a_listObj.GetMember(srcName.c_str(), &src))
+						break;
+
+					const std::string  newName    = "Entry" + std::to_string(i);
+					const RE::GFxValue dupArgs[2] = { RE::GFxValue(newName.c_str()), RE::GFxValue(static_cast<double>(20000 + i)) };
+					src.Invoke("duplicateMovieClip", nullptr, dupArgs, 2);
+
+					RE::GFxValue nc;
+					if (a_listObj.GetMember(newName.c_str(), &nc)) {
+						nc.SetMember("clipIndex", RE::GFxValue(static_cast<double>(i)));
+
+						// Attach interactivity handlers to new rows
+						RE::GFxValue fnPress, fnRoll;
+						a_movieView->CreateFunction(&fnPress, &g_entryPressHandler);
+						a_movieView->CreateFunction(&fnRoll, &g_entryRollOverHandler);
+						nc.SetMember("onPress", fnPress);
+						nc.SetMember("onRollOver", fnRoll);
 					}
 				}
+				a_listObj.SetMember("iMaxItemsShown", RE::GFxValue(static_cast<double>(a_numItems)));
 			}
-			a_params.thisPtr->Invoke("fuck_orig_onCategoryButtonPress", a_params.retVal, a_params.args, a_params.argCount);
-		}
-	};
-	static FUCKMainPressHandler g_fuckMainPressHandler;
 
-	class FUCKSettingsPressHandler : public RE::GFxFunctionHandler
-	{
-	public:
-		void Call(Params& a_params) override
-		{
-			if (!a_params.thisPtr || OpenIfEntryPressed(a_params))
-				return;
-			a_params.thisPtr->Invoke("fuck_orig_onSettingsCategoryPress", a_params.retVal, a_params.args, a_params.argCount);
+			// Expand the physical clipping mask for the Settings List
+			if (a_updateHeight && entryH > 0.0) {
+				RE::GFxValue border;
+				if (a_listObj.GetMember("border", &border)) {
+					border.SetMember("_height", RE::GFxValue(entryH * static_cast<double>(a_numItems) + 4.0));
+				}
+			}
 		}
-	};
-	static FUCKSettingsPressHandler g_fuckSettingsPressHandler;
+	}
+
+	// --- Compatibility ---
+	// Keeping the entry in step with SkyUI 5's System page, which acts on its buttons by their places in the list, and with other mods
+	// that change the page's lists
+	static bool s_settingsListTaken = false;  // The entry listens to the Settings list itself, while the Journal is open
+
+	// Mods that rebuild the list, as Native System Menu Framework and STB System Page do, stamp each entry with its place when they find
+	// it and hand the page that place on a press. Native System Menu Framework also keeps the list as it found it, and shows a copy
+	constexpr std::array<const char*, 2> kPlaceStamps{ "__nsmf_vidx", "__stb_vidx" };
+	constexpr const char*                kKeptListMember = "__nsmf_vanillaEntries";
+
+	// The list a stamp's places were counted in
+	static RE::GFxValue GetStampedList(RE::GFxValue& a_listObj, RE::GFxValue& a_entryList, const char* a_stamp)
+	{
+		RE::GFxValue kept;
+		if (std::string_view(a_stamp) == kPlaceStamps[0] && a_listObj.GetMember(kKeptListMember, &kept) && kept.IsArray())
+			return kept;
+		return a_entryList;
+	}
+
+	// On the older page, where the entry was in the list when a mod stamped it, the stamps below it count it. They're lowered by one and
+	// its own stamp taken away, so every stamp is the page's own place
+	static void CorrectPlaceStamps(RE::GFxValue& a_listObj, RE::GFxValue& a_entryList)
+	{
+		const std::int32_t ours = FindInsertedEntry(a_entryList);
+		RE::GFxValue       entry;
+		if (ours < 0 || !a_entryList.GetElement(static_cast<std::uint32_t>(ours), &entry))
+			return;
+
+		for (const char* stamp : kPlaceStamps) {
+			RE::GFxValue oursAt;
+			if (!entry.GetMember(stamp, &oursAt) || !oursAt.IsNumber())
+				continue;
+			entry.DeleteMember(stamp);
+
+			RE::GFxValue        stamped = GetStampedList(a_listObj, a_entryList, stamp);
+			const std::uint32_t size    = stamped.GetArraySize();
+			for (std::uint32_t i = 0; i < size; ++i) {
+				RE::GFxValue element, place;
+				if (stamped.GetElement(i, &element) && element.IsObject() && element.GetMember(stamp, &place) && place.IsNumber() &&
+					place.GetNumber() > oursAt.GetNumber())
+					element.SetMember(stamp, RE::GFxValue(place.GetNumber() - 1.0));
+			}
+		}
+	}
+
+	// Where Native System Menu Framework shows a copy of the list, it hands the page places in the list it kept, so they're worked out
+	// in that one
+	static void RefreshIndices(RE::GFxValue& a_page, RE::GFxValue& a_listObj)
+	{
+		RE::GFxValue kept, shown;
+		const bool   swap = a_listObj.GetMember(kKeptListMember, &kept) && kept.IsArray() && a_listObj.GetMember("entryList", &shown);
+		if (swap)
+			a_listObj.SetMember("entryList", kept);
+		a_page.Invoke("UpdateIndices", nullptr, nullptr, 0);
+		if (swap)
+			a_listObj.SetMember("entryList", shown);
+	}
+
+	// A press on the main list, passed on with the place the page expects for the button pressed
+	static void AdjustMainPress(RE::GFxValue& a_page, RE::GFxValue& a_event)
+	{
+		RE::GFxValue listObj, entryList, entry, index;
+		if (!GetTargetList(a_page, false, listObj, entryList))
+			return;
+		a_event.GetMember("entry", &entry);
+		if (!a_event.GetMember("index", &index) || !index.IsNumber())
+			return;
+
+		if (a_page.HasMember("UpdateIndices")) {
+			// The newer page matches the index against places it worked out, which another mod may have worked out again since, so
+			// they're worked out once more now
+			RefreshIndices(a_page, listObj);
+			return;
+		}
+
+		// The older page acts on a button by its place in the list. A button another mod stamped is passed on with its stamp, corrected
+		// for the entry, which is what that mod passes on too, so either can run first
+		CorrectPlaceStamps(listObj, entryList);
+		for (const char* stamp : kPlaceStamps) {
+			RE::GFxValue place;
+			if (entry.IsObject() && entry.GetMember(stamp, &place) && place.IsNumber()) {
+				a_event.SetMember("index", place);
+				return;
+			}
+		}
+
+		// Otherwise a button below the entry is passed on with one place fewer. Whether it's below is judged by where the button sits
+		// rather than by the index, which another mod's entry may already have lowered the same way, so each mod takes off only its own
+		// place, in whichever order they're called
+		const std::int32_t ours    = FindInsertedEntry(entryList);
+		const std::int32_t clicked = ours >= 0 ? FindEntryObject(entryList, entry) : -1;
+		if (ours >= 0 && clicked > ours)
+			a_event.SetMember("index", RE::GFxValue(index.GetNumber() - 1.0));
+	}
 
 	// The older System page hands the game its buttons by their places in the list, for it to disable Save and the like when they can't
 	// be used, from both RefreshSystemButtons and UpdatePermissions. So the entry is taken out while either runs, leaving the list as it
@@ -356,7 +392,7 @@ namespace Hooks::Journal
 		running = false;
 	}
 
-	// Once each time the Journal opens, as it's made afresh with the game's own callback
+	// Each time the Journal opens, as it's made afresh with the game's own callback
 	static void GuardSaveButtons(RE::FxDelegate* a_delegate)
 	{
 		auto defn = a_delegate ? a_delegate->callbacks.Get(RE::GString("SetSaveDisabled")) : nullptr;
@@ -366,54 +402,95 @@ namespace Hooks::Journal
 		}
 	}
 
-	// --- Helper: Duplicates the visual MovieClips and expands the mask boundary
-	static void UpdateListVisuals(RE::GFxMovieView* a_movieView, RE::GFxValue& a_listObj, std::uint32_t a_numItems, bool a_updateHeight)
+	// The older page's two functions that hand the game its buttons by place, wrapped to take the entry out while they run
+	static void HookButtonPlaces(RE::GFxMovieView* a_movieView, RE::GFxValue& a_page)
 	{
-		RE::GFxValue maxShownV;
-		if (a_listObj.GetMember("iMaxItemsShown", &maxShownV) && maxShownV.IsNumber()) {
-			std::uint32_t curClips = static_cast<std::uint32_t>(maxShownV.GetNumber());
-
-			double       entryH = 0.0;
-			RE::GFxValue e0, h;
-			if (a_listObj.GetMember("Entry0", &e0) && e0.GetMember("_height", &h) && h.IsNumber()) {
-				entryH = h.GetNumber();
-			}
-
-			if (curClips > 0 && a_numItems > curClips) {
-				for (std::uint32_t i = curClips; i < a_numItems; ++i) {
-					const std::string srcName = "Entry" + std::to_string(i - 1);
-					RE::GFxValue      src;
-					if (!a_listObj.GetMember(srcName.c_str(), &src))
-						break;
-
-					const std::string  newName    = "Entry" + std::to_string(i);
-					const RE::GFxValue dupArgs[2] = { RE::GFxValue(newName.c_str()), RE::GFxValue(static_cast<double>(20000 + i)) };
-					src.Invoke("duplicateMovieClip", nullptr, dupArgs, 2);
-
-					RE::GFxValue nc;
-					if (a_listObj.GetMember(newName.c_str(), &nc)) {
-						nc.SetMember("clipIndex", RE::GFxValue(static_cast<double>(i)));
-
-						// Attach interactivity handlers to new rows
-						RE::GFxValue fnPress, fnRoll;
-						a_movieView->CreateFunction(&fnPress, &g_entryPressHandler);
-						a_movieView->CreateFunction(&fnRoll, &g_entryRollOverHandler);
-						nc.SetMember("onPress", fnPress);
-						nc.SetMember("onRollOver", fnRoll);
-					}
-				}
-				a_listObj.SetMember("iMaxItemsShown", RE::GFxValue(static_cast<double>(a_numItems)));
-			}
-
-			// Expand the physical clipping mask for the Settings List
-			if (a_updateHeight && entryH > 0.0) {
-				RE::GFxValue border;
-				if (a_listObj.GetMember("border", &border)) {
-					border.SetMember("_height", RE::GFxValue(entryH * static_cast<double>(a_numItems) + 4.0));
-				}
+		for (auto& handler : g_buttonPlacesHandlers) {
+			RE::GFxValue original;
+			if (a_page.GetMember(handler.function, &original) && !original.IsUndefined()) {
+				a_page.SetMember(handler.original, original);
+				RE::GFxValue hook;
+				a_movieView->CreateFunction(&hook, &handler);
+				a_page.SetMember(handler.function, hook);
 			}
 		}
 	}
+
+	static void ResetCompat()
+	{
+		s_settingsListTaken = false;
+	}
+
+	// Presses on the Settings list, for when another mod has replaced the page's own listener there with one of its own
+	class SettingsListPressHandler : public RE::GFxFunctionHandler
+	{
+	public:
+		void Call(Params& a_params) override { OpenIfEntryPressed(a_params); }
+	};
+	static SettingsListPressHandler g_settingsListPressHandler;
+
+	// The Settings list holds the game's three tabs, so a fourth that isn't the entry is another mod's. Community Shaders finds its tab
+	// by its place, the fourth, so the entry is kept after any such tab rather than taking it. That mod also replaces the page's listener
+	// on the list with its own, which ignores the entry, so the entry listens for itself
+	constexpr std::uint32_t kGameSettingsTabs = 3;
+
+	static void KeepEntryAfterOtherTabs(RE::GFxMovieView* a_movieView, RE::GFxValue& a_listObj, RE::GFxValue& a_entryList)
+	{
+		const std::int32_t ours = FindEntry(a_entryList, InjectedName());
+		const std::uint32_t size = a_entryList.GetArraySize();
+		if (ours < 0 || size - 1 <= kGameSettingsTabs)
+			return;
+
+		if (static_cast<std::uint32_t>(ours) != size - 1) {
+			RE::GFxValue entry;
+			a_entryList.GetElement(static_cast<std::uint32_t>(ours), &entry);
+			SpliceEntry(a_entryList, static_cast<std::uint32_t>(ours), nullptr);
+			a_entryList.PushBack(entry);
+			a_listObj.Invoke("InvalidateData", nullptr, nullptr, 0);
+		}
+
+		if (!s_settingsListTaken) {
+			s_settingsListTaken = true;
+			RE::GFxValue scope, fn;
+			a_movieView->CreateObject(&scope);
+			a_movieView->CreateFunction(&fn, &g_settingsListPressHandler);
+			scope.SetMember("onFUCKSettingsPress", fn);
+			const RE::GFxValue add[3] = { RE::GFxValue("itemPress"), scope, RE::GFxValue("onFUCKSettingsPress") };
+			a_listObj.Invoke("addEventListener", nullptr, add, 3);
+		}
+	}
+
+	static bool s_fuckButtonInjected = false;
+
+	// --- Menu Action Interceptors ---
+	// Anything that isn't the entry goes on to the page's own handler as it came, arguments or none, as other mods call these to have the
+	// page do its part, such as Native System Menu Framework running the settings press with nothing before filling its own tabs
+	class FUCKMainPressHandler : public RE::GFxFunctionHandler
+	{
+	public:
+		void Call(Params& a_params) override
+		{
+			if (!a_params.thisPtr || OpenIfEntryPressed(a_params))
+				return;
+
+			if (a_params.argCount >= 1 && a_params.args)
+				AdjustMainPress(*a_params.thisPtr, a_params.args[0]);
+			a_params.thisPtr->Invoke("fuck_orig_onCategoryButtonPress", a_params.retVal, a_params.args, a_params.argCount);
+		}
+	};
+	static FUCKMainPressHandler g_fuckMainPressHandler;
+
+	class FUCKSettingsPressHandler : public RE::GFxFunctionHandler
+	{
+	public:
+		void Call(Params& a_params) override
+		{
+			if (!a_params.thisPtr || OpenIfEntryPressed(a_params))
+				return;
+			a_params.thisPtr->Invoke("fuck_orig_onSettingsCategoryPress", a_params.retVal, a_params.args, a_params.argCount);
+		}
+	};
+	static FUCKSettingsPressHandler g_fuckSettingsPressHandler;
 
 	static void TryInjectFUCKButton(RE::GFxMovieView* a_movieView)
 	{
@@ -435,12 +512,15 @@ namespace Hooks::Journal
 			return;
 		}
 
+		if (injectSettings)
+			KeepEntryAfterOtherTabs(a_movieView, listObj, entryList);
+
 		const std::uint32_t arraySize = entryList.GetArraySize();
 		if (arraySize == 0)
 			return;
 
 		const char* menuName = FUCK::Translate(manager->GetSystemMenuName());
-		s_injectedMenuName   = menuName;
+		SetInjectedName(menuName);
 
 		// Determine menu version
 		bool isSafeMenu = page.HasMember("UpdateIndices");
@@ -509,15 +589,8 @@ namespace Hooks::Journal
 				a_movieView->CreateFunction(&hookSet, &g_fuckSettingsPressHandler);
 				page.SetMember("onSettingsCategoryPress", hookSet);
 			}
-			for (auto& handler : g_buttonPlacesHandlers) {
-				RE::GFxValue original;
-				if (!isSafeMenu && page.GetMember(handler.function, &original) && !original.IsUndefined()) {
-					page.SetMember(handler.original, original);
-					RE::GFxValue hook;
-					a_movieView->CreateFunction(&hook, &handler);
-					page.SetMember(handler.function, hook);
-				}
-			}
+			if (!isSafeMenu)
+				HookButtonPlaces(a_movieView, page);
 			page.SetMember("fuck_hooked", RE::GFxValue(true));
 		}
 
@@ -600,6 +673,7 @@ namespace Hooks::Journal
 		{
 			if (a_message.type == RE::UI_MESSAGE_TYPE::kHide) {
 				s_fuckButtonInjected = false;
+				ResetCompat();
 				s_journalMenuOpen    = false;
 				return func(a_this, a_message);
 			}
