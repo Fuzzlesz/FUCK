@@ -348,6 +348,18 @@ namespace ImGui
 		return visible;
 	}
 
+	bool BeginComboThemed(const char* a_label, const char* a_preview, ImGuiComboFlags a_flags)
+	{
+		const bool themed = PushThemedWindowBg(ThemedWindow::kPopup);
+		const bool open   = BeginCombo(a_label, a_preview, a_flags);
+		// A closed combo leaves the current window as the one it's in, which mustn't be given the dropdown's frame
+		if (open)
+			PopThemedWindowBg(themed);
+		else if (themed)
+			PopStyleColor(1 + IM_ARRAYSIZE(s_themedWindowCols));
+		return open;
+	}
+
 	float GetWindowCornerInset()
 	{
 		if (!UseInvertedCorners())

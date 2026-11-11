@@ -172,7 +172,7 @@ namespace ImGui
 
 		PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(popupPad, popupPad));
 
-		bool isOpen = BeginCombo(idStr.c_str(), nullptr, ImGuiComboFlags_NoArrowButton | ImGuiComboFlags_HeightLarge);
+		bool isOpen = BeginComboThemed(idStr.c_str(), nullptr, ImGuiComboFlags_NoArrowButton | ImGuiComboFlags_HeightLarge);
 
 		PopStyleVar(4);
 		PopStyleColor(6);
@@ -534,7 +534,6 @@ namespace ImGui
 			SetNextWindowSizeConstraints({ width, maxPopupH }, { width, maxPopupH });
 		}
 
-		PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
 		PushStyleColor(ImGuiCol_FrameBg, ImVec4(0, 0, 0, 0));
 		PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0, 0, 0, 0));
 		PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(0, 0, 0, 0));
@@ -561,10 +560,10 @@ namespace ImGui
 		AddThemedRectFilled(parentDrawList, ImRect(widgetPos, widgetPos + ImVec2(width, frameH)), GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox), GetFrameRounding());
 		DrawComboPreview(parentDrawList, ImRect(widgetPos, widgetPos + ImVec2(width, frameH)), preview, padX, padY);
 
-		bool isOpen = BeginCombo(idStr.c_str(), nullptr, ImGuiComboFlags_NoArrowButton);
+		bool isOpen = BeginComboThemed(idStr.c_str(), nullptr, ImGuiComboFlags_NoArrowButton);
 
 		PopStyleVar(3);
-		PopStyleColor(7);
+		PopStyleColor(6);
 
 		// Detect if opened Upwards
 		bool opensUp = false;

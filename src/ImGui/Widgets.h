@@ -121,6 +121,9 @@ namespace ImGui
 	// BeginTooltip() whose corners follow the theme. Pair with EndTooltip() as usual
 	bool BeginTooltipThemed();
 
+	// BeginCombo() whose dropdown's corners follow the theme. Pair with EndCombo() as usual
+	bool BeginComboThemed(const char* a_label, const char* a_preview, ImGuiComboFlags a_flags = ImGuiComboFlags_None);
+
 	// How far inverted corners cut into the current window's edges, so things along them can move in clear. 0 otherwise
 	float GetWindowCornerInset();
 
