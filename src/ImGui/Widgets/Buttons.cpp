@@ -33,6 +33,8 @@ namespace ImGui
 		template <typename TDrawFunc>
 		void AlignedWidgetLayout(const char* label, bool alignFar, bool labelLeft, float contentWidth, TDrawFunc drawContent, float targetHeight = -1.0f, bool labelLit = false)
 		{
+			if (label && label[0] && !std::string_view(label).starts_with("##"))
+				AddRowSpacing();
 			BeginGroup();
 			PushID(label);
 

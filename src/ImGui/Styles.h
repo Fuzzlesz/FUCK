@@ -99,7 +99,7 @@ namespace ImGui
 			// Layout & Geometry
 			// --------------------------------------------------
 			ImVec2 windowPadding{ 15.0f, 15.0f };
-			ImVec2 itemSpacing{ 8.0f, 4.0f };
+			ImVec2 itemSpacing{ 8.0f, 5.0f };  // Y is the gap above each labelled row
 			float  indentSpacing{ 25.0f };
 
 			float  widgetSplit{ 0.5f };

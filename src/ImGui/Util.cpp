@@ -93,8 +93,25 @@ namespace ImGui
 		drawList->AddRectFilledMultiColor({ middle, a_row.Min.y }, a_row.Max, peak, clear, clear, peak);
 	}
 
+	// The gap above a labelled row, the item spacing's Y, so rows space themselves evenly whatever widgets they hold. Not for a
+	// widget on the same line as another, nor the first item in a window
+	void AddRowSpacing()
+	{
+		ImGuiWindow* window = GetCurrentWindow();
+		if (window->SkipItems || window->DC.IsSameLine || window->DC.CursorPos.y <= window->DC.CursorStartPos.y)
+			return;
+
+		const float gap = std::round(Styles::GetSingleton()->user.itemSpacing.y * GetDynamicWidgetScale());
+		if (gap > 0.0f)
+			window->DC.CursorPos.y += gap;
+	}
+
 	void LeftAlignedTextImpl(const char* label)
 	{
+		// A label of its own starts a row, so the row's gap goes above it first
+		if (label && label[0] && !std::string_view(label).starts_with("##"))
+			AddRowSpacing();
+
 		float fullAvailX = GetContentRegionAvail().x;
 		float startX     = GetCursorPosX();
 		float startY     = GetCursorPosY();

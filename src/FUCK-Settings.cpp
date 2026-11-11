@@ -133,12 +133,9 @@ void SettingsTool::Draw()
 			FUCK::Spacing(2);
 
 			FUCK::DrawManagedHotkey("$FUCK_Settings_Hotkey"_T, hotkey);
-			FUCK::Spacing(2);
 
 			if (FUCK::Checkbox("$FUCK_Settings_MuteAudio"_T, &manager->_cfg.muteAudio, true, true))
 				manager->Save();
-
-			FUCK::Spacing(2);
 
 			const char* pauseTypes[]    = { "$FUCK_Settings_PauseNone"_T, "$FUCK_Settings_PauseSoft"_T, "$FUCK_Settings_PauseHard"_T };
 			int         currentPauseIdx = static_cast<int>(manager->_cfg.globalPauseType);
@@ -236,7 +233,6 @@ void SettingsTool::Draw()
 				}
 			}
 			FUCK::EndDisabled();
-			FUCK::Spacing(2);
 
 			if (FUCK::SliderFloat("$FUCK_Settings_UIScale"_T, &manager->_cfg.userScale, 0.5f, 2.0f, "%.2f")) {
 				style->RefreshStyle();

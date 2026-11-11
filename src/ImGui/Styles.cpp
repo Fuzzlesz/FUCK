@@ -523,7 +523,7 @@ namespace ImGui
 
 		style.WindowPadding     = ImVec2(user.windowPadding.x * scale, user.windowPadding.y * scale);
 		style.FramePadding      = ImVec2(6.0f * scale, 3.0f * scale);
-		style.ItemSpacing       = ImVec2(user.itemSpacing.x * scale, user.itemSpacing.y * scale);
+		style.ItemSpacing       = ImVec2(user.itemSpacing.x * scale, 4.0f * scale);  // The Y setting spaces rows instead, in AddRowSpacing
 		style.ItemInnerSpacing  = ImVec2(4.0f * scale, 4.0f * scale);
 		style.TouchExtraPadding = ImVec2(0.0f, 0.0f);
 		style.IndentSpacing     = user.indentSpacing * scale;
@@ -564,6 +564,7 @@ namespace ImGui
 		colors[ImGuiCol_FrameBgHovered] = user.frameBG_WidgetActive;
 		colors[ImGuiCol_FrameBgActive]  = user.frameBG_WidgetActive;
 
+		// Buttons and tabs share the background of the other widgets
 		colors[ImGuiCol_Button]        = user.comboBoxTextBox;
 		colors[ImGuiCol_ButtonHovered] = user.frameBG_WidgetActive;
 		colors[ImGuiCol_ButtonActive]  = user.widgetBorderActive;
