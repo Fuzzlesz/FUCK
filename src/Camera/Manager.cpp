@@ -247,6 +247,10 @@ namespace Camera
 		HoldHead();
 		UpdateSmoothCam();
 
+		// A view handed over is put on the camera now, as a frame can be drawn before the client's first update, which would show the camera as the client set it up for its base
+		if (_current->pendingPose && IsOffsetBase(_current->base) && IsBaseReady(*_current))
+			ApplyNode();
+
 		logger::info("Camera session began: {}", GetName(*_current));
 		return true;
 	}
