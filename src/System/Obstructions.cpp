@@ -8,6 +8,7 @@ namespace
 	constexpr float HOLD_MARGIN    = 20.0f;   // something hidden stays hidden until it's this much further out of the way than it took to hide it
 	constexpr float LINGER         =  0.25f;  // and then for this many seconds, so it doesn't flicker as the camera moves
 	constexpr float SETTLE         =  2.0f;   // seconds after the camera or the one shown last moved that hidden things can still come back
+	constexpr int   OPENING_CHECKS =  6;      // updates checked one after another as a showing begins, while its framing settles
 
 	// The sight lines, from the camera to points across the body
 	constexpr float CORRIDOR       =  25.0f;   // how far round a sight line something counts as in the way
@@ -64,6 +65,10 @@ namespace
 	std::unordered_map<RE::FormID, FlameCache> flameSpots;  // by FormID, updated if the 3D changes
 
 	float sinceCheck = CHECK_INTERVAL;
+
+	// A showing's first updates are each checked, as the camera's still settling on the body then (see Core::Settle), and waiting out the
+	// interval would show what's in the way of where it lands for a moment
+	int openingChecks = OPENING_CHECKS;
 
 	// While neither the camera nor the one shown moves, only their animation changes what's in the way (an equip, a bend), which would
 	// hide and show the same things over and over. so once things settle after a move, nothing comes back until the next one
@@ -874,6 +879,7 @@ namespace
 		flameSpots.clear();
 		lastSeen.known = false;
 		sinceCheck     = CHECK_INTERVAL;  // so the next showing checks at once
+		openingChecks  = OPENING_CHECKS;
 	}
 }
 
@@ -892,7 +898,9 @@ namespace Obstructions
 		}
 
 		sinceCheck += a_interval;
-		if (sinceCheck < CHECK_INTERVAL) {
+		if (openingChecks > 0) {
+			--openingChecks;
+		} else if (sinceCheck < CHECK_INTERVAL) {
 			return;
 		}
 
