@@ -928,7 +928,7 @@ void FUCKMan::PushContentScale(const LayoutMetrics& a_m, bool a_ignoreUserScale)
 	auto styleUser = ImGui::Styles::GetSingleton()->user;
 
 	float spaceX = styleUser.itemSpacing.x * a_m.uiScale * _activeScale;
-	float spaceY = styleUser.itemSpacing.y * a_m.uiScale * _activeScale;
+	float spaceY = 4.0f * a_m.uiScale * _activeScale;  // the Y setting spaces rows instead (AddRowSpacing), as in Styles::RefreshStyle
 
 	float innerSpaceX = 4.0f * a_m.uiScale * _activeScale;
 	float innerSpaceY = 4.0f * a_m.uiScale * _activeScale;
