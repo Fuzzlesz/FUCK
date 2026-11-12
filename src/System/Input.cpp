@@ -345,9 +345,19 @@ namespace Input
 		return true;
 	}
 
+	// Typing in the console, a menu's search box, or a FUCK field, where a hotkey's key is a letter being typed
+	bool Manager::IsTyping()
+	{
+		auto controlMap = RE::ControlMap::GetSingleton();
+		if (controlMap && controlMap->GetRuntimeData().textEntryCount > 0)
+			return true;
+		auto ui = RE::UI::GetSingleton();
+		return ui && ui->IsMenuOpen(RE::Console::MENU_NAME);
+	}
+
 	bool Manager::IsManagedHotkeyDown(FUCK::ManagedHotkey& h)
 	{
-		if (h.isBinding)
+		if (h.isBinding || IsTyping())
 			return false;
 
 		bool isDown = false;
@@ -376,6 +386,12 @@ namespace Input
 	{
 		if (h.isBinding)
 			return false;
+
+		// Held through, so a key still down as the typing ends doesn't then fire
+		if (IsTyping()) {
+			h.wasTriggered = true;
+			return false;
+		}
 
 		if (h.waitForRelease) {
 			bool currentlyHeld = false;
