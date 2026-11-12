@@ -955,9 +955,51 @@ void FUCKMan::PopContentScale()
 // CORE RENDER LOOP
 // ==================================================
 
+bool FUCKMan::TakeScaleWheel(float a_wheel)
+{
+	if (!_isOpen || !_mainHovered || a_wheel == 0.0f || !Input::Manager::GetSingleton()->IsModifierPressed(FUCK::Modifier::kCtrl))
+		return false;
+
+	_scaleSteps += a_wheel > 0.0f ? 1 : -1;
+	return true;
+}
+
+bool FUCKMan::TakeScaleKey(KEY a_key)
+{
+	if (!_isOpen || ImGui::GetIO().WantTextInput || !Input::Manager::GetSingleton()->IsModifierPressed(FUCK::Modifier::kCtrl))
+		return false;
+
+	switch (a_key) {
+	case KEY::kEquals:
+	case KEY::kKP_Plus:
+		++_scaleSteps;
+		return true;
+	case KEY::kMinus:
+	case KEY::kKP_Subtract:
+		--_scaleSteps;
+		return true;
+	case KEY::kNum0:
+	case KEY::kKP_0:
+		_scaleReset = true;
+		return true;
+	default:
+		return false;
+	}
+}
+
 void FUCKMan::Draw(bool a_passthroughOnly)
 {
 	FlushPendingRegistrations();
+
+	// A twentieth a step, as the UI Scale slider steps
+	const bool reset = _scaleReset.exchange(false);
+	if (const int steps = _scaleSteps.exchange(0); steps != 0 || reset) {
+		constexpr float STEP = 0.05f;
+		const float     from = reset ? _def.userScale : _cfg.userScale;
+		_cfg.userScale       = std::clamp(std::round((from + steps * STEP) / STEP) * STEP, 0.5f, 2.0f);
+		ImGui::Styles::GetSingleton()->RefreshStyle();
+		Save();
+	}
 
 	if (!_workspaceLoaded) {
 		LoadWorkspace();
@@ -1129,6 +1171,7 @@ void FUCKMan::DrawMainWindow(const LayoutMetrics& a_m)
 	const bool themedBg = ImGui::PushThemedWindowBg();
 	const bool visible  = ImGui::Begin(windowTitle.c_str(), &wantsOpen, winFlags);
 	ImGui::PopThemedWindowBg(themedBg);
+	_mainHovered = visible && ImGui::IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows);
 
 	if (visible) {
 		ImGui::ExtendWindowPastBorder();

@@ -811,7 +811,9 @@ namespace Input
 
 					switch (event->GetDevice()) {
 					case RE::INPUT_DEVICE::kKeyboard:
-						// Always forward KeyUp events (!isDown) to prevent stuck keys in ImGui
+						// Always forward KeyUp events (!isDown) to prevent stuck keys in ImGui. Ctrl with +, - or 0 is the UI scale's, once
+						if (isDown && buttonEvent->IsDown() && FUCKMan::GetSingleton()->TakeScaleKey(static_cast<KEY>(key)))
+							break;
 						if (passKeyboardAndGamepad || !isDown)
 							io.AddKeyEvent(Keymap::ToImGuiKey(static_cast<KEY>(key)), isDown);
 						break;
@@ -819,11 +821,11 @@ namespace Input
 						if (passMouse || !isDown) {
 							switch (auto mouseKey = static_cast<MOUSE>(key)) {
 							case MOUSE::kWheelUp:
-								if (passMouse)
+								if (passMouse && !FUCKMan::GetSingleton()->TakeScaleWheel(value))
 									io.AddMouseWheelEvent(0, value);
 								break;
 							case MOUSE::kWheelDown:
-								if (passMouse)
+								if (passMouse && !FUCKMan::GetSingleton()->TakeScaleWheel(-value))
 									io.AddMouseWheelEvent(0, value * -1);
 								break;
 							default:

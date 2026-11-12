@@ -162,7 +162,12 @@ public:
 	float GetCurrentWindowScale() const;
 	float GetCurrentWindowRotation() const;
 	float GetUserScale() const { return _cfg.userScale; }
-	void  SetCurrentFont(const std::string& a_font);
+
+	// Ctrl + Scroll over the main window, and Ctrl with + or - while it's open, step the UI scale, and Ctrl + 0 puts it back. Taken
+	// from the input thread, rather than reaching ImGui as a scroll or a key
+	bool TakeScaleWheel(float a_wheel);
+	bool TakeScaleKey(KEY a_key);
+	void SetCurrentFont(const std::string& a_font);
 
 	InjectSystemMenuType GetInjectSystemMenu() const { return _cfg.injectSystemMenu; }
 	bool                 GetReplaceHelpMenu() const { return _cfg.replaceHelpMenu; }
@@ -416,6 +421,11 @@ private:
 
 	// Window Metrics
 	bool   _pendingWindowRestore = false;
+
+	std::atomic<bool> _mainHovered{ false };  // the main window, as last drawn
+	std::atomic<int>  _scaleSteps{ 0 };       // UI scale steps not yet applied
+	std::atomic<bool> _scaleReset{ false };   // and Ctrl + 0
+
 	ImVec2 _lastSavedPos{ 0.0f, 0.0f };
 	ImVec2 _lastSavedSize{ 0.0f, 0.0f };
 	bool   _isCollapsed  = false;
