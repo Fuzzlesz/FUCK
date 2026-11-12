@@ -300,6 +300,15 @@ namespace Hooks::Journal
 			// The newer page matches the index against places it worked out, which another mod may have worked out again since, so
 			// they're worked out once more now
 			RefreshIndices(a_page, listObj);
+
+			// Those are where the buttons sit now, so the index is too. A mod written for the older page may have lowered it for its own
+			// entry above (Bestiary UI), which would then miss by one. Not where Native System Menu Framework shows a copy, whose places
+			// are in the list it kept
+			RE::GFxValue kept;
+			if (!listObj.GetMember(kKeptListMember, &kept) || !kept.IsArray()) {
+				if (const std::int32_t clicked = entry.IsObject() ? FindEntryObject(entryList, entry) : -1; clicked >= 0)
+					a_event.SetMember("index", RE::GFxValue(static_cast<double>(clicked)));
+			}
 			return;
 		}
 
