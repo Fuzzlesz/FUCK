@@ -30,6 +30,8 @@ namespace ImGui
 
 	bool CollapsingHeaderIcon(const char* label, int flags)
 	{
+		// A row like the labelled widgets, spaced as they are, so a column of headers lines up with one of checkboxes beside it
+		AddRowSpacing();
 		ImGuiWindow* window = GetCurrentWindow();
 		ImGuiID      id     = window->GetID(label);
 

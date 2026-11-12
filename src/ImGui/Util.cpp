@@ -489,7 +489,8 @@ namespace ImGui
 		float scale     = GetDynamicWidgetScale();
 		float size      = (largeFont ? largeFont->LegacySize : GetStyle().FontSizeBase) * scale;
 
-		Dummy(ImVec2(0.0f, 12.0f * scale));
+		// Room above to set it apart from what's before. Nothing extra below, as the row under it brings its own gap (AddRowSpacing)
+		Dummy(ImVec2(0.0f, 16.0f * scale));
 
 		PushFont(largeFont, size);
 		PushStyleColor(ImGuiCol_Text, GetUserStyleColorU32(USER_STYLE::kHeaderText));
@@ -497,9 +498,6 @@ namespace ImGui
 		PopStyleColor();
 		PopFont();
 		Separator();
-
-		// Half the gap above, so content doesn't sit on the line
-		Dummy(ImVec2(0.0f, 6.0f * scale));
 	}
 
 	ImU32 GetInteractiveColor(ImGuiCol base, ImGuiCol hovered, ImGuiCol active)

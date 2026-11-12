@@ -305,11 +305,11 @@ namespace FUCK::Host
 		ImGui::SeparatorThick();
 		SeparatorPadding();
 	}
+	// Room above to set it apart from what's before. Nothing extra below, as the row under it brings its own gap (AddRowSpacing)
 	static void SeparatorText_Impl(const char* label)
 	{
-		SeparatorPadding();
+		ImGui::Dummy(ImVec2(0.0f, 6.0f * ImGui::GetDynamicWidgetScale()));
 		ImGui::SeparatorText(label);
-		SeparatorPadding();
 	}
 
 	static float GetColumnWidth_Impl(int column_index) { return ImGui::GetColumnWidth(column_index); }
@@ -733,7 +733,12 @@ namespace FUCK::Host
 	// ==================================================
 	// Widgets
 	// ==================================================
-	static bool Button_Impl(const char* label) { return ImGui::OutlineButton(label); }
+	// Spaced as a row, so a button under a checkbox lines up with a slider or header beside it
+	static bool Button_Impl(const char* label)
+	{
+		ImGui::AddRowSpacing();
+		return ImGui::OutlineButton(label);
+	}
 	static bool InvisibleButton_Impl(const char* str_id, const ImVec2& size, int flags) { return ImGui::InvisibleButton(str_id, size, static_cast<ImGuiButtonFlags>(flags)); }
 	static bool Checkbox_Impl(const char* label, bool* v, bool alignFar, bool labelLeft) { return ImGui::CheckBox(label, v, alignFar, labelLeft); }
 	static bool Hotkey_Impl(const char* label, std::uint32_t key, std::int32_t m1, std::int32_t m2, bool alignFar, bool labelLeft, bool flashing) { return ImGui::Hotkey(label, key, m1, m2, alignFar, labelLeft, flashing); }

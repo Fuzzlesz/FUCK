@@ -130,7 +130,6 @@ void SettingsTool::Draw()
 		if (FUCK::BeginTabItem("$FUCK_Settings_Tab"_T)) {
 
 			FUCK::Header("$FUCK_Settings_Behaviour"_T);
-			FUCK::Spacing(2);
 
 			FUCK::DrawManagedHotkey("$FUCK_Settings_Hotkey"_T, hotkey);
 
@@ -150,7 +149,6 @@ void SettingsTool::Draw()
 			FUCK::TextColoredWrapped(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "$FUCK_Settings_PauseDesc"_T);
 
 			FUCK::Header("$FUCK_Settings_SystemMenu"_T);
-			FUCK::Spacing(2);
 
 			const char* injectTypes[]    = { "$FUCK_Settings_InjectYes"_T, "$FUCK_Settings_InjectControllerOnly"_T, "$FUCK_Settings_InjectNo"_T };
 			int         currentInjectIdx = static_cast<int>(manager->_cfg.injectSystemMenu);
@@ -190,7 +188,6 @@ void SettingsTool::Draw()
 			FUCK::EndDisabled();
 
 			FUCK::Header("$FUCK_Settings_Appearance"_T);
-			FUCK::Spacing(2);
 
 			static std::vector<std::string> fonts = style->GetAvailableFonts();
 			std::vector<std::string>        displayFonts;
@@ -274,7 +271,6 @@ void SettingsTool::Draw()
 			s_wasSidebarTabOpen = true;
 
 			FUCK::Header("$FUCK_Sidebar_Title"_T);
-			FUCK::Spacing(2);
 
 			if (FUCK::Checkbox("$FUCK_Settings_SidebarOnRight"_T, &manager->_cfg.sidebarOnRight, true, true))
 				manager->Save();
@@ -1176,7 +1172,6 @@ void SettingsTool::Draw()
 		if (FUCK::BeginTabItem("$FUCK_Styles_Title"_T)) {
 
 			FUCK::Header("$FUCK_Styles_Presets"_T);
-			FUCK::Spacing();
 
 			const auto& presets           = style->GetPresets();
 			std::string currentPresetName = style->GetCurrentPresetName();
