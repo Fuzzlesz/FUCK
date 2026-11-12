@@ -581,6 +581,11 @@ namespace Camera
 
 		CaptureBaseFov();
 
+		// Not until the framing's measured, which can take a few frames as a menu opens, as a narrower FOV on the unframed camera would show
+		// a close-up of whatever's in front of it before the framing lands
+		if (_isFramed && !_hasFraming)
+			return;
+
 		// The FOV on screen is held, so a mod changing worldFOV mid-session (a conversation camera easing in its zoom) doesn't change
 		// the view: whatever it moves worldFOV by, the modifier takes back
 		if (_baseFov != 0.0f) {

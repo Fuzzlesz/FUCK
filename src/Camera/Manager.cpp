@@ -917,9 +917,6 @@ namespace Camera
 			session.core.SolvePose(baseTranslate, baseRotate, pose.position, Maths::RotationFromAngles(pose.pitch, pose.yaw, pose.roll), pose.fov,
 			                       session.pendingPoseEases);
 			session.pendingPose.reset();
-
-			// The FOV was applied earlier this frame, before the pose landed, so it's applied again to show the pose's own on this frame
-			session.core.ApplyFov();
 			session.pendingPoseEases = false;
 		}
 
@@ -928,6 +925,10 @@ namespace Camera
 		RE::NiMatrix3 rotate;
 		const bool    composed   = session.core.Compose(baseTranslate, baseRotate, translate, rotate);
 		const auto    composedAt = translate;
+
+		// The FOV with the view it's for, as it may have been held back earlier this frame till the framing could be measured, or a pose
+		// has just landed with its own
+		session.core.ApplyFov();
 		session.client->OnCameraFinalPosition(translate);
 		if (!composed && !session.hasFixedBase && translate == composedAt)
 			return;
@@ -976,11 +977,10 @@ namespace Camera
 		if (!camera || camera->currentState.get() != a_state)
 			return;
 
-		// The game has just placed the camera, replacing anything FUCK applied, so this is the new base. The FOV's set again too, as a mod can
-		// change it during the game's update (ACC eases its own)
+		// The game has just placed the camera, replacing anything FUCK applied, so this is the new base. ApplyNode() sets the FOV again too, as
+		// a mod can change it during the game's update (ACC eases its own)
 		_current->nodeModified = false;
 		ApplyNode();
-		_current->core.ApplyFov();
 		MatchMovementToView(a_state);
 	}
 
