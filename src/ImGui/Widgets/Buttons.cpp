@@ -540,6 +540,14 @@ namespace ImGui
 		float visualH = textSize.y + (padY * 2.0f);
 		float width   = textSize.x + (padX * 2.0f);
 
+		// An icon alone, from either icon set's private-use codes, makes a square button
+		const char*  shownEnd = FindRenderedTextEnd(label);
+		unsigned int icon     = 0;
+		const char*  afterOne = label + ImTextCharFromUtf8(&icon, label, shownEnd);
+		const bool   iconOnly = afterOne == shownEnd && icon >= 0xE000 && icon <= 0xF8FF;
+		if (iconOnly)
+			width = std::max(visualH, textSize.x + padY * 2.0f);
+
 		// Force the layout slot to encompass the true visual height
 		float  actualLayoutH = std::max(GetFrameHeight(), visualH);
 		ImVec2 logical_sz    = ImVec2(width, actualLayoutH);
@@ -562,9 +570,17 @@ namespace ImGui
 		AddThemedRectFilled(window->DrawList, bbVisual, GetColorU32(ImGuiCol_Button), rounding);
 		DrawWidgetBorder(window->DrawList, bbVisual, h || held, rounding);
 
-		// Centred, then nudged by the theme
-		ImVec2 textOff = GetButtonTextOffset();
-		RenderTextClipped(bbVisual.Min + textOff, bbVisual.Max + textOff, label, NULL, &textSize, { 0.5f, 0.5f });
+		// Centred, then nudged by the theme. An icon alone is centred by its own drawing, as icons sit on the middle of the text's
+		// capitals, which is above the middle of the line the text is centred by
+		ImVec2             textOff = GetButtonTextOffset();
+		const ImFontGlyph* glyph   = iconOnly ? GetFontBaked()->FindGlyph(static_cast<ImWchar>(icon)) : nullptr;
+		if (glyph && glyph->Visible) {
+			const ImVec2 middle = (bbVisual.Min + bbVisual.Max) * 0.5f + textOff;
+			const ImVec2 at(std::round(middle.x - (glyph->X0 + glyph->X1) * 0.5f), std::round(middle.y - (glyph->Y0 + glyph->Y1) * 0.5f));
+			RenderText(at, label, shownEnd, false);
+		} else {
+			RenderTextClipped(bbVisual.Min + textOff, bbVisual.Max + textOff, label, NULL, &textSize, { 0.5f, 0.5f });
+		}
 
 		if (p)
 			PlayAudio(Audio::kOk);
