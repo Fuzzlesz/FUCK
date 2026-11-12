@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 set(NAME "FUCK" CACHE STRING "")
-set(VERSION 1.8.1)
+set(VERSION 1.8.2)
 
 # ---- Options ----
 
