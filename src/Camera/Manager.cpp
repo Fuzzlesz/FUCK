@@ -547,6 +547,9 @@ namespace Camera
 				logger::warn("Camera: SmoothCam refused control ({}), asking again each frame", std::to_underlying(result));
 			}
 		} else {
+			// Straight to where SmoothCam would have the camera, as easing there from the session's view drifts the camera back after a
+			// menu closes, rather than cutting back as the game does without SmoothCam
+			g_smoothCam->SendToGoalPosition(handle, true, false, RE::PlayerCharacter::GetSingleton());
 			g_smoothCam->ReleaseCameraControl(handle);
 			_holdsSmoothCam = false;
 			_smoothCamRefused = false;
