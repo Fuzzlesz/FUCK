@@ -145,8 +145,7 @@ void SettingsTool::Draw()
 				manager->_cfg.globalPauseType = static_cast<FUCKMan::PauseType>(currentPauseIdx);
 				manager->Save();
 			}
-			FUCK::Spacing();
-			FUCK::TextColoredWrapped(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "$FUCK_Settings_PauseDesc"_T);
+			FUCK::SetTooltip("$FUCK_Settings_PauseDesc"_T);
 
 			FUCK::Header("$FUCK_Settings_SystemMenu"_T);
 
