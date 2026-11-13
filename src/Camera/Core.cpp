@@ -59,7 +59,7 @@ namespace
 	// added to worldFOV by the game, as sprinting and bow zoom do. FUCK's FOV goes here, leaving worldFOV as the player set it
 	float& WorldFovModifier()
 	{
-		static REL::Relocation<float*> modifier{ RELOCATION_ID(527997, 414942) };
+		static REL::Relocation<float*> modifier{ REL::VariantID(527997, 414942, 0x348579C) };
 		return *modifier;
 	}
 
