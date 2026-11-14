@@ -731,6 +731,22 @@ namespace Camera
 		session.core.Reframe(session.flags & FUCK::CameraSessionFlags::kInstantMoves);
 	}
 
+	void Manager::SetUpperBody(FUCK::ICameraClient* a_client, bool a_upperBody)
+	{
+		if (!IsActive(a_client))
+			return;
+
+		auto& session = *_current;
+		if (a_upperBody == static_cast<bool>(session.flags & FUCK::CameraSessionFlags::kFrameUpperBody))
+			return;
+
+		if (a_upperBody)
+			session.flags |= FUCK::CameraSessionFlags::kFrameUpperBody;
+		else
+			session.flags = static_cast<FUCK::CameraSessionFlags>(static_cast<int>(session.flags) & ~static_cast<int>(FUCK::CameraSessionFlags::kFrameUpperBody));
+		session.core.Reframe(session.flags & FUCK::CameraSessionFlags::kInstantMoves);
+	}
+
 	// How far down a fresh base (kFreshBase) looks at the body, about what the game's camera does when the player looks level
 	constexpr float FRESH_PITCH = 6.0f * Maths::DEG2RAD;
 
