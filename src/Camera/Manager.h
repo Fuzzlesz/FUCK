@@ -24,6 +24,8 @@ namespace Camera
 		RE::ActorHandle          subject;
 		bool                     hasSubject = false;
 		RE::ActorHandle          alsoFramed;  // framed beside the subject (CameraSessionOptions::alsoFramed)
+		std::string              framedPart;  // SetPartFraming(): the node body framing aims at, empty for the whole body
+		float                    partSize = 0.0f;
 
 		bool            paused        = false;
 		RE::CameraState startingState = RE::CameraState::kThirdPerson;  // the camera it began over, which must be back before it resumes
@@ -112,6 +114,7 @@ namespace Camera
 		bool IsModified(const FUCK::ICameraClient* a_client) const;
 		void SetBodyFraming(FUCK::ICameraClient* a_client, bool a_framed, const FUCK::CameraScreenRect* a_rect, float a_margin);
 		bool SetSubject(FUCK::ICameraClient* a_client, RE::Actor* a_subject, RE::Actor* a_alsoFramed);
+		void SetPartFraming(FUCK::ICameraClient* a_client, const char* a_node, float a_size);
 		bool IsSubject(const RE::Actor* a_actor) const;  // the active session's subject, or framed beside them
 		bool FaceSubject(FUCK::ICameraClient* a_client, bool a_afresh);
 		bool IsBodyFramed(const FUCK::ICameraClient* a_client) const;
@@ -166,6 +169,7 @@ namespace Camera
 		bool                        GetBodyPoints(Maths::BodyPoints& a_body) override;
 		bool                        GetBodyPointsOf(RE::Actor* a_actor, Maths::BodyPoints& a_body);
 		bool                        GetWholeBodyPoints(RE::Actor* a_actor, Maths::BodyPoints& a_body);
+		bool                        GetPartPoints(Maths::BodyPoints& a_part);
 		void                        MoveBaseToFront();
 		void                        MoveBaseBehind();
 		static RE::NiPoint3         BodyMiddle(RE::Actor& a_subject);
@@ -218,7 +222,7 @@ namespace Camera
 		Config _config;
 
 		std::vector<std::unique_ptr<Session>> _sessions;            // oldest first. The last is current unless it's waiting to resume
-		Session*                              _current = nullptr ;  // the running session, if any
+		Session*                              _current = nullptr;   // the running session, if any
 
 		bool  _isUpdating     = false;  // inside the client's OnCameraUpdate(), the only time MoveCamera() applies
 		float _updateInterval = 0.0f;

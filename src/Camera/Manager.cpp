@@ -720,6 +720,17 @@ namespace Camera
 		return true;
 	}
 
+	void Manager::SetPartFraming(FUCK::ICameraClient* a_client, const char* a_node, float a_size)
+	{
+		if (!IsActive(a_client))
+			return;
+
+		auto& session      = *_current;
+		session.framedPart = a_node ? a_node : "";
+		session.partSize   = a_size;
+		session.core.Reframe(session.flags & FUCK::CameraSessionFlags::kInstantMoves);
+	}
+
 	// How far down a fresh base (kFreshBase) looks at the body, about what the game's camera does when the player looks level
 	constexpr float FRESH_PITCH = 6.0f * Maths::DEG2RAD;
 
@@ -1262,6 +1273,10 @@ namespace Camera
 				return translate;
 		}
 
+		Maths::BodyPoints part;
+		if (GetPartPoints(part))
+			return part.centre;
+
 		auto subject = GetSubject();
 		if (!subject)
 			return std::nullopt;
@@ -1325,6 +1340,9 @@ namespace Camera
 	// The subject, and anyone framed beside them, measured the same way. They're left out while they've no 3D
 	bool Manager::GetBodyPoints(Maths::BodyPoints& a_body)
 	{
+		if (GetPartPoints(a_body))
+			return true;
+
 		if (!GetBodyPointsOf(GetSubject(), a_body))
 			return false;
 
@@ -1332,6 +1350,31 @@ namespace Camera
 		const auto        other = _current ? _current->alsoFramed.get() : RE::NiPointer<RE::Actor>{};
 		if (other && GetBodyPointsOf(other.get(), also))
 			a_body = Maths::PairBodyPoints(a_body, also);
+		return true;
+	}
+
+	// SetPartFraming(): the part's span round its node, or round what hangs off it (a worn or held item) by its bounds
+	bool Manager::GetPartPoints(Maths::BodyPoints& a_part)
+	{
+		if (!_current || _current->framedPart.empty())
+			return false;
+
+		auto subject = GetSubject();
+		auto node    = subject ? subject->GetNodeByName(_current->framedPart.c_str()) : nullptr;
+		if (!node)
+			return false;
+
+		RE::NiPoint3 centre = node->world.translate;
+		float        half   = _current->partSize * 0.5f;
+		if (half <= 0.0f) {
+			const auto& bound = node->worldBound;
+			if (bound.radius < 1.0f)
+				return false;
+			centre = bound.center;
+			half   = bound.radius;
+		}
+
+		a_part = { centre, { centre.x, centre.y, centre.z + half }, { centre.x, centre.y, centre.z - half } };
 		return true;
 	}
 
