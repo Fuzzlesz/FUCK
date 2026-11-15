@@ -22,6 +22,10 @@ namespace ImGui::WidgetsDetail
 	// How far a cut-away corner reaches in from a frame's side, a_depth in from its top or bottom edge. 0 when corners aren't inverted
 	float InvertedCornerReach(const ImRect& a_bb, float a_rounding, float a_depth);
 
+	// How far in from a frame's top or bottom edge something a_inset in from its side clears a cut-away corner,
+	// so a window's padding can grow with deep corners. 0 when corners aren't inverted
+	float InvertedCornerClearance(float a_rounding, float a_inset);
+
 	// --- Common.cpp ---
 	// Round rather than floor, so scaled-down borders don't lose up to a whole pixel.
 	// The black outline is three quarters of the coloured border, matching vanilla's buttons

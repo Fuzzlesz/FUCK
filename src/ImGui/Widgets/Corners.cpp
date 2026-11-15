@@ -54,6 +54,13 @@ namespace ImGui::WidgetsDetail
 		const float r = CapInvertedRounding(a_bb, a_rounding);
 		return a_depth < r ? std::sqrt(r * r - a_depth * a_depth) : 0.0f;
 	}
+
+	float InvertedCornerClearance(float a_rounding, float a_inset)
+	{
+		if (!UseInvertedCorners() || a_inset >= a_rounding)
+			return 0.0f;
+		return std::ceil(std::sqrt(a_rounding * a_rounding - std::max(0.0f, a_inset) * std::max(0.0f, a_inset)));
+	}
 }
 
 namespace ImGui
@@ -340,12 +347,60 @@ namespace ImGui
 		return visible;
 	}
 
+	bool BeginChildClearOfCorners(const char* a_id, const ImVec2& a_size, ImGuiChildFlags a_childFlags, ImGuiWindowFlags a_windowFlags)
+	{
+		// Contents start the padding in from the corners, which deep cut-away corners can reach past, so it's grown until the
+		// top-left content corner clears them, as the title bar's icons are moved in. Only with a border, as without one ImGui
+		// gives no padding and the child is just a layout box
+		bool padded = false;
+		if (UseInvertedCorners() && (a_childFlags & ImGuiChildFlags_Borders)) {
+			const ImGuiStyle& style = GetStyle();
+			const float       r     = style.ChildRounding;  // a child's cut, see PopThemedWindowBg
+			const ImVec2      pad   = style.WindowPadding;
+			if (r > 0.0f && pad.x * pad.x + pad.y * pad.y < r * r) {
+				const float clear = std::ceil(r * 0.70710678f);  // the corner's reach along its diagonal
+				PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(std::max(pad.x, clear), std::max(pad.y, clear)));
+				padded = true;
+			}
+		}
+		const bool visible = BeginChildThemed(a_id, a_size, a_childFlags, a_windowFlags);
+		if (padded)
+			PopStyleVar();
+		return visible;
+	}
+
 	bool BeginTooltipThemed()
 	{
 		const bool themed  = PushThemedWindowBg(ThemedWindow::kPopup);
 		const bool visible = BeginTooltip();
 		PopThemedWindowBg(themed);
 		return visible;
+	}
+
+	bool BeginPopupThemed(const char* a_id, ImGuiWindowFlags a_flags)
+	{
+		// ImGui::BeginPopup(), which always fits the popup to its contents
+		ImGuiContext& g = *GImGui;
+		if (g.OpenPopupStack.Size <= g.BeginPopupStack.Size) {
+			g.NextWindowData.ClearFlags();
+			return false;
+		}
+		// A size set beforehand is kept, and the popup scrolls within it
+		if (g.NextWindowData.HasFlags & ImGuiNextWindowDataFlags_HasSize)
+			a_flags |= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+		else
+			a_flags |= ImGuiWindowFlags_AlwaysAutoResize;
+		a_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings;
+
+		const ImGuiID id     = g.CurrentWindow->GetID(a_id);
+		const bool    themed = PushThemedWindowBg(ThemedWindow::kPopup);
+		const bool    open   = BeginPopupEx(id, a_flags);
+		// A closed popup leaves the current window as the one it's in, which mustn't be given the popup's frame
+		if (open)
+			PopThemedWindowBg(themed);
+		else if (themed)
+			PopStyleColor(1 + IM_ARRAYSIZE(s_themedWindowCols));
+		return open;
 	}
 
 	bool BeginComboThemed(const char* a_label, const char* a_preview, ImGuiComboFlags a_flags)

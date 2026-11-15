@@ -118,8 +118,16 @@ namespace ImGui
 	// BeginChild() whose corners follow the theme. Pair with EndChild() as usual
 	bool BeginChildThemed(const char* a_id, const ImVec2& a_size = ImVec2(0, 0), ImGuiChildFlags a_childFlags = ImGuiChildFlags_None, ImGuiWindowFlags a_windowFlags = ImGuiWindowFlags_None);
 
+	// BeginChildThemed() whose padding grows with deep cut-away corners, so a bordered child's contents stay clear of them.
+	// For plugins' children and lists, whose contents don't allow for the corners themselves
+	bool BeginChildClearOfCorners(const char* a_id, const ImVec2& a_size = ImVec2(0, 0), ImGuiChildFlags a_childFlags = ImGuiChildFlags_None, ImGuiWindowFlags a_windowFlags = ImGuiWindowFlags_None);
+
 	// BeginTooltip() whose corners follow the theme. Pair with EndTooltip() as usual
 	bool BeginTooltipThemed();
+
+	// BeginPopup() whose corners follow the theme, keeping a size set with SetNextWindowSize() and scrolling within it.
+	// Pair with EndPopup() as usual
+	bool BeginPopupThemed(const char* a_id, ImGuiWindowFlags a_flags = ImGuiWindowFlags_None);
 
 	// BeginCombo() whose dropdown's corners follow the theme. Pair with EndCombo() as usual
 	bool BeginComboThemed(const char* a_label, const char* a_preview, ImGuiComboFlags a_flags = ImGuiComboFlags_None);

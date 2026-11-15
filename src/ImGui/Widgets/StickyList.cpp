@@ -161,11 +161,14 @@ namespace ImGui
 
 	void BeginStickyList(const char* str_id, const ImVec2& size, bool border)
 	{
-		BeginChildThemed(str_id, size, border ? ImGuiChildFlags_Borders : ImGuiChildFlags_None);
+		BeginChildClearOfCorners(str_id, size, border ? ImGuiChildFlags_Borders : ImGuiChildFlags_None);
 
 		auto& list   = s_lists.emplace_back();
 		list.window  = GetCurrentWindow();
 		list.viewTop = list.window->ClipRect.Min.y;
+		// With cut-away corners a stuck header pins where the contents start, as the clip's top is only half the padding in
+		if (UseInvertedCorners())
+			list.viewTop = std::max(list.viewTop, std::floor(list.window->Pos.y + list.window->WindowPadding.y));
 	}
 
 	bool StickyHeader(const char* label, bool* open, int count, int flags)

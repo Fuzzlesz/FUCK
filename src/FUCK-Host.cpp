@@ -723,7 +723,7 @@ namespace FUCK::Host
 	}
 	static void EndWindow_Impl() { ImGui::End(); }
 	static void ExtendWindowPastBorder_Impl() { ImGui::ExtendWindowPastBorder(); }
-	static void BeginChild_Impl(const char* id, float w, float h, bool border, int flags) { ImGui::BeginChildThemed(id, ImVec2(w, h), border ? ImGuiChildFlags_Borders : ImGuiChildFlags_None, flags); }
+	static void BeginChild_Impl(const char* id, float w, float h, bool border, int flags) { ImGui::BeginChildClearOfCorners(id, ImVec2(w, h), border ? ImGuiChildFlags_Borders : ImGuiChildFlags_None, flags); }
 	static void EndChild_Impl() { ImGui::EndChild(); }
 	static bool TreeNode_Impl(const char* label) { return ImGui::TreeNodeIcon(label, 0); }
 	static void TreePop_Impl() { ImGui::TreePop(); }
@@ -917,7 +917,7 @@ namespace FUCK::Host
 	{
 		// "flags" is currently ignored to prevent FUCK::WindowFlags clashing with ImGuiWindowFlags.
 		// Reserved for future translation logic.
-		return ImGui::BeginPopup(str_id, ImGuiWindowFlags_None);
+		return ImGui::BeginPopupThemed(str_id);
 	}
 
 	static bool BeginPopupModal_Impl(const char* name, bool* p_open, int /*flags*/)

@@ -117,6 +117,8 @@ namespace ImGui
 
 		float designPadY = 15.0f * Renderer::GetResolutionScale();
 		float popupPad   = std::round(std::max(0.0f, designPadY - (2.0f * scale)));
+		// Deeper, so the filter row sits clear of the dropdown's cut-away corners. ImGui keeps the sides at padX
+		popupPad = std::max(popupPad, InvertedCornerClearance(GetStyle().PopupRounding, padX));
 
 		float       frameH         = GetFrameHeight();
 		ImDrawList* parentDrawList = GetWindowDrawList();
@@ -525,7 +527,13 @@ namespace ImGui
 		float  width     = std::round(CalcItemWidth());
 		float  frameH    = std::round(GetFrameHeight());
 
-		float popupPadY = std::round(15.0f * Renderer::GetResolutionScale());
+		// Pushed for the dropdown, so it matches the height worked out from it. Deeper with deep cut-away corners, so
+		// the first and last rows' highlight clears them, as it reaches half the item spacing past each row
+		const ImVec2 spacing   = GetStyle().ItemSpacing;
+		const float  corner    = InvertedCornerClearance(GetStyle().PopupRounding, padX - std::floor(spacing.x * 0.5f));
+		float        popupPadY = std::round(15.0f * Renderer::GetResolutionScale());
+		if (corner > 0.0f)
+			popupPadY = std::max(popupPadY, corner + std::ceil(spacing.y * 0.5f));
 
 		// Compute an exact popup height so ImGui never allocates outer scrollbar space.
 		float maxPopupH = std::round((popupPadY * 2.0f) + CalcListHeight(std::min(items_count, popup_max_height_in_items)) + (GetStyle().PopupBorderSize * 2.0f));
@@ -560,9 +568,10 @@ namespace ImGui
 		AddThemedRectFilled(parentDrawList, ImRect(widgetPos, widgetPos + ImVec2(width, frameH)), GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox), GetFrameRounding());
 		DrawComboPreview(parentDrawList, ImRect(widgetPos, widgetPos + ImVec2(width, frameH)), preview, padX, padY);
 
+		PushStyleVar(ImGuiStyleVar_WindowPadding, { padX, popupPadY });
 		bool isOpen = BeginComboThemed(idStr.c_str(), nullptr, ImGuiComboFlags_NoArrowButton);
 
-		PopStyleVar(3);
+		PopStyleVar(4);
 		PopStyleColor(6);
 
 		// Detect if opened Upwards
