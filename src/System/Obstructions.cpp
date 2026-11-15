@@ -916,6 +916,12 @@ namespace Obstructions
 		}
 	}
 
+	void Hand(const void* a_from, const void* a_to)
+	{
+		if (a_from && a_from == owner)
+			owner = a_to;
+	}
+
 	const void* OwnerOf(const char* a_plugin)
 	{
 		static std::set<std::string, std::less<>> names;

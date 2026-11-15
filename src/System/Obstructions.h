@@ -12,6 +12,9 @@ namespace Obstructions
 	// Brings back what the owner hid. Safe to call any time
 	void Restore(const void* a_owner);
 
+	// What one owner hid is the other's now, kept hidden, for a camera session carrying on another's view
+	void Hand(const void* a_from, const void* a_to);
+
 	// The owner for a plugin hiding through the API, the same for each call with its name
 	const void* OwnerOf(const char* a_plugin);
 

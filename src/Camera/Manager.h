@@ -28,6 +28,7 @@ namespace Camera
 		float                    partSize = 0.0f;
 
 		bool            paused        = false;
+		Session*        continued     = nullptr;  // kContinueView: the paused session whose view it carried on, to hand back to
 		RE::CameraState startingState = RE::CameraState::kThirdPerson;  // the camera it began over, which must be back before it resumes
 
 		// Offset bases: the node's transform before and after this frame's offsets, so it can be put back
@@ -197,9 +198,9 @@ namespace Camera
 		bool TurnsHeading() const { return _current && _current->turnsHeading; }
 
 		void RunControls(float a_interval);
-		void LandIfInstant();                       // kInstantMoves, after a move the client asked for
+		void LandIfInstant();  // kInstantMoves, after a move the client asked for
 		void UpdateObstructions(float a_interval);  // kHideObstructions, once the camera's placed
-		void HoldHead();                            // kHoldHeadStill, each update
+		void HoldHead();  // kHoldHeadStill, each update
 		void ReleaseHead(Session& a_session);
 		void ApplyNode();
 		void RevertNode();
@@ -216,7 +217,7 @@ namespace Camera
 
 		void EnterBase(Session& a_session);
 		void LeaveBase(Session& a_session);
-		void PauseCurrent();
+		void PauseCurrent(bool a_handingOver = false);
 		void EndCurrent(bool a_takenOver);
 		void Remove(Session& a_session);
 		void TryResume();
@@ -235,7 +236,7 @@ namespace Camera
 		Config _config;
 
 		std::vector<std::unique_ptr<Session>> _sessions;            // oldest first. The last is current unless it's waiting to resume
-		Session*                              _current = nullptr;   // the running session, if any
+		Session*                              _current = nullptr;  // the running session, if any
 
 		bool  _isUpdating     = false;  // inside the client's OnCameraUpdate(), the only time MoveCamera() applies
 		float _updateInterval = 0.0f;

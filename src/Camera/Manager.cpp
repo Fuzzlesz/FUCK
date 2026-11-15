@@ -185,6 +185,16 @@ namespace Camera
 			}
 		}
 
+		// kContinueView: over a resumable session on the same subject and base, its camera is carried on as it is, copied before the pause
+		// clears its FOV
+		Session*            continued = nullptr;
+		std::optional<Core> carried;
+		if ((opts.flags & FUCK::CameraSessionFlags::kContinueView) && _current && (_current->flags & FUCK::CameraSessionFlags::kResumable) &&
+			_current->base == opts.base && IsOffsetBase(opts.base) && opts.subject && _current->subject.get().get() == opts.subject) {
+			continued = _current;
+			carried.emplace(_current->core);
+		}
+
 		// kStartFromView: the view on screen. A session's as it holds it, else the game's own (a conversation camera's) as the last frame
 		// drew it, as the client may already have moved the game's camera or changed its FOV to set up its base. Not when the same client
 		// showed the last frame, so one beginning again (showing someone else) cuts, even past a session its end just resumed
@@ -193,7 +203,7 @@ namespace Camera
 		auto       camera    = RE::PlayerCamera::GetSingleton();
 		const bool shownLate = _shownView && std::chrono::steady_clock::now() - _shownViewAt < SHOWN_VIEW_AGE;
 		const bool ownView   = shownLate && _shownViewBy == opts.client;
-		if ((opts.flags & FUCK::CameraSessionFlags::kStartFromView) && !ownView) {
+		if ((opts.flags & FUCK::CameraSessionFlags::kStartFromView) && !ownView && !continued) {
 			if (FUCK::CameraPose view; _current && GetShownView(view))
 				startView = view;
 			else if (shownLate)
@@ -202,7 +212,7 @@ namespace Camera
 
 		if (_current) {
 			if (_current->flags & FUCK::CameraSessionFlags::kResumable) {
-				PauseCurrent();
+				PauseCurrent(continued != nullptr);
 			} else {
 				EndCurrent(true);
 			}
@@ -219,6 +229,38 @@ namespace Camera
 		session->pendingPose      = startView;
 		session->pendingPoseEases = startView.has_value();
 
+		// Its camera, framing, part and facing, its held head and what it hid, so the handover can't be seen
+		if (continued) {
+			std::destroy_at(&session->core);
+			std::construct_at(&session->core, *carried);
+			session->continued       = continued;
+			// Held as it was: the same part of the body framed, the pose followed the same way, turning, the head and what's hidden
+			using F              = FUCK::CameraSessionFlags;
+			constexpr int kShape = static_cast<int>(F::kFrameUpperBody) | static_cast<int>(F::kFollowPose) | static_cast<int>(F::kNoTurning) |
+			                       static_cast<int>(F::kHoldHeadStill) | static_cast<int>(F::kHideObstructions);
+			session->flags      = static_cast<FUCK::CameraSessionFlags>((static_cast<int>(session->flags) & ~kShape) | (static_cast<int>(continued->flags) & kShape));
+			session->alsoFramed = continued->alsoFramed;
+			session->framedPart      = continued->framedPart;
+			session->partSize        = continued->partSize;
+			session->fixedTranslate  = continued->fixedTranslate;
+			session->fixedRotate     = continued->fixedRotate;
+			session->fixedSubjectPos = continued->fixedSubjectPos;
+			session->hasFixedBase    = continued->hasFixedBase;
+			session->subjectYaw      = continued->subjectYaw;
+			session->startSubjectYaw = continued->startSubjectYaw;
+			if (session->flags & F::kHoldHeadStill) {
+				session->heldHead        = continued->heldHead;
+				session->heldHeadTracked = continued->heldHeadTracked;
+				continued->heldHead      = {};
+			} else {
+				ReleaseHead(*continued);
+			}
+			if (session->flags & F::kHideObstructions)
+				Obstructions::Hand(continued->client, opts.client);
+			else
+				Obstructions::Restore(continued->client);
+		}
+
 		if (camera && camera->currentState) {
 			session->startingState = camera->currentState->id;
 		}
@@ -228,8 +270,8 @@ namespace Camera
 
 		EnterBase(*_current);
 
-		// The client has set the camera up by now, so this is the pose the third-person base holds
-		if (_current->base == FUCK::CameraBase::kThirdPerson) {
+		// The client has set the camera up by now, so this is the pose the third-person base holds, unless it's carried on
+		if (_current->base == FUCK::CameraBase::kThirdPerson && !continued) {
 			if (auto node = camera ? camera->cameraRoot.get() : nullptr) {
 				_current->fixedTranslate = node->local.translate;
 				_current->fixedRotate    = node->local.rotate;
@@ -324,7 +366,21 @@ namespace Camera
 
 		auto client = _current->client;
 
-		Obstructions::Restore(client);
+		// Handed back to the session it carried on, if that's the one resuming, so nothing hidden shows or the head moves between them
+		auto handBack = _current->continued;
+		if (handBack && _sessions.size() > 1 && _sessions[_sessions.size() - 2].get() == handBack) {
+			if (handBack->flags & FUCK::CameraSessionFlags::kHideObstructions)
+				Obstructions::Hand(client, handBack->client);
+			else
+				Obstructions::Restore(client);
+			if ((handBack->flags & FUCK::CameraSessionFlags::kHoldHeadStill) && _current->heldHead == handBack->subject) {
+				handBack->heldHead        = _current->heldHead;
+				handBack->heldHeadTracked = _current->heldHeadTracked;
+				_current->heldHead        = {};
+			}
+		} else {
+			Obstructions::Restore(client);
+		}
 		ReleaseHead(*_current);
 		RememberCamera();
 		LeaveBase(*_current);
@@ -341,14 +397,17 @@ namespace Camera
 		}
 	}
 
-	void Manager::PauseCurrent()
+	void Manager::PauseCurrent(bool a_handingOver)
 	{
 		auto& session = *_current;
 
-		// Remembered now, as the newer session owns the base camera until this one resumes
+		// Remembered now, as the newer session owns the base camera until this one resumes. What it hid and its held head go on to a
+		// session carrying on its view
 		RememberCamera();
-		Obstructions::Restore(session.client);
-		ReleaseHead(session);
+		if (!a_handingOver) {
+			Obstructions::Restore(session.client);
+			ReleaseHead(session);
+		}
 
 		RevertNode();
 		RestoreMovement(session);
@@ -378,6 +437,11 @@ namespace Camera
 
 			a_session.enteredFreeCamera = false;
 			a_session.disabledSaving    = false;
+		}
+
+		for (const auto& other : _sessions) {
+			if (other->continued == &a_session)
+				other->continued = nullptr;
 		}
 
 		LeaveBase(a_session);
@@ -496,6 +560,10 @@ namespace Camera
 		session.turnsHeading = session.base == FUCK::CameraBase::kThirdPerson && !(ui && ui->GameIsPaused());
 		if (session.base == FUCK::CameraBase::kThirdPerson)
 			logger::info("Third-person camera session turns the subject's {}", session.turnsHeading ? "heading, as the game is running" : "3D, as the game is paused");
+
+		// Carried on as it was, so nothing turns or moves
+		if (session.continued)
+			return;
 
 		// The subject first, as body framing is measured from where it stands
 		if (session.flags & FUCK::CameraSessionFlags::kFaceCamera) {
