@@ -77,6 +77,8 @@ namespace
 		{ "GPCharRotSpeed", &Camera::Config::gpCharRotSpeed  },
 		{ "GPDeadzone",     &Camera::Config::gpDeadzone      },
 		{ "Cinematic",      &Camera::Config::cinematic       },
+		{ "InvertTilt",     &Camera::Config::invertTilt      },
+		{ "InvertTurn",     &Camera::Config::invertTurn      },
 	} };
 
 	std::string GetConfigPath()
@@ -206,14 +208,14 @@ namespace Camera
 			}
 		}
 
-		auto session              = std::make_unique<Session>(*this);
-		session->client           = opts.client;
-		session->context          = opts.context ? opts.context : "";
-		session->base             = opts.base;
-		session->flags            = opts.flags;
-		session->hasSubject       = opts.subject != nullptr;
-		session->subject          = session->hasSubject ? opts.subject->GetHandle() : RE::ActorHandle{};
-		session->alsoFramed       = opts.alsoFramed ? opts.alsoFramed->GetHandle() : RE::ActorHandle{};
+		auto session        = std::make_unique<Session>(*this);
+		session->client     = opts.client;
+		session->context    = opts.context ? opts.context : "";
+		session->base       = opts.base;
+		session->flags      = opts.flags;
+		session->hasSubject = opts.subject != nullptr;
+		session->subject    = session->hasSubject ? opts.subject->GetHandle() : RE::ActorHandle{};
+		session->alsoFramed = opts.alsoFramed ? opts.alsoFramed->GetHandle() : RE::ActorHandle{};
 		session->pendingPose      = startView;
 		session->pendingPoseEases = startView.has_value();
 
@@ -1940,7 +1942,14 @@ namespace Camera
 
 		const Config def;
 
-		if (a_flags & FUCK::CameraSettingsFlags::kSpeeds) {
+		changed |= FUCK::Checkbox("$FUCK_Camera_Cinematic"_T, &_config.cinematic, true, true);
+		changed |= FUCK::Checkbox("$FUCK_Camera_InvertTilt"_T, &_config.invertTilt, true, true);
+		changed |= FUCK::Checkbox("$FUCK_Camera_InvertTurn"_T, &_config.invertTurn, true, true);
+
+		// The speeds under a header, indented, as few want them. A fixed ID, so its state isn't the label's
+		const std::string feel = std::string{ "$FUCK_Camera_Feel"_T } + "###FUCKCameraFeel";
+		if ((a_flags & FUCK::CameraSettingsFlags::kSpeeds) && FUCK::CollapsingHeader(feel.c_str())) {
+			FUCK::Indent();
 			// Open on the tab for whichever device is in use
 			bool selectTab = a_flags & FUCK::CameraSettingsFlags::kSelectDeviceTab;
 			int  flagsKBM  = (selectTab && !isGamepad) ? TAB_SET_SELECTED : 0;
@@ -2000,20 +2009,20 @@ namespace Camera
 				s_resetWidth = FUCK::GetItemRectSize().x;
 
 				if (resetPressed) {
-					// Only the speeds, as the cinematic toggle sits outside the tabs
-					bool cinematic    = _config.cinematic;
-					_config           = def;
-					_config.cinematic = cinematic;
-					changed           = true;
+					// Only the speeds, as the toggles sit outside the tabs
+					const Config kept  = _config;
+					_config            = def;
+					_config.cinematic  = kept.cinematic;
+					_config.invertTilt = kept.invertTilt;
+					_config.invertTurn = kept.invertTurn;
+					changed            = true;
 				}
 
 				FUCK::SetCursorPos(afterTabs);
 			}
 
-			FUCK::Dummy(ImVec2(0.0f, FUCK::Scale(4.0f)));
+			FUCK::Unindent();
 		}
-
-		changed |= FUCK::Checkbox("$FUCK_Camera_Cinematic"_T, &_config.cinematic, true, true);
 
 		if (changed) {
 			SaveSettings();

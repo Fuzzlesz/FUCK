@@ -19,7 +19,9 @@ namespace Camera
 		float gpCharRotSpeed = 3.0f;
 		float gpDeadzone     = 0.25f;
 
-		bool cinematic = true;
+		bool cinematic   = true;
+		bool invertTilt  = false;  // tilting up and down the other way round, on every device
+		bool invertTurn  = false;  // turning the subject the other way round, on every device
 
 		bool HasCustomSpeeds() const;
 	};
@@ -133,6 +135,7 @@ namespace Camera
 
 		static bool GetCurrentFov(float& a_horizontal, float& a_vertical);
 		static float GetScreenFov();  // worldFOV with the game's modifier, the FOV on screen
+		static float Tilt(const Config& a_settings);
 
 		// The FOV the last frame was drawn at, which the view frustum is built for till the game's next camera update. Noted each frame, so
 		// a session beginning before then (one swapped for another) measures its framing against the frustum as it is

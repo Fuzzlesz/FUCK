@@ -59,7 +59,7 @@ namespace
 	// added to worldFOV by the game, as sprinting and bow zoom do. FUCK's FOV goes here, leaving worldFOV as the player set it
 	float& WorldFovModifier()
 	{
-		static REL::Relocation<float*> modifier{ REL::VariantID(527997, 414942, 0x348579C) };
+		static REL::Relocation<float*> modifier{ RELOCATION_ID(527997, 414942) };
 		return *modifier;
 	}
 
@@ -180,6 +180,9 @@ namespace Camera
 		_isZooming = false;
 	}
 
+	// The player's own tilt the way they've chosen. Not a client's moves, which are already the way it means
+	float Core::Tilt(const Config& a_settings) { return a_settings.invertTilt ? -1.0f : 1.0f; }
+
 	void Core::Move(const FUCK::CameraMoveEx& a_move, const Config& a_settings, bool a_isGamepad, float a_mult, float a_interval)
 	{
 		a_interval = std::min(a_interval, 0.1f);
@@ -191,11 +194,11 @@ namespace Camera
 		SpeedScales scale = GetSpeedScales();
 		float       step  = a_mult * a_interval;
 
-		float panSpeed   = (a_isGamepad ? a_settings.gpPanSpeed  : a_settings.kbmPanSpeed      * _kbmAcceleration) * scale.pan * step;
+		float panSpeed   = (a_isGamepad ? a_settings.gpPanSpeed : a_settings.kbmPanSpeed * _kbmAcceleration) * scale.pan * step;
 		float zoomSpeed  = (a_isGamepad ? a_settings.gpZoomSpeed : a_settings.kbmZoomFovSpeed) * scale.zoom * _zoomAcceleration * step;
-		float orbitSpeed = (a_isGamepad ? a_settings.gpRotSpeed  : a_settings.kbmRotSpeed)     * scale.rot * step;
-		float rollSpeed  = (a_isGamepad ? a_settings.gpRollSpeed : a_settings.kbmRollSpeed)    * step;
-		float fovSpeed   = (a_isGamepad ? a_settings.gpFovSpeed  : a_settings.kbmZoomFovSpeed) * step;
+		float orbitSpeed = (a_isGamepad ? a_settings.gpRotSpeed : a_settings.kbmRotSpeed) * scale.rot * step;
+		float rollSpeed  = (a_isGamepad ? a_settings.gpRollSpeed : a_settings.kbmRollSpeed) * step;
+		float fovSpeed   = (a_isGamepad ? a_settings.gpFovSpeed : a_settings.kbmZoomFovSpeed) * step;
 
 		_targetCamOffset.x += a_move.panX  * panSpeed;
 		_targetCamOffset.z += a_move.panZ  * panSpeed;
@@ -425,7 +428,7 @@ namespace Camera
 			_targetCamRoll += mouseDelta.x * a_settings.kbmRollSpeed * mult;
 		} else if (a_in.ctrlDown) {
 			// Pitch (Middle + Ctrl)
-			_targetCamRotX += mouseDelta.y * a_settings.kbmRotSpeed * mult * a_in.scale.rot;
+			_targetCamRotX += Tilt(a_settings) * mouseDelta.y * a_settings.kbmRotSpeed * mult * a_in.scale.rot;
 		} else if (a_in.rmbDown) {
 			// Orbit (Middle + Right)
 			_targetCamRotZ += mouseDelta.x * a_settings.kbmRotSpeed * mult * a_in.scale.rot;
@@ -461,13 +464,13 @@ namespace Camera
 			_isZooming         |= ws != 0.0f;
 			_targetFovOffset   += da * fovSpeed;
 			_targetCamRoll     += eq * rollSpeed;
-			_targetCamRotX     += rf * rotSpeed;
+			_targetCamRotX     += Tilt(a_settings) * rf * rotSpeed;
 		} else {
 			// Primary (Ctrl): Pan, Orbit & Pitch
 			_targetCamOffset.z += ws * speed;
 			_targetCamOffset.x += da * speed;
 			_targetCamRotZ     += eq * rotSpeed;
-			_targetCamRotX     += rf * rotSpeed;
+			_targetCamRotX     += Tilt(a_settings) * rf * rotSpeed;
 		}
 	}
 
@@ -501,7 +504,7 @@ namespace Camera
 		if (a_in.lbDown) {
 			// LB + RB: Roll & Pitch
 			_targetCamRoll += rightX * rollSpeed;
-			_targetCamRotX -= rightY * rotSpeed;
+			_targetCamRotX -= Tilt(a_settings) * rightY * rotSpeed;
 		} else {
 			// RB: Orbit & Zoom
 			_targetCamRotZ     -= rightX * rotSpeed;
@@ -548,7 +551,7 @@ namespace Camera
 		_wasMouseSubjRot = allowMouseRot;
 
 		if (rotAmount != 0.0f) {
-			_host.RotateSubject(rotAmount);
+			_host.RotateSubject(a_settings.invertTurn ? -rotAmount : rotAmount);
 		}
 	}
 
