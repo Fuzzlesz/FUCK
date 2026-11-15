@@ -349,16 +349,23 @@ namespace ImGui
 
 	bool BeginChildClearOfCorners(const char* a_id, const ImVec2& a_size, ImGuiChildFlags a_childFlags, ImGuiWindowFlags a_windowFlags)
 	{
-		// Contents start the padding in from the corners, which deep cut-away corners can reach past, so it's grown until the
-		// top-left content corner clears them, as the title bar's icons are moved in. Only with a border, as without one ImGui
-		// gives no padding and the child is just a layout box
+		// Contents start the padding in from the edges, so it's grown until a widget's border, whose black half reaches outward,
+		// clears the child's own with a little gap, and the top-left content corner clears deep cut-away corners, as the title
+		// bar's icons are moved in. Only with a border, as without one ImGui gives no padding and the child is just a layout box
 		bool padded = false;
-		if (UseInvertedCorners() && (a_childFlags & ImGuiChildFlags_Borders)) {
+		if (a_childFlags & ImGuiChildFlags_Borders) {
 			const ImGuiStyle& style = GetStyle();
-			const float       r     = style.ChildRounding;  // a child's cut, see PopThemedWindowBg
 			const ImVec2      pad   = style.WindowPadding;
-			if (r > 0.0f && pad.x * pad.x + pad.y * pad.y < r * r) {
-				const float clear = std::ceil(r * 0.70710678f);  // the corner's reach along its diagonal
+
+			float tColor, tBlack;
+			GetBorderThickness(GetUserStyleVar(USER_STYLE::kButtonBorderSize), tColor, tBlack);
+			float clear = std::ceil(style.ChildBorderSize + tBlack + style.ItemSpacing.y * 0.5f);
+
+			const float r = style.ChildRounding;  // a child's cut, see PopThemedWindowBg
+			if (UseInvertedCorners() && r > 0.0f && pad.x * pad.x + pad.y * pad.y < r * r)
+				clear = std::max(clear, std::ceil(r * 0.70710678f));  // the corner's reach along its diagonal
+
+			if (pad.x < clear || pad.y < clear) {
 				PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(std::max(pad.x, clear), std::max(pad.y, clear)));
 				padded = true;
 			}
