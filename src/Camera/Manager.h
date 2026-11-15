@@ -238,6 +238,7 @@ namespace Camera
 		// The view on screen as the last frame was drawn, for kStartFromView, so a client moving the camera before it begins doesn't change it
 		std::optional<FUCK::CameraPose>       _shownView;
 		std::chrono::steady_clock::time_point _shownViewAt;
+		const FUCK::ICameraClient*            _shownViewBy = nullptr;  // whose session showed it, none for the game's own
 
 		// The applet's frame state, shared as only the current session draws it
 		bool  _presetHovered = false;  // the list is open over an entry, so Ctrl+1-9 assigns rather than loads

@@ -184,14 +184,17 @@ namespace Camera
 		}
 
 		// kStartFromView: the view on screen. A session's as it holds it, else the game's own (a conversation camera's) as the last frame
-		// drew it, as the client may already have moved the game's camera or changed its FOV to set up its base
+		// drew it, as the client may already have moved the game's camera or changed its FOV to set up its base. Not when the same client
+		// showed the last frame, so one beginning again (showing someone else) cuts, even past a session its end just resumed
 		constexpr auto                  SHOWN_VIEW_AGE = std::chrono::milliseconds(500);
 		std::optional<FUCK::CameraPose> startView;
-		auto camera = RE::PlayerCamera::GetSingleton();
-		if (opts.flags & FUCK::CameraSessionFlags::kStartFromView) {
+		auto       camera    = RE::PlayerCamera::GetSingleton();
+		const bool shownLate = _shownView && std::chrono::steady_clock::now() - _shownViewAt < SHOWN_VIEW_AGE;
+		const bool ownView   = shownLate && _shownViewBy == opts.client;
+		if ((opts.flags & FUCK::CameraSessionFlags::kStartFromView) && !ownView) {
 			if (FUCK::CameraPose view; _current && GetShownView(view))
 				startView = view;
-			else if (_shownView && std::chrono::steady_clock::now() - _shownViewAt < SHOWN_VIEW_AGE)
+			else if (shownLate)
 				startView = _shownView;
 		}
 
@@ -872,6 +875,7 @@ namespace Camera
 		if (FUCK::CameraPose view; GetShownView(view)) {
 			_shownView   = view;
 			_shownViewAt = std::chrono::steady_clock::now();
+			_shownViewBy = _current && IsOffsetBase(_current->base) ? _current->client : nullptr;
 		}
 
 		// Set again by DrawPresets() if the list is still open over an entry this frame
