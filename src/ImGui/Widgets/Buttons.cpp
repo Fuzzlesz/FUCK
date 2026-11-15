@@ -374,6 +374,8 @@ namespace ImGui
 
 	bool BeginTabBarEx(const char* str_id, ImGuiTabBarFlags flags)
 	{
+		// A row's gap above it, as the other widgets leave
+		AddRowSpacing();
 		ImGuiWindow* window = GetCurrentWindow();
 
 		// BeginTabItemEx() draws tabs as tall as an OutlineButton, centred on ImGui's shorter tab row, so they
