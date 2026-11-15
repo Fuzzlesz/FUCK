@@ -663,8 +663,9 @@ namespace Camera
 			return;
 
 		// Measured at the FOV the session opened at, so changing it zooms on the framing rather than moving the camera to keep the body its
-		// size, which a narrow FOV would carry out through the walls. The view in use is at the FOV last applied
-		const float lens = _baseFov > 0.0f ? FovScale(_baseFov + _appliedFovOffset, _baseFov + _startFovOffset) : 1.0f;
+		// size, which a narrow FOV would carry out through the walls. The frustum is at the FOV the last frame was drawn at
+		const float drawnFov = s_drawnFov > 0.0f ? s_drawnFov : _baseFov + _appliedFovOffset;
+		const float lens     = _baseFov > 0.0f ? FovScale(drawnFov, _baseFov + _startFovOffset) : 1.0f;
 
 		auto framing = FrameFullBody(body, _originalRotate, frustum.fTop * lens, frustum.fRight * lens, _framingMargin, _framingRect);
 		if (!framing)

@@ -134,7 +134,13 @@ namespace Camera
 		static bool GetCurrentFov(float& a_horizontal, float& a_vertical);
 		static float GetScreenFov();  // worldFOV with the game's modifier, the FOV on screen
 
+		// The FOV the last frame was drawn at, which the view frustum is built for till the game's next camera update. Noted each frame, so
+		// a session beginning before then (one swapped for another) measures its framing against the frustum as it is
+		static void NoteDrawnFov() { s_drawnFov = GetScreenFov(); }
+
 	private:
+		static inline float s_drawnFov = 0.0f;
+
 		struct SpeedScales
 		{
 			float pan  = 1.0f;

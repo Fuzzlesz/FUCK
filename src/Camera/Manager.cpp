@@ -250,8 +250,9 @@ namespace Camera
 		HoldHead();
 		UpdateSmoothCam();
 
-		// A view handed over is put on the camera now, as a frame can be drawn before the client's first update, which would show the camera as the client set it up for its base
-		if (_current->pendingPose && IsOffsetBase(_current->base) && IsBaseReady(*_current))
+		// Put on the camera now, a view handed over or the start, as a client beginning after its update for the frame (SPII swapping who it
+		// shows) would otherwise have a frame drawn from where it set the camera up for its base
+		if (IsOffsetBase(_current->base) && IsBaseReady(*_current))
 			ApplyNode();
 
 		logger::info("Camera session began: {}", GetName(*_current));
@@ -896,6 +897,8 @@ namespace Camera
 
 	void Manager::OnFrame()
 	{
+		Core::NoteDrawnFov();
+
 		if (FUCK::CameraPose view; GetShownView(view)) {
 			_shownView   = view;
 			_shownViewAt = std::chrono::steady_clock::now();
