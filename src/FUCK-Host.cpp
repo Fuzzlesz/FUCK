@@ -1153,6 +1153,8 @@ namespace FUCK::Host
 	static bool FaceCameraSubject_Impl(ICameraClient* client, bool afresh) { return MANAGER(Camera)->FaceSubject(client, afresh); }
 	static void SetCameraPartFraming_Impl(ICameraClient* client, const char* node, float size) { MANAGER(Camera)->SetPartFraming(client, node, size); }
 	static void SetCameraUpperBody_Impl(ICameraClient* client, bool upperBody) { MANAGER(Camera)->SetUpperBody(client, upperBody); }
+	static void AddCameraListener_Impl(void* userdata, void (*callback)(int, const char*, void*)) { MANAGER(Camera)->AddListener(userdata, callback); }
+	static void RemoveCameraListener_Impl(void* userdata) { MANAGER(Camera)->RemoveListener(userdata); }
 	static void SetActorFrozenEx_Impl(const char* pluginName, RE::Actor* actor, bool frozen, bool holdPhysics) { MANAGER(Freeze)->SetFrozen(pluginName, actor, frozen, holdPhysics); }
 	static void MoveCameraEx_Impl(const CameraMoveEx* move, InputDevice device, float mult)
 	{
@@ -1524,7 +1526,9 @@ namespace FUCK::Host
 
 			// Version 9
 			.SetCameraPartFraming   = SetCameraPartFraming_Impl,
-			.SetCameraUpperBody     = SetCameraUpperBody_Impl
+			.SetCameraUpperBody     = SetCameraUpperBody_Impl,
+			.AddCameraListener      = AddCameraListener_Impl,
+			.RemoveCameraListener   = RemoveCameraListener_Impl
 		};
 		return &api;
 	}

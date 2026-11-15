@@ -255,6 +255,7 @@ namespace Camera
 			ApplyNode();
 
 		logger::info("Camera session began: {}", GetName(*_current));
+		Notify(FUCK::CameraEvent::kBegan, _current->context);
 		return true;
 	}
 
@@ -265,6 +266,7 @@ namespace Camera
 			return;
 
 		logger::info("Camera session ended: {}", GetName(*session));
+		const std::string context = session->context;
 
 		if (session == _current) {
 			EndCurrent(false);
@@ -274,6 +276,27 @@ namespace Camera
 
 		TryResume();
 		UpdateSmoothCam();
+
+		Notify(FUCK::CameraEvent::kEnded, context);
+	}
+
+	void Manager::AddListener(void* a_userdata, void (*a_callback)(int, const char*, void*))
+	{
+		if (a_callback)
+			_listeners.push_back({ a_userdata, a_callback });
+	}
+
+	void Manager::RemoveListener(void* a_userdata)
+	{
+		std::erase_if(_listeners, [a_userdata](const Listener& l) { return l.userdata == a_userdata; });
+	}
+
+	// A copy, as a listener may add or remove one from inside its callback
+	void Manager::Notify(FUCK::CameraEvent a_event, const std::string& a_context) const
+	{
+		auto listeners = _listeners;
+		for (const auto& l : listeners)
+			l.callback(std::to_underlying(a_event), a_context.c_str(), l.userdata);
 	}
 
 	bool Manager::IsPaused(const FUCK::ICameraClient* a_client) const
@@ -720,6 +743,7 @@ namespace Camera
 		session.startSubjectYaw = GetSubjectYaw();
 		HoldHead();
 		session.core.Reframe(session.flags & FUCK::CameraSessionFlags::kInstantMoves);
+		Notify(FUCK::CameraEvent::kSubjectChanged, session.context);
 		return true;
 	}
 

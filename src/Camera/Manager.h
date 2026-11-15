@@ -159,6 +159,10 @@ namespace Camera
 		// Any session holds off the idle vanity camera, which would take the camera from it
 		bool BlocksVanity() const { return _current != nullptr; }
 
+		// CameraEventListener: told as a session begins, ends or changes its subject
+		void AddListener(void* a_userdata, void (*a_callback)(int, const char*, void*));
+		void RemoveListener(void* a_userdata);
+
 		bool DrawSettings(FUCK::CameraSettingsFlags a_flags);
 		void DrawHelpMarker(FUCK::CameraSessionFlags a_flags, const char* a_extraKBM, const char* a_extraGP);
 
@@ -219,6 +223,14 @@ namespace Camera
 		bool IsBaseReady(const Session& a_session) const;
 
 		void UpdateSmoothCam();
+		void Notify(FUCK::CameraEvent a_event, const std::string& a_context) const;
+
+		struct Listener
+		{
+			void* userdata;
+			void (*callback)(int, const char*, void*);
+		};
+		std::vector<Listener> _listeners;
 
 		Config _config;
 
