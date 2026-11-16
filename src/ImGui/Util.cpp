@@ -637,11 +637,19 @@ namespace ImGui
 	{
 		ImGuiContext& g = *GImGui;
 
-		g.ActiveId        = 0;
+		// A move or init request still in flight would be applied next frame against the window cleared here, which crashes in
+		// NavMoveRequestApplyResult, so they're cancelled first. Focus is let go through ImGui, so its own state goes with it
+		NavMoveRequestCancel();
+		g.NavInitRequest          = false;
+		g.NavInitRequestFromMove  = false;
+		g.NavInitResult.ID        = 0;
+		g.NavNextActivateId       = 0;
+		SetWindowFocus(nullptr);
+
+		ClearActiveID();
 		g.NavId           = 0;
 		g.NavFocusScopeId = 0;
 		g.NavWindow       = nullptr;
-		g.NavInitRequest  = false;
 
 		g.NavCursorVisible         = false;
 		g.NavHighlightItemUnderNav = false;
@@ -653,8 +661,6 @@ namespace ImGui
 			window->NavLastIds[0] = 0;
 			window->NavLastIds[1] = 0;
 		}
-
-		SetWindowFocus(nullptr);
 
 		GetIO().ClearInputKeys();
 		GetIO().ClearEventsQueue();
