@@ -86,6 +86,12 @@ namespace
 		return ::Settings::Core.GetConfigDirectory() + "camera.ini";
 	}
 
+	// Who a session shows, the player when it was given no subject
+	RE::Actor* ShownBy(const Camera::Session& a_session)
+	{
+		return a_session.hasSubject ? a_session.subject.get().get() : RE::PlayerCharacter::GetSingleton();
+	}
+
 	std::string_view GetName(const Camera::Session& a_session)
 	{
 		// Each branch returned on its own, as a ?: of the two would make a temporary copy of the context and point at that
@@ -190,9 +196,8 @@ namespace Camera
 		Session*            continued = nullptr;
 		std::optional<Core> carried;
 		// A session with no subject shows the player, so the two are compared by who they show
-		auto* const player      = RE::PlayerCharacter::GetSingleton();
-		auto* const wanted      = opts.subject ? opts.subject : player;
-		auto* const currentShow = _current ? (_current->hasSubject ? _current->subject.get().get() : player) : nullptr;
+		auto* const wanted      = opts.subject ? opts.subject : RE::PlayerCharacter::GetSingleton();
+		auto* const currentShow = _current ? ShownBy(*_current) : nullptr;
 		if ((opts.flags & FUCK::CameraSessionFlags::kContinueView) && _current && (_current->flags & FUCK::CameraSessionFlags::kResumable) &&
 			_current->base == opts.base && IsOffsetBase(opts.base) && currentShow == wanted) {
 			continued = _current;
@@ -335,6 +340,14 @@ namespace Camera
 		TryResume();
 		UpdateSmoothCam();
 
+		// A camera handed back eases from where it was left to the resumed session's own framing, put on now so no frame shows the game's
+		if (_current && _current->carriedBack) {
+			_current->carriedBack = false;
+			_current->core.Reframe(_current->flags & FUCK::CameraSessionFlags::kInstantMoves);
+			if (IsBaseReady(*_current))
+				ApplyNode();
+		}
+
 		Notify(FUCK::CameraEvent::kEnded, context);
 	}
 
@@ -379,17 +392,30 @@ namespace Camera
 
 		auto client = _current->client;
 
-		// Handed back to the session it carried on, if that's the one resuming, so nothing hidden shows or the head moves between them
+		// Handed back to the session it carried on, if that's the one resuming, so nothing hidden shows or the head moves between them. Still
+		// on the same subject, its camera and facing go back too, with any part let go, so that session eases on from where this one left
+		// off rather than cutting to where it paused
 		auto handBack = _current->continued;
 		if (handBack && _sessions.size() > 1 && _sessions[_sessions.size() - 2].get() == handBack) {
 			if (handBack->flags & FUCK::CameraSessionFlags::kHideObstructions)
 				Obstructions::Hand(client, handBack->client);
 			else
 				Obstructions::Restore(client);
-			if ((handBack->flags & FUCK::CameraSessionFlags::kHoldHeadStill) && _current->heldHead == handBack->subject) {
+			const bool sameSubject = ShownBy(*_current) == ShownBy(*handBack);
+			if ((handBack->flags & FUCK::CameraSessionFlags::kHoldHeadStill) && sameSubject) {
 				handBack->heldHead        = _current->heldHead;
 				handBack->heldHeadTracked = _current->heldHeadTracked;
 				_current->heldHead        = {};
+			}
+			if (sameSubject && IsOffsetBase(_current->base) && _current->base == handBack->base) {
+				std::destroy_at(&handBack->core);
+				std::construct_at(&handBack->core, _current->core);
+				handBack->fixedTranslate  = _current->fixedTranslate;
+				handBack->fixedRotate     = _current->fixedRotate;
+				handBack->fixedSubjectPos = _current->fixedSubjectPos;
+				handBack->hasFixedBase    = _current->hasFixedBase;
+				handBack->subjectYaw      = _current->subjectYaw;
+				handBack->carriedBack     = true;
 			}
 		} else {
 			Obstructions::Restore(client);

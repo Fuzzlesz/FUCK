@@ -29,6 +29,7 @@ namespace Camera
 
 		bool            paused        = false;
 		Session*        continued     = nullptr;  // kContinueView: the paused session whose view it carried on, to hand back to
+		bool            carriedBack   = false;    // its camera was handed back by the session that carried it on, to ease on from
 		RE::CameraState startingState = RE::CameraState::kThirdPerson;  // the camera it began over, which must be back before it resumes
 
 		// Offset bases: the node's transform before and after this frame's offsets, so it can be put back
