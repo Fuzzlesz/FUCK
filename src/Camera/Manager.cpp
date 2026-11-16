@@ -189,10 +189,23 @@ namespace Camera
 		// clears its FOV
 		Session*            continued = nullptr;
 		std::optional<Core> carried;
+		// A session with no subject shows the player, so the two are compared by who they show
+		auto* const player      = RE::PlayerCharacter::GetSingleton();
+		auto* const wanted      = opts.subject ? opts.subject : player;
+		auto* const currentShow = _current ? (_current->hasSubject ? _current->subject.get().get() : player) : nullptr;
 		if ((opts.flags & FUCK::CameraSessionFlags::kContinueView) && _current && (_current->flags & FUCK::CameraSessionFlags::kResumable) &&
-			_current->base == opts.base && IsOffsetBase(opts.base) && opts.subject && _current->subject.get().get() == opts.subject) {
+			_current->base == opts.base && IsOffsetBase(opts.base) && currentShow == wanted) {
 			continued = _current;
 			carried.emplace(_current->core);
+			logger::info("Camera session carries on {}", GetName(*_current));
+		} else if (opts.flags & FUCK::CameraSessionFlags::kContinueView) {
+			if (!_current)
+				logger::info("Camera session has nothing to carry on: it begins as without kContinueView");
+			else
+				logger::info("Camera session can't carry on {} ({}): it begins as without kContinueView", GetName(*_current),
+					!(_current->flags & FUCK::CameraSessionFlags::kResumable) ? "not resumable" :
+					_current->base != opts.base                               ? "another base" :
+					                                                            "another subject");
 		}
 
 		// kStartFromView: the view on screen. A session's as it holds it, else the game's own (a conversation camera's) as the last frame
