@@ -1155,6 +1155,7 @@ namespace FUCK::Host
 	static void SetCameraUpperBody_Impl(ICameraClient* client, bool upperBody) { MANAGER(Camera)->SetUpperBody(client, upperBody); }
 	static void AddCameraListener_Impl(void* userdata, void (*callback)(int, const char*, void*)) { MANAGER(Camera)->AddListener(userdata, callback); }
 	static void RemoveCameraListener_Impl(void* userdata) { MANAGER(Camera)->RemoveListener(userdata); }
+	static void SetGamepadNavBlockedBy_Impl(const char* pluginName, bool blocked) { MANAGER(Input)->SetGamepadNavBlockedBy(pluginName, blocked); }
 	static void SetActorFrozenEx_Impl(const char* pluginName, RE::Actor* actor, bool frozen, bool holdPhysics) { MANAGER(Freeze)->SetFrozen(pluginName, actor, frozen, holdPhysics); }
 	static void MoveCameraEx_Impl(const CameraMoveEx* move, InputDevice device, float mult)
 	{
@@ -1528,7 +1529,8 @@ namespace FUCK::Host
 			.SetCameraPartFraming   = SetCameraPartFraming_Impl,
 			.SetCameraUpperBody     = SetCameraUpperBody_Impl,
 			.AddCameraListener      = AddCameraListener_Impl,
-			.RemoveCameraListener   = RemoveCameraListener_Impl
+			.RemoveCameraListener   = RemoveCameraListener_Impl,
+			.SetGamepadNavBlockedBy = SetGamepadNavBlockedBy_Impl
 		};
 		return &api;
 	}

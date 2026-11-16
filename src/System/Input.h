@@ -92,6 +92,10 @@ namespace Input
 
 		const char* GetKeyName(std::uint32_t a_key) const;
 
+		// Gamepad navigation off while any plugin asks, e.g. while its window drives the pad itself, so the shoulders and face buttons
+		// can't move focus to another window. Buttons still reach ImGui as keys
+		void SetGamepadNavBlockedBy(const char* a_plugin, bool a_blocked);
+
 	private:
 		void UpdateInputDevice(RE::INPUT_DEVICE a_device);
 		void CacheInputState(const RE::InputEvent* const* a_events);
@@ -108,6 +112,10 @@ namespace Input
 		bool                _cursorMovedByJoystick{ false };
 		bool                _expectingSyntheticMouseMove{ false };
 		float               _cursorScale{ 1.0f };
+
+		std::mutex            _navBlockLock;
+		std::set<std::string> _navBlockers;
+		bool                  _wasNavBlocked{ false };
 
 		mutable std::shared_mutex _dataLock;
 		Map<std::uint32_t, float> _keyStateCache;

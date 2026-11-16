@@ -719,6 +719,16 @@ namespace Input
 		}
 	}
 
+	void Manager::SetGamepadNavBlockedBy(const char* a_plugin, bool a_blocked)
+	{
+		std::scoped_lock lock{ _navBlockLock };
+		const std::string plugin = a_plugin ? a_plugin : "";
+		if (a_blocked)
+			_navBlockers.insert(plugin);
+		else
+			_navBlockers.erase(plugin);
+	}
+
 	void Manager::ProcessInputEvents(RE::InputEvent* const* a_events)
 	{
 		if (a_events && *a_events) {
@@ -736,6 +746,24 @@ namespace Input
 		const bool forceCursor  = fuck->IsCursorForced();
 		const bool menuOpen     = fuck->IsOpen();
 		const bool shouldRender = fuck->ShouldRender();
+
+		// With pad nav blocked the pad drives the cursor alone, so A and X click with it wherever it is
+		bool navBlocked = false;
+		{
+			std::scoped_lock lock{ _navBlockLock };
+			navBlocked = !_navBlockers.empty();
+		}
+		// Unblocked, nav starts afresh, so it isn't left holding a window that closed meanwhile
+		if (_wasNavBlocked && !navBlocked)
+			ImGui::ClearNavState();
+		_wasNavBlocked = navBlocked;
+		if (IsInputGamepad()) {
+			auto& io = ImGui::GetIO();
+			if (!navBlocked)
+				io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+			else
+				io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableGamepad;
+		}
 
 		bool shouldShowCursor = false;
 
@@ -786,7 +814,8 @@ namespace Input
 				if (cursorMenu->uiMovie) {
 					RE::GFxValue root;
 					if (cursorMenu->uiMovie->GetVariable(&root, "_root")) {
-						bool hideVisual = IsInputGamepad() && !menuOpen;
+						// Shown for the pad too while a plugin forces the cursor, as its stick drives it there
+						bool hideVisual = IsInputGamepad() && !menuOpen && !forceCursor;
 
 						// Exception: The Map Menu uses the cursor
 						if (hideVisual && ui->IsMenuOpen(RE::MapMenu::MENU_NAME)) {
@@ -857,11 +886,17 @@ namespace Input
 								_cursorMovedByJoystick = false;  // Revert to standard D-Pad Nav
 							}
 
-							bool isMouseClickOverride = (unifiedKey == kGP_L3) || (unifiedKey == kGP_R3) || (unifiedKey == kGP_A && _cursorMovedByJoystick);
+							const bool pointerMode         = _cursorMovedByJoystick || navBlocked;
+							bool       isMouseClickOverride = (unifiedKey == kGP_L3) || (unifiedKey == kGP_R3) || (unifiedKey == kGP_A && pointerMode);
+
+							// X right-clicks while the stick drives the cursor, for context menus
+							const bool isRightClickOverride = unifiedKey == kGP_X && pointerMode;
 
 							if (isMouseClickOverride) {
 								// Inject mouse click AND suppress native gamepad button
 								io.AddMouseButtonEvent(0, isDown);
+							} else if (isRightClickOverride) {
+								io.AddMouseButtonEvent(1, isDown);
 							} else {
 								// Pass native gamepad button to ImGui
 								if (RE::ControlMap::GetSingleton()->GetGamePadType() == RE::PC_GAMEPAD_TYPE::kOrbis) {
@@ -903,6 +938,27 @@ namespace Input
 							}
 						}
 					} else if (const auto thumbstickEvent = event->AsThumbstickEvent()) {
+						// The left stick alone moves the cursor, and not while the camera's controls hold the sticks
+						constexpr std::uint32_t LEFT_STICK  = 0x0B;
+						constexpr std::uint32_t RIGHT_STICK = 0x0C;
+						if (cameraControls) {
+							continue;
+						}
+						// The right stick scrolls what's under the cursor, as a wheel would, while the pad drives the cursor
+						if (thumbstickEvent->GetIDCode() == RIGHT_STICK) {
+							constexpr float SCROLL_DEADZONE = 0.2f;
+							constexpr float SCROLL_SPEED    = 0.15f;  // wheel notches per event at full tilt
+							if ((_cursorMovedByJoystick || navBlocked) && passMouse) {
+								const float x = std::abs(thumbstickEvent->xValue) > SCROLL_DEADZONE ? thumbstickEvent->xValue : 0.0f;
+								const float y = std::abs(thumbstickEvent->yValue) > SCROLL_DEADZONE ? thumbstickEvent->yValue : 0.0f;
+								if (x != 0.0f || y != 0.0f)
+									io.AddMouseWheelEvent(-x * SCROLL_SPEED, y * SCROLL_SPEED);
+							}
+							continue;
+						}
+						if (thumbstickEvent->GetIDCode() != LEFT_STICK) {
+							continue;
+						}
 						if (std::abs(thumbstickEvent->xValue) > 0.05f || std::abs(thumbstickEvent->yValue) > 0.05f) {
 							_cursorMovedByJoystick = true;
 						}
@@ -929,7 +985,9 @@ namespace Input
 			// Sync OS hardware cursor to the virtual joystick cursor. Flat only:
 			// there's no meaningful OS cursor in a headset, and warping it here
 			// would fight the wand's own AddMousePosEvent pump.
-			if (!ImGui::Renderer::IsVRHelperConnected() && _cursorMovedByJoystick && cursorMenuOpen && passMouse) {
+			// With pad nav blocked the pad has only the cursor, so it's kept in step even when a mouse-move echo cleared the flag
+			const bool padPointer = _cursorMovedByJoystick || (navBlocked && IsInputGamepad());
+			if (!ImGui::Renderer::IsVRHelperConnected() && padPointer && cursorMenuOpen && passMouse) {
 				if (auto mc = RE::MenuCursor::GetSingleton()) {
 					ImVec2 clientPos = ImGui::TranslateScaleformToScreen(mc->GetRuntimeData().cursorPosX, mc->GetRuntimeData().cursorPosY);
 

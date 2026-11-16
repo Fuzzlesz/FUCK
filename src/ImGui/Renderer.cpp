@@ -143,6 +143,22 @@ namespace ImGui::Renderer
 			// disable windowing
 			GImGui->NavWindowingTarget = nullptr;
 
+			// The d-pad moves within the focused window and there's no windowing to pick another, so once that window's gone (closed, or
+			// nav cleared) the pad's focus goes to the top window still drawn
+			if ((GetIO().ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) && MANAGER(Input)->IsInputGamepad()) {
+				ImGuiContext& g = *GImGui;
+				if (!g.NavWindow || !g.NavWindow->WasActive) {
+					for (int i = g.WindowsFocusOrder.Size - 1; i >= 0; --i) {
+						ImGuiWindow* window = g.WindowsFocusOrder[i];
+						if (window->WasActive && !window->Hidden &&
+							!(window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup | ImGuiWindowFlags_NoNavFocus))) {
+							FocusWindow(window);
+							break;
+						}
+					}
+				}
+			}
+
 			MANAGER(Camera)->OnFrame();
 			MANAGER(Freeze)->OnFrame();
 			Physics::OnFrame();
