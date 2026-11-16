@@ -26,6 +26,48 @@ namespace ImGui
 			DrawArrowIcon(drawList, drawPos, ap.drawSize, col,
 				isOpen ? IconDirection::kDown : IconDirection::kRight);
 		}
+
+		// Expand all or collapse all, picked from any header's right-click menu. It reaches every header in the same
+		// root window the next frame and then expires, so each header's own state takes over again
+		struct FoldAll
+		{
+			ImGuiID root    = 0;
+			int     pending = -1;  // 0 collapse, 1 expand, for the next frame
+			int     live    = -1;  // the request headers act on this frame
+			int     frame   = -1;
+		};
+		FoldAll s_foldAll;
+
+		int FoldAllRequest(ImGuiWindow* a_window)
+		{
+			if (s_foldAll.frame != GImGui->FrameCount) {
+				s_foldAll.frame   = GImGui->FrameCount;
+				s_foldAll.live    = s_foldAll.pending;
+				s_foldAll.pending = -1;
+			}
+			return s_foldAll.live >= 0 && a_window->RootWindow && a_window->RootWindow->ID == s_foldAll.root ? s_foldAll.live : -1;
+		}
+
+		void FoldAllMenu(ImGuiWindow* a_window, ImGuiID a_id, bool a_hovered)
+		{
+			PushID(static_cast<int>(a_id));
+			if (a_hovered && IsMouseClicked(ImGuiMouseButton_Right))
+				OpenPopup("##fold_all");
+			if (BeginPopupThemed("##fold_all")) {
+				int pick = -1;
+				if (SelectableStyled(TRANSLATE("$FUCK_ExpandAll")))
+					pick = 1;
+				if (SelectableStyled(TRANSLATE("$FUCK_CollapseAll")))
+					pick = 0;
+				if (pick >= 0) {
+					s_foldAll.root    = a_window->RootWindow ? a_window->RootWindow->ID : 0;
+					s_foldAll.pending = pick;
+					CloseCurrentPopup();
+				}
+				EndPopup();
+			}
+			PopID();
+		}
 	}
 
 	bool CollapsingHeaderIcon(const char* label, int flags)
@@ -42,6 +84,11 @@ namespace ImGui
 
 		bool is_open = window->DC.StateStorage->GetInt(id, (flags & ImGuiTreeNodeFlags_DefaultOpen) != 0);
 		bool is_leaf = (flags & ImGuiTreeNodeFlags_Leaf) != 0;
+
+		if (const int fold = FoldAllRequest(window); fold >= 0 && !is_leaf) {
+			is_open = fold == 1;
+			window->DC.StateStorage->SetInt(id, is_open);
+		}
 
 		// Use the same row height as OutlineButton
 		float scale       = GetDynamicWidgetScale();
@@ -62,6 +109,8 @@ namespace ImGui
 				PlayAudio(is_open ? Audio::kFocus : Audio::kCancel);
 			}
 		}
+		if (!is_leaf)
+			FoldAllMenu(window, id, h);
 
 		// Check selection flag
 		bool is_selected = (flags & ImGuiTreeNodeFlags_Selected) != 0;
