@@ -830,11 +830,26 @@ namespace FUCK::Host
 			return ImGui::ButtonIconWithLabelStyled(label, reinterpret_cast<void*>(srv), size, alignFar, labelLeft);
 		return false;
 	}
+	// The picture fills the button and its corners are clipped to the theme's
+	// corner shape, rounded or cut away, so it isn't shrunk inside a padded
+	// frame. It's framed in the border colour, as a card is, and lit in the
+	// button colours while hovered or held, so a pushed Border colour marks a
+	// selected one
 	static bool ImageButton_Impl(const char* str_id, void* user_texture_id, float x, float y, const ImVec4* tint)
 	{
-		if (auto srv = GetSRV(user_texture_id))
-			return ImGui::ImageButton(str_id, reinterpret_cast<ImTextureID>(srv), ImVec2(x, y), ImVec2(0, 0), ImVec2(1, 1), ImVec4(0, 0, 0, 0), tint ? *tint : ImVec4(1, 1, 1, 1));
-		return false;
+		auto* srv = GetSRV(user_texture_id);
+		if (!srv)
+			return false;
+		const bool   pressed = ImGui::InvisibleButton(str_id, ImVec2(x, y));
+		const ImVec2 mn      = ImGui::GetItemRectMin();
+		const ImVec2 mx      = ImGui::GetItemRectMax();
+		const float  r       = std::min(ImGui::GetStyle().FrameRounding, std::min(mx.x - mn.x, mx.y - mn.y) * 0.5f);
+		const bool   lit     = ImGui::IsItemHovered() || (ImGui::IsItemFocused() && ImGui::GetIO().NavActive);
+		const ImGuiCol edge  = ImGui::IsItemActive() ? ImGuiCol_ButtonActive : lit ? ImGuiCol_ButtonHovered : ImGuiCol_Border;
+		auto*        dl      = ImGui::GetWindowDrawList();
+		ImGui::AddThemedImage(dl, reinterpret_cast<ImTextureID>(srv), ImRect(mn, mx), ImVec2(0, 0), ImVec2(1, 1), ImGui::ColorConvertFloat4ToU32(tint ? *tint : ImVec4(1, 1, 1, 1)), r);
+		ImGui::AddThemedRect(dl, ImRect(mn, mx), ImGui::GetColorU32(edge), r, std::max(1.0f, ImGui::GetFontSize() * 0.08f));
+		return pressed;
 	}
 	static void Stepper_Impl(const char* label, const char* text, bool* outLeft, bool* outRight) { ImGui::Stepper(label, text, outLeft, outRight); }
 
@@ -1155,6 +1170,43 @@ namespace FUCK::Host
 	static void SetCameraUpperBody_Impl(ICameraClient* client, bool upperBody) { MANAGER(Camera)->SetUpperBody(client, upperBody); }
 	static void AddCameraListener_Impl(void* userdata, void (*callback)(int, const char*, void*)) { MANAGER(Camera)->AddListener(userdata, callback); }
 	static void RemoveCameraListener_Impl(void* userdata) { MANAGER(Camera)->RemoveListener(userdata); }
+
+	static void AddThemedImage_Impl(void* tex, const ImVec2& min, const ImVec2& max, const ImVec2& u0, const ImVec2& u1, const ImVec4& col, float r, int corners)
+	{
+		if (auto* srv = GetSRV(tex))
+			ImGui::AddThemedImage(ImGui::GetWindowDrawList(), reinterpret_cast<ImTextureID>(srv), ImRect(min, max), u0, u1, ImGui::ColorConvertFloat4ToU32(col), r, corners);
+	}
+	static void DrawThemedRectFilled_Impl(const ImVec2& min, const ImVec2& max, const ImVec4& col, float r, int corners) { ImGui::AddThemedRectFilled(ImGui::GetWindowDrawList(), ImRect(min, max), ImGui::ColorConvertFloat4ToU32(col), r, corners); }
+	static void DrawThemedRect_Impl(const ImVec2& min, const ImVec2& max, const ImVec4& col, float r, float t) { ImGui::AddThemedRect(ImGui::GetWindowDrawList(), ImRect(min, max), ImGui::ColorConvertFloat4ToU32(col), r, t); }
+	static void GetThemeColor_Impl(int which, float* r, float* g, float* b, float* a)
+	{
+		// By name, so the public order doesn't follow the theme's own
+		using T = FUCK::ThemeColor;
+		using U = ImGui::USER_STYLE;
+		U style = U::kTabBorderActive;
+		switch (static_cast<T>(which)) {
+		case T::kTextHovered:         style = U::kTextHovered; break;
+		case T::kHeaderText:          style = U::kHeaderText; break;
+		case T::kNavHighlight:        style = U::kNavHighlight; break;
+		case T::kSeparator:           style = U::kSeparator; break;
+		case T::kTabBorder:           style = U::kTabBorder; break;
+		case T::kTabBorderActive:     style = U::kTabBorderActive; break;
+		case T::kWidgetBorder:        style = U::kWidgetBorder; break;
+		case T::kWidgetBorderActive:  style = U::kWidgetBorderActive; break;
+		}
+		const ImVec4 col = ImGui::GetUserStyleColorVec4(style);
+		*r = col.x;
+		*g = col.y;
+		*b = col.z;
+		*a = col.w;
+	}
+	static bool ButtonEx_Impl(const char* label, bool selected, float minTextWidth)
+	{
+		ImGui::AddRowSpacing();
+		return ImGui::OutlineButton(label, nullptr, selected, minTextWidth);
+	}
+	static bool BeginTabBarWithTrailing_Impl(const char* s, float w, int f) { return ImGui::BeginTabBarWithTrailing(s, w, f); }
+
 	static void SetGamepadNavBlockedBy_Impl(const char* pluginName, bool blocked) { MANAGER(Input)->SetGamepadNavBlockedBy(pluginName, blocked); }
 	static void SetActorFrozenEx_Impl(const char* pluginName, RE::Actor* actor, bool frozen, bool holdPhysics) { MANAGER(Freeze)->SetFrozen(pluginName, actor, frozen, holdPhysics); }
 	static void MoveCameraEx_Impl(const CameraMoveEx* move, InputDevice device, float mult)
@@ -1530,6 +1582,12 @@ namespace FUCK::Host
 			.SetCameraUpperBody     = SetCameraUpperBody_Impl,
 			.AddCameraListener      = AddCameraListener_Impl,
 			.RemoveCameraListener   = RemoveCameraListener_Impl,
+			.AddThemedImage         = AddThemedImage_Impl,
+			.DrawThemedRectFilled   = DrawThemedRectFilled_Impl,
+			.DrawThemedRect         = DrawThemedRect_Impl,
+			.GetThemeColor          = GetThemeColor_Impl,
+			.ButtonEx               = ButtonEx_Impl,
+			.BeginTabBarWithTrailing = BeginTabBarWithTrailing_Impl,
 			.SetGamepadNavBlockedBy = SetGamepadNavBlockedBy_Impl
 		};
 		return &api;

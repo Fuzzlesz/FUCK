@@ -397,6 +397,17 @@ namespace ImGui
 		return BeginTabBar(str_id, flags | ImGuiTabBarFlags_NoTabListScrollingButtons);
 	}
 
+	// The bar takes its width from the work rect as it begins, so narrowing that for the call alone leaves the room
+	bool BeginTabBarWithTrailing(const char* str_id, float a_trailingWidth, ImGuiTabBarFlags flags)
+	{
+		ImGuiWindow* window = GetCurrentWindow();
+		const float  right  = window->WorkRect.Max.x;
+		window->WorkRect.Max.x = std::max(window->DC.CursorPos.x, right - a_trailingWidth - GetStyle().ItemSpacing.x);
+		const bool open = BeginTabBarEx(str_id, flags);
+		window->WorkRect.Max.x = right;
+		return open;
+	}
+
 	bool BeginTabItemEx(const char* label, ImGuiTabItemFlags flags)
 	{
 		ImGuiWindow* window     = GetCurrentWindow();
@@ -434,8 +445,8 @@ namespace ImGui
 		ImVec2 min = GetItemRectMin();
 		ImVec2 max = GetItemRectMax();
 
-		// Mathematically match OutlineButton's visual geometry
-		ImVec2 textSize = CalcTextSize(label);
+		// Mathematically match OutlineButton's visual geometry. Measured without any ## id, as it's drawn
+		ImVec2 textSize = CalcTextSize(label, nullptr, true);
 		float  padY     = 7.0f * scale;
 		float  visualH  = textSize.y + (padY * 2.0f);
 		float  logicalH = GetFrameHeight();
@@ -523,7 +534,7 @@ namespace ImGui
 		return active;
 	}
 
-	bool OutlineButton(const char* label, bool* wasFocused)
+	bool OutlineButton(const char* label, bool* wasFocused, bool selected, float minTextWidth)
 	{
 		ImGuiWindow* window = GetCurrentWindow();
 		if (window->SkipItems)
@@ -539,8 +550,10 @@ namespace ImGui
 		float padY = 7.0f * scale;
 		float padX = 8.0f * scale;
 
-		float visualH = textSize.y + (padY * 2.0f);
-		float width   = textSize.x + (padX * 2.0f);
+		// Sized for the wider of its label and minTextWidth, so a button flipping between labels keeps one width
+		const float textW   = std::max(textSize.x, minTextWidth);
+		float       visualH = textSize.y + (padY * 2.0f);
+		float       width   = textW + (padX * 2.0f);
 
 		// An icon alone, from either icon set's private-use codes, makes a square button
 		const char*  shownEnd = FindRenderedTextEnd(label);
@@ -548,7 +561,7 @@ namespace ImGui
 		const char*  afterOne = label + ImTextCharFromUtf8(&icon, label, shownEnd);
 		const bool   iconOnly = afterOne == shownEnd && icon >= 0xE000 && icon <= 0xF8FF;
 		if (iconOnly)
-			width = std::max(visualH, textSize.x + padY * 2.0f);
+			width = std::max(visualH, textW + padY * 2.0f);
 
 		// Force the layout slot to encompass the true visual height
 		float  actualLayoutH = std::max(GetFrameHeight(), visualH);
@@ -568,9 +581,9 @@ namespace ImGui
 		bool h, held;
 		bool p = ButtonBehavior(bb, window->GetID(label), &h, &held);
 
-		// Background stays solid; hover feedback is handled by the Border
+		// Background stays solid; hover feedback is handled by the Border, which a selected button keeps lit
 		AddThemedRectFilled(window->DrawList, bbVisual, GetColorU32(ImGuiCol_Button), rounding);
-		DrawWidgetBorder(window->DrawList, bbVisual, h || held, rounding);
+		DrawWidgetBorder(window->DrawList, bbVisual, h || held || selected, rounding);
 
 		// Centred, then nudged by the theme. An icon alone is centred by its own drawing, as icons sit on the middle of the text's
 		// capitals, which is above the middle of the line the text is centred by

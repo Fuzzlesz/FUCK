@@ -101,6 +101,8 @@ namespace ImGui
 	bool UseInvertedCorners();
 	void AddThemedRectFilled(ImDrawList* a_drawList, const ImRect& a_bb, ImU32 a_col, float a_rounding, ImDrawFlags a_flags = ImDrawFlags_None);
 	void AddThemedRect(ImDrawList* a_drawList, const ImRect& a_bb, ImU32 a_col, float a_rounding, float a_thickness = 1.0f);
+	// A picture clipped to the same shape, so it can fill a themed frame edge to edge rather than sit inside it
+	void AddThemedImage(ImDrawList* a_drawList, ImTextureID a_tex, const ImRect& a_bb, const ImVec2& a_uv0, const ImVec2& a_uv1, ImU32 a_col, float a_rounding, ImDrawFlags a_flags = ImDrawFlags_None);
 
 	enum class ThemedWindow
 	{
@@ -182,8 +184,9 @@ namespace ImGui
 
 	// Navigation
 	bool BeginTabBarEx(const char* str_id, ImGuiTabBarFlags flags = 0);
+	bool BeginTabBarWithTrailing(const char* str_id, float a_trailingWidth, ImGuiTabBarFlags flags = 0);
 	bool BeginTabItemEx(const char* label, ImGuiTabItemFlags flags = 0);
-	bool OutlineButton(const char* label, bool* wasFocused = nullptr);
+	bool OutlineButton(const char* label, bool* wasFocused = nullptr, bool selected = false, float minTextWidth = 0.0f);
 	bool CollapsingHeaderIcon(const char* label, int flags = 0);
 	bool TreeNodeIcon(const char* label, int flags = 0);
 

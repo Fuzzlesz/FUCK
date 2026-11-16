@@ -128,6 +128,20 @@ namespace ImGui
 			a_drawList->AddRect(a_bb.Min, a_bb.Max, a_col, a_rounding, 0, a_thickness);
 	}
 
+	// The themed fill with the picture's UVs laid over it, so the cut-away corners clip it as they clip a frame
+	void AddThemedImage(ImDrawList* a_drawList, ImTextureID a_tex, const ImRect& a_bb, const ImVec2& a_uv0, const ImVec2& a_uv1, ImU32 a_col, float a_rounding, ImDrawFlags a_flags)
+	{
+		if (!UseInvertedCorners() || a_rounding <= 0.0f) {
+			a_drawList->AddImageRounded(a_tex, a_bb.Min, a_bb.Max, a_uv0, a_uv1, a_col, a_rounding, a_flags);
+			return;
+		}
+		a_drawList->PushTexture(a_tex);
+		const int first = a_drawList->VtxBuffer.Size;
+		AddInvertedRectFilled(a_drawList, a_bb, a_col, CapInvertedRounding(a_bb, a_rounding), a_flags);
+		ShadeVertsLinearUV(a_drawList, first, a_drawList->VtxBuffer.Size, a_bb.Min, a_bb.Max, a_uv0, a_uv1, true);
+		a_drawList->PopTexture();
+	}
+
 	// The colours ImGui uses for the parts of a window it draws in Begin(). Cleared for a themed window, which draws them itself
 	static constexpr ImGuiCol s_themedWindowCols[] = {
 		ImGuiCol_Border,

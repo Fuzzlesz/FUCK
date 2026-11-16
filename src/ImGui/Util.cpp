@@ -406,7 +406,10 @@ namespace ImGui
 			}
 
 			if (BeginTooltipThemed()) {
+				// Wrapped at a readable width, so a long tip is a few lines rather than one across the screen
+				PushTextWrapPos(GetFontSize() * 22.0f);
 				DrawFormattedText(fmt);
+				PopTextWrapPos();
 				EndTooltip();
 			}
 
@@ -438,6 +441,9 @@ namespace ImGui
 
 		ImVec4 cHighlight = ImVec4(1.0f, 0.85f, 0.2f, 1.0f);  // Yellow
 		ImVec4 cNormal    = GetStyleColorVec4(ImGuiCol_Text);
+
+		// Lines as close as one wrapped paragraph's, rather than a row gap apart
+		PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(GetStyle().ItemSpacing.x, 0.0f));
 
 		size_t line_start = 0;
 		while (line_start < s.length()) {
@@ -481,6 +487,7 @@ namespace ImGui
 				break;
 			line_start = line_end + 1;
 		}
+		PopStyleVar();
 	}
 
 	void Header(const char* label)
