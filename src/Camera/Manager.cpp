@@ -862,8 +862,15 @@ namespace Camera
 		if (!IsActive(a_client))
 			return;
 
-		auto& session      = *_current;
-		session.framedPart = a_node ? a_node : "";
+		auto&             session = *_current;
+		const std::string part    = a_node ? a_node : "";
+		// A new part is framed from the view and facing the session began with: the subject turned back and every camera move eased
+		// away, as framing measures from those and a turned body or moved camera carries the part out of where it's placed
+		if (part != session.framedPart) {
+			session.core.ClearMovesForFraming();
+			ResetSubject();
+		}
+		session.framedPart = part;
 		session.partSize   = a_size;
 		session.core.Reframe(session.flags & FUCK::CameraSessionFlags::kInstantMoves);
 	}

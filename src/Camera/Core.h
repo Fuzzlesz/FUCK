@@ -44,6 +44,9 @@ namespace Camera
 		// Where the subject stands, which body framing is kept relative to
 		virtual std::optional<RE::NiPoint3> GetAnchor() = 0;
 
+		// Whether the body points are one part's (SetPartFraming), which moves round the subject as they turn
+		virtual bool FramesPart() = 0;
+
 		// Asked only when a scroll is about to zoom, as the check can be costly
 		virtual bool IsScrollBlocked() = 0;
 
@@ -100,6 +103,9 @@ namespace Camera
 
 		// Frames the body again, e.g. for another subject, at once or easing over
 		void Reframe(bool a_instant);
+
+		// Eases away the orbit, pan, zoom, tilt, roll and FOV, which would otherwise carry a newly framed part off where framing places it
+		void ClearMovesForFraming();
 
 		// The FOV the session opens at, and the reset gesture goes back to, rather than the player's
 		void  SetStartFov(float a_fov);

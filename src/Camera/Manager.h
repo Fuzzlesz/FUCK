@@ -174,6 +174,7 @@ namespace Camera
 		std::optional<RE::NiPoint3> GetPivot() override;
 		std::optional<RE::NiPoint3> GetAnchor() override;
 		bool                        GetBodyPoints(Maths::BodyPoints& a_body) override;
+		bool                        FramesPart() override { return _current && !_current->framedPart.empty(); }
 		bool                        GetBodyPointsOf(RE::Actor* a_actor, Maths::BodyPoints& a_body);
 		bool                        GetWholeBodyPoints(RE::Actor* a_actor, Maths::BodyPoints& a_body);
 		bool                        GetPartPoints(Maths::BodyPoints& a_part);

@@ -22,6 +22,7 @@ namespace
 	constexpr float FRAMING_POSE_HOLD         =  0.4f;   // kFollowPose: seconds a changed pose must hold still before it's framed, so an animation (an equip, a draw) plays out first
 	constexpr float FRAMING_POSE_HOLD_SMALLER =  1.5f;   // and before it's framed smaller, as swapping a drawn weapon puts it away for a moment before drawing the next
 	constexpr float FRAMING_PAIR_CHANGE       =  0.1f;   // how much the space between two framed together must change, as a share, before the framing follows
+	constexpr float FRAMING_PART_MOVE         =  5.0f;   // how far a framed part may move round where the subject stands, in units, before the framing follows
 	constexpr float ACCEL_RATE                =  1.5f;   // per second held, for pan and zoom acceleration
 	constexpr float ACCEL_MAX                 = 15.0f;
 	constexpr float CINEMATIC_SPEED           = 10.0f;
@@ -639,6 +640,14 @@ namespace Camera
 			}
 		}
 
+		// A framed part is followed as it moves round the subject, e.g. a hand as they're turned, as its framing is kept relative to where
+		// they stand rather than to the part
+		if (measured && _host.FramesPart()) {
+			const auto anchor = _host.GetAnchor().value_or(_originalTranslate);
+			if ((body.centre - anchor - _framingPivotDeltaTo).Length() > FRAMING_PART_MOVE)
+				UpdateFraming(_host.GetPivot().value_or(_originalTranslate), true);
+		}
+
 		// Two framed together are framed again as they draw closer or apart, e.g. one following the other
 		if (measured && body.pair && std::abs(body.sideA.GetDistance(body.sideB) - _framingSpread) > _framingSpread * FRAMING_PAIR_CHANGE) {
 			UpdateFraming(_host.GetPivot().value_or(_originalTranslate), true);
@@ -929,6 +938,20 @@ namespace Camera
 
 		_framingProgress = _isFramed ? 1.0f : 0.0f;
 		_framingBlend    = _framingProgress;
+	}
+
+	// Every move eased away, as ResetMoves() does, but keeping the framing and the subject: framing measures from the session's own
+	// view, so a new part lands where it's placed only once the orbit, pan, zoom, tilt, roll and FOV are back to it
+	void Core::ClearMovesForFraming()
+	{
+		_targetCamOffset  = { 0.0f, 0.0f, 0.0f };
+		_targetCamRotZ    = 0.0f;
+		_targetCamRotX    = 0.0f;
+		_targetCamRoll    = 0.0f;
+		_targetFovOffset  = _startFovOffset;
+		_pendingScroll    = 0.0f;
+		_smoothScrollZoom = 0.0f;
+		_smoothScrollFov  = 0.0f;
 	}
 
 	void Core::Reframe(bool a_instant)
