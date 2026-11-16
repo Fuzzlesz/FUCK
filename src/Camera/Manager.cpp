@@ -80,6 +80,7 @@ namespace
 		{ "Cinematic",      &Camera::Config::cinematic       },
 		{ "InvertTilt",     &Camera::Config::invertTilt      },
 		{ "InvertTurn",     &Camera::Config::invertTurn      },
+		{ "InvertOrbit",    &Camera::Config::invertOrbit     },
 	} };
 
 	std::string GetConfigPath()
@@ -2097,6 +2098,7 @@ namespace Camera
 			changed |= FUCK::Checkbox("$FUCK_Camera_Cinematic"_T, &_config.cinematic, true, true);
 			changed |= FUCK::Checkbox("$FUCK_Camera_InvertTilt"_T, &_config.invertTilt, true, true);
 			changed |= FUCK::Checkbox("$FUCK_Camera_InvertTurn"_T, &_config.invertTurn, true, true);
+			changed |= FUCK::Checkbox("$FUCK_Camera_InvertOrbit"_T, &_config.invertOrbit, true, true);
 		}
 
 		// The speeds under a node, as few want them. A fixed ID, so its state isn't the label's
@@ -2162,12 +2164,13 @@ namespace Camera
 
 				if (resetPressed) {
 					// Only the speeds, as the toggles sit outside the tabs
-					const Config kept  = _config;
-					_config            = def;
-					_config.cinematic  = kept.cinematic;
-					_config.invertTilt = kept.invertTilt;
-					_config.invertTurn = kept.invertTurn;
-					changed            = true;
+					const Config kept   = _config;
+					_config             = def;
+					_config.cinematic   = kept.cinematic;
+					_config.invertTilt  = kept.invertTilt;
+					_config.invertTurn  = kept.invertTurn;
+					_config.invertOrbit = kept.invertOrbit;
+					changed             = true;
 				}
 
 				FUCK::SetCursorPos(afterTabs);

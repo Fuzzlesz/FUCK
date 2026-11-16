@@ -187,6 +187,7 @@ namespace Camera
 
 	// The player's own tilt the way they've chosen. Not a client's moves, which are already the way it means
 	float Core::Tilt(const Config& a_settings) { return a_settings.invertTilt ? -1.0f : 1.0f; }
+	float Core::Orbit(const Config& a_settings) { return a_settings.invertOrbit ? -1.0f : 1.0f; }
 
 	void Core::Move(const FUCK::CameraMoveEx& a_move, const Config& a_settings, bool a_isGamepad, float a_mult, float a_interval)
 	{
@@ -439,7 +440,7 @@ namespace Camera
 			_targetCamRotX += Tilt(a_settings) * mouseDelta.y * a_settings.kbmRotSpeed * mult * a_in.scale.rot;
 		} else if (a_in.rmbDown) {
 			// Orbit (Middle + Right)
-			_targetCamRotZ += mouseDelta.x * a_settings.kbmRotSpeed * mult * a_in.scale.rot;
+			_targetCamRotZ += Orbit(a_settings) * mouseDelta.x * a_settings.kbmRotSpeed * mult * a_in.scale.rot;
 		} else {
 			// Pan (Middle)
 			_targetCamOffset.x -= mouseDelta.x * a_settings.kbmPanSpeed * mult * a_in.scale.pan;
@@ -477,7 +478,7 @@ namespace Camera
 			// Primary (Ctrl): Pan, Orbit & Pitch
 			_targetCamOffset.z += ws * speed;
 			_targetCamOffset.x += da * speed;
-			_targetCamRotZ     += eq * rotSpeed;
+			_targetCamRotZ     += Orbit(a_settings) * eq * rotSpeed;
 			_targetCamRotX     += Tilt(a_settings) * rf * rotSpeed;
 		}
 	}
@@ -515,7 +516,7 @@ namespace Camera
 			_targetCamRotX -= Tilt(a_settings) * rightY * rotSpeed;
 		} else {
 			// RB: Orbit & Zoom
-			_targetCamRotZ     -= rightX * rotSpeed;
+			_targetCamRotZ     -= Orbit(a_settings) * rightX * rotSpeed;
 			_targetCamOffset.y += rightY * zoomSpeed;
 			_isZooming         |= rightY != 0.0f;
 		}
