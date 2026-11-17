@@ -647,12 +647,12 @@ namespace Input
 
 	// ImGui puts tooltips past the mouse by an offset scaled by ImGuiStyle::MouseCursorScale, which at 1 clears its own
 	// 12x19 arrow. So this is how many of those the game cursor is, read from the cursor movie so a replaced cursor counts
-	void Manager::UpdateCursorScale(RE::GFxMovieView* a_movie)
+	bool Manager::UpdateCursorScale(RE::GFxMovieView* a_movie)
 	{
 		RE::GFxValue cursor, width, height;
 		if (!a_movie->GetVariable(&cursor, "_root.mc_Cursor") || !cursor.IsDisplayObject() ||
 			!cursor.GetMember("_width", &width) || !cursor.GetMember("_height", &height) || !width.IsNumber() || !height.IsNumber()) {
-			return;
+			return false;
 		}
 
 		// Its size is in the movie's stage units, so scale by how much of the stage the screen shows
@@ -662,7 +662,7 @@ namespace Input
 		const float visibleW = visible.right - visible.left;
 		const float visibleH = visible.bottom - visible.top;
 		if (visibleW <= 0.0f || visibleH <= 0.0f)
-			return;
+			return false;
 
 		const float widthPx  = static_cast<float>(width.GetNumber()) * static_cast<float>(viewport.width) / visibleW;
 		const float heightPx = static_cast<float>(height.GetNumber()) * static_cast<float>(viewport.height) / visibleH;
@@ -671,6 +671,7 @@ namespace Input
 		// so it expects a cursor 24px across at a scale of 1
 		constexpr float kImGuiCursorSize = 24.0f;
 		_cursorScale                     = std::max(1.0f, std::max(widthPx, heightPx) / kImGuiCursorSize);
+		return true;
 	}
 
 	void Manager::UpdateInputDevice(RE::INPUT_DEVICE a_device)
@@ -808,24 +809,38 @@ namespace Input
 			}
 		}
 
-		// Hide visual cursor when playing with a gamepad
+		// Hide visual cursor when playing with a gamepad. Forgotten while the cursor menu's gone, so a new one at the same address is set up
 		if (auto ui = RE::UI::GetSingleton()) {
-			if (auto cursorMenu = ui->GetMenu<RE::CursorMenu>()) {
+			const auto cursorMenu = ui->GetMenu<RE::CursorMenu>();
+			if (!cursorMenu || !cursorMenu->uiMovie)
+				_cursorMovie = nullptr;
+			if (cursorMenu) {
 				if (cursorMenu->uiMovie) {
-					RE::GFxValue root;
-					if (cursorMenu->uiMovie->GetVariable(&root, "_root")) {
-						// Shown for the pad too while a plugin forces the cursor, as its stick drives it there
-						bool hideVisual = IsInputGamepad() && !menuOpen && !forceCursor;
-
-						// Exception: The Map Menu uses the cursor
-						if (hideVisual && ui->IsMenuOpen(RE::MapMenu::MENU_NAME)) {
-							hideVisual = false;
-						}
-
-						root.SetMember("_alpha", RE::GFxValue(hideVisual ? 0.0 : 100.0));
+					auto* movie = cursorMenu->uiMovie.get();
+					if (movie != _cursorMovie) {
+						_cursorMovie  = movie;
+						_cursorHidden = std::nullopt;
+						_cursorViewW  = 0;
 					}
 
-					UpdateCursorScale(cursorMenu->uiMovie.get());
+					// Shown for the pad too while a plugin forces the cursor, as its stick drives it there, and in the map, which uses it
+					const bool hideVisual = IsInputGamepad() && !menuOpen && !forceCursor && !ui->IsMenuOpen(RE::MapMenu::MENU_NAME);
+					if (_cursorHidden != hideVisual) {
+						RE::GFxValue root;
+						if (movie->GetVariable(&root, "_root")) {
+							root.SetMember("_alpha", RE::GFxValue(hideVisual ? 0.0 : 100.0));
+							_cursorHidden = hideVisual;
+						}
+					}
+
+					// Measured again only for a new movie or screen size
+					RE::GViewport viewport;
+					movie->GetViewport(&viewport);
+					if (viewport.width != _cursorViewW || viewport.height != _cursorViewH) {
+						const bool measured = UpdateCursorScale(movie);
+						_cursorViewW        = measured ? viewport.width : 0;
+						_cursorViewH        = measured ? viewport.height : 0;
+					}
 				}
 			}
 		}

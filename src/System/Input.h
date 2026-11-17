@@ -99,7 +99,7 @@ namespace Input
 	private:
 		void UpdateInputDevice(RE::INPUT_DEVICE a_device);
 		void CacheInputState(const RE::InputEvent* const* a_events);
-		void UpdateCursorScale(RE::GFxMovieView* a_movie);
+		bool UpdateCursorScale(RE::GFxMovieView* a_movie);  // false while the cursor isn't there to measure
 
 		bool CheckModifiersStrict(const std::uint32_t* mods, size_t count, std::int32_t req1, std::int32_t req2, std::uint32_t primaryKey) const;
 
@@ -112,6 +112,13 @@ namespace Input
 		bool                _cursorMovedByJoystick{ false };
 		bool                _expectingSyntheticMouseMove{ false };
 		float               _cursorScale{ 1.0f };
+
+		// The cursor movie last read and what it was set to, so it's only touched when something changed, as reading it every input frame
+		// walks its display list while another mod may be rebuilding it
+		const RE::GFxMovieView* _cursorMovie{ nullptr };
+		std::int32_t            _cursorViewW{ 0 };
+		std::int32_t            _cursorViewH{ 0 };
+		std::optional<bool>     _cursorHidden;
 
 		std::mutex            _navBlockLock;
 		std::set<std::string> _navBlockers;
