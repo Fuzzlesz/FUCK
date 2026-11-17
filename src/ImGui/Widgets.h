@@ -69,7 +69,7 @@ namespace ImGui
 	struct ArrowIconParams
 	{
 		ImVec2 drawSize;  // final draw dimensions, orientation-swapped
-		float  offsetY;   // vertical centering offset within rowH
+		float  offsetY;   // vertical centring offset within rowH
 	};
 
 	inline ArrowIconParams CalcArrowIconParams(float iconAspect, bool pointsDown, float rowH,
@@ -113,7 +113,7 @@ namespace ImGui
 
 	// ImGui only rounds a window's corners outwards. With inverted corners, call PushThemedWindowBg() just before Begin(), BeginChild(),
 	// or a popup's or tooltip's begin, with the kind of window it is, and PopThemedWindowBg() straight after it, whatever it returned. ImGui
-	// then leaves the background, border and resize grip out, and they're drawn inverted instead. Returns false when there's nothing to invert
+	// then leaves the background, border, and resize grip out, and they're drawn inverted instead. Returns false when there's nothing to invert
 	bool PushThemedWindowBg(ThemedWindow a_kind = ThemedWindow::kWindow);
 	void PopThemedWindowBg(bool a_pushed);
 
@@ -160,7 +160,7 @@ namespace ImGui
 	bool Hotkey(const char* label, std::uint32_t key, std::int32_t modifier, std::int32_t modifier2, bool alignFar = true, bool labelLeft = true, bool flashing = false, bool alwaysHighlight = false, float iconScale = 1.0f);
 	bool DrawManagedHotkey(const char* label, FUCK::ManagedHotkey& h, FUCK::HotkeyFlags flags, float iconScale = 1.0f, float labelScale = 1.0f);
 
-	// Specialized Inputs
+	// Specialised Inputs
 	bool InputTextStyled(const char* label, char* buf, size_t buf_size, int flags = 0);
 	bool ColorEdit3Styled(const char* label, float col[3], int flags = 0);
 	bool ColorEdit4Styled(const char* label, float col[4], int flags = 0);

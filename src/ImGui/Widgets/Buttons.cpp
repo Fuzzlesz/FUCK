@@ -73,7 +73,7 @@ namespace ImGui
 			ImFont* labelFont  = GetLabelFont();
 			float   labelWidth = labelFont->CalcTextSizeA(GetFontSize(), FLT_MAX, 0.0f, labelView.data(), labelView.data() + labelView.size()).x;
 
-			// Calculate true dynamic centering, supporting widgets (like Icons) that are taller than a standard frame
+			// Calculate true dynamic centring, supporting widgets (like Icons) that are taller than a standard frame
 			float actualTargetH = targetHeight > 0.0f ? targetHeight : GetFrameHeight();
 			float textH         = GetTextLineHeight();
 			float offY          = std::floor((actualTargetH - textH) * style.labelAlign.y);
@@ -96,7 +96,7 @@ namespace ImGui
 			float maxX    = startX;
 
 			if (alignFar) {
-				// Center the widget inside the right-hand pane
+				// Centre the widget inside the right-hand pane
 				float rightPaneCenter = rightPaneStart + (rightPaneEnd - rightPaneStart) * 0.5f;
 				float splitPoint      = rightPaneCenter - (contentWidth * 0.5f);
 
@@ -366,7 +366,7 @@ namespace ImGui
 		buildPath(drawList, -halfB, rOuter, max.y + halfB);  // Extend down past max.y slightly so it connects to separator cleanly
 		drawList->PathStroke(IM_COL32(0, 0, 0, 255), 0, tBlack);
 
-		// Inner Color stroke (No bottom line)
+		// Inner Colour stroke (No bottom line)
 		drawList->PathClear();
 		buildPath(drawList, halfC, rInner, max.y);
 		drawList->PathStroke(col, 0, tColor);
@@ -424,7 +424,7 @@ namespace ImGui
 		PushStyleColor(ImGuiCol_TabUnfocused, ImVec4(0, 0, 0, 0));
 		PushStyleColor(ImGuiCol_TabUnfocusedActive, ImVec4(0, 0, 0, 0));
 
-		// Hide the native text rendering by passing a transparent color
+		// Hide the native text rendering by passing a transparent colour
 		PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 0));
 
 		// Widen the X padding to match OutlineButtons, but LEAVE Y ALONE so we don't break the layout engine
@@ -437,7 +437,7 @@ namespace ImGui
 		bool active = BeginTabItem(label, nullptr, flags);
 
 		PopStyleVar();
-		PopStyleColor(6);  // Transparent text + 5 tab colors
+		PopStyleColor(6);  // Transparent text + 5 tab colours
 
 		// Switch to background channel for custom border
 		window->DrawList->ChannelsSetCurrent(0);
@@ -456,7 +456,7 @@ namespace ImGui
 		ImRect idealBb = { min.x, min.y + offY, max.x, min.y + offY + visualH };
 
 		// Chop the bottom of the drawn rect at max.y so it rests flush on the separator line
-		// Use std::floor to prevent subpixel geometry artifacts
+		// Use std::floor to prevent subpixel geometry artefacts
 		ImRect drawBb = { std::floor(idealBb.Min.x), std::floor(idealBb.Min.y), std::floor(idealBb.Max.x), std::floor(max.y) };
 
 		// Tabs share button rounding, so they curve the same
@@ -500,7 +500,7 @@ namespace ImGui
 
 		DrawTabBorder(window->DrawList, drawBb, active || IsItemHovered(), rounding);
 
-		// Switch to foreground channel to render our custom centered text
+		// Switch to foreground channel to render our custom centred text
 		window->DrawList->ChannelsSetCurrent(1);
 
 		ImU32 textColor;
@@ -574,7 +574,7 @@ namespace ImGui
 		if (!ItemAdd(bb, window->GetID(label)))
 			return false;
 
-		// Shift visual rect vertically to center it cleanly and strictly align to pixel boundaries
+		// Shift visual rect vertically to centre it cleanly and strictly align to pixel boundaries
 		float  offY = (logical_sz.y - visualH) * 0.5f;
 		ImRect bbVisual(std::floor(pos.x), std::floor(pos.y + offY), std::floor(pos.x + width), std::floor(pos.y + offY + visualH));
 
