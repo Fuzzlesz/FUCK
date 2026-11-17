@@ -4,11 +4,12 @@ set(headers ${headers}
 	src/API/FUCK_ColorPalette.h
 	src/API/IconsFontAwesome6.h
 	src/API/IconsGameIcons.h
+	src/Camera/API/CinemacamAPI.h
+	src/Camera/API/SmoothCamAPI.h
 	src/Camera/Core.h
 	src/Camera/Manager.h
 	src/Camera/Maths.h
 	src/Camera/Presets.h
-	src/Camera/SmoothCamAPI.h
 	src/FUCK-Ass.h
 	src/FUCK-Host.h
 	src/FUCK-Man.h

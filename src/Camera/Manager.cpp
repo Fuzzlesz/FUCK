@@ -8,7 +8,8 @@
 #include "System/Settings.h"
 
 #define SMOOTHCAM_API_COMMONLIB
-#include "Camera/SmoothCamAPI.h"
+#include "API/CinemacamAPI.h"
+#include "API/SmoothCamAPI.h"
 
 namespace
 {
@@ -311,6 +312,7 @@ namespace Camera
 		SetUpStart(opts);
 		HoldHead();
 		UpdateSmoothCam();
+		UpdateCinemacam();
 
 		// Put on the camera now, a view handed over or the start, as a client beginning after its update for the frame (SPII swapping who it
 		// shows) would otherwise have a frame drawn from where it set the camera up for its base
@@ -339,6 +341,7 @@ namespace Camera
 
 		TryResume();
 		UpdateSmoothCam();
+		UpdateCinemacam();
 
 		// A camera handed back eases from where it was left to the resumed session's own framing, put on now so no frame shows the game's
 		if (_current && _current->carriedBack) {
@@ -691,6 +694,23 @@ namespace Camera
 			_smoothCamRefused = false;
 			logger::info("Camera: gave control back to SmoothCam");
 		}
+	}
+
+	void Manager::UpdateCinemacam()
+	{
+		// Borrowed while any session is open, as Cinemacam otherwise moves the camera and FOV on top of ours, its menu cameras included,
+		// and takes back a FOV it read mid-session once we're done
+		static const auto cinemacam = Cinemacam::API::Get();
+		const bool        wanted    = !_sessions.empty();
+		if (wanted == _holdsCinemacam || !cinemacam)
+			return;
+
+		if (wanted)
+			cinemacam.RequestCamera("FUCK");
+		else
+			cinemacam.ReleaseCamera("FUCK");
+		_holdsCinemacam = wanted;
+		logger::info("Camera: {} Cinemacam's camera", wanted ? "borrowed" : "gave back");
 	}
 
 	void Manager::RunControls(float a_interval)

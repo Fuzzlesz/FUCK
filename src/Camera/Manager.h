@@ -226,6 +226,7 @@ namespace Camera
 		bool IsBaseReady(const Session& a_session) const;
 
 		void UpdateSmoothCam();
+		void UpdateCinemacam();
 		void Notify(FUCK::CameraEvent a_event, const std::string& a_context) const;
 
 		struct Listener
@@ -260,7 +261,8 @@ namespace Camera
 		float _deleteButtonW = 0.0f;
 		float _saveButtonW   = 0.0f;
 
-		bool _holdsSmoothCam = false;
+		bool _holdsSmoothCam   = false;
 		bool _smoothCamRefused = false;  // refused since last asked, so the refusal's logged once
+		bool _holdsCinemacam   = false;
 	};
 }
