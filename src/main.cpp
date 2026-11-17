@@ -64,9 +64,7 @@ void OnInit(SKSE::MessagingInterface::Message* a_msg)
 	}
 }
 
-// One DLL for SE/AE/VR: AE 1.6.629+ reads this version data, while SE and VR
-// call SKSEPlugin_Query below.
-extern "C" DLLEXPORT constinit auto SKSEPlugin_Version = []() {
+SKSE_EXPORT constinit auto SKSEPlugin_Version = []() {
 	SKSE::PluginVersionData v;
 	v.PluginVersion(Version::MAJOR);
 	v.PluginName("FUCK");
@@ -78,7 +76,7 @@ extern "C" DLLEXPORT constinit auto SKSEPlugin_Version = []() {
 	return v;
 }();
 
-extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a_skse, SKSE::PluginInfo* a_info)
+SKSE_PLUGIN_QUERY(const SKSE::QueryInterface* a_skse, SKSE::PluginInfo* a_info)
 {
 	a_info->infoVersion = SKSE::PluginInfo::kVersion;
 	a_info->name        = "FUCK";
@@ -120,7 +118,7 @@ void InitializeLog()
 	logger::info("FUCK API Version: {}", FUCK_API_VERSION);
 }
 
-extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_skse)
+SKSE_PLUGIN_LOAD(const SKSE::LoadInterface* a_skse)
 {
 	InitializeLog();
 	SKSE::Init(a_skse, false);
