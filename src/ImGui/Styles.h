@@ -119,15 +119,6 @@ namespace ImGui
 			float popupRounding{ 0.0f };
 			float scrollbarRounding{ 0.0f };
 			float grabRounding{ 0.0f };
-
-			// --------------------------------------------------
-			// Audio
-			// --------------------------------------------------
-			std::string soundOk{ "UIMenuOKSD" };
-			std::string soundCancel{ "UIMenuCancelSD" };
-			std::string soundFocus{ "UIMenuFocus" };
-			std::string soundPrevNext{ "UIMenuPrevNextSD" };
-			std::string soundTab{ "UIJournalTabsSD" };
 		};
 
 		// --- API ---

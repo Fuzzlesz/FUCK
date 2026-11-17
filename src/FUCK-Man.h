@@ -45,7 +45,6 @@ public:
 		bool                 showSidebarFilter{ true };
 		bool                 showSidebarFavourites{ true };
 		bool                 groupFavourites{ true };
-		bool                 muteAudio{ false };
 		std::string          currentFont{ "Default" };
 		std::string          customSystemMenuName{ "$FUCK_Title" };
 	};
@@ -155,7 +154,6 @@ public:
 	void Save();
 	void SaveKeybinds();
 
-	bool  GetMuteAudio() const { return _cfg.muteAudio; }
 	float GetActiveScale() const { return _activeScale; }
 
 	// kEditable windows: scale and rotation of the window being drawn

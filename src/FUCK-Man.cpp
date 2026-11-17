@@ -46,7 +46,6 @@ namespace
 		{ "bShowSidebarFilter",     &Config::showSidebarFilter     },
 		{ "bShowSidebarFavourites", &Config::showSidebarFavourites },
 		{ "bGroupFavourites",       &Config::groupFavourites       },
-		{ "bMuteAudio",             &Config::muteAudio             },
 		{ "sSystemMenuName",        &Config::customSystemMenuName  },
 	} };
 }

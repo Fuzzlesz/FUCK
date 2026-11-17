@@ -133,9 +133,6 @@ void SettingsTool::Draw()
 
 			FUCK::DrawManagedHotkey("$FUCK_Settings_Hotkey"_T, hotkey);
 
-			if (FUCK::Checkbox("$FUCK_Settings_MuteAudio"_T, &manager->_cfg.muteAudio, true, true))
-				manager->Save();
-
 			const char* pauseTypes[]    = { "$FUCK_Settings_PauseNone"_T, "$FUCK_Settings_PauseSoft"_T, "$FUCK_Settings_PauseHard"_T };
 			int         currentPauseIdx = static_cast<int>(manager->_cfg.globalPauseType);
 			FUCK::SetNextItemWidth(-1);
