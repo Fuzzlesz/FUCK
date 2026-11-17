@@ -421,6 +421,8 @@ private:
 
 	// Window Metrics
 	bool   _pendingWindowRestore = false;
+	bool   _windowIsDefault      = false;  // not moved or resized since the default was applied, so it follows a later font
+	float  _defaultWidthScale    = 0.0f;   // the font's width scale it was applied for
 
 	std::atomic<bool> _mainHovered{ false };  // the main window, as last drawn
 	std::atomic<int>  _scaleSteps{ 0 };       // UI scale steps not yet applied

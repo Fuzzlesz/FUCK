@@ -1137,8 +1137,20 @@ void FUCKMan::DrawMainWindow(const LayoutMetrics& a_m)
 
 	const float collapsedH = a_m.titleH * 1.02f;
 
+	// Still at its default, so a font loaded since (a style picked, or loaded after the game started) sizes it as the default would
+	if (_windowIsDefault && MANAGER(IconFont)->GetTextWidthScale() != _defaultWidthScale) {
+		ApplyDefaultWindow();
+		_lastSavedPos         = _cfg.windowPos;
+		_lastSavedSize        = _cfg.windowSize;
+		_pendingWindowRestore = true;
+	}
+
 	if (_pendingWindowRestore) {
 		ClampWindowToScreen(_cfg.windowPos, _cfg.windowSize);
+		if (_windowIsDefault) {
+			_lastSavedPos  = _cfg.windowPos;
+			_lastSavedSize = _cfg.windowSize;
+		}
 		ImGui::SetNextWindowPos(_cfg.windowPos, ImGuiCond_Always);
 		if (!_isCollapsed) {
 			ImGui::SetNextWindowSize(_cfg.windowSize, ImGuiCond_Always);
@@ -1182,10 +1194,12 @@ void FUCKMan::DrawMainWindow(const LayoutMetrics& a_m)
 
 			// Auto-save settings on move/resize end
 			if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-				if (_cfg.windowPos.x != _lastSavedPos.x || _cfg.windowPos.y != _lastSavedPos.y ||
-					_cfg.windowSize.x != _lastSavedSize.x || _cfg.windowSize.y != _lastSavedSize.y) {
-					_lastSavedPos  = _cfg.windowPos;
-					_lastSavedSize = _cfg.windowSize;
+				// Past a pixel, as ImGui's own rounding of a default window isn't the user moving it
+				const auto moved = [](const ImVec2& a, const ImVec2& b) { return std::abs(a.x - b.x) > 1.0f || std::abs(a.y - b.y) > 1.0f; };
+				if (moved(_cfg.windowPos, _lastSavedPos) || moved(_cfg.windowSize, _lastSavedSize)) {
+					_lastSavedPos    = _cfg.windowPos;
+					_lastSavedSize   = _cfg.windowSize;
+					_windowIsDefault = false;
 					SaveWorkspace();
 				}
 			}

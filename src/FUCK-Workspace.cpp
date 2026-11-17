@@ -113,6 +113,8 @@ void FUCKMan::ApplyDefaultWindow()
 	const float widen = MANAGER(IconFont)->GetTextWidthScale();
 	_cfg.windowPos    = { _def.windowPos.x * scale, _def.windowPos.y * scale };
 	_cfg.windowSize   = { _def.windowSize.x * scale * widen, _def.windowSize.y * scale };
+	_windowIsDefault   = true;
+	_defaultWidthScale = widen;
 }
 
 void FUCKMan::LoadWorkspace()
@@ -128,11 +130,11 @@ void FUCKMan::LoadWorkspace()
 		if (auto err = glz::read_file_json(sd, workspacePath, wBuffer); !err) {
 			s_workspaceFiles[workspacePath] = wBuffer;
 
-			// Apply Main Window state
+			// Apply Main Window state. No place saved means it was still at its default
+			_isCollapsed = sd.mainWindow.collapsed;
 			if (sd.mainWindow.x != -1.0f && sd.mainWindow.y != -1.0f) {
 				_cfg.windowPos  = { sd.mainWindow.x * scale, sd.mainWindow.y * scale };
 				_cfg.windowSize = { sd.mainWindow.w * scale, sd.mainWindow.h * scale };
-				_isCollapsed    = sd.mainWindow.collapsed;
 
 				_lastSavedPos         = _cfg.windowPos;
 				_lastSavedSize        = _cfg.windowSize;
@@ -283,10 +285,13 @@ void FUCKMan::WriteWorkspace()
 	if (scale < 0.1f)
 		scale = 1.0f;  // Safety clamp
 
-	sd.mainWindow.x         = _cfg.windowPos.x / scale;
-	sd.mainWindow.y         = _cfg.windowPos.y / scale;
-	sd.mainWindow.w         = _cfg.windowSize.x / scale;
-	sd.mainWindow.h         = _cfg.windowSize.y / scale;
+	// Left unsaved while it's at its default, so the default is worked out afresh next time, for whatever font is loaded then
+	if (!_windowIsDefault) {
+		sd.mainWindow.x = _cfg.windowPos.x / scale;
+		sd.mainWindow.y = _cfg.windowPos.y / scale;
+		sd.mainWindow.w = _cfg.windowSize.x / scale;
+		sd.mainWindow.h = _cfg.windowSize.y / scale;
+	}
 	sd.mainWindow.collapsed = _isCollapsed;
 
 	// Distribute Window Geometries (External plugins)
