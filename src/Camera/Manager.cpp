@@ -2076,14 +2076,15 @@ namespace Camera
 
 		const Config def;
 
-		changed |= FUCK::Checkbox("$FUCK_Camera_Cinematic"_T, &_config.cinematic, true, true);
-		changed |= FUCK::Checkbox("$FUCK_Camera_InvertTilt"_T, &_config.invertTilt, true, true);
-		changed |= FUCK::Checkbox("$FUCK_Camera_InvertTurn"_T, &_config.invertTurn, true, true);
+		if (!(a_flags & FUCK::CameraSettingsFlags::kNoToggles)) {
+			changed |= FUCK::Checkbox("$FUCK_Camera_Cinematic"_T, &_config.cinematic, true, true);
+			changed |= FUCK::Checkbox("$FUCK_Camera_InvertTilt"_T, &_config.invertTilt, true, true);
+			changed |= FUCK::Checkbox("$FUCK_Camera_InvertTurn"_T, &_config.invertTurn, true, true);
+		}
 
-		// The speeds under a header, indented, as few want them. A fixed ID, so its state isn't the label's
+		// The speeds under a node, as few want them. A fixed ID, so its state isn't the label's
 		const std::string feel = std::string{ "$FUCK_Camera_Feel"_T } + "###FUCKCameraFeel";
-		if ((a_flags & FUCK::CameraSettingsFlags::kSpeeds) && FUCK::CollapsingHeader(feel.c_str())) {
-			FUCK::Indent();
+		if ((a_flags & FUCK::CameraSettingsFlags::kSpeeds) && FUCK::TreeNode(feel.c_str())) {
 			// Open on the tab for whichever device is in use
 			bool selectTab = a_flags & FUCK::CameraSettingsFlags::kSelectDeviceTab;
 			int  flagsKBM  = (selectTab && !isGamepad) ? TAB_SET_SELECTED : 0;
@@ -2155,7 +2156,7 @@ namespace Camera
 				FUCK::SetCursorPos(afterTabs);
 			}
 
-			FUCK::Unindent();
+			FUCK::TreePop();
 		}
 
 		if (changed) {
