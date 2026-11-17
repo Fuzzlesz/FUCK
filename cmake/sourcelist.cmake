@@ -35,6 +35,7 @@ set(sources ${sources}
 	src/System/Input.cpp
 	src/System/ItemPreview.cpp
 	src/System/Journal.cpp
+	src/System/ModelRender.cpp
 	src/System/Obstructions.cpp
 	src/System/Papyrus.cpp
 	src/System/Physics.cpp

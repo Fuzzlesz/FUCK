@@ -876,6 +876,134 @@ namespace ImGui
 		return triggered;
 	}
 
+	namespace
+	{
+		// A card's name shrinks with the card, so a small one still shows more than a few letters before the cut
+		float CardNameScale(float a_side)
+		{
+			const float font = GetFontSize();
+			if (font <= 0.0f || a_side <= 0.0f)
+				return 1.0f;
+			return std::clamp((a_side / font) / 7.0f, 0.55f, 1.0f);
+		}
+
+		float CardNameHeight(float a_side) { return GetFontSize() * CardNameScale(a_side) * 1.4f; }
+
+		// Text with a dark ring, so it reads on any picture
+		void AddRingedText(ImDrawList* a_drawList, float a_size, const ImVec2& a_pos, ImU32 a_col, const char* a_text)
+		{
+			const float ring = std::max(1.0f, a_size * 0.045f);
+			for (int dy = -1; dy <= 1; dy += 2) {
+				for (int dx = -1; dx <= 1; dx += 2)
+					a_drawList->AddText(GetFont(), a_size, ImVec2(a_pos.x + dx * ring, a_pos.y + dy * ring), IM_COL32(0, 0, 0, 150), a_text);
+			}
+			a_drawList->AddText(GetFont(), a_size, a_pos, a_col, a_text);
+		}
+	}
+
+	float GetCardHeight(float a_side, float a_aspect, bool a_withName)
+	{
+		return a_side * a_aspect + (a_withName ? CardNameHeight(a_side) : 0.0f);
+	}
+
+	bool Card(const FUCK::CardDesc& a_desc, ImTextureID a_tex, FUCK::CardResult& a_out)
+	{
+		a_out = {};
+		if (!a_desc.id || a_desc.side <= 0.0f)
+			return false;
+
+		const bool  withName = a_desc.name && a_desc.name[0] != '\0';
+		const float pictureH = a_desc.side * std::max(0.01f, a_desc.aspect);
+		const float height   = GetCardHeight(a_desc.side, a_desc.aspect, withName);
+
+		const ImVec2 min = GetCursorScreenPos();
+		const ImVec2 max(min.x + a_desc.side, min.y + height);
+		const ImRect picture(min, ImVec2(max.x, min.y + pictureH));
+
+		a_out.clicked    = InvisibleButton(a_desc.id, ImVec2(a_desc.side, height));
+		a_out.hovered    = IsItemHovered();
+		const bool focus = IsItemFocused();
+		a_out.pictureMin = picture.Min;
+		a_out.pictureMax = picture.Max;
+
+		auto*       drawList = GetWindowDrawList();
+		const float rounding = std::min(GetFrameRounding(), a_desc.side * 0.5f);
+		const float line     = std::max(1.0f, Renderer::GetResolutionScale());
+
+		AddThemedRectFilled(drawList, ImRect(min, max), GetColorU32(ImGuiCol_FrameBg), rounding);
+
+		// The picture, else what's happening to it
+		const ImU32  faint  = GetColorU32(ImGuiCol_TextDisabled);
+		const ImVec2 centre = picture.GetCenter();
+		const float  mark   = std::min(a_desc.side, pictureH) * 0.3f;
+		if (a_tex) {
+			const ImU32 tint = GetColorU32(ImVec4(1.0f, 1.0f, 1.0f, std::clamp(a_desc.alpha, 0.0f, 1.0f)));
+			AddThemedImage(drawList, a_tex, picture, ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), tint, rounding, withName ? ImDrawFlags_RoundCornersTop : ImDrawFlags_RoundCornersAll);
+		} else if (a_desc.state == FUCK::ImageState::kLoading) {
+			const float radius = mark * 0.4f;
+			const float start  = static_cast<float>(GetTime()) * 6.0f;
+			drawList->PathArcTo(centre, radius, start, start + IM_PI * 1.5f, 24);
+			drawList->PathStroke(faint, ImDrawFlags_None, line * 2.0f);
+		} else if (a_desc.state == FUCK::ImageState::kFailed) {
+			const float h = mark * 0.5f;
+			drawList->AddLine(ImVec2(centre.x - h, centre.y - h), ImVec2(centre.x + h, centre.y + h), faint, line * 2.0f);
+			drawList->AddLine(ImVec2(centre.x - h, centre.y + h), ImVec2(centre.x + h, centre.y - h), faint, line * 2.0f);
+		} else if (a_desc.glyph && a_desc.glyph[0] != '\0') {
+			const float  size = mark;
+			const ImVec2 gsz  = GetFont()->CalcTextSizeA(size, FLT_MAX, 0.0f, a_desc.glyph);
+			drawList->AddText(GetFont(), size, ImVec2(centre.x - gsz.x * 0.5f, centre.y - gsz.y * 0.5f), faint, a_desc.glyph);
+		}
+
+		// The star, hit-tested by hand as it sits on the card's own item
+		if (a_desc.showStar) {
+			const float  size = GetFontSize();
+			const float  pad  = std::max(2.0f, a_desc.side * 0.04f);
+			const ImVec2 sMin(picture.Min.x + pad, picture.Min.y + pad);
+			const ImRect star(sMin, ImVec2(sMin.x + size, sMin.y + size));
+
+			const bool starHovered = a_out.hovered && star.Contains(GetMousePos());
+			a_out.starHovered      = starHovered;
+			a_out.favouriteAsked   = (starHovered && a_out.clicked) || ((a_out.hovered || focus) && IsKeyPressed(ImGuiKey_GamepadFaceUp, false));
+			if (starHovered)
+				a_out.clicked = false;
+			if (a_out.favouriteAsked)
+				PlayAudio(Audio::kFocus);
+
+			if (a_desc.favourite || a_out.hovered || focus) {
+				const ImU32  col = starHovered ? IM_COL32(255, 255, 100, 255) : (a_desc.favourite ? IM_COL32(255, 215, 0, 255) : faint);
+				const ImVec2 ssz = GetFont()->CalcTextSizeA(size, FLT_MAX, 0.0f, ICON_FA_STAR);
+				AddRingedText(drawList, size, ImVec2(sMin.x + (size - ssz.x) * 0.5f, sMin.y), col, ICON_FA_STAR);
+			}
+		}
+
+		if (withName) {
+			const float size  = GetFontSize() * CardNameScale(a_desc.side);
+			const float avail = a_desc.side - GetStyle().FramePadding.x * 2.0f;
+			PushFont(nullptr, size);
+			bool              cut   = false;
+			const std::string label = FitTextToWidth(a_desc.name, nullptr, avail, &cut);
+			const ImVec2      tsz   = CalcTextSize(label.c_str());
+			PopFont();
+			a_out.nameCut = cut;
+
+			const ImU32 col = a_desc.nameColor.w > 0.0f                         ? GetColorU32(a_desc.nameColor) :
+			                  (a_out.hovered || focus || a_desc.selected) ? GetUserStyleColorU32(USER_STYLE::kTextHovered) :
+			                                                                GetColorU32(ImGuiCol_Text);
+			drawList->AddText(GetFont(), size, ImVec2(min.x + std::max(0.0f, (a_desc.side - tsz.x) * 0.5f), picture.Max.y + (max.y - picture.Max.y - tsz.y) * 0.5f), col, label.c_str());
+		}
+
+		// Every card faintly edged, as its name band is close to the window's colour. The picked one edged as the lit tab is
+		ImVec4 border = GetStyleColorVec4(ImGuiCol_Border);
+		border.w *= 0.45f;
+		AddThemedRect(drawList, ImRect(min, max), GetColorU32(border), rounding, line);
+		if (a_desc.selected || a_out.hovered || focus)
+			AddThemedRect(drawList, ImRect(min, max), GetUserStyleColorU32(a_desc.selected ? USER_STYLE::kTabBorderActive : USER_STYLE::kTextHovered), rounding, line * 2.0f);
+
+		if (a_out.clicked)
+			PlayAudio(Audio::kFocus);
+		return a_out.clicked;
+	}
+
 	bool SelectableStyled(const char* label, bool selected, int flags, const ImVec2& size)
 	{
 		// A label wider than its row is cut short with "...", as clipped text reads as broken

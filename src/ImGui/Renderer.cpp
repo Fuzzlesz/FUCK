@@ -2,11 +2,13 @@
 
 #include "Camera/Manager.h"
 
+#include "Graphics.h"
 #include "IconsFonts.h"
 #include "Renderer.h"
 #include "Styles.h"
 
 #include "System\Freeze.h"
+#include "System\ModelRender.h"
 #include "System\Physics.h"
 #include "System\Input.h"
 
@@ -112,6 +114,14 @@ namespace ImGui::Renderer
 
 		Styles::GetSingleton()->OnStyleRefresh();
 		IconFont::Manager::GetSingleton()->ProcessPendingReload();
+
+		// Before the UI is drawn onto the frame, so captures leave it out
+		if (const auto renderer = RE::BSGraphics::Renderer::GetSingleton()) {
+			const auto device  = reinterpret_cast<ID3D11Device*>(renderer->GetRuntimeData().forwarder);
+			const auto context = reinterpret_cast<ID3D11DeviceContext*>(renderer->GetRuntimeData().context);
+			Capture::OnFrame(device, context);
+			::ModelRender::OnFrame(device, context);
+		}
 
 		const auto manager = FUCKMan::GetSingleton();
 

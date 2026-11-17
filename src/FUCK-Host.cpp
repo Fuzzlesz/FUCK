@@ -5,6 +5,7 @@
 
 #include "ImGui/Graphics.h"
 #include "ImGui/IconsFonts.h"
+#include "System/ModelRender.h"
 #include "ImGui/Overlays.h"
 #include "ImGui/Renderer.h"
 #include "ImGui/Styles.h"
@@ -1208,6 +1209,74 @@ namespace FUCK::Host
 	static bool BeginTabBarWithTrailing_Impl(const char* s, float w, int f) { return ImGui::BeginTabBarWithTrailing(s, w, f); }
 
 	static void SetGamepadNavBlockedBy_Impl(const char* pluginName, bool blocked) { MANAGER(Input)->SetGamepadNavBlockedBy(pluginName, blocked); }
+
+	static bool Card_Impl(const FUCK::CardDesc* desc, FUCK::CardResult* out)
+	{
+		if (!desc || desc->size == 0)
+			return false;
+
+		// Read only as much as the caller's version of the struct holds, so newer options keep their defaults
+		FUCK::CardDesc options{};
+		std::memcpy(&options, desc, std::min<std::size_t>(desc->size, sizeof(options)));
+		options.size = sizeof(options);
+
+		// An image still loading or failed shows as such, unless the caller said otherwise
+		auto* srv = GetSRV(options.image);
+		if (!srv && options.image && options.state == FUCK::ImageState::kNone)
+			options.state = static_cast<FUCK::ImageState>(GetImageState_Impl(options.image));
+
+		FUCK::CardResult result;
+		const bool       clicked = ImGui::Card(options, reinterpret_cast<ImTextureID>(srv), result);
+		if (out)
+			*out = result;
+		return clicked;
+	}
+	static float GetCardHeight_Impl(float side, float aspect, bool withName) { return ImGui::GetCardHeight(side, aspect, withName); }
+
+	static bool RenderModel_Impl(const FUCK::ModelRenderRequest* request)
+	{
+		if (!request || request->size == 0)
+			return false;
+
+		FUCK::ModelRenderRequest options{};
+		std::memcpy(&options, request, std::min<std::size_t>(request->size, sizeof(options)));
+		if (!options.model || !options.path || !*options.path || options.pixels == 0 || options.pixels > 4096)
+			return false;
+
+		ModelRender::Request queued{ RE::NiPointer<RE::NiAVObject>(options.model), SKSE::stl::utf8_to_utf16(options.path).value_or(L""), options.path, options.pixels,
+			options.yaw, options.pitch, std::max(options.margin, 0.5f), options.transparent, options.userdata, options.callback };
+		for (std::uint32_t i = 0; options.faceTint && i < options.faceTintCount; ++i) {
+			const auto& layer = options.faceTint[i];
+			if (layer.mask && *layer.mask)
+				queued.faceTint.push_back({ layer.mask, { layer.colour[0], layer.colour[1], layer.colour[2], layer.colour[3] } });
+		}
+		ModelRender::Queue(std::move(queued));
+		return true;
+	}
+
+	static bool DrawMeshes_Impl(const FUCK::MeshDrawRequest* request)
+	{
+		if (!request || request->size == 0)
+			return false;
+
+		FUCK::MeshDrawRequest options{};
+		std::memcpy(&options, request, std::min<std::size_t>(request->size, sizeof(options)));
+		return ModelRender::DrawMeshes(options);
+	}
+
+	static bool CaptureFrame_Impl(const FUCK::CaptureRequest* request)
+	{
+		if (!request || request->size == 0)
+			return false;
+
+		FUCK::CaptureRequest options{};
+		std::memcpy(&options, request, std::min<std::size_t>(request->size, sizeof(options)));
+		if (!options.path || !*options.path)
+			return false;
+
+		ImGui::Capture::Queue({ options.min, options.max, options.outSize, SKSE::stl::utf8_to_utf16(options.path).value_or(L""), options.path, options.userdata, options.callback });
+		return true;
+	}
 	static void SetActorFrozenEx_Impl(const char* pluginName, RE::Actor* actor, bool frozen, bool holdPhysics) { MANAGER(Freeze)->SetFrozen(pluginName, actor, frozen, holdPhysics); }
 	static void MoveCameraEx_Impl(const CameraMoveEx* move, InputDevice device, float mult)
 	{
@@ -1588,7 +1657,12 @@ namespace FUCK::Host
 			.GetThemeColor          = GetThemeColor_Impl,
 			.ButtonEx               = ButtonEx_Impl,
 			.BeginTabBarWithTrailing = BeginTabBarWithTrailing_Impl,
-			.SetGamepadNavBlockedBy = SetGamepadNavBlockedBy_Impl
+			.SetGamepadNavBlockedBy = SetGamepadNavBlockedBy_Impl,
+			.Card                   = Card_Impl,
+			.GetCardHeight          = GetCardHeight_Impl,
+			.CaptureFrame           = CaptureFrame_Impl,
+			.RenderModel            = RenderModel_Impl,
+			.DrawMeshes             = DrawMeshes_Impl
 		};
 		return &api;
 	}

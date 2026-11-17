@@ -76,4 +76,24 @@ namespace ImGui
 		// Drops a load that hasn't started. One already loading finishes and is freed with its last owner
 		void Cancel(const Texture* a_texture);
 	}
+
+	// Saves parts of a frame to .png files, for FUCK::CaptureFrame()
+	namespace Capture
+	{
+		struct Request
+		{
+			ImVec2       min{};
+			ImVec2       max{};
+			ImVec2       outSize{};
+			std::wstring path;
+			std::string  pathUtf8;  // handed back to the callback
+			void*        userdata = nullptr;
+			void (*callback)(const char*, bool, void*) = nullptr;
+		};
+
+		void Queue(Request a_request);
+
+		// Takes what's queued from the render target being drawn to, before FUCK's UI is. Written out on a background thread
+		void OnFrame(ID3D11Device* a_device, ID3D11DeviceContext* a_context);
+	}
 }
