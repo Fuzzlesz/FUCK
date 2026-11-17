@@ -51,18 +51,18 @@ namespace GameFonts
 			Config      config;
 			std::string text(data.begin(), data.end());
 
-			static const std::regex library(R"re(^\s*fontlib\s+"([^"]+)")re", std::regex::icase);
-			static const std::regex map(R"re(^\s*map\s+"([^"]+)"\s*=\s*"([^"]+)"\s*(\w*))re", std::regex::icase);
+			static const boost::regex library(R"re(^\s*fontlib\s+"([^"]+)")re", boost::regex::icase);
+			static const boost::regex map(R"re(^\s*map\s+"([^"]+)"\s*=\s*"([^"]+)"\s*(\w*))re", boost::regex::icase);
 
 			std::istringstream lines(text);
 			for (std::string line; std::getline(lines, line);) {
-				std::smatch match;
-				if (std::regex_search(line, match, library)) {
-					config.libraries.push_back(match[1]);
-				} else if (std::regex_search(line, match, map)) {
+				boost::smatch match;
+				if (boost::regex_search(line, match, library)) {
+					config.libraries.push_back(match[1].str());
+				} else if (boost::regex_search(line, match, map)) {
 					for (std::size_t i = 0; i < FACE_NAMES.size(); ++i) {
 						if (match[1] == FACE_NAMES[i])
-							config.faces[i] = Mapping{ match[2], _stricmp(match[3].str().c_str(), "Bold") == 0 };
+							config.faces[i] = Mapping{ match[2].str(), _stricmp(match[3].str().c_str(), "Bold") == 0 };
 					}
 				}
 			}
