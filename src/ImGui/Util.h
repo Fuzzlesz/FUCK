@@ -15,6 +15,9 @@ namespace ImGui
 	void        TextColoredWrapped(const ImVec4& col, std::string_view text);
 	void        TextWrappedEx(const char* text);
 	void        DrawFormattedText(const char* text);
+
+	// a_text up to a_end, cut to the longest whole-character run that fits a_maxW with "..." after it. a_cut says whether it was cut
+	std::string FitTextToWidth(const char* a_text, const char* a_end, float a_maxW, bool* a_cut = nullptr);
 	void        Header(const char* label);
 
 	void Spinner(const char* label, float radius, float thickness, const ImVec4& color);

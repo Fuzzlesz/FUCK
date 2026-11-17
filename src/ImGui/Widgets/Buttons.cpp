@@ -878,7 +878,23 @@ namespace ImGui
 
 	bool SelectableStyled(const char* label, bool selected, int flags, const ImVec2& size)
 	{
-		bool pressed = Selectable(label, selected, flags, size);
+		// A label wider than its row is cut short with "...", as clipped text reads as broken
+		const char* shownEnd = FindRenderedTextEnd(label);
+		const float avail    = GetContentRegionAvail().x;
+		const float rowW     = size.x > 0.0f ? size.x : avail + std::min(size.x, 0.0f);
+
+		bool pressed = false;
+		if (rowW > 0.0f && CalcTextSize(label, shownEnd).x > rowW) {
+			// "###" keeps the ID off the shown text, so the row stays the same item as it's cut. A label's own "###" ID
+			// hashes the same either way
+			const char* ownId  = std::strstr(label, "###");
+			std::string fitted = FitTextToWidth(label, shownEnd, rowW);
+			fitted += "###";
+			fitted += ownId ? ownId + 3 : label;
+			pressed = Selectable(fitted.c_str(), selected, flags, size);
+		} else {
+			pressed = Selectable(label, selected, flags, size);
+		}
 		if (pressed)
 			PlayAudio(Audio::kFocus);
 		return pressed;

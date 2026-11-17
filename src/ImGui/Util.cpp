@@ -215,6 +215,45 @@ namespace ImGui
 		}
 	}
 
+	std::string FitTextToWidth(const char* a_text, const char* a_end, float a_maxW, bool* a_cut)
+	{
+		if (!a_end)
+			a_end = a_text + std::strlen(a_text);
+		if (a_cut)
+			*a_cut = false;
+		if (CalcTextSize(a_text, a_end).x <= a_maxW)
+			return std::string(a_text, a_end);
+		if (a_cut)
+			*a_cut = true;
+
+		static constexpr const char* kEllipsis = "...";
+		const float                  avail     = a_maxW - CalcTextSize(kEllipsis).x;
+
+		// The longest run of whole characters that fits, found by halving
+		std::vector<const char*> bounds;
+		for (const char* p = a_text; p < a_end;) {
+			bounds.push_back(p);
+			unsigned int c = 0;
+			p += std::max(1, ImTextCharFromUtf8(&c, p, a_end));
+		}
+		bounds.push_back(a_end);
+
+		std::size_t lo = 0;
+		std::size_t hi = bounds.size() - 1;
+		while (lo < hi) {
+			const std::size_t mid = (lo + hi + 1) / 2;
+			if (CalcTextSize(a_text, bounds[mid]).x <= avail)
+				lo = mid;
+			else
+				hi = mid - 1;
+		}
+
+		std::string fitted(a_text, bounds[lo]);
+		while (!fitted.empty() && fitted.back() == ' ')
+			fitted.pop_back();
+		return fitted + kEllipsis;
+	}
+
 	void TextWrappedEx(const char* text)
 	{
 		float scale = GetDynamicWidgetScale();

@@ -799,45 +799,10 @@ void FUCKMan::DrawSidebar(const SidebarMetrics& a_metrics, float a_height)
 
 		// Draws a name in the current font, cut short with "..." when it's wider than a_maxW. Returns whether it was cut
 		auto DrawFittedLabel = [&](ImDrawList* a_drawList, const ImVec2& a_pos, float a_maxW, const char* a_label) -> bool {
-			ImFont*     font     = ImGui::GetFont();
-			const float fontSize = ImGui::GetFontSize();
-			const ImU32 col      = ImGui::GetColorU32(ImGuiCol_Text);
-			const char* end      = a_label + std::strlen(a_label);
-
-			if (ImGui::CalcTextSize(a_label, end).x <= a_maxW) {
-				a_drawList->AddText(font, fontSize, a_pos, col, a_label, end);
-				return false;
-			}
-
-			static constexpr const char* kEllipsis = "...";
-			const float                  avail     = a_maxW - ImGui::CalcTextSize(kEllipsis).x;
-
-			// The longest run of whole characters that fits, found by halving
-			std::vector<const char*> bounds;
-			for (const char* p = a_label; p < end;) {
-				bounds.push_back(p);
-				unsigned int c = 0;
-				p += std::max(1, ImTextCharFromUtf8(&c, p, end));
-			}
-			bounds.push_back(end);
-
-			std::size_t lo = 0;
-			std::size_t hi = bounds.size() - 1;
-			while (lo < hi) {
-				const std::size_t mid = (lo + hi + 1) / 2;
-				if (ImGui::CalcTextSize(a_label, bounds[mid]).x <= avail)
-					lo = mid;
-				else
-					hi = mid - 1;
-			}
-
-			std::string fitted(a_label, bounds[lo]);
-			while (!fitted.empty() && fitted.back() == ' ')
-				fitted.pop_back();
-			fitted += kEllipsis;
-
-			a_drawList->AddText(font, fontSize, a_pos, col, fitted.c_str());
-			return true;
+			bool              cut    = false;
+			const std::string fitted = ImGui::FitTextToWidth(a_label, nullptr, a_maxW, &cut);
+			a_drawList->AddText(ImGui::GetFont(), ImGui::GetFontSize(), a_pos, ImGui::GetColorU32(ImGuiCol_Text), fitted.c_str());
+			return cut;
 		};
 
 		auto RenderSidebarItem = [&](FUCK::ITool* tool, const char* label, float extraIndent = 0.0f) {
