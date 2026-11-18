@@ -623,7 +623,7 @@ namespace Camera
 	// kFollowPose: a framed body that stands up from a kneel, or sits, is framed again, easing over so the camera doesn't jump
 	void Core::FollowFramedPose(float a_interval)
 	{
-		if (!_isFramed || !_hasFraming)
+		if (!_isFramed || !_hasFraming || _framingHeld)
 			return;
 
 		// Only once a changed pose has held still for a moment, so an animation (an equip, a draw) is framed where it ends, not part way
@@ -965,6 +965,15 @@ namespace Camera
 		} else {
 			UpdateFraming(_host.GetPivot().value_or(_originalTranslate), true);
 		}
+	}
+
+	void Core::HoldFraming(bool a_held)
+	{
+		if (a_held == _framingHeld)
+			return;
+		_framingHeld = a_held;
+		if (!a_held)
+			Reframe(false);
 	}
 
 	void Core::Pause()

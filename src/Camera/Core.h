@@ -107,6 +107,9 @@ namespace Camera
 		// Eases away the orbit, pan, zoom, tilt, roll and FOV, which would otherwise carry a newly framed part off where framing places it
 		void ClearMovesForFraming();
 
+		// Framing kept where it is, not following the part or pose as they change, then framed again easing over once let go
+		void HoldFraming(bool a_held);
+
 		// The FOV the session opens at, and the reset gesture goes back to, rather than the player's
 		void  SetStartFov(float a_fov);
 		float GetStartFov() const { return _startFovOffset != 0.0f ? _baseFov + _startFovOffset : 0.0f; }
@@ -240,6 +243,7 @@ namespace Camera
 		float                  _framingBlend      = 0.0f;  // 0 = base view, 1 = body
 		float                  _framingDistance   = 0.0f;
 		bool                   _isFramed          = false;
+		bool                   _framingHeld       = false;  // HoldFraming()
 		bool                   _hasFraming        = false;
 		FUCK::CameraScreenRect _framingRect;
 		float                  _framingMargin     = 1.0f;

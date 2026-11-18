@@ -911,6 +911,12 @@ namespace Camera
 		session.core.Reframe(session.flags & FUCK::CameraSessionFlags::kInstantMoves);
 	}
 
+	void Manager::SetFramingHeld(FUCK::ICameraClient* a_client, bool a_held)
+	{
+		if (IsActive(a_client))
+			_current->core.HoldFraming(a_held);
+	}
+
 	// How far down a fresh base (kFreshBase) looks at the body, about what the game's camera does when the player looks level
 	constexpr float FRESH_PITCH = 6.0f * Maths::DEG2RAD;
 
