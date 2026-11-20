@@ -224,8 +224,6 @@ namespace Camera
 		if (_framingSettleFrames > 0) {
 			--_framingSettleFrames;
 			_hasFraming = false;
-			if (_framingHeld || _logFrames > 0)
-				logger::info("Camera log: settle frame, measured afresh");
 		}
 
 		UpdateFramingBlend(a_interval);
@@ -650,8 +648,6 @@ namespace Camera
 			_poseStillFor      = still ? _poseStillFor + a_interval : 0.0f;
 			const float hold = height < _framingHeight ? FRAMING_POSE_HOLD_SMALLER : FRAMING_POSE_HOLD;
 			if (_poseStillFor >= hold && std::abs(height - _framingHeight) > _framingHeight * FRAMING_POSE_CHANGE) {
-				if (_logFrames > 0)
-					logger::info("Camera log: following the pose, height {:.1f} from {:.1f}", height, _framingHeight);
 				UpdateFraming(_host.GetPivot().value_or(_originalTranslate), true);
 			}
 		}
@@ -666,8 +662,6 @@ namespace Camera
 			if (std::hypot(offset.x, offset.y) < FRAMING_PART_AXIS)
 				moved.x = moved.y = 0.0f;
 			if (moved.Length() > FRAMING_PART_MOVE) {
-				if (_logFrames > 0)
-					logger::info("Camera log: following the part, moved {:.1f}", moved.Length());
 				UpdateFraming(_host.GetPivot().value_or(_originalTranslate), true);
 			}
 		}
@@ -776,26 +770,6 @@ namespace Camera
 		a_outTranslate           = orbitedTranslate + finalOffset;
 		a_outRotate              = orbitedRotate * pitchMat * rollMat;
 		_cameraDistance          = hostPivot ? a_outTranslate.GetDistance(pivot) : 0.0f;
-
-		// Temporary: each move of the camera while framing's held and a while after, and what it came from
-		if (_framingHeld || _logFrames > 0) {
-			if (!_framingHeld)
-				--_logFrames;
-			const auto  forward = ForwardAxis(a_outRotate);
-			const float moved   = a_outTranslate.GetDistance(_logTranslate);
-			const float turned  = forward.GetDistance(_logForward) * 57.3f;
-			if (moved > 0.05f || turned > 0.05f) {
-				const auto anchor = _host.GetAnchor().value_or(_originalTranslate);
-				const auto baseFw = ForwardAxis(_originalRotate);
-				logger::info("Camera log: base forward ({:.3f}, {:.3f}, {:.3f}) progress {:.2f}", baseFw.x, baseFw.y, baseFw.z, _framingProgress);
-				logger::info("Camera log: moved {:.2f} turned {:.2f} held {} framing {} blend {:.2f} anchor ({:.1f}, {:.1f}, {:.1f}) delta ({:.1f}, {:.1f}, {:.1f}) to ({:.1f}, {:.1f}, {:.1f}) base ({:.1f}, {:.1f}, {:.1f}) offset ({:.1f}, {:.1f}, {:.1f}) orbit {:.3f} pitch {:.3f}",
-					moved, turned, _framingHeld, _hasFraming, _framingBlend, anchor.x, anchor.y, anchor.z, _framingCamDelta.x, _framingCamDelta.y, _framingCamDelta.z,
-					_framingCamDeltaTo.x, _framingCamDeltaTo.y, _framingCamDeltaTo.z, _originalTranslate.x, _originalTranslate.y, _originalTranslate.z,
-					_camOffset.x, _camOffset.y, _camOffset.z, _camRotZ, _camRotX);
-			}
-			_logTranslate = a_outTranslate;
-			_logForward   = forward;
-		}
 		return true;
 	}
 
@@ -1021,8 +995,6 @@ namespace Camera
 	{
 		if (!_isFramed)
 			return;
-		if (_framingHeld || _logFrames > 0)
-			logger::info("Camera log: reframed{}", a_instant ? " at once" : "");
 
 		// Measured afresh next update, which lands at once, or measured now and eased over
 		if (a_instant) {
@@ -1046,19 +1018,11 @@ namespace Camera
 			_heldRotateEase = 0.0f;
 	}
 
-	void Core::StartLog(const char* a_why)
-	{
-		logger::info("Camera log: {}", a_why);
-		_logFrames = 180;
-	}
-
 	void Core::HoldFraming(bool a_held)
 	{
 		if (a_held == _framingHeld)
 			return;
 		_framingHeld = a_held;
-		logger::info("Camera log: framing {}", a_held ? "held" : "let go");
-		_logFrames = 180;
 		// A view that's kept already holds its turn, so it's neither taken afresh nor eased back here
 		if (a_held) {
 			if (!_keepView)

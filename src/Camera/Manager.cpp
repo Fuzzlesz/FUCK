@@ -884,7 +884,6 @@ namespace Camera
 
 		auto&             session = *_current;
 		const std::string part    = a_node ? a_node : "";
-		session.core.StartLog(part.empty() ? "part framing off" : "part framing on");
 		// A new part is framed from the view and facing the session began with: the subject turned back and every camera move eased
 		// away, as framing measures from those and a turned body or moved camera carries the part out of where it's placed
 		// Unless the view's kept, as then nothing should move

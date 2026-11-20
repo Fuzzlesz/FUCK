@@ -1178,10 +1178,12 @@ namespace FUCK::Host
 	{
 		return !from || !to || Obstructions::IsLineClear(around, *from, *to, std::span(ignore, ignore ? count : 0));
 	}
+
 	static void UpdateObstructions_Impl(const char* pluginName, RE::Actor* subject, RE::Actor* alsoFramed, float interval, bool upperBody)
 	{
 		Obstructions::Update(Obstructions::OwnerOf(pluginName), interval, subject, alsoFramed, upperBody);
 	}
+
 	static void ClearObstructions_Impl(const char* pluginName) { Obstructions::Restore(Obstructions::OwnerOf(pluginName)); }
 	static bool SetCameraSubject_Impl(ICameraClient* client, RE::Actor* subject, RE::Actor* alsoFramed) { return MANAGER(Camera)->SetSubject(client, subject, alsoFramed); }
 	static bool IsCameraSubject_Impl(RE::Actor* actor) { return MANAGER(Camera)->IsSubject(actor); }
@@ -1189,13 +1191,32 @@ namespace FUCK::Host
 	static void SetAutoVanityBlockedBy_Impl(const char* pluginName, bool blocked) { FUCKMan::GetSingleton()->SetVanityBlockedBy(pluginName, blocked); }
 	static void SetHardPauseBy_Impl(const char* pluginName, bool paused) { FUCKMan::GetSingleton()->SetHardPauseBy(pluginName, paused); }
 	static void SetSoftPauseBy_Impl(const char* pluginName, bool paused) { FUCKMan::GetSingleton()->SetSoftPauseBy(pluginName, paused); }
+
+	static void MoveCameraEx_Impl(const CameraMoveEx* move, InputDevice device, float mult)
+	{
+		if (!move)
+			return;
+
+		// Only what the caller's struct holds, so an older or newer one reads safely
+		CameraMoveEx copy;
+		std::memcpy(&copy, move, std::min<std::size_t>(move->size, sizeof(copy)));
+		copy.size = sizeof(copy);
+		MANAGER(Camera)->Move(copy, device, mult);
+	}
+
 	static void SavePluginSettings_Impl(const char* pluginName, const char* savedBy, bool keybinds, void* userdata, void (*callback)(CSimpleIniA&, void*))
 	{
 		SavePluginFile(pluginName, savedBy, keybinds, userdata, callback);
 	}
+
 	static void AddSettingsListener_Impl(void* userdata, void (*callback)(const char*, const char*, bool, void*)) { FUCKMan::GetSingleton()->AddSettingsListener(userdata, callback); }
 	static void RemoveSettingsListener_Impl(void* userdata) { FUCKMan::GetSingleton()->RemoveSettingsListener(userdata); }
+	static void SetActorFrozenEx_Impl(const char* pluginName, RE::Actor* actor, bool frozen, bool holdPhysics) { MANAGER(Freeze)->SetFrozen(pluginName, actor, frozen, holdPhysics); }
 	static bool FaceCameraSubject_Impl(ICameraClient* client, bool afresh) { return MANAGER(Camera)->FaceSubject(client, afresh); }
+
+	// ==================================================
+	// Version 9
+	// ==================================================
 	static void SetCameraPartFraming_Impl(ICameraClient* client, const char* node, float size) { MANAGER(Camera)->SetPartFraming(client, node, size); }
 	static void SetCameraUpperBody_Impl(ICameraClient* client, bool upperBody) { MANAGER(Camera)->SetUpperBody(client, upperBody); }
 	static void SetCameraFramingHeld_Impl(ICameraClient* client, bool held) { MANAGER(Camera)->SetFramingHeld(client, held); }
@@ -1208,8 +1229,10 @@ namespace FUCK::Host
 		if (auto* srv = GetSRV(tex))
 			ImGui::AddThemedImage(ImGui::GetWindowDrawList(), reinterpret_cast<ImTextureID>(srv), ImRect(min, max), u0, u1, ImGui::ColorConvertFloat4ToU32(col), r, corners);
 	}
+
 	static void DrawThemedRectFilled_Impl(const ImVec2& min, const ImVec2& max, const ImVec4& col, float r, int corners) { ImGui::AddThemedRectFilled(ImGui::GetWindowDrawList(), ImRect(min, max), ImGui::ColorConvertFloat4ToU32(col), r, corners); }
 	static void DrawThemedRect_Impl(const ImVec2& min, const ImVec2& max, const ImVec4& col, float r, float t) { ImGui::AddThemedRect(ImGui::GetWindowDrawList(), ImRect(min, max), ImGui::ColorConvertFloat4ToU32(col), r, t); }
+
 	static void GetThemeColor_Impl(int which, float* r, float* g, float* b, float* a)
 	{
 		// By name, so the public order doesn't follow the theme's own
@@ -1232,13 +1255,16 @@ namespace FUCK::Host
 		*b = col.z;
 		*a = col.w;
 	}
+
 	static bool ButtonEx_Impl(const char* label, bool selected, float minTextWidth)
 	{
 		ImGui::AddRowSpacing();
 		return ImGui::OutlineButton(label, nullptr, selected, minTextWidth);
 	}
-	static bool BeginTabBarWithTrailing_Impl(const char* s, float w, int f) { return ImGui::BeginTabBarWithTrailing(s, w, f); }
 
+	static bool BeginTabBarWithTrailing_Impl(const char* s, float w, int f) { return ImGui::BeginTabBarWithTrailing(s, w, f); }
+	static bool BeginComboStyled_Impl(const char* id, const char* preview, float width, int itemCount) { return ImGui::BeginComboStyled(id, preview, width, itemCount); }
+	static void EndCombo_Impl() { ImGui::EndCombo(); }
 	static void SetGamepadNavBlockedBy_Impl(const char* pluginName, bool blocked) { MANAGER(Input)->SetGamepadNavBlockedBy(pluginName, blocked); }
 
 	static bool Card_Impl(const FUCK::CardDesc* desc, FUCK::CardResult* out)
@@ -1262,7 +1288,22 @@ namespace FUCK::Host
 			*out = result;
 		return clicked;
 	}
+
 	static float GetCardHeight_Impl(float side, float aspect, bool withName) { return ImGui::GetCardHeight(side, aspect, withName); }
+
+	static bool CaptureFrame_Impl(const FUCK::CaptureRequest* request)
+	{
+		if (!request || request->size == 0)
+			return false;
+
+		FUCK::CaptureRequest options{};
+		std::memcpy(&options, request, std::min<std::size_t>(request->size, sizeof(options)));
+		if (!options.path || !*options.path)
+			return false;
+
+		ImGui::Capture::Queue({ options.min, options.max, options.outSize, SKSE::stl::utf8_to_utf16(options.path).value_or(L""), options.path, options.userdata, options.callback });
+		return true;
+	}
 
 	static bool RenderModel_Impl(const FUCK::ModelRenderRequest* request)
 	{
@@ -1296,40 +1337,11 @@ namespace FUCK::Host
 		return ModelRender::DrawMeshes(options);
 	}
 
-	static bool BeginComboStyled_Impl(const char* id, const char* preview, float width, int itemCount) { return ImGui::BeginComboStyled(id, preview, width, itemCount); }
-	static void EndCombo_Impl() { ImGui::EndCombo(); }
-
 	static bool ReadMeshMaterial_Impl(void* shaderProperty, void* alphaProperty, FUCK::MeshDraw* out)
 	{
 		if (!shaderProperty || !out)
 			return false;
 		return ModelRender::ReadMeshMaterial(static_cast<RE::NiProperty*>(shaderProperty), static_cast<RE::NiProperty*>(alphaProperty), *out);
-	}
-
-	static bool CaptureFrame_Impl(const FUCK::CaptureRequest* request)
-	{
-		if (!request || request->size == 0)
-			return false;
-
-		FUCK::CaptureRequest options{};
-		std::memcpy(&options, request, std::min<std::size_t>(request->size, sizeof(options)));
-		if (!options.path || !*options.path)
-			return false;
-
-		ImGui::Capture::Queue({ options.min, options.max, options.outSize, SKSE::stl::utf8_to_utf16(options.path).value_or(L""), options.path, options.userdata, options.callback });
-		return true;
-	}
-	static void SetActorFrozenEx_Impl(const char* pluginName, RE::Actor* actor, bool frozen, bool holdPhysics) { MANAGER(Freeze)->SetFrozen(pluginName, actor, frozen, holdPhysics); }
-	static void MoveCameraEx_Impl(const CameraMoveEx* move, InputDevice device, float mult)
-	{
-		if (!move)
-			return;
-
-		// Only what the caller's struct holds, so an older or newer one reads safely
-		CameraMoveEx copy;
-		std::memcpy(&copy, move, std::min<std::size_t>(move->size, sizeof(copy)));
-		copy.size = sizeof(copy);
-		MANAGER(Camera)->Move(copy, device, mult);
 	}
 
 	// ==================================================
@@ -1689,27 +1701,27 @@ namespace FUCK::Host
 			.FaceCameraSubject      = FaceCameraSubject_Impl,
 
 			// Version 9
-			.SetCameraPartFraming   = SetCameraPartFraming_Impl,
-			.SetCameraUpperBody     = SetCameraUpperBody_Impl,
-			.SetCameraFramingHeld   = SetCameraFramingHeld_Impl,
+			.SetCameraPartFraming      = SetCameraPartFraming_Impl,
+			.SetCameraUpperBody        = SetCameraUpperBody_Impl,
+			.SetCameraFramingHeld      = SetCameraFramingHeld_Impl,
 			.SetCameraFramingKeepsView = SetCameraFramingKeepsView_Impl,
-			.AddCameraListener      = AddCameraListener_Impl,
-			.RemoveCameraListener   = RemoveCameraListener_Impl,
-			.AddThemedImage         = AddThemedImage_Impl,
-			.DrawThemedRectFilled   = DrawThemedRectFilled_Impl,
-			.DrawThemedRect         = DrawThemedRect_Impl,
-			.GetThemeColor          = GetThemeColor_Impl,
-			.ButtonEx               = ButtonEx_Impl,
-			.BeginTabBarWithTrailing = BeginTabBarWithTrailing_Impl,
-			.SetGamepadNavBlockedBy = SetGamepadNavBlockedBy_Impl,
-			.Card                   = Card_Impl,
-			.GetCardHeight          = GetCardHeight_Impl,
-			.CaptureFrame           = CaptureFrame_Impl,
-			.RenderModel            = RenderModel_Impl,
-			.DrawMeshes             = DrawMeshes_Impl,
-			.ReadMeshMaterial       = ReadMeshMaterial_Impl,
-			.BeginComboStyled       = BeginComboStyled_Impl,
-			.EndCombo               = EndCombo_Impl
+			.AddCameraListener         = AddCameraListener_Impl,
+			.RemoveCameraListener      = RemoveCameraListener_Impl,
+			.AddThemedImage            = AddThemedImage_Impl,
+			.DrawThemedRectFilled      = DrawThemedRectFilled_Impl,
+			.DrawThemedRect            = DrawThemedRect_Impl,
+			.GetThemeColor             = GetThemeColor_Impl,
+			.ButtonEx                  = ButtonEx_Impl,
+			.BeginTabBarWithTrailing   = BeginTabBarWithTrailing_Impl,
+			.BeginComboStyled          = BeginComboStyled_Impl,
+			.EndCombo                  = EndCombo_Impl,
+			.SetGamepadNavBlockedBy    = SetGamepadNavBlockedBy_Impl,
+			.Card                      = Card_Impl,
+			.GetCardHeight             = GetCardHeight_Impl,
+			.CaptureFrame              = CaptureFrame_Impl,
+			.RenderModel               = RenderModel_Impl,
+			.DrawMeshes                = DrawMeshes_Impl,
+			.ReadMeshMaterial          = ReadMeshMaterial_Impl
 		};
 		return &api;
 	}

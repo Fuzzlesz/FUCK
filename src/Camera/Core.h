@@ -110,7 +110,6 @@ namespace Camera
 		// Framing kept where it is, not following the part or pose as they change, nor the base camera's turn, then framed again easing
 		// over once let go
 		void HoldFraming(bool a_held);
-		void StartLog(const char* a_why);  // temporary: logs the camera's moves for a few seconds
 		void KeepView(bool a_keep);
 		bool KeepsView() const { return _keepView; }
 
@@ -257,9 +256,6 @@ namespace Camera
 		bool                   _hasHeldRotate     = false;
 		float                  _heldRotateEase    = 1.0f;   // 0 to 1 through the turn back once let go
 		RE::NiMatrix3          _heldRotate;
-		int                    _logFrames = 0;  // temporary, for the log
-		RE::NiPoint3           _logTranslate;
-		RE::NiPoint3           _logForward;
 		bool                   _hasFraming        = false;
 		FUCK::CameraScreenRect _framingRect;
 		float                  _framingMargin     = 1.0f;
