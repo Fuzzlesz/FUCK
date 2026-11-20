@@ -762,6 +762,16 @@ namespace Camera
 		_camRoll           = std::lerp(_easeFromRoll, _targetCamRoll, s);
 	}
 
+	// What a framed body orbits and zooms on: the head, as unframed, or the middle of a framed part or of two framed together
+	RE::NiPoint3 Core::FramedPivot(const BodyPoints& a_body)
+	{
+		if (!_host.FramesPart() && !a_body.pair) {
+			if (const auto head = _host.GetFocusPoint(FocusPoint::kHead))
+				return *head;
+		}
+		return a_body.centre;
+	}
+
 	void Core::UpdateFraming(const RE::NiPoint3& a_pivot, bool a_ease)
 	{
 		// Bail if anything isn't ready yet. It's tried again next frame
@@ -801,7 +811,7 @@ namespace Camera
 			}
 			_framingCamDeltaTo = _framingCamDeltaTo + _framingAdjust;
 		}
-		_framingPivotDeltaTo = body.centre - anchor;
+		_framingPivotDeltaTo = FramedPivot(body) - anchor;
 		_framingFacing       = _host.GetFacing();
 		_framingDistanceTo   = std::max(framing->depth - pivotDepth, 0.0f);
 		_framingHeight       = body.top.GetDistance(body.bottom);  // along the body, so it holds for one lying down too

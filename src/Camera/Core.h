@@ -217,6 +217,7 @@ namespace Camera
 		void UpdateFramingBlend(float a_interval);
 		void UpdatePartEase(float a_interval);
 		void FollowTurnedPart();
+		RE::NiPoint3 FramedPivot(const Maths::BodyPoints& a_body);
 		void ClearInputState();
 		void HandleControls(const FUCK::CameraControlState& a_state, const Config& a_settings, float a_interval);
 		void HandleMouse(const FrameInput& a_in, const Config& a_settings, float a_interval);
