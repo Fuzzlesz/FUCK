@@ -119,6 +119,7 @@ namespace Camera
 		void SetPartFraming(FUCK::ICameraClient* a_client, const char* a_node, float a_size);
 		void SetUpperBody(FUCK::ICameraClient* a_client, bool a_upperBody);
 		void SetFramingHeld(FUCK::ICameraClient* a_client, bool a_held);
+		void SetFramingKeepsView(FUCK::ICameraClient* a_client, bool a_keep);
 		bool IsSubject(const RE::Actor* a_actor) const;  // the active session's subject, or framed beside them
 		bool FaceSubject(FUCK::ICameraClient* a_client, bool a_afresh);
 		bool IsBodyFramed(const FUCK::ICameraClient* a_client) const;

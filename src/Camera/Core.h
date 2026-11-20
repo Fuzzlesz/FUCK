@@ -107,8 +107,12 @@ namespace Camera
 		// Eases away the orbit, pan, zoom, tilt, roll and FOV, which would otherwise carry a newly framed part off where framing places it
 		void ClearMovesForFraming();
 
-		// Framing kept where it is, not following the part or pose as they change, then framed again easing over once let go
+		// Framing kept where it is, not following the part or pose as they change, nor the base camera's turn, then framed again easing
+		// over once let go
 		void HoldFraming(bool a_held);
+		void StartLog(const char* a_why);  // temporary: logs the camera's moves for a few seconds
+		void KeepView(bool a_keep);
+		bool KeepsView() const { return _keepView; }
 
 		// The FOV the session opens at, and the reset gesture goes back to, rather than the player's
 		void  SetStartFov(float a_fov);
@@ -206,6 +210,7 @@ namespace Camera
 		void        UpdateZoomAcceleration(float a_interval);
 		void        UpdateFraming(const RE::NiPoint3& a_pivot, bool a_ease = false);
 		void        FollowFramedPose(float a_interval);
+		RE::NiMatrix3 HeldRotate(const RE::NiMatrix3& a_baseRotate);
 
 		Host& _host;
 
@@ -244,6 +249,17 @@ namespace Camera
 		float                  _framingDistance   = 0.0f;
 		bool                   _isFramed          = false;
 		bool                   _framingHeld       = false;  // HoldFraming()
+		bool                   _keepView          = false;  // KeepView(): framing starts from the view as it is, and the base's turn is held
+		bool                   _keepViewPending   = false;  // KeepView(): the next framing measures how far it is from the view
+		RE::NiPoint3           _framingAdjust;              // KeepView(): added to every framing, so the first lands where the camera is
+		RE::NiPoint3           _lastOutTranslate;           // where Compose() last put the camera, before the orbit and moves
+		bool                   _hasLastOut        = false;
+		bool                   _hasHeldRotate     = false;
+		float                  _heldRotateEase    = 1.0f;   // 0 to 1 through the turn back once let go
+		RE::NiMatrix3          _heldRotate;
+		int                    _logFrames = 0;  // temporary, for the log
+		RE::NiPoint3           _logTranslate;
+		RE::NiPoint3           _logForward;
 		bool                   _hasFraming        = false;
 		FUCK::CameraScreenRect _framingRect;
 		float                  _framingMargin     = 1.0f;

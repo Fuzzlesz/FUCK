@@ -884,9 +884,11 @@ namespace Camera
 
 		auto&             session = *_current;
 		const std::string part    = a_node ? a_node : "";
+		session.core.StartLog(part.empty() ? "part framing off" : "part framing on");
 		// A new part is framed from the view and facing the session began with: the subject turned back and every camera move eased
 		// away, as framing measures from those and a turned body or moved camera carries the part out of where it's placed
-		if (part != session.framedPart) {
+		// Unless the view's kept, as then nothing should move
+		if (part != session.framedPart && !session.core.KeepsView()) {
 			session.core.ClearMovesForFraming();
 			ResetSubject();
 		}
@@ -915,6 +917,12 @@ namespace Camera
 	{
 		if (IsActive(a_client))
 			_current->core.HoldFraming(a_held);
+	}
+
+	void Manager::SetFramingKeepsView(FUCK::ICameraClient* a_client, bool a_keep)
+	{
+		if (IsActive(a_client))
+			_current->core.KeepView(a_keep);
 	}
 
 	// How far down a fresh base (kFreshBase) looks at the body, about what the game's camera does when the player looks level

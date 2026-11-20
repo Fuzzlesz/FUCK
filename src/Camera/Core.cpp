@@ -15,6 +15,7 @@ namespace
 	constexpr float PITCH_CLAMP_LIMIT         =  1.55f;
 	constexpr float SCROLL_SMOOTH_SPEED       = 15.0f;
 	constexpr float FRAMING_DURATION          =  0.8f;
+	constexpr float FRAMING_HELD_TURN_TIME    =  0.4f;   // seconds the view takes to turn back to the base's once held framing's let go
 	constexpr int   FRAMING_SETTLE_FRAMES     =  5;      // how many updates the framing is recalculated for after it's applied instantly, while the subject's pose settles
 	constexpr float FRAMING_POSE_CHANGE       =  0.05f;  // kFollowPose: how much the body's height must change, as a share, before the framing follows, so idle sway can't
 	constexpr float FRAMING_FOLLOW_SPEED      =  4.0f;
@@ -22,7 +23,9 @@ namespace
 	constexpr float FRAMING_POSE_HOLD         =  0.4f;   // kFollowPose: seconds a changed pose must hold still before it's framed, so an animation (an equip, a draw) plays out first
 	constexpr float FRAMING_POSE_HOLD_SMALLER =  1.5f;   // and before it's framed smaller, as swapping a drawn weapon puts it away for a moment before drawing the next
 	constexpr float FRAMING_PAIR_CHANGE       =  0.1f;   // how much the space between two framed together must change, as a share, before the framing follows
-	constexpr float FRAMING_PART_MOVE         =  5.0f;   // how far a framed part may move round where the subject stands, in units, before the framing follows
+	constexpr float FRAMING_KEEP_VIEW_MAX     = 60.0f;   // KeepView(): how far the view may be from the framing and still be kept, so a far one (the whole body, say) is framed afresh
+	constexpr float FRAMING_PART_MOVE         =  5.0f;
+	constexpr float FRAMING_PART_AXIS         = 15.0f;   // how far a framed part may sit from the line the subject turns about and still count as on it   // how far a framed part may move round where the subject stands, in units, before the framing follows
 	constexpr float ACCEL_RATE                =  1.5f;   // per second held, for pan and zoom acceleration
 	constexpr float ACCEL_MAX                 = 15.0f;
 	constexpr float CINEMATIC_SPEED           = 10.0f;
@@ -221,10 +224,14 @@ namespace Camera
 		if (_framingSettleFrames > 0) {
 			--_framingSettleFrames;
 			_hasFraming = false;
+			if (_framingHeld || _logFrames > 0)
+				logger::info("Camera log: settle frame, measured afresh");
 		}
 
 		UpdateFramingBlend(a_interval);
 		FollowFramedPose(a_interval);
+		if (!_framingHeld && !_keepView && _heldRotateEase < 1.0f)
+			_heldRotateEase = std::min(1.0f, _heldRotateEase + a_interval / FRAMING_HELD_TURN_TIME);
 
 		if (!a_state.inputAllowed) {
 			ClearInputState();
@@ -295,10 +302,11 @@ namespace Camera
 		if (HandleResetGesture(in, a_interval))
 			return;
 
-		// With cameraMoves off only turning works, so scrolls are dropped now rather than zooming once it's back on
-		if (!a_state.cameraMoves) {
+		// Scrolls outside camera mode are dropped, so a list scrolled without Ctrl doesn't zoom once Ctrl is pressed, and likewise with
+		// cameraMoves off
+		if (!a_state.cameraMoves || !in.isCameraMode) {
 			_pendingScroll = 0.0f;
-		} else if (in.isCameraMode) {
+		} else {
 			in.scale = GetSpeedScales();
 
 			HandleMouse   (in, a_settings, a_interval);
@@ -623,12 +631,18 @@ namespace Camera
 	// kFollowPose: a framed body that stands up from a kneel, or sits, is framed again, easing over so the camera doesn't jump
 	void Core::FollowFramedPose(float a_interval)
 	{
-		if (!_isFramed || !_hasFraming || _framingHeld)
+		if (!_isFramed || !_hasFraming)
 			return;
 
-		// Only once a changed pose has held still for a moment, so an animation (an equip, a draw) is framed where it ends, not part way
+		// Held, nothing's measured afresh, but an ease already begun carries on to where it was going rather than stopping part way
 		BodyPoints body;
-		const bool measured = _host.GetBodyPoints(body);
+		bool       measured = !_framingHeld && _host.GetBodyPoints(body);
+
+		// A kept view follows only when told to (Reframe), so turning the subject or an idle doesn't drag it round
+		if (_keepView)
+			measured = false;
+
+		// Only once a changed pose has held still for a moment, so an animation (an equip, a draw) is framed where it ends, not part way
 		if (_followPose && measured) {
 			const float height = body.top.GetDistance(body.bottom);
 			const bool  still  = std::abs(height - _poseHeight) <= _poseHeight * FRAMING_POSE_STILL;
@@ -636,16 +650,26 @@ namespace Camera
 			_poseStillFor      = still ? _poseStillFor + a_interval : 0.0f;
 			const float hold = height < _framingHeight ? FRAMING_POSE_HOLD_SMALLER : FRAMING_POSE_HOLD;
 			if (_poseStillFor >= hold && std::abs(height - _framingHeight) > _framingHeight * FRAMING_POSE_CHANGE) {
+				if (_logFrames > 0)
+					logger::info("Camera log: following the pose, height {:.1f} from {:.1f}", height, _framingHeight);
 				UpdateFraming(_host.GetPivot().value_or(_originalTranslate), true);
 			}
 		}
 
 		// A framed part is followed as it moves round the subject, e.g. a hand as they're turned, as its framing is kept relative to where
 		// they stand rather than to the part
+		// A part near the line they turn about, a head or a foot, only up and down, so turning them doesn't drag the camera round with it
 		if (measured && _host.FramesPart()) {
-			const auto anchor = _host.GetAnchor().value_or(_originalTranslate);
-			if ((body.centre - anchor - _framingPivotDeltaTo).Length() > FRAMING_PART_MOVE)
+			const auto   anchor = _host.GetAnchor().value_or(_originalTranslate);
+			const auto   offset = body.centre - anchor;
+			RE::NiPoint3 moved  = offset - _framingPivotDeltaTo;
+			if (std::hypot(offset.x, offset.y) < FRAMING_PART_AXIS)
+				moved.x = moved.y = 0.0f;
+			if (moved.Length() > FRAMING_PART_MOVE) {
+				if (_logFrames > 0)
+					logger::info("Camera log: following the part, moved {:.1f}", moved.Length());
 				UpdateFraming(_host.GetPivot().value_or(_originalTranslate), true);
+			}
 		}
 
 		// Two framed together are framed again as they draw closer or apart, e.g. one following the other
@@ -688,6 +712,16 @@ namespace Camera
 		// Relative to where the subject stands, so neither idle animation nor the game's camera easing on can drag it around
 		const auto anchor    = _host.GetAnchor().value_or(_originalTranslate);
 		_framingCamDeltaTo   = framing->camPos - anchor;
+		// Kept at the view it began from, so turning framing on doesn't move the camera, and later framings move it only as the part moves
+		if (_keepView) {
+			if (_keepViewPending && _hasLastOut) {
+				_framingAdjust   = _lastOutTranslate - (anchor + _framingCamDeltaTo);
+				_keepViewPending = false;
+				if (_framingAdjust.Length() > FRAMING_KEEP_VIEW_MAX)
+					_framingAdjust = {};
+			}
+			_framingCamDeltaTo = _framingCamDeltaTo + _framingAdjust;
+		}
 		_framingPivotDeltaTo = body.centre - anchor;
 		_framingDistanceTo   = std::max(framing->depth - pivotDepth, 0.0f);
 		_framingHeight       = body.top.GetDistance(body.bottom);  // along the body, so it holds for one lying down too
@@ -706,11 +740,14 @@ namespace Camera
 		a_outTranslate = a_baseTranslate;
 		a_outRotate    = a_baseRotate;
 
-		if (!HasAnyCamera())
+		if (!HasAnyCamera()) {
+			_lastOutTranslate = a_baseTranslate;
+			_hasLastOut       = true;
 			return false;
+		}
 
 		_originalTranslate = a_baseTranslate;
-		_originalRotate    = a_baseRotate;
+		_originalRotate    = HeldRotate(a_baseRotate);
 
 		const auto   hostPivot = _host.GetPivot();
 		RE::NiPoint3 pivot     = hostPivot.value_or(_originalTranslate);
@@ -726,6 +763,9 @@ namespace Camera
 			pivot                  = pivot + (bodyPivot - pivot) * _framingBlend;
 			camBase                = _originalTranslate + (anchor + _framingCamDelta - _originalTranslate) * _framingBlend;
 		}
+		// Before the orbit and the moves, which stay as they are, so a kept view starts from here
+		_lastOutTranslate = camBase;
+		_hasLastOut       = true;
 
 		RE::NiPoint3  orbitedTranslate = OrbitAroundZ(pivot, camBase, _camRotZ);
 		RE::NiMatrix3 orbitedRotate    = MakeYaw(_camRotZ) * _originalRotate;
@@ -736,6 +776,26 @@ namespace Camera
 		a_outTranslate           = orbitedTranslate + finalOffset;
 		a_outRotate              = orbitedRotate * pitchMat * rollMat;
 		_cameraDistance          = hostPivot ? a_outTranslate.GetDistance(pivot) : 0.0f;
+
+		// Temporary: each move of the camera while framing's held and a while after, and what it came from
+		if (_framingHeld || _logFrames > 0) {
+			if (!_framingHeld)
+				--_logFrames;
+			const auto  forward = ForwardAxis(a_outRotate);
+			const float moved   = a_outTranslate.GetDistance(_logTranslate);
+			const float turned  = forward.GetDistance(_logForward) * 57.3f;
+			if (moved > 0.05f || turned > 0.05f) {
+				const auto anchor = _host.GetAnchor().value_or(_originalTranslate);
+				const auto baseFw = ForwardAxis(_originalRotate);
+				logger::info("Camera log: base forward ({:.3f}, {:.3f}, {:.3f}) progress {:.2f}", baseFw.x, baseFw.y, baseFw.z, _framingProgress);
+				logger::info("Camera log: moved {:.2f} turned {:.2f} held {} framing {} blend {:.2f} anchor ({:.1f}, {:.1f}, {:.1f}) delta ({:.1f}, {:.1f}, {:.1f}) to ({:.1f}, {:.1f}, {:.1f}) base ({:.1f}, {:.1f}, {:.1f}) offset ({:.1f}, {:.1f}, {:.1f}) orbit {:.3f} pitch {:.3f}",
+					moved, turned, _framingHeld, _hasFraming, _framingBlend, anchor.x, anchor.y, anchor.z, _framingCamDelta.x, _framingCamDelta.y, _framingCamDelta.z,
+					_framingCamDeltaTo.x, _framingCamDeltaTo.y, _framingCamDeltaTo.z, _originalTranslate.x, _originalTranslate.y, _originalTranslate.z,
+					_camOffset.x, _camOffset.y, _camOffset.z, _camRotZ, _camRotX);
+			}
+			_logTranslate = a_outTranslate;
+			_logForward   = forward;
+		}
 		return true;
 	}
 
@@ -769,9 +829,12 @@ namespace Camera
 			_unframedOffset  = _targetCamOffset;
 			_unframedRotZ    = _targetCamRotZ;
 			_unframedRotX    = _targetCamRotX;
-			_targetCamOffset = { 0.0f, 0.0f, 0.0f };
-			_targetCamRotZ   = 0.0f;
-			_targetCamRotX   = 0.0f;
+			// A kept view keeps its moves too, as easing them away would move the camera
+			if (!_keepView) {
+				_targetCamOffset = { 0.0f, 0.0f, 0.0f };
+				_targetCamRotZ   = 0.0f;
+				_targetCamRotX   = 0.0f;
+			}
 		} else {
 			_targetCamOffset = _unframedOffset;
 			_targetCamRotZ   = _unframedRotZ;
@@ -958,6 +1021,8 @@ namespace Camera
 	{
 		if (!_isFramed)
 			return;
+		if (_framingHeld || _logFrames > 0)
+			logger::info("Camera log: reframed{}", a_instant ? " at once" : "");
 
 		// Measured afresh next update, which lands at once, or measured now and eased over
 		if (a_instant) {
@@ -967,13 +1032,80 @@ namespace Camera
 		}
 	}
 
+	void Core::KeepView(bool a_keep)
+	{
+		if (a_keep == _keepView)
+			return;
+		_keepView        = a_keep;
+		_keepViewPending = a_keep;
+		_framingAdjust   = {};
+		// The base camera's turn is held while the view's kept, and eased back to after
+		if (a_keep && !_framingHeld)
+			_hasHeldRotate = false;
+		else if (!a_keep && !_framingHeld)
+			_heldRotateEase = 0.0f;
+	}
+
+	void Core::StartLog(const char* a_why)
+	{
+		logger::info("Camera log: {}", a_why);
+		_logFrames = 180;
+	}
+
 	void Core::HoldFraming(bool a_held)
 	{
 		if (a_held == _framingHeld)
 			return;
 		_framingHeld = a_held;
-		if (!a_held)
+		logger::info("Camera log: framing {}", a_held ? "held" : "let go");
+		_logFrames = 180;
+		// A view that's kept already holds its turn, so it's neither taken afresh nor eased back here
+		if (a_held) {
+			if (!_keepView)
+				_hasHeldRotate = false;
+		} else {
+			if (!_keepView)
+				_heldRotateEase = 0.0f;
 			Reframe(false);
+		}
+	}
+
+	// The base camera's turn kept while framing's held or the view's kept, as a base that re-aims for a rebuilt subject (RaceMenu's) would turn the view
+	// out from under it. Eased back to the base's own once let go, as the framing eases onto the subject
+	RE::NiMatrix3 Core::HeldRotate(const RE::NiMatrix3& a_baseRotate)
+	{
+		if (_framingHeld || _keepView) {
+			if (!_hasHeldRotate) {
+				_heldRotate    = a_baseRotate;
+				_hasHeldRotate = true;
+			}
+			return _heldRotate;
+		}
+		if (!_hasHeldRotate || _heldRotateEase >= 1.0f) {
+			_hasHeldRotate = false;
+			return a_baseRotate;
+		}
+
+		// Its axes blended and squared up again, which holds for the small turns a re-aim makes
+		const float  t       = _heldRotateEase * _heldRotateEase * (3.0f - 2.0f * _heldRotateEase);
+		const auto   blend   = [&](const RE::NiPoint3& a_from, const RE::NiPoint3& a_to) { return a_from + (a_to - a_from) * t; };
+		RE::NiPoint3 forward = blend(ForwardAxis(_heldRotate), ForwardAxis(a_baseRotate));
+		RE::NiPoint3 right   = blend(RightAxis(_heldRotate), RightAxis(a_baseRotate));
+		forward.Unitize();
+		right = right - forward * right.Dot(forward);
+		right.Unitize();
+		const RE::NiPoint3 up = right.Cross(forward);
+
+		RE::NiMatrix3 out;
+		const auto    set = [&](int a_column, const RE::NiPoint3& a_axis) {
+			out.entry[0][a_column] = a_axis.x;
+			out.entry[1][a_column] = a_axis.y;
+			out.entry[2][a_column] = a_axis.z;
+		};
+		set(0, right);
+		set(1, forward);
+		set(2, up);
+		return out;
 	}
 
 	void Core::Pause()
