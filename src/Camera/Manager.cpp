@@ -784,6 +784,15 @@ namespace Camera
 		return std::ranges::any_of(cameraKeys, [](std::uint32_t a_key) { return FUCK::IsInputDown(a_key); });
 	}
 
+	bool Manager::IsDragging() const
+	{
+		namespace Keys = Input::Keymap;
+
+		// Checked against the buttons too, as the core only updates once a frame
+		return _current && _inputAllowed && _current->core.IsDragging() &&
+		       (FUCK::IsInputDown(Keys::kMouse_Middle) || FUCK::IsInputDown(Keys::kMouse_Right));
+	}
+
 	void Manager::Move(const FUCK::CameraMoveEx& a_move, FUCK::InputDevice a_device, float a_mult)
 	{
 		if (!_isUpdating || !_current)
@@ -1059,12 +1068,16 @@ namespace Camera
 		// A session waiting on its camera to come back, e.g. for the free camera to be left
 		TryResume();
 
+		// Taken every frame, so movement from before a session doesn't arrive all at once
+		const ImVec2 drag = Input::Manager::GetSingleton()->TakeRawMouseDelta();
+
 		if (!_current)
 			return;
 
 		if (float wheel = FUCK::GetMouseWheel(); wheel != 0.0f) {
 			_current->core.AccumulateScroll(wheel);
 		}
+		_current->core.AccumulateDrag(drag);
 	}
 
 	// ==================================================

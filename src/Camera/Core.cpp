@@ -298,6 +298,11 @@ namespace Camera
 	void Core::HandleControls(const FUCK::CameraControlState& a_state, const Config& a_settings, float a_interval)
 	{
 		FrameInput in = GatherInput(a_state);
+		in.mouseDelta = std::exchange(_pendingDrag, ImVec2(0.0f, 0.0f));
+
+		// The drags below, which the input hook holds the cursor still for
+		const bool mouseFree = !in.isUIHovered && !in.isPopupOpen && !in.mouseLocked;
+		_isDragging          = mouseFree && ((in.mmbDown && a_state.cameraMoves && in.isCameraMode) || (in.rmbDown && _turningEnabled));
 
 		if (HandleResetGesture(in, a_interval))
 			return;
@@ -323,7 +328,7 @@ namespace Camera
 	bool Core::HandleResetGesture(const FrameInput& a_in, float a_interval)
 	{
 		// A double middle click, not over UI the client or FUCK owns, and not after the mouse has wandered off
-		const ImVec2 delta = FUCK::GetMouseDelta();
+		const ImVec2 delta = a_in.mouseDelta;
 		_sinceMiddleClick += a_interval;
 		_middleClickTravel += std::abs(delta.x) + std::abs(delta.y);
 
@@ -401,6 +406,8 @@ namespace Camera
 		_zoomAcceleration   = 1.0f;
 		_isZooming          = false;
 		_wasMouseSubjRot    = false;
+		_pendingDrag        = ImVec2(0.0f, 0.0f);
+		_isDragging         = false;
 
 		// Wait for X/Y to be released, so buttons pressed while locked don't turn the subject afterwards
 		_lockoutGPSubjRot = true;
@@ -429,7 +436,7 @@ namespace Camera
 		if (!a_in.mmbDown || a_in.isUIHovered || a_in.isPopupOpen || a_in.mouseLocked)
 			return;
 
-		ImVec2 mouseDelta = FUCK::GetMouseDelta();
+		ImVec2 mouseDelta = a_in.mouseDelta;
 		float  mult       = MOUSE_MOVE_MULT;
 
 		if (a_in.ctrlDown && a_in.shiftDown) {
@@ -548,7 +555,7 @@ namespace Camera
 
 		if (allowMouseRot) {
 			if (_wasMouseSubjRot) {  // Ignore the very first frame to prevent delta spikes
-				rotAmount = FUCK::GetMouseDelta().x * MOUSE_ROT_MULT;
+				rotAmount = a_in.mouseDelta.x * MOUSE_ROT_MULT;
 			}
 		} else if (allowGPRot) {
 			if (gpY)

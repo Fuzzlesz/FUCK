@@ -144,6 +144,8 @@ namespace Camera
 		void    SetTargetOffsets(const Offsets& a_offsets);
 
 		void AccumulateScroll(float a_delta) { _pendingScroll += a_delta; }
+		void AccumulateDrag(const ImVec2& a_delta) { _pendingDrag.x += a_delta.x; _pendingDrag.y += a_delta.y; }
+		bool IsDragging() const { return _isDragging; }
 
 		bool HasAnyCamera() const { return IsModified() || _framingBlend > 0.001f; }
 		bool IsModified() const;
@@ -187,6 +189,8 @@ namespace Camera
 			bool isUIHovered  = false;
 			bool isItemActive = false;
 			bool mouseLocked  = false;
+
+			ImVec2 mouseDelta{ 0.0f, 0.0f };  // the mouse's own movement this frame, which doesn't stop at the screen's edge
 
 			SpeedScales scale;
 		};
@@ -287,6 +291,9 @@ namespace Camera
 		float _pendingScroll    = 0.0f;
 		float _smoothScrollZoom = 0.0f;
 		float _smoothScrollFov  = 0.0f;
+
+		ImVec2 _pendingDrag{ 0.0f, 0.0f };
+		bool   _isDragging = false;
 
 		float _kbmAcceleration  = 1.0f;
 		bool  _lockoutGPSubjRot = false;

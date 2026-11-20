@@ -92,6 +92,9 @@ namespace Input
 		// The wheel turned in the input being processed, as it has no held state
 		bool IsWheelInBatch() const { return _wheelInBatch; }
 
+		// The mouse's own movement since last taken, in cursor pixels. Unlike the cursor it doesn't stop at the screen's edge
+		ImVec2 TakeRawMouseDelta();
+
 		const char* GetKeyName(std::uint32_t a_key) const;
 
 		// Gamepad navigation off while any plugin asks, e.g. while its window drives the pad itself, so the shoulders and face buttons
@@ -102,6 +105,7 @@ namespace Input
 		void UpdateInputDevice(RE::INPUT_DEVICE a_device);
 		void CacheInputState(const RE::InputEvent* const* a_events);
 		bool UpdateCursorScale(RE::GFxMovieView* a_movie);  // false while the cursor isn't there to measure
+		void AddRawMouseMove(const RE::MouseMoveEvent* a_event);
 
 		bool CheckModifiersStrict(const std::uint32_t* mods, size_t count, std::int32_t req1, std::int32_t req2, std::uint32_t primaryKey) const;
 
@@ -129,6 +133,7 @@ namespace Input
 		mutable std::shared_mutex _dataLock;
 		Map<std::uint32_t, float> _keyStateCache;
 		bool                      _wheelInBatch{ false };
+		ImVec2                    _rawMouseDelta{ 0.0f, 0.0f };
 
 		std::vector<Context> _contexts;
 	};
