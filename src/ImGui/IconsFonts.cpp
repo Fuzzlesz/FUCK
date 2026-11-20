@@ -212,12 +212,13 @@ namespace IconFont
 	void Manager::RebuildFontAtlas()
 	{
 		_loadedFonts = true;
-		auto& io    = ImGui::GetIO();
+		auto& io     = ImGui::GetIO();
 		io.Fonts->Clear();
 
-		// Set before any font is added, so the flags apply from the first build
+		// Set before any font is added, so the flags apply from the first build. Hinting flags are set per-font in LoadFontIconSet()
+		// because atlas flags are OR'd into every font
 		io.Fonts->SetFontLoader(ImGuiFreeType::GetFontLoader());
-		io.Fonts->FontLoaderFlags = ImGuiFreeTypeLoaderFlags_NoHinting;
+		io.Fonts->FontLoaderFlags = 0;
 
 		// Read before the fonts that are kept, as it adds and removes a font of its own. The game's fonts are then sized against it
 		const auto& reference = GetReferenceMetrics();
@@ -254,7 +255,7 @@ namespace IconFont
 		// Compared with vanilla's Futura Condensed, the built-in typeface, whose a to z runs 8.946 em
 		constexpr float BUILT_IN_WIDTH_PER_EM = 8.946f;
 		const auto&     medium                = GameFonts::Get(GameFonts::Face::kMedium);
-		_textWidthScale = _gameFont && medium.widthPerEm > 0.0f ? std::clamp(medium.widthPerEm / BUILT_IN_WIDTH_PER_EM, 1.0f, 1.5f) : 1.0f;
+		_textWidthScale                       = _gameFont && medium.widthPerEm > 0.0f ? std::clamp(medium.widthPerEm / BUILT_IN_WIDTH_PER_EM, 1.0f, 1.5f) : 1.0f;
 
 		io.FontDefault                 = _regularFont;
 		ImGui::GetStyle().FontSizeBase = _regularFont->LegacySize;
@@ -277,6 +278,13 @@ namespace IconFont
 		// The typeface never supplies the icons, even where it has glyphs of its own in their range
 		ImFontConfig main_cfg;
 		main_cfg.GlyphExcludeRanges = iconRanges;
+		if (a_face == GameFonts::Face::kBold) {
+			// Unhinted bold SWF outlines blur with NoHinting, so let FreeType's auto-hinter snap the stems
+			main_cfg.FontLoaderFlags = ImGuiFreeTypeLoaderFlags_ForceAutoHint;
+			main_cfg.PixelSnapH      = true;
+		} else {
+			main_cfg.FontLoaderFlags = ImGuiFreeTypeLoaderFlags_NoHinting;
+		}
 
 		// The game's own font, or the chosen typeface without it
 		const auto* game = _gameFont ? &GameFonts::Get(a_face) : nullptr;
@@ -298,6 +306,7 @@ namespace IconFont
 		icon_config.MergeMode   = true;
 		icon_config.PixelSnapH  = false;
 		icon_config.OversampleH = icon_config.OversampleV = 1;
+		icon_config.FontLoaderFlags                       = ImGuiFreeTypeLoaderFlags_NoHinting;
 
 		// Force all icons to be monospaced by locking their advance width
 		icon_config.GlyphMinAdvanceX = a_iconSize;
