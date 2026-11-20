@@ -749,6 +749,9 @@ void FUCKMan::Open()
 
 	_isOpen = true;
 
+	if (auto ui = RE::UI::GetSingleton())
+		_overConsole = ui->IsMenuOpen(RE::Console::MENU_NAME);
+
 	_isCollapsed = false;
 
 	_forceCursor = false;
@@ -853,6 +856,10 @@ EventResult FUCKMan::ProcessEvent(const RE::MenuOpenCloseEvent* a_event, RE::BST
 	DirectionRepeat::Sync();
 
 	DispatchMenuEvent(a_event->menuName.c_str(), a_event->opening);
+
+	// The console opened over the menu takes the input back, and one shut beneath it leaves nothing to sit over
+	if (a_event->menuName == RE::Console::MENU_NAME)
+		_overConsole = false;
 
 	if (a_event->opening) {
 		if (a_event->menuName == RE::MainMenu::MENU_NAME) {

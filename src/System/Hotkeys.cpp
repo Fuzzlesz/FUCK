@@ -50,9 +50,6 @@ namespace Hotkeys
 		}
 
 		if (auto ui = RE::UI::GetSingleton()) {
-			// Don't open if Console is open
-			if (ui->IsMenuOpen(RE::Console::MENU_NAME))
-				return false;
 			// Don't open during Load Screens
 			if (ui->IsMenuOpen(RE::LoadingMenu::MENU_NAME))
 				return false;

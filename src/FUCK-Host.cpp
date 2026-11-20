@@ -1133,14 +1133,13 @@ namespace FUCK::Host
 		}
 
 		const auto  manager = FUCKMan::GetSingleton();
-		const auto  ui      = RE::UI::GetSingleton();
 		const auto& io      = ImGui::GetIO();
 
 		auto state = kNone;
 		if (manager->IsOpen())
 			state |= kMenu;
-		// The console keeps the game's input even then, as FUCK's input hook lets it through
-		if (manager->IsInputBlocked() && !(ui && ui->IsMenuOpen(RE::Console::MENU_NAME)))
+		// The console keeps the game's input even then, as FUCK's input hook lets it through, unless the menu was opened over it
+		if (manager->IsInputBlocked() && !Input::Manager::ConsoleHasInput())
 			state |= kGameInput;
 		if (io.WantCaptureKeyboard)
 			state |= kKeyboard;

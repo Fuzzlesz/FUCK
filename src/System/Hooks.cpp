@@ -117,10 +117,9 @@ namespace Hooks
 			MANAGER(Input)->ProcessInputEvents(a_events);
 
 			auto* manager = FUCKMan::GetSingleton();
-			auto* ui      = RE::UI::GetSingleton();
 
-			// Do not interfere if console is open
-			const bool consoleOpen = ui && ui->IsMenuOpen(RE::Console::MENU_NAME);
+			// Do not interfere while the console has the input, rather than a FUCK menu opened over it
+			const bool consoleOpen = Input::Manager::ConsoleHasInput();
 
 			// Process menu input (may change the open/blocked state mid-frame)
 			const bool consumed = manager->ProcessAsyncInput(a_events);
@@ -145,32 +144,9 @@ namespace Hooks
 				}
 			}
 
-			// Temporarily unpause the game if a paused menu opens, to ensure our filtered events are processed and don't get "stuck"
-			std::uint32_t savedPauses = 0;
-			bool          savedFreeze = false;
-			auto*         main        = RE::Main::GetSingleton();
-
-			if (justBlocked) {
-				if (ui && ui->numPausesGame > 0) {
-					savedPauses       = ui->numPausesGame;
-					ui->numPausesGame = 0;
-				}
-				if (main && main->GetRuntimeData().freezeTime) {
-					savedFreeze                       = true;
-					main->GetRuntimeData().freezeTime = false;
-				}
-			}
-
-			// Dispatch the filtered/zeroed events
+			// Dispatch the filtered/zeroed events. Not unpaused for it: a paused game's menu has already released the player's keys, and
+			// unpausing here (on the input thread) let the player's controls run mid-menu, which the game never does
 			func(a_dispatcher, a_events);
-
-			// Restore the pauses immediately after dispatch
-			if (justBlocked) {
-				if (main && savedFreeze)
-					main->GetRuntimeData().freezeTime = true;
-				if (ui && savedPauses > 0)
-					ui->numPausesGame += savedPauses;
-			}
 		}
 		static inline REL::Relocation<decltype(thunk)> func;
 	};

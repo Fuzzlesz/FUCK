@@ -355,19 +355,55 @@ namespace Input
 		return ui && ui->IsMenuOpen(RE::Console::MENU_NAME);
 	}
 
+	bool Manager::ConsoleHasInput()
+	{
+		auto ui = RE::UI::GetSingleton();
+		return ui && ui->IsMenuOpen(RE::Console::MENU_NAME) && !FUCKMan::GetSingleton()->IsOverConsole();
+	}
+
+	namespace
+	{
+		// A key the console types nothing with and has no use for: the function keys, Scroll Lock and Pause
+		bool ConsoleIgnores(std::uint32_t a_key)
+		{
+			return (a_key >= 0x3B && a_key <= 0x44) || a_key == 0x57 || a_key == 0x58 || (a_key >= 0x64 && a_key <= 0x66) ||
+			       a_key == 0x46 || a_key == 0xC5;
+		}
+
+		struct TypingHold
+		{
+			bool keyboard{ false };
+			bool pad{ false };
+			[[nodiscard]] bool All() const { return keyboard && pad; }
+		};
+
+		// What typing holds back of a hotkey. The console's typing holds only a keyboard key it uses, so a hotkey on a function
+		// key or a pad button still works over it, while typing anywhere else holds the lot
+		TypingHold HoldFor(const FUCK::ManagedHotkey& h)
+		{
+			auto       ui      = RE::UI::GetSingleton();
+			const bool console = ui && ui->IsMenuOpen(RE::Console::MENU_NAME);
+			if (console)
+				return { !ConsoleIgnores(h.kKey), false };
+			const bool typing = Manager::IsTyping();
+			return { typing, typing };
+		}
+	}
+
 	bool Manager::IsManagedHotkeyDown(FUCK::ManagedHotkey& h)
 	{
-		if (h.isBinding || IsTyping())
+		const auto hold = HoldFor(h);
+		if (h.isBinding || hold.All())
 			return false;
 
 		bool isDown = false;
 
-		if (h.kKey != 0 && IsInputDown(h.kKey)) {
+		if (!hold.keyboard && h.kKey != 0 && IsInputDown(h.kKey)) {
 			if (CheckModifiersStrict(KB_MODS, std::size(KB_MODS), h.kMod1, h.kMod2, h.kKey))
 				isDown = true;
 		}
 
-		if (!isDown && h.gKey != 0 && IsInputDown(h.gKey)) {
+		if (!isDown && !hold.pad && h.gKey != 0 && IsInputDown(h.gKey)) {
 			if (CheckModifiersStrict(GP_MODS, std::size(GP_MODS), h.gMod1, h.gMod2, h.gKey))
 				isDown = true;
 		}
@@ -388,7 +424,8 @@ namespace Input
 			return false;
 
 		// Held through, so a key still down as the typing ends doesn't then fire
-		if (IsTyping()) {
+		const auto hold = HoldFor(h);
+		if (hold.All()) {
 			h.wasTriggered = true;
 			return false;
 		}
@@ -409,12 +446,12 @@ namespace Input
 
 		bool pressed = false;
 
-		if (h.kKey != 0 && IsInputPressed(a_event, h.kKey)) {
+		if (!hold.keyboard && h.kKey != 0 && IsInputPressed(a_event, h.kKey)) {
 			if (CheckModifiersStrict(KB_MODS, std::size(KB_MODS), h.kMod1, h.kMod2, h.kKey))
 				pressed = true;
 		}
 
-		if (!pressed && h.gKey != 0 && IsInputPressed(a_event, h.gKey)) {
+		if (!pressed && !hold.pad && h.gKey != 0 && IsInputPressed(a_event, h.gKey)) {
 			if (CheckModifiersStrict(GP_MODS, std::size(GP_MODS), h.gMod1, h.gMod2, h.gKey))
 				pressed = true;
 		}
@@ -736,8 +773,8 @@ namespace Input
 			CacheInputState(a_events);
 		}
 
-		// Prevent forwarding keys to ImGui if the console is open
-		if (auto ui = RE::UI::GetSingleton(); ui && ui->IsMenuOpen(RE::Console::MENU_NAME)) {
+		// Keys aren't forwarded to ImGui while the console has them, rather than a FUCK menu opened over it
+		if (ConsoleHasInput()) {
 			return;
 		}
 

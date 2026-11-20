@@ -76,6 +76,8 @@ namespace Input
 		bool        UpdateManagedHotkey(const RE::InputEvent* const* a_event, FUCK::ManagedHotkey& h);
 		bool        ProcessManagedHotkey(const RE::InputEvent* const* a_event, FUCK::ManagedHotkey& h);
 		static bool IsTyping();
+		// The console open and in charge of the input, rather than under a FUCK menu opened over it
+		static bool ConsoleHasInput();
 		bool        IsManagedHotkeyDown(FUCK::ManagedHotkey& h);
 
 		bool        IsInputDown(std::uint32_t a_unifiedKey) const;

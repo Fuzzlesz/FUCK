@@ -127,6 +127,8 @@ public:
 	bool IsIgnoringUserScale() const { return _isIgnoringUserScale; }
 	bool HasWindowWithFlag(FUCK::WindowFlags a_flag) const;
 	bool IsOpen() const { return _isOpen; }
+	// Opened with the console already up, so the menu has the input until it shuts or the console is opened again over it
+	bool IsOverConsole() const { return _isOpen && _overConsole; }
 	bool IsGameHUDHidden() const { return _isGameHUDHidden.load(); }  // the game's own HUD, see RefreshGameHUDState()
 
 	// --- HUD widgets (kHideWithHUD), for HUD managers. Safe from any thread ---
@@ -373,6 +375,7 @@ private:
 
 	FUCK::ITool* _activeTool      = nullptr;
 	bool         _isOpen          = false;
+	bool         _overConsole     = false;
 	bool         _workspaceLoaded = false;
 
 	Sidebar::ToolLayout _layout;
