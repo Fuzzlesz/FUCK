@@ -103,6 +103,9 @@ namespace Translation
 			std::getline(ls >> std::ws, value);
 
 			if (!key.empty() && !value.empty()) {
+				// A written \n is a line break, as the files keep each entry to one line
+				for (std::size_t at = value.find("\\n"); at != std::string::npos; at = value.find("\\n", at + 1))
+					value.replace(at, 2, "\n");
 				entries.emplace_back(std::move(key), std::move(value));
 			}
 		}

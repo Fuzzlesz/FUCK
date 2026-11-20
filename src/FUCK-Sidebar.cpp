@@ -859,12 +859,17 @@ void FUCKMan::DrawSidebar(const SidebarMetrics& a_metrics, float a_height)
 				float       starScale    = 0.85f;
 				float       starFontSize = m.sidebarFontSize * starScale;
 
+				// Centred on the glyph's own ink, as an icon sits on the middle of the capitals rather than of the line
 				ImGui::PushFont(regularFont, starFontSize);
-				ImVec2 starSize = ImGui::CalcTextSize(starIcon);
+				ImVec2             starSize = ImGui::CalcTextSize(starIcon);
+				unsigned int       starChar = 0;
+				ImTextCharFromUtf8(&starChar, starIcon, nullptr);
+				const ImFontGlyph* glyph    = ImGui::GetFontBaked()->FindGlyph(static_cast<ImWchar>(starChar));
+				const float        inkMid   = glyph && glyph->Visible ? (glyph->Y0 + glyph->Y1) * 0.5f : starFontSize * 0.5f;
 				ImGui::PopFont();
 
 				float starX = startScreenPos.x + rowW - starSize.x - (15.0f * m.uiScale);
-				float starY = startScreenPos.y + (m.sidebarItemH - starFontSize) * 0.5f - (1.0f * m.uiScale);
+				float starY = std::round(startScreenPos.y + m.sidebarItemH * 0.5f - inkMid);
 
 				// Hit-tested by hand, as the star sits on top of the row's own item
 				ImRect starBB(

@@ -457,20 +457,13 @@ namespace ImGui
 		}
 	}
 
-	// Parses \n into linebreaks and [Brackets] into yellow
+	// Draws [Brackets] in yellow. A translation's written \n is already a line break, as the loader turns it into one
 	void DrawFormattedText(const char* text)
 	{
 		if (!text)
 			return;
 
 		std::string s(text);
-
-		// Un-escape literal "\\n" from translation files into actual newlines
-		size_t pos = 0;
-		while ((pos = s.find("\\n", pos)) != std::string::npos) {
-			s.replace(pos, 2, "\n");
-			pos += 1;  // Advance past the newly inserted '\n'
-		}
 
 		// If there are no brackets, draw normally so native ImGui auto-wrap still functions optimally
 		if (s.find('[') == std::string::npos && s.find(']') == std::string::npos) {

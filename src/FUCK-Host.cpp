@@ -246,12 +246,21 @@ namespace FUCK::Host
 	static void SetCursorScreenPos_Impl(float x, float y) { ImGui::SetCursorScreenPos({ x, y }); }
 	static void AlignTextToFramePadding_Impl()
 	{
-		float scale                      = GetGlobalScale_Impl();
-		float padY                       = 7.0f * scale;
-		float oldPadY                    = ImGui::GetStyle().FramePadding.y;
-		ImGui::GetStyle().FramePadding.y = padY;
-		ImGui::AlignTextToFramePadding();
-		ImGui::GetStyle().FramePadding.y = oldPadY;
+		// Where a FUCK button beside it puts its label: its padding, scaled by the font, its box centred in the row, and the
+		// theme's nudge for labels. So text beside one sits level with its label and leaves the row the button's height
+		ImGuiWindow* window = ImGui::GetCurrentWindow();
+		if (window->SkipItems)
+			return;
+		const float  scale   = ImGui::GetDynamicWidgetScale();
+		const float  padY    = 7.0f * scale;
+		const float  fontH   = ImGui::GetFontSize();
+		const float  rowH    = std::max(ImGui::GetFrameHeight(), fontH + padY * 2.0f);
+		const float  boxTop  = std::floor((rowH - (fontH + padY * 2.0f)) * 0.5f);
+		const float  nudge   = std::round(ImGui::Styles::GetSingleton()->user.buttonTextOffset.y * scale);
+		window->DC.CurrLineSize.y         = std::max(window->DC.CurrLineSize.y, rowH);
+		// Kept inside the row, so a theme's nudge down can't make the line taller than the button
+		const float  base    = std::min(boxTop + padY + nudge, rowH - fontH);
+		window->DC.CurrLineTextBaseOffset = std::max(window->DC.CurrLineTextBaseOffset, base);
 	}
 	static void GetContentRegionAvail_Impl(float* x, float* y)
 	{

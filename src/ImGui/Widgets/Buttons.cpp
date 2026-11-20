@@ -442,6 +442,16 @@ namespace ImGui
 		// Switch to background channel for custom border
 		window->DrawList->ChannelsSetCurrent(0);
 
+		// Kept within the bar across, as ImGui clips its own tabs, so one scrolled off an end can't spill onto the frame or
+		// under what's drawn beside a trailing bar
+		const ImVec4 clip = window->DrawList->_CmdHeader.ClipRect;
+		ImVec2       clipMin(clip.x, clip.y), clipMax(clip.z, clip.w);
+		if (const ImGuiTabBar* bar = GImGui->CurrentTabBar) {
+			clipMin.x = std::max(clipMin.x, bar->BarRect.Min.x);
+			clipMax.x = std::min(clipMax.x, bar->BarRect.Max.x);
+		}
+		window->DrawList->PushClipRect(clipMin, ImVec2(std::max(clipMin.x, clipMax.x), clipMax.y), false);
+
 		ImVec2 min = GetItemRectMin();
 		ImVec2 max = GetItemRectMax();
 
@@ -519,6 +529,8 @@ namespace ImGui
 		RenderTextClipped(idealBb.Min + textOff, idealBb.Max + textOff, label, NULL, &textSize, { 0.5f, 0.5f });
 
 		PopStyleColor();
+
+		window->DrawList->PopClipRect();
 
 		// Merge channels back to normal
 		window->DrawList->ChannelsMerge();
