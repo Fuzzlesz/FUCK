@@ -625,6 +625,72 @@ namespace ImGui
 		return changed;
 	}
 
+	bool BeginComboStyled(const char* a_id, const char* a_preview, float a_width, int a_itemCount)
+	{
+		ImGuiWindow* window = GetCurrentWindow();
+		if (window->SkipItems)
+			return false;
+
+		const float currentFontScale = window->FontWindowScale;
+		const float scale            = GetDynamicWidgetScale();
+		const float borderSize       = GetUserStyleVar(USER_STYLE::kButtonBorderSize) * currentFontScale;
+		const float padX             = std::floor(std::max(GetStyle().FramePadding.x, borderSize + (8.0f * scale)));
+		const float padY             = 7.0f * scale;  // a button's, so it's the same height
+
+		PushStyleVar(ImGuiStyleVar_FramePadding, { padX, padY });
+		PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
+		PushStyleVar(ImGuiStyleVar_FrameRounding, GetFrameRounding());
+
+		const ImVec2 widgetPos = GetCursorScreenPos();
+		const float  width     = std::round(a_width > 0.0f ? a_width : CalcItemWidth());
+		const float  frameH    = std::round(GetFrameHeight());
+
+		// The dropdown's tallest, for a_itemCount rows as ComboStyled sizes its own, deeper with deep cut-away corners
+		const ImVec2 spacing   = GetStyle().ItemSpacing;
+		const float  corner    = InvertedCornerClearance(GetStyle().PopupRounding, padX - std::floor(spacing.x * 0.5f));
+		float        popupPadY = std::round(15.0f * Renderer::GetResolutionScale());
+		if (corner > 0.0f)
+			popupPadY = std::max(popupPadY, corner + std::ceil(spacing.y * 0.5f));
+		const int   rows   = std::clamp(a_itemCount, 1, 8);
+		const float listH  = std::round((GetFontSize() + spacing.y) * rows - spacing.y);
+		const float popupH = std::round(popupPadY * 2.0f + listH + GetStyle().PopupBorderSize * 2.0f);
+		// Fitted to its rows up to that height, as the caller's rows may be fewer than it said, or taller
+		SetNextWindowSizeConstraints({ width, 0.0f }, { FLT_MAX, popupH });
+
+		PushStyleColor(ImGuiCol_FrameBg, ImVec4(0, 0, 0, 0));
+		PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0, 0, 0, 0));
+		PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(0, 0, 0, 0));
+		PushStyleColor(ImGuiCol_Text, GetUserStyleColorVec4(USER_STYLE::kComboBoxText));
+		PushStyleColor(ImGuiCol_PopupBg, GetUserStyleColorVec4(USER_STYLE::kComboBoxTextBox));
+		PushStyleColor(ImGuiCol_NavCursor, ImVec4(0, 0, 0, 0));
+
+		ImDrawList* parentDrawList = GetWindowDrawList();
+		const ImRect box(widgetPos, widgetPos + ImVec2(width, frameH));
+		AddThemedRectFilled(parentDrawList, box, GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox), GetFrameRounding());
+		DrawComboPreview(parentDrawList, box, a_preview ? a_preview : "", padX, padY);
+
+		// The width for this item alone, as an open dropdown is the current window after BeginCombo, so nothing pushed on the
+		// parent can be popped here
+		SetNextItemWidth(width);
+		PushStyleVar(ImGuiStyleVar_WindowPadding, { padX, popupPadY });
+		const bool isOpen = BeginComboThemed(a_id, nullptr, ImGuiComboFlags_NoArrowButton);
+		PopStyleVar(4);
+		PopStyleColor(6);
+
+		bool opensUp = false;
+		if (isOpen) {
+			ImGuiWindow* popupWindow = GetCurrentWindow();
+			opensUp                  = popupWindow && popupWindow->Pos.y < widgetPos.y;
+		}
+		DrawDropdownIcon(parentDrawList, { std::floor(widgetPos.x + width - frameH), std::floor(widgetPos.y) }, { frameH, frameH }, isOpen, opensUp, IsItemHovered());
+		DrawWidgetBorder(parentDrawList, { std::floor(widgetPos.x), std::floor(widgetPos.y), std::floor(widgetPos.x + width), std::floor(widgetPos.y + frameH) },
+			isOpen || IsItemHovered() || IsWidgetFocused(GetID(a_id)), GetFrameRounding());
+
+		if (isOpen)
+			SetWindowFontScale(currentFontScale);
+		return isOpen;
+	}
+
 	bool InputTextStyled(const char* label, char* buf, size_t buf_size, int flags)
 	{
 		ImGuiWindow* window = GetCurrentWindow();

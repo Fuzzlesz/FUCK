@@ -133,6 +133,9 @@ namespace ImGui
 
 	// BeginCombo() whose dropdown's corners follow the theme. Pair with EndCombo() as usual
 	bool BeginComboThemed(const char* a_label, const char* a_preview, ImGuiComboFlags a_flags = ImGuiComboFlags_None);
+	// ComboStyled()'s box with no label, whose rows the caller draws, for a list Combo() can't hold: rows disabled or with
+	// tooltips of their own. Sized for a_itemCount rows. Pair a true return with EndCombo()
+	bool BeginComboStyled(const char* a_id, const char* a_preview, float a_width, int a_itemCount);
 
 	// How far inverted corners cut into the current window's edges, so things along them can move in clear. 0 otherwise
 	float GetWindowCornerInset();

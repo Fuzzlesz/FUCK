@@ -1274,6 +1274,9 @@ namespace FUCK::Host
 		return ModelRender::DrawMeshes(options);
 	}
 
+	static bool BeginComboStyled_Impl(const char* id, const char* preview, float width, int itemCount) { return ImGui::BeginComboStyled(id, preview, width, itemCount); }
+	static void EndCombo_Impl() { ImGui::EndCombo(); }
+
 	static bool CaptureFrame_Impl(const FUCK::CaptureRequest* request)
 	{
 		if (!request || request->size == 0)
@@ -1675,6 +1678,8 @@ namespace FUCK::Host
 			.CaptureFrame           = CaptureFrame_Impl,
 			.RenderModel            = RenderModel_Impl,
 			.DrawMeshes             = DrawMeshes_Impl
+			.BeginComboStyled       = BeginComboStyled_Impl,
+			.EndCombo               = EndCombo_Impl
 		};
 		return &api;
 	}
