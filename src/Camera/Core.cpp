@@ -27,6 +27,7 @@ namespace
 	constexpr float FRAMING_PART_MOVE         =  5.0f;
 	constexpr float FRAMING_PART_TURN         =  0.02f;  // radians the subject's turned since a part was framed before it's followed
 	constexpr float FRAMING_PART_AXIS         = 15.0f;   // how far a framed part may sit from the line the subject turns about and still count as on it   // how far a framed part may move round where the subject stands, in units, before the framing follows
+	constexpr float SIDE_VIEW_MIN_REACH       =  3.0f;   // how far off the subject's axis a framed part must be before the camera orbits to its side
 	constexpr float ACCEL_RATE                =  1.5f;   // per second held, for pan and zoom acceleration
 	constexpr float ACCEL_MAX                 = 15.0f;
 	constexpr float CINEMATIC_SPEED           = 10.0f;
@@ -252,6 +253,7 @@ namespace Camera
 
 		UpdateZoomAcceleration(a_interval);
 		UpdateCinematic(a_settings.cinematic, a_interval);
+		UpdatePartEase(a_interval);
 		FollowHandover();
 		ApplyFov();
 	}
@@ -580,7 +582,29 @@ namespace Camera
 
 		if (rotAmount != 0.0f) {
 			_host.RotateSubject(a_settings.invertTurn ? -rotAmount : rotAmount);
+			FollowTurnedPart();
 		}
+	}
+
+	// A framed part turns in place: the camera moves with it as the subject turns, so the part stays where it's framed and the body turns round
+	// it, rather than the part swinging out of frame for the framing to catch up with after
+	void Core::FollowTurnedPart()
+	{
+		if (!_hasFraming || _framingHeld || !_host.FramesPart())
+			return;
+
+		BodyPoints body;
+		if (!_host.GetBodyPoints(body))
+			return;
+
+		const auto         anchor = _host.GetAnchor().value_or(_originalTranslate);
+		const RE::NiPoint3 moved  = body.centre - anchor - _framingPivotDeltaTo;
+		_framingPivotDeltaTo = _framingPivotDeltaTo + moved;
+		_framingPivotDelta   = _framingPivotDelta + moved;
+		_framingCamDeltaTo   = _framingCamDeltaTo + moved;
+		_framingCamDelta     = _framingCamDelta + moved;
+		_easeFromPivot       = _easeFromPivot + moved;
+		_easeFromCam         = _easeFromCam + moved;
 	}
 
 	void Core::UpdateCinematic(bool a_enabled, float a_interval)
@@ -702,6 +726,42 @@ namespace Camera
 		_framingDistance   = std::lerp(_framingDistance, _framingDistanceTo, t);
 	}
 
+	// The framing follows on its own at FRAMING_FOLLOW_SPEED and the moves at CINEMATIC_SPEED, so the orbit came round well before the camera
+	// reached the part and it slid on sideways after. Here both set out together and land together
+	void Core::EasePartChange()
+	{
+		if (!_hasFraming || _framingProgress < 1.0f)
+			return;
+
+		// The orbit taken the short way round, as a turn of a whole circle looks the same
+		_camRotZ = _targetCamRotZ - std::remainder(_targetCamRotZ - _camRotZ, 6.2831853f);
+
+		_partEase         = 0.0f;
+		_easeFromCam      = _framingCamDelta;
+		_easeFromPivot    = _framingPivotDelta;
+		_easeFromDistance = _framingDistance;
+		_easeFromOffset   = _camOffset;
+		_easeFromRotZ     = _camRotZ;
+		_easeFromRotX     = _camRotX;
+		_easeFromRoll     = _camRoll;
+	}
+
+	void Core::UpdatePartEase(float a_interval)
+	{
+		if (_partEase >= 1.0f)
+			return;
+
+		_partEase    = std::min(_partEase + a_interval / FRAMING_DURATION, 1.0f);
+		const float s = _partEase * _partEase * (3.0f - 2.0f * _partEase);
+		_framingCamDelta   = _easeFromCam + (_framingCamDeltaTo - _easeFromCam) * s;
+		_framingPivotDelta = _easeFromPivot + (_framingPivotDeltaTo - _easeFromPivot) * s;
+		_framingDistance   = std::lerp(_easeFromDistance, _framingDistanceTo, s);
+		_camOffset         = _easeFromOffset + (_targetCamOffset - _easeFromOffset) * s;
+		_camRotZ           = std::lerp(_easeFromRotZ, _targetCamRotZ, s);
+		_camRotX           = std::lerp(_easeFromRotX, _targetCamRotX, s);
+		_camRoll           = std::lerp(_easeFromRoll, _targetCamRoll, s);
+	}
+
 	void Core::UpdateFraming(const RE::NiPoint3& a_pivot, bool a_ease)
 	{
 		// Bail if anything isn't ready yet. It's tried again next frame
@@ -746,6 +806,19 @@ namespace Camera
 		_framingDistanceTo   = std::max(framing->depth - pivotDepth, 0.0f);
 		_framingHeight       = body.top.GetDistance(body.bottom);  // along the body, so it holds for one lying down too
 		_framingSpread       = body.pair ? body.sideA.GetDistance(body.sideB) : 0.0f;
+
+		// A hand, a foot or a held item seen head-on is a sliver, so the camera orbits once to the side it sits on, looking in along the line
+		// from the subject's axis out through the part. Only when it's well off the axis, as a part on it gives no side worth turning to
+		if (_sideViewPending) {
+			const float latX = _framingPivotDeltaTo.x;
+			const float latY = _framingPivotDeltaTo.y;
+			const float camX = _framingCamDeltaTo.x - _framingPivotDeltaTo.x;
+			const float camY = _framingCamDeltaTo.y - _framingPivotDeltaTo.y;
+			if (latX * latX + latY * latY > SIDE_VIEW_MIN_REACH * SIDE_VIEW_MIN_REACH && camX * camX + camY * camY > 1.0f) {
+				_sideViewPending = false;
+				_targetCamRotZ   = std::remainder(std::atan2(latY, latX) - std::atan2(camY, camX), 6.2831853f);
+			}
+		}
 
 		if (!a_ease || !_hasFraming) {
 			_framingCamDelta   = _framingCamDeltaTo;
@@ -1298,6 +1371,7 @@ namespace Camera
 		_framingProgress     = 0.0f;
 		_framingBlend        = 0.0f;
 		_framingDistance     = 0.0f;
+		_partEase            = 1.0f;
 		_handover.reset();
 		_hasFraming          = false;
 		_smoothScrollZoom    = 0.0f;

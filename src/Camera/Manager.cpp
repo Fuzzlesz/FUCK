@@ -893,16 +893,35 @@ namespace Camera
 
 		auto&             session = *_current;
 		const std::string part    = a_node ? a_node : "";
+		const bool        changed = part != session.framedPart;
 		// A new part is framed from the view and facing the session began with: the subject turned back and every camera move eased
 		// away, as framing measures from those and a turned body or moved camera carries the part out of where it's placed
 		// Unless the view's kept, as then nothing should move
-		if (part != session.framedPart && !session.core.KeepsView()) {
+		const bool reframes = changed && !session.core.KeepsView();
+		if (reframes) {
 			session.core.ClearMovesForFraming();
+			session.core.RequestSideView(PartWantsSideView(part));
 			ResetSubject();
 		}
 		session.framedPart = part;
 		session.partSize   = a_size;
 		session.core.Reframe(session.flags & FUCK::CameraSessionFlags::kInstantMoves);
+		if (reframes && !(session.flags & FUCK::CameraSessionFlags::kInstantMoves))
+			session.core.EasePartChange();
+	}
+
+	// Parts that read flat from the front: hands, forearms, calves and feet, and anything that isn't a body bone, such as a weapon or shield node
+	bool Manager::PartWantsSideView(const std::string& a_part)
+	{
+		if (a_part.empty())
+			return false;
+		if (!a_part.starts_with("NPC "))
+			return true;
+		for (const auto bit : { "Hand", "Finger", "Forearm", "Calf", "Foot", "Toe" }) {
+			if (a_part.find(bit) != std::string::npos)
+				return true;
+		}
+		return false;
 	}
 
 	void Manager::SetUpperBody(FUCK::ICameraClient* a_client, bool a_upperBody)

@@ -124,12 +124,15 @@ namespace Camera
 
 		// Eases away the orbit, pan, zoom, tilt, roll and FOV, which would otherwise carry a newly framed part off where framing places it
 		void ClearMovesForFraming();
+		void RequestSideView(bool a_side) { _sideViewPending = a_side; }
 
 		// Framing kept where it is, not following the part or pose as they change, nor the base camera's turn, then framed again easing
 		// over once let go
 		void HoldFraming(bool a_held);
 		void KeepView(bool a_keep);
 		bool KeepsView() const { return _keepView; }
+		// A newly framed part is eased onto as one move, the framing and the eased-away moves together
+		void EasePartChange();
 
 		// The FOV the session opens at, and the reset gesture goes back to, rather than the player's
 		void  SetStartFov(float a_fov);
@@ -212,6 +215,8 @@ namespace Camera
 		FrameInput GatherInput(const FUCK::CameraControlState& a_state) const;
 
 		void UpdateFramingBlend(float a_interval);
+		void UpdatePartEase(float a_interval);
+		void FollowTurnedPart();
 		void ClearInputState();
 		void HandleControls(const FUCK::CameraControlState& a_state, const Config& a_settings, float a_interval);
 		void HandleMouse(const FrameInput& a_in, const Config& a_settings, float a_interval);
@@ -286,6 +291,7 @@ namespace Camera
 		float                  _heldRotateEase    = 1.0f;   // 0 to 1 through the turn back once let go
 		RE::NiMatrix3          _heldRotate;
 		bool                   _hasFraming        = false;
+		bool                   _sideViewPending   = false;  // a framed part that reads flat from the front: orbit to its side once measured
 		FUCK::CameraScreenRect _framingRect;
 		float                  _framingMargin     = 1.0f;
 		int                    _framingSettleFrames = 0;
@@ -298,6 +304,16 @@ namespace Camera
 		RE::NiPoint3           _framingPivotDeltaTo{ 0.0f, 0.0f, 0.0f };
 		std::optional<float>   _framingFacing;  // the subject's facing as framed, which a framed part follows only when it changes
 		float                  _framingDistanceTo = 0.0f;
+
+		// EasePartChange(): how far through, and where the framing and the moves set out from
+		float                  _partEase = 1.0f;
+		RE::NiPoint3           _easeFromCam{ 0.0f, 0.0f, 0.0f };
+		RE::NiPoint3           _easeFromPivot{ 0.0f, 0.0f, 0.0f };
+		RE::NiPoint3           _easeFromOffset{ 0.0f, 0.0f, 0.0f };
+		float                  _easeFromDistance = 0.0f;
+		float                  _easeFromRotZ     = 0.0f;
+		float                  _easeFromRotX     = 0.0f;
+		float                  _easeFromRoll     = 0.0f;
 		float                  _framingHeight     = 0.0f;
 		float                  _poseHeight        = 0.0f;  // kFollowPose: the body's height last frame
 		float                  _poseStillFor      = 0.0f;  // kFollowPose: seconds it's held still

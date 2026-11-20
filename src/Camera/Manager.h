@@ -184,6 +184,7 @@ namespace Camera
 		bool                        GetBodyPointsOf(RE::Actor* a_actor, Maths::BodyPoints& a_body);
 		bool                        GetWholeBodyPoints(RE::Actor* a_actor, Maths::BodyPoints& a_body);
 		bool                        GetPartPoints(Maths::BodyPoints& a_part);
+		static bool                 PartWantsSideView(const std::string& a_part);
 		void                        MoveBaseToFront();
 		void                        MoveBaseBehind();
 		static RE::NiPoint3         BodyMiddle(RE::Actor& a_subject);
