@@ -1281,6 +1281,7 @@ namespace FUCK::Host
 			if (layer.mask && *layer.mask)
 				queued.faceTint.push_back({ layer.mask, { layer.colour[0], layer.colour[1], layer.colour[2], layer.colour[3] } });
 		}
+		queued.frameFace = options.frameFace;
 		ModelRender::Queue(std::move(queued));
 		return true;
 	}
@@ -1297,6 +1298,13 @@ namespace FUCK::Host
 
 	static bool BeginComboStyled_Impl(const char* id, const char* preview, float width, int itemCount) { return ImGui::BeginComboStyled(id, preview, width, itemCount); }
 	static void EndCombo_Impl() { ImGui::EndCombo(); }
+
+	static bool ReadMeshMaterial_Impl(void* shaderProperty, void* alphaProperty, FUCK::MeshDraw* out)
+	{
+		if (!shaderProperty || !out)
+			return false;
+		return ModelRender::ReadMeshMaterial(static_cast<RE::NiProperty*>(shaderProperty), static_cast<RE::NiProperty*>(alphaProperty), *out);
+	}
 
 	static bool CaptureFrame_Impl(const FUCK::CaptureRequest* request)
 	{
@@ -1698,7 +1706,8 @@ namespace FUCK::Host
 			.GetCardHeight          = GetCardHeight_Impl,
 			.CaptureFrame           = CaptureFrame_Impl,
 			.RenderModel            = RenderModel_Impl,
-			.DrawMeshes             = DrawMeshes_Impl
+			.DrawMeshes             = DrawMeshes_Impl,
+			.ReadMeshMaterial       = ReadMeshMaterial_Impl,
 			.BeginComboStyled       = BeginComboStyled_Impl,
 			.EndCombo               = EndCombo_Impl
 		};

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "API/FUCK_ModelRender.h"
+
 // Draws a loaded model off screen and saves it to a .png, for FUCK::RenderModel(). Taken at the start of FUCK's draw, as the model's
 // buffers are read on the render thread, and written out on a background thread
 namespace ModelRender
@@ -23,6 +25,7 @@ namespace ModelRender
 			std::array<float, 4> colour{};
 		};
 		std::vector<TintLayer> faceTint;
+		bool                   frameFace = false;  // framed on the face alone, so hair or a beard doesn't change its size
 	};
 
 	void Queue(Request a_request);
@@ -31,4 +34,7 @@ namespace ModelRender
 
 	// A caller's own meshes drawn at once with the same look, for FUCK::DrawMeshes(). On the render thread only
 	bool DrawMeshes(const FUCK::MeshDrawRequest& a_request);
+
+	// A shape's material as these renders draw it, into a MeshDraw, for FUCK::ReadMeshMaterial(). False with neither a lighting nor an effect shader
+	bool ReadMeshMaterial(RE::NiProperty* a_shader, RE::NiProperty* a_alpha, FUCK::MeshDraw& a_out);
 }

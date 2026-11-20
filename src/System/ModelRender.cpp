@@ -1,7 +1,5 @@
 #include "System/ModelRender.h"
 
-#include <DirectXPackedVector.h>
-#include <unordered_map>
 #include <d3dcompiler.h>
 
 #pragma comment(lib, "d3dcompiler.lib")
@@ -25,26 +23,42 @@ namespace ModelRender
 			ComPtr<ID3D11Buffer>             vertexBuffer;
 			ComPtr<ID3D11Buffer>             indexBuffer;
 			ComPtr<ID3D11ShaderResourceView> diffuse;
-			ComPtr<ID3D11ShaderResourceView> faceTint;  // FaceGen's tint texture, laid over the face's own
-			ComPtr<ID3D11ShaderResourceView> detail;    // FaceGen's detail texture, which the tinted face is scaled by
-			ComPtr<ID3D11ShaderResourceView> normalMap;  // a model space one, as a head's is, turned into the model's by normalTurn
+			ComPtr<ID3D11ShaderResourceView> faceTint;                  // FaceGen's tint texture, laid over the face's own
+			ComPtr<ID3D11ShaderResourceView> detail;                    // FaceGen's detail texture, which the tinted face is scaled by
+			ComPtr<ID3D11ShaderResourceView> normalMap;                 // a model space one, as a head's is, turned into the model's by normalTurn
+			ComPtr<ID3D11ShaderResourceView> glow;                      // where it glows, lit by its emissive colour
+			ComPtr<ID3D11ShaderResourceView> envMap;                    // a cube map it reflects, as metal does
+			ComPtr<ID3D11ShaderResourceView> envMask;                   // where it reflects, else everywhere
+			bool                             envMaskInAlpha   = false;  // in its alpha, e.g. a normal map's gloss, rather than its red
+			float                            envScale         = 0.0f;
 			std::array<float, 9>             normalTurn{ 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f };
-			bool                             faceGen = false;
-			bool                             plain   = false;  // a caller's own, without vertex colours
+			bool                             faceGen          = false;
+			bool                             plain            = false;  // a caller's own, without vertex colours
 			float                            specularStrength = 0.10f;
 			float                            specularPower    = 42.0f;
 			std::array<float, 3>             emissive{};
 			float                            emissiveStrength = 0.0f;
-			std::uint32_t                    indexCount = 0;
+			std::uint32_t                    indexCount       = 0;
 			std::array<float, 3>             tint{ 1.0f, 1.0f, 1.0f };  // hair's tint colour
-			bool                             hasTint    = false;
-			bool                             useAlpha   = false;
-			bool                             blendAlpha = false;
-			float                            alpha      = 1.0f;
-			float                            cutoff     = 0.0f;
+			bool                             hasTint          = false;
+			bool                             useAlpha         = false;
+			bool                             blendAlpha       = false;
+			bool                             split            = false;  // blended but cut too, so drawn solid where strong and blended where faint
+			float                            alpha            = 1.0f;
+			float                            cutoff           = 0.0f;
 			std::array<float, 3>             min{};
 			std::array<float, 3>             max{};
-			bool                             hasBounds = false;
+			bool                             hasBounds        = false;
+			bool                             twoSided         = true;   // drawn from behind too, else only its side facing the camera
+			bool                             vertexAlpha      = false;  // its vertex colours' alpha fades it too
+			bool                             effect           = false;  // drawn unlit, as an effect shader's glowing shell
+			std::array<float, 4>             effectColour{ 1.0f, 1.0f, 1.0f, 1.0f };
+			float                            effectScale      = 1.0f;
+			ComPtr<ID3D11ShaderResourceView> palette;                   // what the diffuse's green picks its colour from
+			bool                             paletteAlpha     = false;
+			bool                             falloff          = false;
+			std::array<float, 4>             falloffData{ 1.0f, 0.0f, 1.0f, 1.0f };  // the two cosines, then the opacity at each
+			bool                             additive         = false;
 		};
 
 		struct Part
@@ -116,8 +130,8 @@ namespace ModelRender
 		// Whether a position is three floats rather than four halves: what follows it starts 12 bytes on or more
 		bool FullPrecision(RE::BSGraphics::VertexDesc a_desc, std::uint32_t a_offset)
 		{
-			using V             = RE::BSGraphics::Vertex;
-			std::uint32_t next  = a_desc.GetSize();
+			using V                     = RE::BSGraphics::Vertex;
+			std::uint32_t next          = a_desc.GetSize();
 			const V::Attribute others[] = { V::VA_TEXCOORD0, V::VA_TEXCOORD1, V::VA_NORMAL, V::VA_BINORMAL, V::VA_COLOR, V::VA_SKINNING, V::VA_EYEDATA };
 			for (const auto attr : others) {
 				const auto off = a_desc.GetAttributeOffset(attr);
@@ -150,8 +164,8 @@ namespace ModelRender
 			if (FAILED(a_device->CreateBuffer(&desc, &data, a_out.vertexBuffer.GetAddressOf())))
 				return false;
 
-			desc       = { static_cast<UINT>(a_indices.size() * sizeof(std::uint32_t)), D3D11_USAGE_DEFAULT, D3D11_BIND_INDEX_BUFFER };
-			data       = { a_indices.data() };
+			desc = { static_cast<UINT>(a_indices.size() * sizeof(std::uint32_t)), D3D11_USAGE_DEFAULT, D3D11_BIND_INDEX_BUFFER };
+			data = { a_indices.data() };
 			if (FAILED(a_device->CreateBuffer(&desc, &data, a_out.indexBuffer.GetAddressOf())))
 				return false;
 			a_out.indexCount = static_cast<std::uint32_t>(a_indices.size());
@@ -306,20 +320,20 @@ namespace ModelRender
 			if (!readBack(vb, vbytes) || !readBack(ib, ibytes))
 				return false;
 
-			auto& tri   = shape->GetTrishapeRuntimeData();
-			auto  count = std::min<std::uint32_t>(tri.vertexCount ? tri.vertexCount : 0xFFFFFFFF, static_cast<std::uint32_t>(vbytes.size() / stride));
+			auto& tri          = shape->GetTrishapeRuntimeData();
+			auto  count        = std::min<std::uint32_t>(tri.vertexCount ? tri.vertexCount : 0xFFFFFFFF, static_cast<std::uint32_t>(vbytes.size() / stride));
 			const auto dynamic = DynamicPositions(a_part.geometry, count);
 
-			using F                  = RE::BSGraphics::Vertex::Flags;
-			const bool hasPos        = rt.vertexDesc.HasFlag(F::VF_VERTEX);
-			const bool hasUV         = rt.vertexDesc.HasFlag(F::VF_UV);
-			const bool hasNrm        = rt.vertexDesc.HasFlag(F::VF_NORMAL);
-			const auto posOffset     = rt.vertexDesc.GetAttributeOffset(RE::BSGraphics::Vertex::VA_POSITION);
-			const auto uvOffset      = rt.vertexDesc.GetAttributeOffset(RE::BSGraphics::Vertex::VA_TEXCOORD0);
-			const auto nrmOffset     = rt.vertexDesc.GetAttributeOffset(RE::BSGraphics::Vertex::VA_NORMAL);
-			const bool hasCol        = rt.vertexDesc.HasFlag(F::VF_COLORS);
-			const auto colOffset     = rt.vertexDesc.GetAttributeOffset(RE::BSGraphics::Vertex::VA_COLOR);
-			const bool full          = hasPos && FullPrecision(rt.vertexDesc, posOffset);
+			using F              = RE::BSGraphics::Vertex::Flags;
+			const bool hasPos    = rt.vertexDesc.HasFlag(F::VF_VERTEX);
+			const bool hasUV     = rt.vertexDesc.HasFlag(F::VF_UV);
+			const bool hasNrm    = rt.vertexDesc.HasFlag(F::VF_NORMAL);
+			const auto posOffset = rt.vertexDesc.GetAttributeOffset(RE::BSGraphics::Vertex::VA_POSITION);
+			const auto uvOffset  = rt.vertexDesc.GetAttributeOffset(RE::BSGraphics::Vertex::VA_TEXCOORD0);
+			const auto nrmOffset = rt.vertexDesc.GetAttributeOffset(RE::BSGraphics::Vertex::VA_NORMAL);
+			const bool hasCol    = rt.vertexDesc.HasFlag(F::VF_COLORS);
+			const auto colOffset = rt.vertexDesc.GetAttributeOffset(RE::BSGraphics::Vertex::VA_COLOR);
+			const bool full      = hasPos && FullPrecision(rt.vertexDesc, posOffset);
 			if (!hasPos)
 				count = std::min(count, static_cast<std::uint32_t>(dynamic.size()));
 
@@ -331,9 +345,9 @@ namespace ModelRender
 				Include(a_out, pos);
 				vertices[i] = { pos.x, pos.y, pos.z, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f };
 				if (hasUV) {
-					const auto* uv  = reinterpret_cast<const std::uint16_t*>(v + uvOffset);
-					vertices[i].u   = DirectX::PackedVector::XMConvertHalfToFloat(uv[0]);
-					vertices[i].v   = DirectX::PackedVector::XMConvertHalfToFloat(uv[1]);
+					const auto* uv = reinterpret_cast<const std::uint16_t*>(v + uvOffset);
+					vertices[i].u  = DirectX::PackedVector::XMConvertHalfToFloat(uv[0]);
+					vertices[i].v  = DirectX::PackedVector::XMConvertHalfToFloat(uv[1]);
 				}
 				if (hasNrm) {
 					const auto n   = TurnNormal(a_part.transform, v + nrmOffset);
@@ -360,45 +374,77 @@ namespace ModelRender
 			return data ? reinterpret_cast<ID3D11ShaderResourceView*>(data->resourceView) : nullptr;
 		}
 
-		// The diffuse, the head's two tints, a model space normal map, and how it's see-through, as the game's own material says
+		// An effect shader's look, from what ReadMeshMaterial read or a caller filled in
+		void CopyEffect(const FUCK::MeshDraw& a_in, Mesh& a_out)
+		{
+			a_out.effect = a_in.effect;
+			if (!a_in.effect)
+				return;
+			a_out.effectColour = { a_in.effectColour[0], a_in.effectColour[1], a_in.effectColour[2], a_in.effectColour[3] };
+			a_out.effectScale  = a_in.effectScale;
+			a_out.palette      = static_cast<ID3D11ShaderResourceView*>(a_in.palette);
+			a_out.paletteAlpha = a_in.paletteAlpha;
+			a_out.falloff      = a_in.falloff;
+			a_out.falloffData  = { a_in.falloffAngles[0], a_in.falloffAngles[1], a_in.falloffOpacity[0], a_in.falloffOpacity[1] };
+			a_out.additive     = a_in.additive;
+		}
+
+		// The head's two tints, a model space normal map, and how it's see-through, read here. The rest, the textures and look its
+		// material gives, is ReadMeshMaterial's, which Fitting Room's item cards read too, so the two are drawn the same way. Only
+		// what this has always drawn is taken from it, as a portrait's lighting is tuned to its own specular
 		void ReadMaterial(RE::BSGeometry* a_geometry, Mesh& a_out)
 		{
-			auto& rt       = a_geometry->GetGeometryRuntimeData();
+			auto& rt = a_geometry->GetGeometryRuntimeData();
+
+			FUCK::MeshDraw shared;
+			if (ReadMeshMaterial(rt.shaderProperty.get(), rt.alphaProperty.get(), shared)) {
+				a_out.diffuse        = static_cast<ID3D11ShaderResourceView*>(shared.diffuse);
+				a_out.alpha          = shared.alpha;
+				a_out.twoSided       = shared.twoSided;
+				a_out.hasTint        = shared.useTint;
+				a_out.tint           = { shared.tint[0], shared.tint[1], shared.tint[2] };
+				a_out.envMap         = static_cast<ID3D11ShaderResourceView*>(shared.envMap);
+				a_out.envMask        = static_cast<ID3D11ShaderResourceView*>(shared.envMask);
+				a_out.envMaskInAlpha = shared.envMaskInAlpha;
+				a_out.envScale       = shared.envScale;
+				a_out.glow           = static_cast<ID3D11ShaderResourceView*>(shared.glow);
+				if (a_out.glow) {
+					a_out.emissive         = { shared.emissive[0], shared.emissive[1], shared.emissive[2] };
+					a_out.emissiveStrength = shared.emissiveStrength;
+				}
+				CopyEffect(shared, a_out);
+			}
+
 			auto* lighting = netimmerse_cast<RE::BSLightingShaderProperty*>(rt.shaderProperty.get());
 			if (lighting && lighting->material) {
 				auto* material = static_cast<RE::BSLightingShaderMaterialBase*>(lighting->material);
-				a_out.diffuse  = TextureSrv(material->diffuseTexture.get());
-				a_out.alpha    = std::clamp(lighting->alpha * material->materialAlpha, 0.0f, 1.0f);
 				if (lighting->flags.all(RE::BSShaderProperty::EShaderPropertyFlag::kModelSpaceNormals))
 					a_out.normalMap = TextureSrv(material->normalTexture.get());
-
-				switch (material->GetFeature()) {
-				case RE::BSShaderMaterial::Feature::kFaceGen:
+				if (material->GetFeature() == RE::BSShaderMaterial::Feature::kFaceGen) {
 					a_out.faceTint = TextureSrv(static_cast<RE::BSLightingShaderMaterialFacegen*>(material)->tintTexture.get());
 					a_out.detail   = TextureSrv(static_cast<RE::BSLightingShaderMaterialFacegen*>(material)->detailTexture.get());
 					a_out.faceGen  = true;
-					break;
-				case RE::BSShaderMaterial::Feature::kHairTint:
-					{
-						const auto& c = static_cast<RE::BSLightingShaderMaterialHairTint*>(material)->tintColor;
-						a_out.tint    = { c.red, c.green, c.blue };
-						a_out.hasTint = true;
-						break;
-					}
-				default:
-					break;
 				}
 			}
 
 			if (auto* alpha = rt.alphaProperty.get()) {
 				const bool testing  = alpha->GetAlphaTesting();
 				const bool blending = alpha->GetAlphaBlending();
-				a_out.useAlpha      = testing || blending;
-				a_out.blendAlpha    = blending && !testing;
-				a_out.cutoff        = testing ? std::clamp(alpha->alphaThreshold / 255.0f, 0.005f, 0.95f) : 0.005f;
+				// Blended whenever it blends, as a beard drawn solid down to its cut shows its whole patch. One that's cut too has
+				// its strong strands drawn solid, so they hide what's behind them, while its faint edges can't hide anything
+				a_out.useAlpha   = testing || blending;
+				a_out.blendAlpha = blending;
+				a_out.split      = blending && testing;
+				a_out.cutoff     = testing ? std::clamp(alpha->alphaThreshold / 255.0f, 0.005f, 0.95f) : 0.005f;
 			}
 			if (a_out.alpha < 0.995f)
 				a_out.useAlpha = a_out.blendAlpha = true;
+			// An effect shell always blends, faint wherever it's faint
+			if (a_out.effect) {
+				a_out.useAlpha = a_out.blendAlpha = true;
+				a_out.split                       = false;
+				a_out.cutoff                      = 0.003f;
+			}
 		}
 
 		bool ExtractOne(ID3D11Device* a_device, ID3D11DeviceContext* a_context, const Part& a_part, Mesh& a_out)
@@ -545,24 +591,38 @@ namespace ModelRender
 		{
 			DirectX::XMFLOAT4X4 viewProj;
 			DirectX::XMFLOAT3   lightDir;
-			float               ambient = 0.36f;
+			float               ambient          = 0.36f;
 			DirectX::XMFLOAT3   eyePos;
-			float               alpha = 1.0f;
+			float               alpha            = 1.0f;
 			DirectX::XMFLOAT3   tint{ 1.0f, 1.0f, 1.0f };
-			float               cutoff = 0.0f;
-			std::uint32_t       useTexture = 0;
-			std::uint32_t       useAlpha   = 0;
-			std::uint32_t       useTint    = 0;
-			std::uint32_t       useFaceTint = 0;
-			std::uint32_t       useDetail    = 0;
-			std::uint32_t       useNormalMap = 0;
+			float               cutoff           = 0.0f;
+			std::uint32_t       useTexture       = 0;
+			std::uint32_t       useAlpha         = 0;
+			std::uint32_t       useTint          = 0;
+			std::uint32_t       useFaceTint      = 0;
+			std::uint32_t       useDetail        = 0;
+			std::uint32_t       useNormalMap     = 0;
 			float               specularStrength = 0.10f;
 			float               specularPower    = 42.0f;
 			DirectX::XMFLOAT3   emissive{};
 			float               emissiveStrength = 0.0f;
 			float               backdropLift     = 0.0f;
-			float               pad[3]{};
-			DirectX::XMFLOAT4   turn[3]{};  // a model space normal map's rows into the model's space
+			std::uint32_t       twoSided         = 1;
+			std::uint32_t       blended          = 0;
+			float               ceiling          = 2.0f;  // alpha at or over this isn't drawn
+			std::uint32_t       useGlow          = 0;
+			std::uint32_t       useEnv           = 0;
+			std::uint32_t       useEnvMask       = 0;
+			float               envScale         = 0.0f;
+			std::uint32_t       useVertexAlpha   = 0;
+			std::uint32_t       useEffect        = 0;
+			std::uint32_t       usePalette       = 0;     // 1 its colour, 2 its alpha too
+			std::uint32_t       useFalloff       = 0;
+			DirectX::XMFLOAT4   turn[3]{};                // a model space normal map's rows into the model's space
+			DirectX::XMFLOAT4   effectColour{ 1.0f, 1.0f, 1.0f, 1.0f };
+			DirectX::XMFLOAT4   falloffData{ 1.0f, 0.0f, 1.0f, 1.0f };
+			float               effectScale      = 1.0f;
+			float               pad2[3]{};
 		};
 		static_assert(sizeof(Params) % 16 == 0);
 
@@ -576,13 +636,22 @@ cbuffer Params : register(b0)
     uint     UseTexture; uint  UseAlpha; uint UseTint; uint UseFaceTint;
     uint     UseDetail;  uint  UseNormalMap; float SpecularStrength; float SpecularPower;
     float3   Emissive;   float EmissiveStrength;
-    float    BackdropLift; float3 Pad;
+    float    BackdropLift; uint TwoSided; uint Blended; float AlphaCeiling;
+    uint     UseGlow;    uint UseEnv; uint UseEnvMask; float EnvScale;
+    uint     UseVertexAlpha; uint UseEffect; uint UsePalette; uint UseFalloff;
     float4   Turn[3];
+    float4   EffectColour;
+    float4   FalloffData;
+    float    EffectScale; float3 Pad2;
 };
 Texture2D    Diffuse   : register(t0);
 Texture2D    FaceTint  : register(t1);
 Texture2D    Detail    : register(t2);
 Texture2D    NormalMap : register(t3);
+Texture2D    GlowMap   : register(t4);
+TextureCube  EnvMap    : register(t5);
+Texture2D    EnvMask   : register(t6);
+Texture2D    Palette   : register(t7);
 SamplerState Samp      : register(s0);
 
 struct VS_IN    { float3 Position : POSITION; float2 UV : TEXCOORD0; float3 Normal : NORMAL; float4 Colour : COLOR; };
@@ -610,11 +679,36 @@ VS_OUT PlainVS(PLAIN_IN i)
     return ModelVS(full);
 }
 
+// An effect shader's shell, unlit, as the game draws one: its texture times its base colour and scale, or with a palette, the
+// colour its texture's green picks along the row its base colour's red picks, and the alpha its texture's alpha picks along the row
+// its base colour's alpha picks. Faded by its vertices and by how square on it is to the camera
+float4 EffectPS(VS_OUT i)
+{
+    float4 t = UseTexture ? Diffuse.Sample(Samp, i.UV) : 1.0;
+    float4 c = float4(EffectColour.rgb * EffectScale, EffectColour.a) * t;
+    if (UsePalette) {
+        // Kept off the edges, as the sampler wraps and a palette's two ends are its opposite colours
+        c.rgb = EffectScale * Palette.Sample(Samp, clamp(float2(t.g, EffectColour.r), 0.004, 0.996)).rgb;
+        c.a   = UsePalette == 2 ? Palette.Sample(Samp, clamp(float2(t.a, EffectColour.a), 0.004, 0.996)).a : c.a;
+    }
+    c *= i.Colour;
+    if (UseFalloff) {
+        float d  = abs(dot(normalize(i.Normal), normalize(EyePos - i.World)));
+        float k  = abs(FalloffData.y - FalloffData.x) > 0.0001 ? saturate((d - FalloffData.x) / (FalloffData.y - FalloffData.x)) : 0.0;
+        c.a     *= lerp(FalloffData.z, FalloffData.w, k);
+    }
+    float a = saturate(c.a * MaterialAlpha);
+    if (a <= AlphaCutoff) discard;
+    float3 o = c.rgb < 0.8 ? c.rgb : 0.8 + 0.2 * (1.0 - exp(-(c.rgb - 0.8) / 0.2));
+    return float4(saturate(o), a);
+}
+
 float4 ModelPS(VS_OUT i, bool front : SV_IsFrontFace) : SV_Target
 {
+    if (UseEffect) return EffectPS(i);
     float4 c = UseTexture ? Diffuse.Sample(Samp, i.UV) : float4(0.62, 0.60, 0.56, 1.0);
-    float  a = saturate(MaterialAlpha * (UseAlpha ? c.a : 1.0));
-    if (a <= AlphaCutoff) discard;
+    float  a = saturate(MaterialAlpha * (UseAlpha ? c.a : 1.0) * (UseVertexAlpha ? i.Colour.a : 1.0));
+    if (a <= AlphaCutoff || a >= AlphaCeiling) discard;
 
     // FaceGen's own blend, a soft light of the tint over the face, scaled by the face's detail
     if (UseFaceTint) {
@@ -622,30 +716,53 @@ float4 ModelPS(VS_OUT i, bool front : SV_IsFrontFace) : SV_Target
         float3 d = UseDetail ? 3.984375 * (Detail.Sample(Samp, i.UV).rgb + float3(0.00392156886, 0.0, 0.00392156886)) : 1.0;
         c.rgb    = saturate((c.rgb * c.rgb + 2.0 * t * c.rgb * (1.0 - c.rgb)) * d);
     }
-    // Hair takes its tint where its vertices' green says, and everything else its vertex colour. A hair colour is kept at half,
-    // as the game doubles it for the shader, e.g. RaceMenu's grey (90, 95, 105) shows as near white
-    c.rgb *= UseTint ? lerp(1.0, Tint * 2.0, i.Colour.g) : i.Colour.rgb;
+    // Hair takes its tint where its vertices' green says, and everything else its vertex colour, as the game's hair shader does
+    c.rgb *= UseTint ? lerp(1.0, Tint, i.Colour.g) : i.Colour.rgb;
 
-    // A model space normal map, stored as XZY, unless it faces away from the camera where the mesh doesn't
+    // A one-sided see-through shape's far side left out, as hair's cards and a beard's layers would show their backs through each
+    // other. By its normals rather than its winding, which the meshes don't agree on, and a little past edge on, as normals blended
+    // across a triangle dip below it at the silhouette. A solid shape's far side is hidden by its near side, so it's kept, as a stray
+    // normal would cut a hole in it
     float3 view = normalize(EyePos - i.World);
-    float3 n    = normalize(i.Normal) * (front ? 1.0 : -1.0);
+    if ((Blended || UseAlpha) && !TwoSided && dot(i.Normal, view) < -0.15) discard;
+
+    // A model space normal map, stored as XZY, unless it faces away from the camera where the mesh doesn't. Only a two-sided
+    // shape's back is turned to face the camera, else the far side peeping past a silhouette is lit as if facing it
+    float3 n    = normalize(i.Normal) * (front || !TwoSided ? 1.0 : -1.0);
     if (UseNormalMap) {
         float3 m  = NormalMap.Sample(Samp, i.UV).xzy * 2.0 - 1.0;
         float3 mn = normalize(float3(dot(Turn[0].xyz, m), dot(Turn[1].xyz, m), dot(Turn[2].xyz, m)));
         n         = dot(mn, view) < -0.2 ? n : mn;
     }
     // A studio's key, fill, top, and rim, as Fitting Room's cards have always been lit
-    float3 key  = normalize(LightDir);
-    float3 fill = normalize(float3(-key.x * 0.75, key.y * 0.25, key.z * 0.55 + 0.25));
-    float3 rimD = normalize(float3(0.46, -0.36, 0.72));
-    float  keyL = saturate(dot(n, key));
-    float  wrap = saturate(dot(n, key) * 0.65 + 0.35);
-    float  top  = saturate(n.z * 0.5 + 0.5);
-    float  spec = pow(saturate(dot(n, normalize(key + view))), max(SpecularPower, 8.0)) * SpecularStrength * (0.35 + keyL * 0.65);
-    float  rim  = pow(1.0 - saturate(dot(n, view)), 2.2) * 0.12 * saturate(dot(n, rimD) * 0.55 + 0.45);
-    float3 lit  = c.rgb * (Ambient + wrap * 0.56 + saturate(dot(n, fill)) * 0.30 + top * 0.08 + rim) + spec;
-    lit        += saturate(Emissive) * EmissiveStrength;
-    return float4(saturate(lit * 0.96 + c.rgb * 0.04), a);
+    float3 key   = normalize(LightDir);
+    float3 fill  = normalize(float3(-key.x * 0.75, key.y * 0.25, key.z * 0.55 + 0.25));
+    float3 rimD  = normalize(float3(0.46, -0.36, 0.72));
+    float  keyL  = saturate(dot(n, key));
+    float  wrap  = saturate(dot(n, key) * 0.65 + 0.35);
+    float  top   = saturate(n.z * 0.5 + 0.5);
+    float  spec  = pow(saturate(dot(n, normalize(key + view))), max(SpecularPower, 8.0)) * SpecularStrength * (0.35 + keyL * 0.65);
+    float  rim   = pow(1.0 - saturate(dot(n, view)), 2.2) * 0.12 * saturate(dot(n, rimD) * 0.55 + 0.45);
+    float  light = Ambient + wrap * 0.56 + saturate(dot(n, fill)) * 0.30 + top * 0.08 + rim;
+    float3 lit   = c.rgb * light + spec;
+    // A cube map reflected where its mask says (1 its red, 2 its alpha, a normal map's gloss), and lit as the surface is, as the
+    // game's environment shader does. Tinted mostly by the surface's own colour and a little by its hue, as metal colours what it
+    // reflects, so bronze or rusted steel doesn't turn to chrome, and dark metal reflects darkly. The world's +Z up is the cube's +Y
+    if (UseEnv) {
+        float3 r    = reflect(-view, n);
+        float4 mask = UseEnvMask ? EnvMask.Sample(Samp, i.UV) : 1.0;
+        float  m    = UseEnvMask == 2 ? mask.a : mask.r;
+        float3 hue  = c.rgb / max(max(c.r, max(c.g, c.b)), 0.05);
+        float3 tint = lerp(c.rgb, hue, 0.3);
+        lit        += EnvMap.Sample(Samp, float3(r.x, r.z, r.y)).rgb * tint * m * EnvScale * saturate(light);
+    }
+    // A glow map lights only where it says, as the game's does, e.g. a Daedric blade's veins
+    lit        += saturate(Emissive) * EmissiveStrength * (UseGlow ? GlowMap.Sample(Samp, i.UV).rgb : 1.0);
+    // Highlights rolled off rather than clipped, so a pale tint like white hair keeps its strands
+    float3 o = lit * 0.96 + c.rgb * 0.04;
+    o        = o < 0.8 ? o : 0.8 + 0.2 * (1.0 - exp(-(o - 0.8) / 0.2));
+    // Solid unless blended, as a cut shape's soft alpha would otherwise leave holes in the picture
+    return float4(saturate(o), Blended ? a : 1.0);
 }
 
 struct BG_OUT { float4 Position : SV_Position; float2 UV : TEXCOORD0; };
@@ -674,7 +791,7 @@ float4 BackdropPS(BG_OUT i) : SV_Target
 			ComPtr<ID3D11InputLayout>       layout, plainLayout;
 			ComPtr<ID3D11Buffer>            params;
 			ComPtr<ID3D11RasterizerState>   raster;
-			ComPtr<ID3D11BlendState>        opaque, blend;
+			ComPtr<ID3D11BlendState>        opaque, blend, additive;
 			ComPtr<ID3D11DepthStencilState> depthWrite, depthTest, depthOff;
 			ComPtr<ID3D11SamplerState>      sampler;
 			bool                            failed = false;
@@ -748,6 +865,10 @@ float4 BackdropPS(BG_OUT i) : SV_Target
 			rt.BlendOpAlpha   = D3D11_BLEND_OP_ADD;
 			if (FAILED(a_device->CreateBlendState(&bd, p.blend.GetAddressOf())))
 				return false;
+			rt.DestBlend      = D3D11_BLEND_ONE;
+			rt.DestBlendAlpha = D3D11_BLEND_ONE;
+			if (FAILED(a_device->CreateBlendState(&bd, p.additive.GetAddressOf())))
+				return false;
 
 			D3D11_DEPTH_STENCIL_DESC ds{ TRUE, D3D11_DEPTH_WRITE_MASK_ALL, D3D11_COMPARISON_LESS_EQUAL };
 			if (FAILED(a_device->CreateDepthStencilState(&ds, p.depthWrite.GetAddressOf())))
@@ -801,28 +922,28 @@ float4 BackdropPS(BG_OUT i) : SV_Target
 			ID3D11DepthStencilView*   dsv = nullptr;
 			D3D11_VIEWPORT            viewports[D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE]{};
 			UINT                      viewportCount = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
-			ID3D11VertexShader*       vs = nullptr;
-			ID3D11PixelShader*        ps = nullptr;
-			ID3D11GeometryShader*     gs = nullptr;
-			ID3D11HullShader*         hs = nullptr;
-			ID3D11DomainShader*       ds = nullptr;
-			ID3D11InputLayout*        layout = nullptr;
+			ID3D11VertexShader*       vs            = nullptr;
+			ID3D11PixelShader*        ps            = nullptr;
+			ID3D11GeometryShader*     gs            = nullptr;
+			ID3D11HullShader*         hs            = nullptr;
+			ID3D11DomainShader*       ds            = nullptr;
+			ID3D11InputLayout*        layout        = nullptr;
 			D3D11_PRIMITIVE_TOPOLOGY  topology{};
 			ID3D11RasterizerState*    raster = nullptr;
 			ID3D11BlendState*         blend  = nullptr;
 			float                     blendFactor[4]{};
 			UINT                      sampleMask = 0;
-			ID3D11DepthStencilState*  depth = nullptr;
+			ID3D11DepthStencilState*  depth      = nullptr;
 			UINT                      stencilRef = 0;
-			ID3D11Buffer*             vb = nullptr;
+			ID3D11Buffer*             vb         = nullptr;
 			UINT                      stride = 0, offset = 0;
 			ID3D11Buffer*             ib = nullptr;
 			DXGI_FORMAT               ibFormat{};
 			UINT                      ibOffset = 0;
-			ID3D11Buffer*             vsCb = nullptr;
-			ID3D11Buffer*             psCb = nullptr;
-			ID3D11SamplerState*       sampler = nullptr;
-			ID3D11ShaderResourceView* srvs[4]{};
+			ID3D11Buffer*             vsCb     = nullptr;
+			ID3D11Buffer*             psCb     = nullptr;
+			ID3D11SamplerState*       sampler  = nullptr;
+			ID3D11ShaderResourceView* srvs[8]{};
 
 			explicit StateGuard(ID3D11DeviceContext* a_ctx) :
 				ctx(a_ctx)
@@ -844,7 +965,7 @@ float4 BackdropPS(BG_OUT i) : SV_Target
 				ctx->VSGetConstantBuffers(0, 1, &vsCb);
 				ctx->PSGetConstantBuffers(0, 1, &psCb);
 				ctx->PSGetSamplers(0, 1, &sampler);
-				ctx->PSGetShaderResources(0, 4, srvs);
+				ctx->PSGetShaderResources(0, 8, srvs);
 			}
 
 			~StateGuard()
@@ -866,9 +987,9 @@ float4 BackdropPS(BG_OUT i) : SV_Target
 				ctx->VSSetConstantBuffers(0, 1, &vsCb);
 				ctx->PSSetConstantBuffers(0, 1, &psCb);
 				ctx->PSSetSamplers(0, 1, &sampler);
-				ctx->PSSetShaderResources(0, 4, srvs);
+				ctx->PSSetShaderResources(0, 8, srvs);
 
-				IUnknown* held[] = { rtv, dsv, vs, ps, gs, hs, ds, layout, raster, blend, depth, vb, ib, vsCb, psCb, sampler, srvs[0], srvs[1], srvs[2], srvs[3] };
+				IUnknown* held[] = { rtv, dsv, vs, ps, gs, hs, ds, layout, raster, blend, depth, vb, ib, vsCb, psCb, sampler, srvs[0], srvs[1], srvs[2], srvs[3], srvs[4], srvs[5], srvs[6], srvs[7] };
 				for (auto* h : held) {
 					if (h)
 						h->Release();
@@ -878,13 +999,15 @@ float4 BackdropPS(BG_OUT i) : SV_Target
 			ID3D11DeviceContext* ctx;
 		};
 
-		// Front on, as an actor faces down +y, the whole model's bounds in view
+		// Front on, as an actor faces down +y, the whole model's bounds in view, or only the face's when asked and there is one
 		void Frame(const std::vector<Mesh>& a_meshes, const Request& a_request, Params& a_out)
 		{
+			const bool faceOnly = a_request.frameFace && std::ranges::any_of(a_meshes, [](const Mesh& a_mesh) { return a_mesh.faceGen && a_mesh.hasBounds; });
+
 			std::array<float, 3> min{ -10.0f, -10.0f, -10.0f }, max{ 10.0f, 10.0f, 10.0f };
 			bool                 have = false;
 			for (const auto& m : a_meshes) {
-				if (!m.hasBounds)
+				if (!m.hasBounds || (faceOnly && !m.faceGen))
 					continue;
 				for (int i = 0; i < 3; ++i) {
 					min[i] = have ? std::min(min[i], m.min[i]) : m.min[i];
@@ -963,23 +1086,39 @@ float4 BackdropPS(BG_OUT i) : SV_Target
 			ID3D11SamplerState* sampler = p.sampler.Get();
 			a_ctx->PSSetSamplers(0, 1, &sampler);
 
-			const auto drawMesh = [&](const Mesh& a_mesh) {
-				Params params      = base;
-				params.useTexture  = a_mesh.diffuse ? 1u : 0u;
-				params.useAlpha    = a_mesh.useAlpha ? 1u : 0u;
-				params.useTint     = a_mesh.hasTint ? 1u : 0u;
-				params.useFaceTint = a_mesh.faceTint ? 1u : 0u;
-				params.useDetail   = a_mesh.faceTint && a_mesh.detail ? 1u : 0u;
-				params.useNormalMap = a_mesh.normalMap ? 1u : 0u;
-				for (int r = 0; r < 3; ++r)
-					params.turn[r] = { a_mesh.normalTurn[r * 3], a_mesh.normalTurn[r * 3 + 1], a_mesh.normalTurn[r * 3 + 2], 0.0f };
-				params.alpha       = a_mesh.alpha;
-				params.cutoff      = a_mesh.cutoff;
-				params.tint        = { a_mesh.tint[0], a_mesh.tint[1], a_mesh.tint[2] };
+			// A split shape's strong strands in the solid pass and its faint edges in the blended one, divided here
+			constexpr float kSplit   = 0.5f;
+			const auto      drawMesh = [&](const Mesh& a_mesh, bool a_blendPass) {
+				Params params           = base;
+				params.useTexture       = a_mesh.diffuse ? 1u : 0u;
+				params.useAlpha         = a_mesh.useAlpha ? 1u : 0u;
+				params.useTint          = a_mesh.hasTint ? 1u : 0u;
+				params.useFaceTint      = a_mesh.faceTint ? 1u : 0u;
+				params.useDetail        = a_mesh.faceTint && a_mesh.detail ? 1u : 0u;
+				params.useNormalMap     = a_mesh.normalMap ? 1u : 0u;
+				params.useGlow          = a_mesh.glow ? 1u : 0u;
+				params.useEnv           = a_mesh.envMap && a_mesh.envScale > 0.0f ? 1u : 0u;
+				params.useEnvMask       = a_mesh.envMask ? (a_mesh.envMaskInAlpha ? 2u : 1u) : 0u;
+				params.envScale         = a_mesh.envScale;
+				params.alpha            = a_mesh.alpha;
+				params.cutoff           = a_mesh.split && !a_blendPass ? std::max(a_mesh.cutoff, kSplit) : a_mesh.cutoff;
+				params.ceiling          = a_mesh.split && a_blendPass ? kSplit : 2.0f;
+				params.tint             = { a_mesh.tint[0], a_mesh.tint[1], a_mesh.tint[2] };
 				params.specularStrength = a_mesh.specularStrength;
 				params.specularPower    = a_mesh.specularPower;
 				params.emissive         = { a_mesh.emissive[0], a_mesh.emissive[1], a_mesh.emissive[2] };
 				params.emissiveStrength = a_mesh.emissiveStrength;
+				params.twoSided         = a_mesh.twoSided ? 1u : 0u;
+				params.useVertexAlpha   = a_mesh.vertexAlpha ? 1u : 0u;
+				params.blended          = a_blendPass ? 1u : 0u;
+				params.useEffect        = a_mesh.effect ? 1u : 0u;
+				params.usePalette       = a_mesh.effect && a_mesh.palette ? (a_mesh.paletteAlpha ? 2u : 1u) : 0u;
+				params.useFalloff       = a_mesh.effect && a_mesh.falloff ? 1u : 0u;
+				params.effectColour     = { a_mesh.effectColour[0], a_mesh.effectColour[1], a_mesh.effectColour[2], a_mesh.effectColour[3] };
+				params.effectScale      = a_mesh.effectScale;
+				params.falloffData      = { a_mesh.falloffData[0], a_mesh.falloffData[1], a_mesh.falloffData[2], a_mesh.falloffData[3] };
+				for (int r = 0; r < 3; ++r)
+					params.turn[r] = { a_mesh.normalTurn[r * 3], a_mesh.normalTurn[r * 3 + 1], a_mesh.normalTurn[r * 3 + 2], 0.0f };
 				if (!upload(params))
 					return;
 
@@ -990,8 +1129,9 @@ float4 BackdropPS(BG_OUT i) : SV_Target
 				ID3D11Buffer* vb     = a_mesh.vertexBuffer.Get();
 				a_ctx->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
 				a_ctx->IASetIndexBuffer(a_mesh.indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
-				ID3D11ShaderResourceView* srvs[4] = { a_mesh.diffuse.Get(), a_mesh.faceTint.Get(), a_mesh.detail.Get(), a_mesh.normalMap.Get() };
-				a_ctx->PSSetShaderResources(0, 4, srvs);
+				ID3D11ShaderResourceView* srvs[8] = { a_mesh.diffuse.Get(), a_mesh.faceTint.Get(), a_mesh.detail.Get(), a_mesh.normalMap.Get(), a_mesh.glow.Get(),
+					a_mesh.envMap.Get(), a_mesh.envMask.Get(), a_mesh.palette.Get() };
+				a_ctx->PSSetShaderResources(0, 8, srvs);
 				a_ctx->DrawIndexed(a_mesh.indexCount, 0, 0);
 			};
 
@@ -999,18 +1139,20 @@ float4 BackdropPS(BG_OUT i) : SV_Target
 			a_ctx->OMSetDepthStencilState(p.depthWrite.Get(), 0);
 			a_ctx->OMSetBlendState(p.opaque.Get(), nullptr, 0xFFFFFFFF);
 			for (const auto& mesh : a_meshes) {
-				if (!mesh.blendAlpha)
-					drawMesh(mesh);
+				if (!mesh.blendAlpha || mesh.split)
+					drawMesh(mesh, false);
 			}
 			a_ctx->OMSetDepthStencilState(p.depthTest.Get(), 0);
-			a_ctx->OMSetBlendState(p.blend.Get(), nullptr, 0xFFFFFFFF);
 			for (const auto& mesh : a_meshes) {
-				if (mesh.blendAlpha)
-					drawMesh(mesh);
+				if (mesh.blendAlpha) {
+					// An additive shell, as many effect shaders are, adds its light to what's behind it
+					a_ctx->OMSetBlendState(mesh.additive ? p.additive.Get() : p.blend.Get(), nullptr, 0xFFFFFFFF);
+					drawMesh(mesh, true);
+				}
 			}
 
-			ID3D11ShaderResourceView* none[4]{};
-			a_ctx->PSSetShaderResources(0, 4, none);
+			ID3D11ShaderResourceView* none[8]{};
+			a_ctx->PSSetShaderResources(0, 8, none);
 
 			// Read back at once, which waits on the GPU. Fine for the odd picture
 			a_ctx->CopyResource(p.staging.Get(), p.colour.Get());
@@ -1103,6 +1245,154 @@ float4 BackdropPS(BG_OUT i) : SV_Target
 		}
 	}
 
+	namespace
+	{
+		// An effect shader's shell, e.g. a Ghostblade's or a conjured weapon's, read as the game's effect shader draws it: its texture
+		// times its base colour, or a colour from its palette, faded at the angle its falloff gives, and usually added to what's behind
+		bool ReadEffectMaterial(RE::BSEffectShaderProperty* a_effect, RE::NiProperty* a_alpha, FUCK::MeshDraw& a_out)
+		{
+			if (!a_effect->material)
+				return false;
+			const auto finite = [](float a_v, float a_min, float a_max, float a_fallback) {
+				return std::isfinite(a_v) ? std::clamp(a_v, a_min, a_max) : a_fallback;
+			};
+			using Flag = RE::BSShaderProperty::EShaderPropertyFlag;
+			// By bit, as the game numbers them: greyscale to palette colour, to palette alpha, and falloff
+			const auto has = [&](int a_bit) { return a_effect->flags.any(static_cast<Flag>(1ull << a_bit)); };
+
+			auto* material = static_cast<RE::BSEffectShaderMaterial*>(a_effect->material);
+			a_out.effect          = true;
+			a_out.diffuse         = TextureSrv(material->sourceTexture.get());
+			a_out.effectColour[0] = finite(material->baseColor.red, 0.0f, 1.0f, 1.0f);
+			a_out.effectColour[1] = finite(material->baseColor.green, 0.0f, 1.0f, 1.0f);
+			a_out.effectColour[2] = finite(material->baseColor.blue, 0.0f, 1.0f, 1.0f);
+			a_out.effectColour[3] = finite(material->baseColor.alpha, 0.0f, 1.0f, 1.0f);
+			a_out.effectScale     = finite(material->baseColorScale, 0.0f, 8.0f, 1.0f);
+			if (has(4)) {
+				a_out.palette      = TextureSrv(material->greyscaleTexture.get());
+				a_out.paletteAlpha = a_out.palette && has(5);
+			}
+			if (has(6)) {
+				a_out.falloff           = true;
+				a_out.falloffAngles[0]  = finite(material->falloffStartAngle, -1.0f, 1.0f, 1.0f);
+				a_out.falloffAngles[1]  = finite(material->falloffStopAngle, -1.0f, 1.0f, 0.0f);
+				a_out.falloffOpacity[0] = finite(material->falloffStartOpacity, 0.0f, 1.0f, 1.0f);
+				a_out.falloffOpacity[1] = finite(material->falloffStopOpacity, 0.0f, 1.0f, 1.0f);
+			}
+			a_out.alpha      = finite(a_effect->alpha, 0.0f, 1.0f, 1.0f);
+			a_out.vertexAlpha = true;
+			a_out.twoSided   = a_effect->flags.any(Flag::kTwoSided);
+			a_out.useAlpha   = true;
+			a_out.blendAlpha = true;
+			a_out.cutoff     = 0.003f;
+			// Added when it blends onto what's behind it at full, the NIF format's ONE (0) as its far side's factor
+			if (auto* alpha = netimmerse_cast<RE::NiAlphaProperty*>(a_alpha))
+				a_out.additive = alpha->GetAlphaBlending() && static_cast<int>(alpha->GetDestBlendMode()) == 0;
+			return true;
+		}
+	}
+
+	bool ReadMeshMaterial(RE::NiProperty* a_shader, RE::NiProperty* a_alpha, FUCK::MeshDraw& a_out)
+	{
+		// A material's value clamped, and its default where it's NaN or infinite, as a broken NIF can carry either
+		const auto finite = [](float a_v, float a_min, float a_max, float a_fallback) {
+			return std::isfinite(a_v) ? std::clamp(a_v, a_min, a_max) : a_fallback;
+		};
+		using Flag = RE::BSShaderProperty::EShaderPropertyFlag;
+
+		if (auto* effect = netimmerse_cast<RE::BSEffectShaderProperty*>(a_shader))
+			return ReadEffectMaterial(effect, a_alpha, a_out);
+
+		auto* lighting = netimmerse_cast<RE::BSLightingShaderProperty*>(a_shader);
+		if (!lighting || !lighting->material)
+			return false;
+		auto* material = static_cast<RE::BSLightingShaderMaterialBase*>(lighting->material);
+
+		a_out.diffuse = TextureSrv(material->diffuseTexture.get());
+		a_out.alpha   = std::clamp(finite(lighting->alpha, 0.0f, 1.0f, 1.0f) * finite(material->materialAlpha, 0.0f, 1.0f, 1.0f), 0.0f, 1.0f);
+
+		// Faded by its material's alpha, a screen door, premultiplied alpha, or its vertices, and so drawn over the solid meshes
+		a_out.vertexAlpha = lighting->flags.any(Flag::kVertexAlpha);
+		const bool fades  = a_out.alpha < 0.995f || lighting->flags.any(Flag::kScreendoorAlphaFade) ||
+		                   lighting->flags.any(Flag::kPremultAlpha) || a_out.vertexAlpha;
+		a_out.useAlpha    = fades;
+		a_out.blendAlpha  = fades;
+
+		if (lighting->flags.any(Flag::kSpecular)) {
+			const float scale        = finite(material->specularColorScale, 0.0f, 2.5f, 1.0f);
+			a_out.specularStrength = std::clamp(0.04f + scale * 0.055f, 0.02f, 0.18f);
+		} else {
+			a_out.specularStrength = 0.045f;
+		}
+		a_out.specularPower = finite(material->specularPower, 10.0f, 96.0f, 42.0f);
+
+		// One sided unless its shader says otherwise, as the game culls its back, so a blended layer like a beard's isn't laid on twice
+		a_out.twoSided = lighting->flags.any(Flag::kTwoSided);
+
+		// A faint self light where it emits, e.g. a lantern's glass
+		const bool emits = lighting->emissiveColor &&
+		                   (lighting->flags.any(Flag::kOwnEmit) || lighting->flags.any(Flag::kGlowMap) || lighting->emissiveMult > 0.01f);
+		if (emits) {
+			a_out.emissive[0]      = finite(lighting->emissiveColor->red, 0.0f, 1.0f, 0.0f);
+			a_out.emissive[1]      = finite(lighting->emissiveColor->green, 0.0f, 1.0f, 0.0f);
+			a_out.emissive[2]      = finite(lighting->emissiveColor->blue, 0.0f, 1.0f, 0.0f);
+			a_out.emissiveStrength = finite(lighting->emissiveMult * 0.12f, 0.0f, 0.32f, 0.0f);
+		}
+
+		switch (material->GetFeature()) {
+		case RE::BSShaderMaterial::Feature::kHairTint:
+			{
+				// Hair and beards take the actor's hair colour from their material, as the game's hair shader does
+				const auto& c = static_cast<RE::BSLightingShaderMaterialHairTint*>(material)->tintColor;
+				a_out.useTint = true;
+				a_out.tint[0] = finite(c.red, 0.0f, 1.0f, 1.0f);
+				a_out.tint[1] = finite(c.green, 0.0f, 1.0f, 1.0f);
+				a_out.tint[2] = finite(c.blue, 0.0f, 1.0f, 1.0f);
+				break;
+			}
+		case RE::BSShaderMaterial::Feature::kEnvironmentMap:
+			{
+				// A cube map reflected where its mask says, so metal shines as it does in game. With no mask, the normal map's
+				// gloss in its alpha, as the game's environment shader takes it
+				auto* env      = static_cast<RE::BSLightingShaderMaterialEnvmap*>(material);
+				a_out.envMap   = TextureSrv(env->envTexture.get());
+				a_out.envMask  = TextureSrv(env->envMaskTexture.get());
+				a_out.envScale = finite(env->envMapScale, 0.0f, 4.0f, 0.0f);
+				if (!a_out.envMask) {
+					a_out.envMask        = TextureSrv(material->normalTexture.get());
+					a_out.envMaskInAlpha = a_out.envMask != nullptr;
+				}
+				break;
+			}
+		case RE::BSShaderMaterial::Feature::kGlowMap:
+			// A glow map lights only its own marks, so it takes the full strength the game gives it, e.g. a Daedric blade's veins
+			if (emits) {
+				a_out.glow = TextureSrv(static_cast<RE::BSLightingShaderMaterialGlowmap*>(material)->glowTexture.get());
+				if (a_out.glow)
+					a_out.emissiveStrength = finite(lighting->emissiveMult, 0.0f, 2.0f, 0.0f);
+			}
+			break;
+		default:
+			break;
+		}
+
+		if (auto* alpha = netimmerse_cast<RE::NiAlphaProperty*>(a_alpha)) {
+			const bool testing  = alpha->GetAlphaTesting();
+			const bool blending = alpha->GetAlphaBlending();
+			// Over the solid meshes when it blends as the pass can, source alpha over its inverse. One blended another way but cut
+			// too is drawn solid, its cut shaping it
+			// 6 and 7 in the NIF format's own order
+			const bool plainBlend = static_cast<int>(alpha->GetSrcBlendMode()) == 6 && static_cast<int>(alpha->GetDestBlendMode()) == 7;
+			a_out.useAlpha   = a_out.useAlpha || testing || blending;
+			a_out.blendAlpha = a_out.blendAlpha || (blending && (plainBlend || !testing));
+			if (testing)
+				a_out.cutoff = std::clamp(alpha->alphaThreshold > 0 ? alpha->alphaThreshold / 255.0f : 0.04f, 0.005f, 0.95f);
+			else if (blending)
+				a_out.cutoff = 0.005f;
+		}
+		return true;
+	}
+
 	bool DrawMeshes(const FUCK::MeshDrawRequest& a_request)
 	{
 		auto* renderer = RE::BSGraphics::Renderer::GetSingleton();
@@ -1122,7 +1412,8 @@ float4 BackdropPS(BG_OUT i) : SV_Target
 			mesh.indexBuffer      = static_cast<ID3D11Buffer*>(in.indexBuffer);
 			mesh.diffuse          = static_cast<ID3D11ShaderResourceView*>(in.diffuse);
 			mesh.indexCount       = in.indexCount;
-			mesh.plain            = true;
+			mesh.plain            = !in.vertexColours;
+			mesh.vertexAlpha      = in.vertexColours && in.vertexAlpha;
 			mesh.useAlpha         = in.useAlpha;
 			mesh.blendAlpha       = in.blendAlpha;
 			mesh.alpha            = in.alpha;
@@ -1131,6 +1422,15 @@ float4 BackdropPS(BG_OUT i) : SV_Target
 			mesh.specularPower    = in.specularPower;
 			mesh.emissive         = { in.emissive[0], in.emissive[1], in.emissive[2] };
 			mesh.emissiveStrength = in.emissiveStrength;
+			mesh.hasTint          = in.useTint;
+			mesh.tint             = { in.tint[0], in.tint[1], in.tint[2] };
+			mesh.twoSided         = in.twoSided;
+			mesh.glow             = static_cast<ID3D11ShaderResourceView*>(in.glow);
+			mesh.envMap           = static_cast<ID3D11ShaderResourceView*>(in.envMap);
+			mesh.envMask          = static_cast<ID3D11ShaderResourceView*>(in.envMask);
+			mesh.envMaskInAlpha   = in.envMaskInAlpha;
+			mesh.envScale         = in.envScale;
+			CopyEffect(in, mesh);
 			meshes.push_back(std::move(mesh));
 		}
 		if (meshes.empty())
