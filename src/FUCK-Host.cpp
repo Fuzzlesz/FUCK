@@ -910,8 +910,29 @@ namespace FUCK::Host
 
 	static void PushItemWidth_Impl(float item_width) { ImGui::PushItemWidth(item_width); }
 	static void PopItemWidth_Impl() { ImGui::PopItemWidth(); }
-	static bool BeginTooltip_Impl() { return ImGui::BeginTooltipThemed(); }
-	static void EndTooltip_Impl() { ImGui::EndTooltip(); }
+	// Whether each open tooltip wraps at its picture, so its end can undo it
+	static std::vector<bool> g_tooltipWraps;
+
+	static bool BeginTooltip_Impl()
+	{
+		if (!ImGui::BeginTooltipThemed())
+			return false;
+		// Wrapped text stops at the picture's edge, as the tooltip is as wide as the picture
+		const float picture = ImGui::DrawTooltipPicture();
+		if (picture > 0.0f)
+			ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + picture);
+		g_tooltipWraps.push_back(picture > 0.0f);
+		return true;
+	}
+	static void EndTooltip_Impl()
+	{
+		if (!g_tooltipWraps.empty()) {
+			if (g_tooltipWraps.back())
+				ImGui::PopTextWrapPos();
+			g_tooltipWraps.pop_back();
+		}
+		ImGui::EndTooltip();
+	}
 	static void SetScrollHereY_Impl(float center_y_ratio) { ImGui::SetScrollHereY(center_y_ratio); }
 
 	static bool InputTextMultiline_Impl(const char* label, char* buf, size_t buf_size, const ImVec2& size, int flags)

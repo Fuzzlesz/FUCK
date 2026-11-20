@@ -394,6 +394,31 @@ namespace ImGui
 		}
 	}
 
+	namespace
+	{
+		// A card's picture for this frame's tooltip, shown large over its text (see SetTooltipPicture)
+		struct TooltipPicture
+		{
+			ImTextureID texture{};
+			ImVec2      size{};
+			int         frame = -1;
+		} g_tooltipPicture;
+	}
+
+	void SetTooltipPicture(ImTextureID a_texture, const ImVec2& a_size)
+	{
+		g_tooltipPicture = { a_texture, a_size, GetFrameCount() };
+	}
+
+	float DrawTooltipPicture()
+	{
+		if (g_tooltipPicture.frame != GetFrameCount() || !g_tooltipPicture.texture)
+			return 0.0f;
+		Image(g_tooltipPicture.texture, g_tooltipPicture.size);
+		g_tooltipPicture.frame = -1;
+		return g_tooltipPicture.size.x;
+	}
+
 	void SetTooltipEx(const char* fmt)
 	{
 		bool isHoveredTooltip = IsItemHovered(ImGuiHoveredFlags_ForTooltip);
@@ -445,8 +470,10 @@ namespace ImGui
 			}
 
 			if (BeginTooltipThemed()) {
-				// Wrapped at a readable width, so a long tip is a few lines rather than one across the screen
-				PushTextWrapPos(GetFontSize() * 22.0f);
+				// Wrapped at the picture's edge when there is one, else at a readable width, so a long tip is a few lines rather
+				// than one across the screen
+				const float picture = DrawTooltipPicture();
+				PushTextWrapPos(picture > 0.0f ? GetCursorPosX() + picture : GetFontSize() * 22.0f);
 				DrawFormattedText(fmt);
 				PopTextWrapPos();
 				EndTooltip();

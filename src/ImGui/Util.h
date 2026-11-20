@@ -24,6 +24,10 @@ namespace ImGui
 	void HelpMarker(const char* desc);
 	void SetTooltipEx(const char* fmt);
 
+	// A picture shown large over the text of a tooltip opened this frame, e.g. a hovered card's, so it can be seen properly
+	void  SetTooltipPicture(ImTextureID a_texture, const ImVec2& a_size);
+	float DrawTooltipPicture();  // its width, or 0 without one
+
 	ImU32  GetInteractiveColor(ImGuiCol base, ImGuiCol hovered, ImGuiCol active);
 	ImVec4 GetInteractiveColorVec4(ImGuiCol base, ImGuiCol hovered, ImGuiCol active);
 	ImU32  GetDynamicTextColor(bool highlighted);

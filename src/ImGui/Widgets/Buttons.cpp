@@ -938,6 +938,10 @@ namespace ImGui
 		a_out.pictureMin = picture.Min;
 		a_out.pictureMax = picture.Max;
 
+		// Its picture shown large over the card's tooltip, when the caller sets one
+		if ((a_out.hovered || focus) && a_tex && a_desc.tooltipPicture > 0.0f)
+			SetTooltipPicture(a_tex, ImVec2(a_desc.tooltipPicture, a_desc.tooltipPicture * std::max(0.01f, a_desc.aspect)));
+
 		auto*       drawList = GetWindowDrawList();
 		const float rounding = std::min(GetFrameRounding(), a_desc.side * 0.5f);
 		const float line     = std::max(1.0f, Renderer::GetResolutionScale());
