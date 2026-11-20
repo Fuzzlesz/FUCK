@@ -23,8 +23,19 @@ namespace Camera
 		bool invertTilt  = false;  // tilting up and down the other way round, on every device
 		bool invertTurn  = false;  // turning the subject the other way round, on every device
 		bool invertOrbit = false;  // orbiting round the subject the other way round, on every device
+		bool zoomToFocus = false;  // zooming in heads for the point on the subject nearest the cursor, rather than straight ahead
 
 		bool HasCustomSpeeds() const;
+	};
+
+	// Points on the subject that zoomToFocus can head for
+	enum class FocusPoint : std::uint32_t
+	{
+		kHead,
+		kChest,
+		kPelvis,
+		kFeet,
+		kTotal
 	};
 
 	// What the core needs from the camera it's moving and the subject it's looking at
@@ -41,6 +52,9 @@ namespace Camera
 
 		// The body's top, bottom and centre, for body framing
 		virtual bool GetBodyPoints(Maths::BodyPoints& a_body) = 0;
+
+		// A point on the subject for zoomToFocus, or none to zoom straight ahead
+		virtual std::optional<RE::NiPoint3> GetFocusPoint(FocusPoint a_point) = 0;
 
 		// Where the subject stands, which body framing is kept relative to
 		virtual std::optional<RE::NiPoint3> GetAnchor() = 0;
@@ -219,6 +233,12 @@ namespace Camera
 		void        UpdateFraming(const RE::NiPoint3& a_pivot, bool a_ease = false);
 		void        FollowFramedPose(float a_interval);
 		RE::NiMatrix3 HeldRotate(const RE::NiMatrix3& a_baseRotate);
+		void        GetFramedBase(const RE::NiPoint3& a_baseTranslate, const std::optional<RE::NiPoint3>& a_hostPivot, RE::NiPoint3& a_pivot, RE::NiPoint3& a_camBase) const;
+		bool        GetTargetView(RE::NiPoint3& a_translate, RE::NiMatrix3& a_rotate, RE::NiPoint3* a_subject = nullptr);
+		void        Zoom(float a_amount, bool a_atCursor);
+		void        ClearFocus();
+
+		std::optional<FocusPoint> PickFocus(const RE::NiPoint3& a_translate, const RE::NiMatrix3& a_rotate, bool a_atCursor);
 
 		Host& _host;
 
@@ -294,6 +314,15 @@ namespace Camera
 
 		ImVec2 _pendingDrag{ 0.0f, 0.0f };
 		bool   _isDragging = false;
+		// zoomToFocus: the point zooming in heads for, how far it's zoomed in towards it, and the sideways shift that brought it to the middle,
+		// which zooming back out takes off again
+		bool                      _zoomToFocus = false;
+		std::optional<FocusPoint> _focus;
+		float                     _focusDepth  = 0.0f;
+		float                     _focusShiftX = 0.0f;
+		float                     _focusShiftZ = 0.0f;
+		float                     _sinceZoomIn = 0.0f;
+		float                     _focusBlend  = 0.0f;  // 0 = speeds go by the pivot's distance, 1 = by the focus point's
 
 		float _kbmAcceleration  = 1.0f;
 		bool  _lockoutGPSubjRot = false;

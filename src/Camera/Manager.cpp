@@ -81,6 +81,7 @@ namespace
 		{ "InvertTilt",     &Camera::Config::invertTilt      },
 		{ "InvertTurn",     &Camera::Config::invertTurn      },
 		{ "InvertOrbit",    &Camera::Config::invertOrbit     },
+		{ "ZoomToFocus",    &Camera::Config::zoomToFocus     },
 	} };
 
 	std::string GetConfigPath()
@@ -1680,6 +1681,42 @@ namespace Camera
 		return true;
 	}
 
+	// zoomToFocus: the head, chest, pelvis and feet. None when the camera orbits itself, as there's no subject it's looking at
+	std::optional<RE::NiPoint3> Manager::GetFocusPoint(FocusPoint a_point)
+	{
+		if (_current && (_current->flags & FUCK::CameraSessionFlags::kPivotAtCamera))
+			return std::nullopt;
+
+		auto subject = GetSubject();
+		if (!subject)
+			return std::nullopt;
+
+		auto bone = [&](const char* a_name) -> std::optional<RE::NiPoint3> {
+			if (auto node = subject->GetNodeByName(a_name))
+				return node->world.translate;
+			return std::nullopt;
+		};
+
+		switch (a_point) {
+		case FocusPoint::kHead:
+			return bone("NPC Head [Head]");
+		case FocusPoint::kChest:
+			return bone("NPC Spine2 [Spn2]");
+		case FocusPoint::kPelvis:
+			return bone("NPC Pelvis [Pelv]");
+		case FocusPoint::kFeet:
+			{
+				const auto left  = bone("NPC L Foot [Lft ]");
+				const auto right = bone("NPC R Foot [Rft ]");
+				if (left && right)
+					return (*left + *right) * 0.5f;
+				return std::nullopt;
+			}
+		default:
+			return std::nullopt;
+		}
+	}
+
 	bool Manager::IsScrollBlocked()
 	{
 		return _current && _current->client->IsCameraScrollBlocked();
@@ -2112,6 +2149,8 @@ namespace Camera
 			changed |= FUCK::Checkbox("$FUCK_Camera_InvertTilt"_T, &_config.invertTilt, true, true);
 			changed |= FUCK::Checkbox("$FUCK_Camera_InvertTurn"_T, &_config.invertTurn, true, true);
 			changed |= FUCK::Checkbox("$FUCK_Camera_InvertOrbit"_T, &_config.invertOrbit, true, true);
+			changed |= FUCK::Checkbox("$FUCK_Camera_ZoomToFocus"_T, &_config.zoomToFocus, true, true);
+			FUCK::SetTooltip("$FUCK_Camera_ZoomToFocusTT"_T);
 		}
 
 		// The speeds under a node, as few want them. A fixed ID, so its state isn't the label's
@@ -2183,6 +2222,7 @@ namespace Camera
 					_config.invertTilt  = kept.invertTilt;
 					_config.invertTurn  = kept.invertTurn;
 					_config.invertOrbit = kept.invertOrbit;
+					_config.zoomToFocus = kept.zoomToFocus;
 					changed             = true;
 				}
 

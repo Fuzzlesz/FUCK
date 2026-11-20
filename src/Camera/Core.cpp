@@ -34,6 +34,9 @@ namespace
 	constexpr float EPSILON                   =  0.001f;
 	constexpr float DOUBLE_CLICK_TIME         =  0.35f;  // seconds between middle clicks that reset the camera
 	constexpr float DOUBLE_CLICK_TRAVEL       =  8.0f;   // pixels the mouse may move between them, so a drag doesn't count
+	constexpr float FOCUS_HOLD                =  0.5f;   // zoomToFocus: seconds without zooming in before the next zoom picks its point afresh
+	constexpr float FOCUS_MIN_DEPTH           =  5.0f;   // zoomToFocus: how far ahead a point must be to head for it
+	constexpr float FOCUS_BLEND_SPEED         =  4.0f;
 
 	float InputAxis(std::uint32_t a_positive, std::uint32_t a_negative)
 	{
@@ -208,11 +211,13 @@ namespace Camera
 
 		_targetCamOffset.x += a_move.panX  * panSpeed;
 		_targetCamOffset.z += a_move.panZ  * panSpeed;
-		_targetCamOffset.y += a_move.zoom  * zoomSpeed;
 		_targetCamRotZ     += a_move.orbit * orbitSpeed;
 		_targetCamRotX     += a_move.pitch * orbitSpeed;
 		_targetCamRoll     += a_move.roll  * rollSpeed;
 		_targetFovOffset   += a_move.fov   * fovSpeed;
+
+		_zoomToFocus = a_settings.zoomToFocus;
+		Zoom(a_move.zoom * zoomSpeed, false);
 
 		_isZooming |= a_move.zoom != 0.0f;
 		if (a_move.pitch != 0.0f)
@@ -232,6 +237,12 @@ namespace Camera
 		FollowFramedPose(a_interval);
 		if (!_framingHeld && !_keepView && _heldRotateEase < 1.0f)
 			_heldRotateEase = std::min(1.0f, _heldRotateEase + a_interval / FRAMING_HELD_TURN_TIME);
+
+		_zoomToFocus  = a_settings.zoomToFocus;
+		_sinceZoomIn += a_interval;
+		_focusBlend   = std::lerp(_focusBlend, _focusDepth > 0.0f ? 1.0f : 0.0f, SmoothFactor(FOCUS_BLEND_SPEED, a_interval));
+		if (_focusBlend < EPSILON)
+			_focusBlend = 0.0f;
 
 		if (!a_state.inputAllowed) {
 			ClearInputState();
@@ -369,6 +380,7 @@ namespace Camera
 		_pendingScroll      = 0.0f;
 		_smoothScrollZoom   = 0.0f;
 		_smoothScrollFov    = 0.0f;
+		ClearFocus();
 
 		_host.ResetSubject();
 	}
@@ -430,7 +442,7 @@ namespace Camera
 		_pendingScroll = 0.0f;
 
 		float scrollFactor = SmoothFactor(SCROLL_SMOOTH_SPEED, a_interval);
-		_targetCamOffset.y += DrainSmoothed(_smoothScrollZoom, scrollFactor, EPSILON);
+		Zoom(DrainSmoothed(_smoothScrollZoom, scrollFactor, EPSILON), true);
 		_targetFovOffset   -= DrainSmoothed(_smoothScrollFov,  scrollFactor, EPSILON);
 
 		if (!a_in.mmbDown || a_in.isUIHovered || a_in.isPopupOpen || a_in.mouseLocked)
@@ -476,7 +488,7 @@ namespace Camera
 
 		if (a_in.shiftDown) {
 			// Secondary (Ctrl + Shift): Zoom, FOV, Roll & Pitch
-			_targetCamOffset.y += ws * zoomSpeed;
+			Zoom(ws * zoomSpeed, false);
 			_isZooming         |= ws != 0.0f;
 			_targetFovOffset   += da * fovSpeed;
 			_targetCamRoll     += eq * rollSpeed;
@@ -524,7 +536,7 @@ namespace Camera
 		} else {
 			// RB: Orbit & Zoom
 			_targetCamRotZ     -= Orbit(a_settings) * rightX * rotSpeed;
-			_targetCamOffset.y += rightY * zoomSpeed;
+			Zoom(rightY * zoomSpeed, false);
 			_isZooming         |= rightY != 0.0f;
 		}
 	}
@@ -764,13 +776,8 @@ namespace Camera
 			UpdateFraming(pivot);
 		}
 
-		RE::NiPoint3 camBase = _originalTranslate;
-		if (_hasFraming && _framingBlend > 0.0f) {
-			const auto   anchor    = _host.GetAnchor().value_or(_originalTranslate);
-			RE::NiPoint3 bodyPivot = anchor + _framingPivotDelta;
-			pivot                  = pivot + (bodyPivot - pivot) * _framingBlend;
-			camBase                = _originalTranslate + (anchor + _framingCamDelta - _originalTranslate) * _framingBlend;
-		}
+		RE::NiPoint3 camBase;
+		GetFramedBase(_originalTranslate, hostPivot, pivot, camBase);
 		// Before the orbit and the moves, which stay as they are, so a kept view starts from here
 		_lastOutTranslate = camBase;
 		_hasLastOut       = true;
@@ -784,7 +791,180 @@ namespace Camera
 		a_outTranslate           = orbitedTranslate + finalOffset;
 		a_outRotate              = orbitedRotate * pitchMat * rollMat;
 		_cameraDistance          = hostPivot ? a_outTranslate.GetDistance(pivot) : 0.0f;
+
+		// zoomToFocus: zoomed in on a point, speeds go by how far it is, so each step still covers the same share of the way there
+		if (hostPivot && _focus && _focusBlend > 0.0f) {
+			if (const auto focus = _host.GetFocusPoint(*_focus))
+				_cameraDistance = std::lerp(_cameraDistance, a_outTranslate.GetDistance(*focus), _focusBlend);
+		}
 		return true;
+	}
+
+	// The pivot and the camera before the offsets, with the body framing blended in
+	void Core::GetFramedBase(const RE::NiPoint3& a_baseTranslate, const std::optional<RE::NiPoint3>& a_hostPivot, RE::NiPoint3& a_pivot, RE::NiPoint3& a_camBase) const
+	{
+		a_pivot   = a_hostPivot.value_or(a_baseTranslate);
+		a_camBase = a_baseTranslate;
+		if (_hasFraming && _framingBlend > 0.0f) {
+			const auto   anchor    = _host.GetAnchor().value_or(a_baseTranslate);
+			RE::NiPoint3 bodyPivot = anchor + _framingPivotDelta;
+			a_pivot                = a_pivot + (bodyPivot - a_pivot) * _framingBlend;
+			a_camBase              = a_baseTranslate + (anchor + _framingCamDelta - a_baseTranslate) * _framingBlend;
+		}
+	}
+
+	// Where the camera is heading: the view Compose gives once the offsets reach their targets
+	bool Core::GetTargetView(RE::NiPoint3& a_translate, RE::NiMatrix3& a_rotate, RE::NiPoint3* a_subject)
+	{
+		RE::NiPoint3  baseTranslate;
+		RE::NiMatrix3 baseRotate;
+		if (!_host.GetBasePose(baseTranslate, baseRotate))
+			return false;
+
+		RE::NiPoint3 pivot;
+		RE::NiPoint3 camBase;
+		GetFramedBase(baseTranslate, _host.GetPivot(), pivot, camBase);
+
+		a_rotate    = MakeYaw(_targetCamRotZ) * baseRotate * MakePitch(_targetCamRotX);
+		a_translate = OrbitAroundZ(pivot, camBase, _targetCamRotZ) + a_rotate * _targetCamOffset;
+		if (a_subject)
+			*a_subject = pivot;
+		return true;
+	}
+
+	// zoomToFocus: the point on the subject nearest the line through the cursor, or through the middle of the screen
+	std::optional<FocusPoint> Core::PickFocus(const RE::NiPoint3& a_translate, const RE::NiMatrix3& a_rotate, bool a_atCursor)
+	{
+		// The line as how far across and up it goes for each unit ahead
+		float aimX = 0.0f;
+		float aimZ = 0.0f;
+		if (a_atCursor) {
+			const auto   worldCam = RE::Main::WorldRootCamera();
+			const ImVec2 size     = FUCK::GetDisplaySize();
+			const ImVec2 mouse    = FUCK::GetMousePos();
+			if (worldCam && size.x > 0.0f && size.y > 0.0f && mouse.x >= 0.0f && mouse.y >= 0.0f && mouse.x <= size.x && mouse.y <= size.y) {
+				const auto& frustum = worldCam->GetRuntimeData2().viewFrustum;
+				aimX                = (mouse.x / size.x * 2.0f - 1.0f) * frustum.fRight;
+				aimZ                = (1.0f - mouse.y / size.y * 2.0f) * frustum.fTop;
+			}
+		}
+
+		const RE::NiMatrix3       toView = Transposed(a_rotate);
+		std::optional<FocusPoint> best;
+		float                     bestMiss = 0.0f;
+		for (std::uint32_t i = 0; i < static_cast<std::uint32_t>(FocusPoint::kTotal); ++i) {
+			const auto point    = static_cast<FocusPoint>(i);
+			const auto position = _host.GetFocusPoint(point);
+			if (!position)
+				continue;
+
+			const RE::NiPoint3 local = toView * (*position - a_translate);
+			if (local.y < FOCUS_MIN_DEPTH)
+				continue;
+
+			const float missX = local.x / local.y - aimX;
+			const float missZ = local.z / local.y - aimZ;
+			const float miss  = missX * missX + missZ * missZ;
+			if (!best || miss < bestMiss) {
+				best     = point;
+				bestMiss = miss;
+			}
+		}
+		return best;
+	}
+
+	// Zooms by a_amount, in when positive, along the line to the subject, so they stay where they're framed on screen. Framing puts the body
+	// off centre, so going straight ahead would carry them out of frame. With zoomToFocus, zooming in also moves the camera sideways so the
+	// focus point comes to where the subject is framed as the camera nears it (what's left of its offset falls with the square of the
+	// distance left), and zooming back out takes that off again over the same distance, back to where the zoom began
+	void Core::Zoom(float a_amount, bool a_atCursor)
+	{
+		if (a_amount == 0.0f)
+			return;
+
+		// Measured from where the camera's heading before this step
+		RE::NiPoint3  translate;
+		RE::NiMatrix3 rotate;
+		RE::NiPoint3  subject;
+		const bool    hasView = GetTargetView(translate, rotate, &subject);
+
+		// Where the subject sits on screen, as how far across and up for each unit ahead
+		float aimX = 0.0f;
+		float aimZ = 0.0f;
+		if (hasView) {
+			const RE::NiPoint3 local = Transposed(rotate) * (subject - translate);
+			if (local.y >= FOCUS_MIN_DEPTH) {
+				aimX = local.x / local.y;
+				aimZ = local.z / local.y;
+			}
+		}
+		const auto alongAim = [&](float a_step) {
+			_targetCamOffset.x += aimX * a_step;
+			_targetCamOffset.y += a_step;
+			_targetCamOffset.z += aimZ * a_step;
+		};
+
+		if (!_zoomToFocus) {
+			ClearFocus();
+			alongAim(a_amount);
+			return;
+		}
+
+		if (a_amount < 0.0f) {
+			if (_focusDepth <= 0.0f) {
+				alongAim(a_amount);
+				return;
+			}
+
+			_targetCamOffset.y += a_amount;
+			const float share   = std::min(-a_amount / _focusDepth, 1.0f);
+			const float backX   = _focusShiftX * share;
+			const float backZ   = _focusShiftZ * share;
+			_targetCamOffset.x -= backX;
+			_targetCamOffset.z -= backZ;
+			_focusShiftX       -= backX;
+			_focusShiftZ       -= backZ;
+			_focusDepth         = share >= 1.0f ? 0.0f : _focusDepth + a_amount;
+			return;
+		}
+
+		if (!hasView) {
+			_targetCamOffset.y += a_amount;
+			return;
+		}
+
+		if (!_focus || _sinceZoomIn > FOCUS_HOLD)
+			_focus = PickFocus(translate, rotate * MakeRoll(_targetCamRoll), a_atCursor);
+		_sinceZoomIn = 0.0f;
+
+		const auto position = _focus ? _host.GetFocusPoint(*_focus) : std::nullopt;
+		const RE::NiPoint3 local = position ? Transposed(rotate) * (*position - translate) : RE::NiPoint3{};
+		if (!position || local.y < FOCUS_MIN_DEPTH) {
+			alongAim(a_amount);
+			return;
+		}
+
+		// After the step the point sits at the subject's place on screen, plus what's left of how far off it was
+		const float depth   = local.y - a_amount;
+		const float left    = std::max(depth / local.y, 0.0f);
+		const float keep    = left * left;
+		const float shiftX  = local.x - (aimX * depth + (local.x - aimX * local.y) * keep);
+		const float shiftZ  = local.z - (aimZ * depth + (local.z - aimZ * local.y) * keep);
+		_targetCamOffset.y += a_amount;
+		_targetCamOffset.x += shiftX;
+		_targetCamOffset.z += shiftZ;
+		_focusShiftX       += shiftX;
+		_focusShiftZ       += shiftZ;
+		_focusDepth        += a_amount;
+	}
+
+	void Core::ClearFocus()
+	{
+		_focus.reset();
+		_focusDepth  = 0.0f;
+		_focusShiftX = 0.0f;
+		_focusShiftZ = 0.0f;
+		_focusBlend  = 0.0f;
 	}
 
 	void Core::SetBodyFraming(bool a_framed, const FUCK::CameraScreenRect& a_rect, float a_margin)
@@ -807,6 +987,7 @@ namespace Camera
 
 		_isFramed = a_framed;
 		_smoothScrollZoom = 0.0f;
+		ClearFocus();
 
 		// Framing the body eases out the moves so the camera settles on it, and turning it off eases back to them
 		if (_isFramed) {
@@ -875,6 +1056,7 @@ namespace Camera
 		// Drop scroll still easing in, so it can't push past the preset
 		_smoothScrollZoom = 0.0f;
 		_smoothScrollFov  = 0.0f;
+		ClearFocus();
 	}
 
 	void Core::Reset()
@@ -1120,5 +1302,6 @@ namespace Camera
 		_hasFraming          = false;
 		_smoothScrollZoom    = 0.0f;
 		_smoothScrollFov     = 0.0f;
+		ClearFocus();
 	}
 }
