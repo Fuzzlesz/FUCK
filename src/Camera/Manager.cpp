@@ -1736,6 +1736,34 @@ namespace Camera
 		}
 	}
 
+	// The face mesh's authored bound, as skinned geometry's worldBound isn't kept up. Hair is left out, as long hair would hold the camera
+	// well back from the face
+	float Manager::GetHeadRadius()
+	{
+		constexpr float HEAD_RADIUS_FALLBACK = 12.0f;
+		constexpr float HEAD_RADIUS_MIN      = 6.0f;
+		constexpr float HEAD_RADIUS_MAX      = 25.0f;
+
+		if (_current && (_current->flags & FUCK::CameraSessionFlags::kPivotAtCamera))
+			return 0.0f;
+
+		auto subject = GetSubject();
+		if (!subject || !subject->GetNodeByName("NPC Head [Head]"))
+			return 0.0f;
+
+		const float scale = std::max(subject->GetScale(), 0.1f);
+		auto        npc   = subject->GetActorBase();
+		auto        part  = npc ? npc->GetCurrentHeadPartByType(RE::BGSHeadPart::HeadPartType::kFace) : nullptr;
+		auto        face  = subject->GetFaceNodeSkinned();
+		auto        mesh  = part && face && !part->formEditorID.empty() ? face->GetObjectByName(part->formEditorID) : nullptr;
+		auto        geom  = mesh ? mesh->AsGeometry() : nullptr;
+		if (!geom)
+			return HEAD_RADIUS_FALLBACK * scale;
+
+		const float radius = geom->GetModelData().modelBound.radius * geom->world.scale;
+		return std::clamp(radius, HEAD_RADIUS_MIN * scale, HEAD_RADIUS_MAX * scale);
+	}
+
 	bool Manager::IsScrollBlocked()
 	{
 		return _current && _current->client->IsCameraScrollBlocked();

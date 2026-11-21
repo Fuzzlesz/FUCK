@@ -59,6 +59,9 @@ namespace Camera
 		// Where the subject stands, which body framing is kept relative to
 		virtual std::optional<RE::NiPoint3> GetAnchor() = 0;
 
+		// The head mesh's radius round the head node, or 0 when there's no head to measure
+		virtual float GetHeadRadius() = 0;
+
 		// Whether the body points are one part's (SetPartFraming), which moves round the subject as they turn
 		virtual bool FramesPart() = 0;
 
@@ -243,6 +246,8 @@ namespace Camera
 		bool        GetTargetView(RE::NiPoint3& a_translate, RE::NiMatrix3& a_rotate, RE::NiPoint3* a_subject = nullptr);
 		void        Zoom(float a_amount, bool a_atCursor);
 		void        ClearFocus();
+		float       HeadClearance();
+		void        KeepOutOfHead(RE::NiPoint3& a_translate, const RE::NiMatrix3& a_rotate);
 
 		std::optional<FocusPoint> PickFocus(const RE::NiPoint3& a_translate, const RE::NiMatrix3& a_rotate, bool a_atCursor);
 

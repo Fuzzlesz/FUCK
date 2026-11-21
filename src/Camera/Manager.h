@@ -181,6 +181,7 @@ namespace Camera
 		bool                        FramesPart() override { return _current && !_current->framedPart.empty(); }
 		std::optional<float>        GetFacing() override { return GetSubjectYaw(); }
 		std::optional<RE::NiPoint3> GetFocusPoint(FocusPoint a_point) override;
+		float                       GetHeadRadius() override;
 		bool                        GetBodyPointsOf(RE::Actor* a_actor, Maths::BodyPoints& a_body);
 		bool                        GetWholeBodyPoints(RE::Actor* a_actor, Maths::BodyPoints& a_body);
 		bool                        GetPartPoints(Maths::BodyPoints& a_part);

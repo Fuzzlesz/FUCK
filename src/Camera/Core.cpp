@@ -873,6 +873,7 @@ namespace Camera
 		RE::NiPoint3 finalOffset = orbitedRotate * (pitchMat * _camOffset);
 		a_outTranslate           = orbitedTranslate + finalOffset;
 		a_outRotate              = orbitedRotate * pitchMat * rollMat;
+		KeepOutOfHead(a_outTranslate, a_outRotate);
 		_cameraDistance          = hostPivot ? a_outTranslate.GetDistance(pivot) : 0.0f;
 
 		// zoomToFocus: zoomed in on a point, speeds go by how far it is, so each step still covers the same share of the way there
@@ -971,6 +972,16 @@ namespace Camera
 		RE::NiPoint3  subject;
 		const bool    hasView = GetTargetView(translate, rotate, &subject);
 
+		// Not closer than the head allows, so scrolling on against it doesn't bank a zoom that has to be scrolled back out of
+		if (a_amount > 0.0f && hasView) {
+			const auto head = _host.GetFocusPoint(FocusPoint::kHead);
+			if (const float clearance = HeadClearance(); head && clearance > 0.0f) {
+				a_amount = std::min(a_amount, translate.GetDistance(*head) - clearance);
+				if (a_amount <= 0.0f)
+					return;
+			}
+		}
+
 		// Where the subject sits on screen, as how far across and up for each unit ahead
 		float aimX = 0.0f;
 		float aimZ = 0.0f;
@@ -1039,6 +1050,37 @@ namespace Camera
 		_focusShiftX       += shiftX;
 		_focusShiftZ       += shiftZ;
 		_focusDepth        += a_amount;
+	}
+
+	// The near plane cuts into a head the camera comes closer to than its radius plus the plane's distance
+	float Core::HeadClearance()
+	{
+		constexpr float HEAD_CLEARANCE_MARGIN = 2.0f;
+
+		const float radius   = _host.GetHeadRadius();
+		const auto  worldCam = RE::Main::WorldRootCamera();
+		if (radius <= 0.0f || !worldCam)
+			return 0.0f;
+		return radius + worldCam->GetRuntimeData2().viewFrustum.fNear + HEAD_CLEARANCE_MARGIN;
+	}
+
+	// Pushed straight out from the head, as old Menu Studio's camera floor did, whichever move brought it in
+	void Core::KeepOutOfHead(RE::NiPoint3& a_translate, const RE::NiMatrix3& a_rotate)
+	{
+		const auto head = _host.GetFocusPoint(FocusPoint::kHead);
+		const float clearance = HeadClearance();
+		if (!head || clearance <= 0.0f)
+			return;
+
+		RE::NiPoint3 away = a_translate - *head;
+		float        dist = away.Length();
+		if (dist >= clearance)
+			return;
+		if (dist < EPSILON) {
+			away = ForwardAxis(a_rotate) * -1.0f;
+			dist = 1.0f;
+		}
+		a_translate = *head + away * (clearance / dist);
 	}
 
 	void Core::ClearFocus()
