@@ -76,6 +76,7 @@ namespace
 		{ "GPRollSpeed",    &Camera::Config::gpRollSpeed     },
 		{ "GPFovSpeed",     &Camera::Config::gpFovSpeed      },
 		{ "GPCharRotSpeed", &Camera::Config::gpCharRotSpeed  },
+		{ "KBMCharRotSpeed", &Camera::Config::kbmCharRotSpeed },
 		{ "GPDeadzone",     &Camera::Config::gpDeadzone      },
 		{ "Cinematic",      &Camera::Config::cinematic       },
 		{ "InvertTilt",     &Camera::Config::invertTilt      },
@@ -2233,6 +2234,8 @@ namespace Camera
 						changed |= SpeedSlider("$FUCK_Camera_SpeedOrbit"_T,   &_config.kbmRotSpeed,     def.kbmRotSpeed);
 						changed |= SpeedSlider("$FUCK_Camera_SpeedRoll"_T,    &_config.kbmRollSpeed,    def.kbmRollSpeed);
 						changed |= SpeedSlider("$FUCK_Camera_SpeedFovZoom"_T, &_config.kbmZoomFovSpeed, def.kbmZoomFovSpeed);
+						changed |= SpeedSlider("$FUCK_Camera_SpeedCharacter"_T, &_config.kbmCharRotSpeed, def.kbmCharRotSpeed);
+						FUCK::SetTooltip("$FUCK_Camera_SpeedCharacterKbmTT"_T);
 
 						FUCK::PopID();
 						FUCK::EndTabItem();

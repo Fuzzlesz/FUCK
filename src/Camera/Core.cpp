@@ -10,7 +10,6 @@ namespace
 	// Tuned against the speed sliders' defaults, so changing one changes how the camera feels for every consumer
 	constexpr float MOUSE_WHEEL_MULT          =  0.1f;
 	constexpr float MOUSE_MOVE_MULT           =  0.002f;
-	constexpr float MOUSE_ROT_MULT            =  0.010f;
 
 	constexpr float PITCH_CLAMP_LIMIT         =  1.55f;
 	constexpr float SCROLL_SMOOTH_SPEED       = 15.0f;
@@ -63,7 +62,8 @@ bool Camera::Config::HasCustomSpeeds() const
 	       differs(gpRollSpeed,     def.gpRollSpeed)     ||
 	       differs(gpFovSpeed,      def.gpFovSpeed)      ||
 	       differs(gpCharRotSpeed,  def.gpCharRotSpeed)  ||
-	       differs(gpDeadzone,      def.gpDeadzone);
+	       differs(gpDeadzone,      def.gpDeadzone)      ||
+	       std::abs(kbmCharRotSpeed - def.kbmCharRotSpeed) > def.kbmCharRotSpeed * 0.01f;
 }
 
 namespace
@@ -584,7 +584,7 @@ namespace Camera
 
 		if (allowMouseRot) {
 			if (_wasMouseSubjRot) {  // Ignore the very first frame to prevent delta spikes
-				rotAmount = a_in.mouseDelta.x * MOUSE_ROT_MULT;
+				rotAmount = a_in.mouseDelta.x * a_settings.kbmCharRotSpeed;
 			}
 			// The drag's speed over its last moments, so one that slowed to a stop before release has nothing left to carry
 			if (a_interval > 0.0f)

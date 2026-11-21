@@ -10,6 +10,7 @@ namespace Camera
 		float kbmRotSpeed     = 1.5f;
 		float kbmRollSpeed    = 1.5f;
 		float kbmZoomFovSpeed = 30.0f;
+		float kbmCharRotSpeed = 0.005f;  // radians of right-drag turn per pixel
 
 		float gpPanSpeed     = 100.0f;
 		float gpZoomSpeed    = 100.0f;
