@@ -25,6 +25,8 @@ namespace Camera
 		bool invertOrbit = false;  // orbiting round the subject the other way round, on every device
 		bool zoomToFocus = false;  // zooming in heads for the point on the subject nearest the cursor, rather than straight ahead
 		bool turnCoast   = true;   // a flicked right-drag turn carries on and eases to a stop after release
+		bool orbitHead   = true;   // a framed body orbits and zooms on the head rather than its middle
+		bool followHead  = true;   // zoomed in on a framed body, the camera moves with the live head
 
 		bool HasCustomSpeeds() const;
 	};
@@ -248,6 +250,8 @@ namespace Camera
 		void        Zoom(float a_amount, bool a_atCursor);
 		void        ClearFocus();
 		float       HeadClearance();
+		bool        PivotsOnHead(bool a_pair) const;
+		RE::NiPoint3 HeadFollow(const RE::NiPoint3& a_anchor) const;
 		void        KeepOutOfHead(RE::NiPoint3& a_translate, const RE::NiMatrix3& a_rotate);
 
 		std::optional<FocusPoint> PickFocus(const RE::NiPoint3& a_translate, const RE::NiMatrix3& a_rotate, bool a_atCursor);
@@ -350,6 +354,8 @@ namespace Camera
 		float _kbmAcceleration  = 1.0f;
 		bool  _lockoutGPSubjRot = false;
 		bool  _wasMouseSubjRot  = false;
+		bool  _orbitHead        = true;
+		bool  _followHead       = true;
 		float _turnSpeed        = 0.0f;  // turnCoast: radians a second the drag was turning at
 		float _turnCoast        = 0.0f;  // turnCoast: radians a second still carried after release
 

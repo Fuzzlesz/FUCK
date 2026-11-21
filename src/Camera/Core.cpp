@@ -243,6 +243,9 @@ namespace Camera
 			_heldRotateEase = std::min(1.0f, _heldRotateEase + a_interval / FRAMING_HELD_TURN_TIME);
 
 		_zoomToFocus  = a_settings.zoomToFocus;
+		_followHead   = a_settings.followHead;
+		if (std::exchange(_orbitHead, a_settings.orbitHead) != a_settings.orbitHead)
+			Reframe(false);
 		_sinceZoomIn += a_interval;
 		_focusBlend   = std::lerp(_focusBlend, _focusDepth > 0.0f ? 1.0f : 0.0f, SmoothFactor(FOCUS_BLEND_SPEED, a_interval));
 		if (_focusBlend < EPSILON)
@@ -793,11 +796,33 @@ namespace Camera
 	// What a framed body orbits and zooms on: the head, as unframed, or the middle of a framed part or of two framed together
 	RE::NiPoint3 Core::FramedPivot(const BodyPoints& a_body)
 	{
-		if (!_host.FramesPart() && !a_body.pair) {
+		if (PivotsOnHead(a_body.pair)) {
 			if (const auto head = _host.GetFocusPoint(FocusPoint::kHead))
 				return *head;
 		}
 		return a_body.centre;
+	}
+
+	bool Core::PivotsOnHead(bool a_pair) const
+	{
+		return _orbitHead && !a_pair && !_host.FramesPart();
+	}
+
+	// Framing holds the head where it was measured, relative to where the subject stands, so the wide shot doesn't sway with an idle.
+	// Zoomed in that drift leaves the frame, so the camera takes up the live head's movement as it closes in, all of it by halfway
+	RE::NiPoint3 Core::HeadFollow(const RE::NiPoint3& a_anchor) const
+	{
+		constexpr float HEAD_FOLLOW_FULL = 0.5f;  // share of the way in at which the head's followed fully
+
+		if (!_followHead || !PivotsOnHead(_framingSpread > 0.0f) || _framingDistance <= EPSILON)
+			return {};
+		const auto head = _host.GetFocusPoint(FocusPoint::kHead);
+		if (!head)
+			return {};
+
+		const float in = std::clamp(_camOffset.y / (_framingDistance * HEAD_FOLLOW_FULL), 0.0f, 1.0f);
+		const float w  = in * in * (3.0f - 2.0f * in);
+		return (*head - (a_anchor + _framingPivotDelta)) * w;
 	}
 
 	void Core::UpdateFraming(const RE::NiPoint3& a_pivot, bool a_ease)
@@ -919,9 +944,10 @@ namespace Camera
 		a_camBase = a_baseTranslate;
 		if (_hasFraming && _framingBlend > 0.0f) {
 			const auto   anchor    = _host.GetAnchor().value_or(a_baseTranslate);
-			RE::NiPoint3 bodyPivot = anchor + _framingPivotDelta;
+			const auto   follow    = HeadFollow(anchor);
+			RE::NiPoint3 bodyPivot = anchor + _framingPivotDelta + follow;
 			a_pivot                = a_pivot + (bodyPivot - a_pivot) * _framingBlend;
-			a_camBase              = a_baseTranslate + (anchor + _framingCamDelta - a_baseTranslate) * _framingBlend;
+			a_camBase              = a_baseTranslate + (anchor + _framingCamDelta + follow - a_baseTranslate) * _framingBlend;
 		}
 	}
 

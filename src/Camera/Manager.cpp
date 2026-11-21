@@ -83,6 +83,8 @@ namespace
 		{ "InvertOrbit",    &Camera::Config::invertOrbit     },
 		{ "ZoomToFocus",    &Camera::Config::zoomToFocus     },
 		{ "TurnCoast",      &Camera::Config::turnCoast       },
+		{ "OrbitHead",      &Camera::Config::orbitHead       },
+		{ "FollowHead",     &Camera::Config::followHead      },
 	} };
 
 	std::string GetConfigPath()
@@ -2201,6 +2203,12 @@ namespace Camera
 			FUCK::SetTooltip("$FUCK_Camera_ZoomToFocusTT"_T);
 			changed |= FUCK::Checkbox("$FUCK_Camera_TurnCoast"_T, &_config.turnCoast, true, true);
 			FUCK::SetTooltip("$FUCK_Camera_TurnCoastTT"_T);
+			changed |= FUCK::Checkbox("$FUCK_Camera_OrbitHead"_T, &_config.orbitHead, true, true);
+			FUCK::SetTooltip("$FUCK_Camera_OrbitHeadTT"_T);
+			FUCK::BeginDisabled(!_config.orbitHead);
+			changed |= FUCK::Checkbox("$FUCK_Camera_FollowHead"_T, &_config.followHead, true, true);
+			FUCK::EndDisabled();
+			FUCK::SetTooltip("$FUCK_Camera_FollowHeadTT"_T);
 		}
 
 		// The speeds under a node, as few want them. A fixed ID, so its state isn't the label's
@@ -2274,6 +2282,8 @@ namespace Camera
 					_config.invertOrbit = kept.invertOrbit;
 					_config.zoomToFocus = kept.zoomToFocus;
 					_config.turnCoast   = kept.turnCoast;
+					_config.orbitHead   = kept.orbitHead;
+					_config.followHead  = kept.followHead;
 					changed             = true;
 				}
 
