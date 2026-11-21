@@ -998,7 +998,19 @@ namespace Camera
 			_targetCamOffset.z += aimZ * a_step;
 		};
 
-		if (!_zoomToFocus) {
+		// Framed, zooming in brings the pivot to the middle of the framing area, where a framed part (FR's hair shot) puts it. Left where
+		// it is, a whole body's head pivot stays up near the top of the frame
+		float goalX = aimX;
+		float goalZ = aimZ;
+		const auto worldCam = RE::Main::WorldRootCamera();
+		const bool toGoal   = !_zoomToFocus && hasView && _isFramed && _hasFraming && !_keepView && worldCam;
+		if (toGoal) {
+			const auto& frustum = worldCam->GetRuntimeData2().viewFrustum;
+			goalX               = _framingRect.centreX * frustum.fRight;
+			goalZ               = _framingRect.centreY * frustum.fTop;
+		}
+
+		if (!_zoomToFocus && !toGoal) {
 			ClearFocus();
 			alongAim(a_amount);
 			return;
@@ -1027,11 +1039,15 @@ namespace Camera
 			return;
 		}
 
-		if (!_focus || _sinceZoomIn > FOCUS_HOLD)
-			_focus = PickFocus(translate, rotate * MakeRoll(_targetCamRoll), a_atCursor);
-		_sinceZoomIn = 0.0f;
-
-		const auto position = _focus ? _host.GetFocusPoint(*_focus) : std::nullopt;
+		std::optional<RE::NiPoint3> position = subject;
+		if (!toGoal) {
+			if (!_focus || _sinceZoomIn > FOCUS_HOLD)
+				_focus = PickFocus(translate, rotate * MakeRoll(_targetCamRoll), a_atCursor);
+			_sinceZoomIn = 0.0f;
+			position     = _focus ? _host.GetFocusPoint(*_focus) : std::nullopt;
+			goalX        = aimX;
+			goalZ        = aimZ;
+		}
 		const RE::NiPoint3 local = position ? Transposed(rotate) * (*position - translate) : RE::NiPoint3{};
 		if (!position || local.y < FOCUS_MIN_DEPTH) {
 			alongAim(a_amount);
@@ -1042,8 +1058,8 @@ namespace Camera
 		const float depth   = local.y - a_amount;
 		const float left    = std::max(depth / local.y, 0.0f);
 		const float keep    = left * left;
-		const float shiftX  = local.x - (aimX * depth + (local.x - aimX * local.y) * keep);
-		const float shiftZ  = local.z - (aimZ * depth + (local.z - aimZ * local.y) * keep);
+		const float shiftX  = local.x - (goalX * depth + (local.x - goalX * local.y) * keep);
+		const float shiftZ  = local.z - (goalZ * depth + (local.z - goalZ * local.y) * keep);
 		_targetCamOffset.y += a_amount;
 		_targetCamOffset.x += shiftX;
 		_targetCamOffset.z += shiftZ;
