@@ -38,6 +38,9 @@ namespace
 	constexpr float FOCUS_HOLD                =  0.5f;   // zoomToFocus: seconds without zooming in before the next zoom picks its point afresh
 	constexpr float FOCUS_MIN_DEPTH           =  5.0f;   // zoomToFocus: how far ahead a point must be to head for it
 	constexpr float FOCUS_BLEND_SPEED         =  4.0f;
+	constexpr float TURN_SPEED_RATE           = 20.0f;   // turnCoast: about the last 50 ms of a drag sets the speed it carries
+	constexpr float TURN_COAST_TIME           =  0.05f;  // turnCoast: the carried speed's decay, so a coast is mostly gone in 150 ms
+	constexpr float TURN_COAST_MIN            =  0.05f;  // turnCoast: radians a second, below which it stops
 
 	float InputAxis(std::uint32_t a_positive, std::uint32_t a_negative)
 	{
@@ -420,6 +423,8 @@ namespace Camera
 		_zoomAcceleration   = 1.0f;
 		_isZooming          = false;
 		_wasMouseSubjRot    = false;
+		_turnSpeed          = 0.0f;
+		_turnCoast          = 0.0f;
 		_pendingDrag        = ImVec2(0.0f, 0.0f);
 		_isDragging         = false;
 
@@ -547,6 +552,8 @@ namespace Camera
 	{
 		if (!_turningEnabled) {
 			_wasMouseSubjRot = false;
+			_turnSpeed       = 0.0f;
+			_turnCoast       = 0.0f;
 			return;
 		}
 
@@ -567,15 +574,36 @@ namespace Camera
 
 		float rotAmount = 0.0f;
 
+		// Any click or pad turn ends a coast at once, so it never fights the next input
+		const bool released = _wasMouseSubjRot && !allowMouseRot && !FUCK::IsInputDown(Keys::kMouse_Right);
+		if (allowMouseRot || allowGPRot || a_in.mmbDown || FUCK::IsInputDown(Keys::kMouse_Left))
+			_turnCoast = 0.0f;
+
 		if (allowMouseRot) {
 			if (_wasMouseSubjRot) {  // Ignore the very first frame to prevent delta spikes
 				rotAmount = a_in.mouseDelta.x * MOUSE_ROT_MULT;
 			}
+			// The drag's speed over its last moments, so one that slowed to a stop before release has nothing left to carry
+			if (a_interval > 0.0f)
+				_turnSpeed = std::lerp(_turnSpeed, rotAmount / a_interval, SmoothFactor(TURN_SPEED_RATE, a_interval));
 		} else if (allowGPRot) {
 			if (gpY)
 				rotAmount -= a_settings.gpCharRotSpeed * a_interval;
 			if (gpX)
 				rotAmount += a_settings.gpCharRotSpeed * a_interval;
+		}
+
+		if (released && a_settings.turnCoast)
+			_turnCoast = _turnSpeed;
+		if (!allowMouseRot)
+			_turnSpeed = 0.0f;
+
+		// The drag itself stays 1:1; only after release does the turn ease out
+		if (_turnCoast != 0.0f) {
+			rotAmount  = _turnCoast * a_interval;
+			_turnCoast *= std::exp(-a_interval / TURN_COAST_TIME);
+			if (std::abs(_turnCoast) < TURN_COAST_MIN)
+				_turnCoast = 0.0f;
 		}
 
 		_wasMouseSubjRot = allowMouseRot;

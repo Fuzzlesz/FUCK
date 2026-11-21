@@ -24,6 +24,7 @@ namespace Camera
 		bool invertTurn  = false;  // turning the subject the other way round, on every device
 		bool invertOrbit = false;  // orbiting round the subject the other way round, on every device
 		bool zoomToFocus = false;  // zooming in heads for the point on the subject nearest the cursor, rather than straight ahead
+		bool turnCoast   = true;   // a flicked right-drag turn carries on and eases to a stop after release
 
 		bool HasCustomSpeeds() const;
 	};
@@ -349,6 +350,8 @@ namespace Camera
 		float _kbmAcceleration  = 1.0f;
 		bool  _lockoutGPSubjRot = false;
 		bool  _wasMouseSubjRot  = false;
+		float _turnSpeed        = 0.0f;  // turnCoast: radians a second the drag was turning at
+		float _turnCoast        = 0.0f;  // turnCoast: radians a second still carried after release
 
 		// The reset gesture: a double middle click, or RB + R3
 		float _sinceMiddleClick  = 0.0f;  // seconds since middle mouse last went down

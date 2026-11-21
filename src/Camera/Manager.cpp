@@ -82,6 +82,7 @@ namespace
 		{ "InvertTurn",     &Camera::Config::invertTurn      },
 		{ "InvertOrbit",    &Camera::Config::invertOrbit     },
 		{ "ZoomToFocus",    &Camera::Config::zoomToFocus     },
+		{ "TurnCoast",      &Camera::Config::turnCoast       },
 	} };
 
 	std::string GetConfigPath()
@@ -2198,6 +2199,8 @@ namespace Camera
 			changed |= FUCK::Checkbox("$FUCK_Camera_InvertOrbit"_T, &_config.invertOrbit, true, true);
 			changed |= FUCK::Checkbox("$FUCK_Camera_ZoomToFocus"_T, &_config.zoomToFocus, true, true);
 			FUCK::SetTooltip("$FUCK_Camera_ZoomToFocusTT"_T);
+			changed |= FUCK::Checkbox("$FUCK_Camera_TurnCoast"_T, &_config.turnCoast, true, true);
+			FUCK::SetTooltip("$FUCK_Camera_TurnCoastTT"_T);
 		}
 
 		// The speeds under a node, as few want them. A fixed ID, so its state isn't the label's
@@ -2270,6 +2273,7 @@ namespace Camera
 					_config.invertTurn  = kept.invertTurn;
 					_config.invertOrbit = kept.invertOrbit;
 					_config.zoomToFocus = kept.zoomToFocus;
+					_config.turnCoast   = kept.turnCoast;
 					changed             = true;
 				}
 
