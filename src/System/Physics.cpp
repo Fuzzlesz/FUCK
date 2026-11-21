@@ -39,6 +39,7 @@ namespace Physics
 			std::uint32_t pauses     = 0;
 			bool          freezeTime = false;
 			float         delta      = 0.0f;
+			std::optional<bool> sheathed;
 		};
 		std::optional<Saved> g_saved;
 
@@ -62,6 +63,12 @@ namespace Physics
 				runtime.freezeTime = false;
 				// A paused game's frame time, so FSMP steps by the time that really passed
 				timer->delta = timer->realTimeDelta;
+
+				// FSMP slows the player's skeleton to rotationSpeedLimit while their weapon is sheathed, so a turned subject swung round late
+				// and caught up after. Seen as drawn for its step, it follows the turn
+				if (auto camera = RE::PlayerCamera::GetSingleton()) {
+					g_saved->sheathed = std::exchange(camera->GetRuntimeData2().isWeapSheathed, false);
+				}
 			}
 			static inline REL::Relocation<decltype(thunk)> func;
 		};
@@ -80,6 +87,8 @@ namespace Physics
 				if (auto timer = RE::BSTimer::GetSingleton())
 					timer->delta = g_saved->delta;
 				a_main->GetRuntimeData().freezeTime = g_saved->freezeTime;
+				if (auto camera = RE::PlayerCamera::GetSingleton(); camera && g_saved->sheathed)
+					camera->GetRuntimeData2().isWeapSheathed = *g_saved->sheathed;
 				g_saved.reset();
 			}
 			static inline REL::Relocation<decltype(thunk)> func;
