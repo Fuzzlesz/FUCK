@@ -47,6 +47,9 @@ namespace Camera
 		// Whether the body points are one part's (SetPartFraming), which moves round the subject as they turn
 		virtual bool FramesPart() = 0;
 
+		// Which way the subject faces, so a framed part follows them as they're turned but not as it sways in an idle
+		virtual std::optional<float> GetFacing() = 0;
+
 		// Asked only when a scroll is about to zoom, as the check can be costly
 		virtual bool IsScrollBlocked() = 0;
 
@@ -267,6 +270,7 @@ namespace Camera
 		bool                   _followPose        = false;
 		RE::NiPoint3           _framingCamDeltaTo  { 0.0f, 0.0f, 0.0f };
 		RE::NiPoint3           _framingPivotDeltaTo{ 0.0f, 0.0f, 0.0f };
+		std::optional<float>   _framingFacing;  // the subject's facing as framed, which a framed part follows only when it changes
 		float                  _framingDistanceTo = 0.0f;
 		float                  _framingHeight     = 0.0f;
 		float                  _poseHeight        = 0.0f;  // kFollowPose: the body's height last frame

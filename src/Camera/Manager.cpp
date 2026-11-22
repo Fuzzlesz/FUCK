@@ -343,10 +343,10 @@ namespace Camera
 		UpdateSmoothCam();
 		UpdateCinemacam();
 
-		// A camera handed back eases from where it was left to the resumed session's own framing, put on now so no frame shows the game's
+		// A camera handed back opens on the view it was left at and eases into the resumed session's own framing, put on now so no frame
+		// shows the game's
 		if (_current && _current->carriedBack) {
 			_current->carriedBack = false;
-			_current->core.Reframe(_current->flags & FUCK::CameraSessionFlags::kInstantMoves);
 			if (IsBaseReady(*_current))
 				ApplyNode();
 		}
@@ -396,8 +396,9 @@ namespace Camera
 		auto client = _current->client;
 
 		// Handed back to the session it carried on, if that's the one resuming, so nothing hidden shows or the head moves between them. Still
-		// on the same subject, its camera and facing go back too, with any part let go, so that session eases on from where this one left
-		// off rather than cutting to where it paused
+		// on the same subject, that session keeps its own camera, and opens on the view this one shows, as kStartFromView does, easing from
+		// it into its own starting framing and FOV, so nothing cuts. The subject turns back to how that session had them, as this one's
+		// turns were for its own look at them
 		auto handBack = _current->continued;
 		if (handBack && _sessions.size() > 1 && _sessions[_sessions.size() - 2].get() == handBack) {
 			if (handBack->flags & FUCK::CameraSessionFlags::kHideObstructions)
@@ -411,14 +412,11 @@ namespace Camera
 				_current->heldHead        = {};
 			}
 			if (sameSubject && IsOffsetBase(_current->base) && _current->base == handBack->base) {
-				std::destroy_at(&handBack->core);
-				std::construct_at(&handBack->core, _current->core);
-				handBack->fixedTranslate  = _current->fixedTranslate;
-				handBack->fixedRotate     = _current->fixedRotate;
-				handBack->fixedSubjectPos = _current->fixedSubjectPos;
-				handBack->hasFixedBase    = _current->hasFixedBase;
-				handBack->subjectYaw      = _current->subjectYaw;
-				handBack->carriedBack     = true;
+				if (FUCK::CameraPose view; GetShownView(view)) {
+					handBack->pendingPose      = view;
+					handBack->pendingPoseEases = true;
+					handBack->carriedBack      = true;
+				}
 			}
 		} else {
 			Obstructions::Restore(client);

@@ -25,6 +25,7 @@ namespace
 	constexpr float FRAMING_PAIR_CHANGE       =  0.1f;   // how much the space between two framed together must change, as a share, before the framing follows
 	constexpr float FRAMING_KEEP_VIEW_MAX     = 60.0f;   // KeepView(): how far the view may be from the framing and still be kept, so a far one (the whole body, say) is framed afresh
 	constexpr float FRAMING_PART_MOVE         =  5.0f;
+	constexpr float FRAMING_PART_TURN         =  0.02f;  // radians the subject's turned since a part was framed before it's followed
 	constexpr float FRAMING_PART_AXIS         = 15.0f;   // how far a framed part may sit from the line the subject turns about and still count as on it   // how far a framed part may move round where the subject stands, in units, before the framing follows
 	constexpr float ACCEL_RATE                =  1.5f;   // per second held, for pan and zoom acceleration
 	constexpr float ACCEL_MAX                 = 15.0f;
@@ -655,7 +656,11 @@ namespace Camera
 		// A framed part is followed as it moves round the subject, e.g. a hand as they're turned, as its framing is kept relative to where
 		// they stand rather than to the part
 		// A part near the line they turn about, a head or a foot, only up and down, so turning them doesn't drag the camera round with it
-		if (measured && _host.FramesPart()) {
+		// Only once they've been turned, so a hand swaying in an idle, close up on a ring, doesn't drag the framing about with it
+		const auto facing = _host.GetFacing();
+		const bool turned = facing && _framingFacing &&
+		                    std::abs(std::remainder(*facing - *_framingFacing, 2.0f * std::numbers::pi_v<float>)) > FRAMING_PART_TURN;
+		if (measured && turned && _host.FramesPart()) {
 			const auto   anchor = _host.GetAnchor().value_or(_originalTranslate);
 			const auto   offset = body.centre - anchor;
 			RE::NiPoint3 moved  = offset - _framingPivotDeltaTo;
@@ -717,6 +722,7 @@ namespace Camera
 			_framingCamDeltaTo = _framingCamDeltaTo + _framingAdjust;
 		}
 		_framingPivotDeltaTo = body.centre - anchor;
+		_framingFacing       = _host.GetFacing();
 		_framingDistanceTo   = std::max(framing->depth - pivotDepth, 0.0f);
 		_framingHeight       = body.top.GetDistance(body.bottom);  // along the body, so it holds for one lying down too
 		_framingSpread       = body.pair ? body.sideA.GetDistance(body.sideB) : 0.0f;
