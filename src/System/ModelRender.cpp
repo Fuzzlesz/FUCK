@@ -62,6 +62,8 @@ namespace ModelRender
 			bool                             falloff          = false;
 			std::array<float, 4>             falloffData{ 1.0f, 0.0f, 1.0f, 1.0f };  // the two cosines, then the opacity at each
 			bool                             additive         = false;
+			bool                             skinTint         = false;  // skin, its tone soft-lit over its diffuse
+			std::array<float, 3>             skinTintColour{ 1.0f, 1.0f, 1.0f };
 		};
 
 		struct Part
@@ -159,17 +161,20 @@ namespace ModelRender
 			return next - a_offset >= 12;
 		}
 
-		// FaceGen's morphed positions, which stand in for the buffer's own on a head
-		std::span<const DirectX::XMFLOAT4> DynamicPositions(RE::BSGeometry* a_geometry, std::uint32_t a_count)
+		// FaceGen's morphed positions, which stand in for the buffer's own on a head. Copied out under the shape's own lock, as the
+		// game rewrites them on its own threads as the face morphs or talks, and a read across that write tore the face
+		std::vector<DirectX::XMFLOAT4> DynamicPositions(RE::BSGeometry* a_geometry, std::uint32_t a_count)
 		{
 			auto* shape   = a_geometry->AsTriShape();
 			auto* dynamic = shape ? shape->AsDynamicTriShape() : nullptr;
 			if (!dynamic || a_count == 0)
 				return {};
-			auto& data = dynamic->GetDynamicTrishapeRuntimeData();
+			auto&               data = dynamic->GetDynamicTrishapeRuntimeData();
+			RE::BSSpinLockGuard held(data.lock);
 			if (!data.dynamicData || data.dataSize < a_count * sizeof(DirectX::XMFLOAT4))
 				return {};
-			return { static_cast<const DirectX::XMFLOAT4*>(data.dynamicData), a_count };
+			const auto* first = static_cast<const DirectX::XMFLOAT4*>(data.dynamicData);
+			return { first, first + a_count };
 		}
 
 		bool Upload(ID3D11Device* a_device, const std::vector<Vertex>& a_vertices, const std::vector<std::uint32_t>& a_indices, Mesh& a_out)
@@ -438,6 +443,8 @@ namespace ModelRender
 					a_out.normalMap      = static_cast<ID3D11ShaderResourceView*>(shared.normalMap);
 					a_out.tangentNormals = true;
 				}
+				a_out.skinTint       = shared.skinTint;
+				a_out.skinTintColour = { shared.skinTintColour[0], shared.skinTintColour[1], shared.skinTintColour[2] };
 				a_out.glow           = static_cast<ID3D11ShaderResourceView*>(shared.glow);
 				if (a_out.glow) {
 					a_out.emissive         = { shared.emissive[0], shared.emissive[1], shared.emissive[2] };
@@ -670,6 +677,8 @@ namespace ModelRender
 			float               saturation       = 1.0f;
 			float               contrast         = 1.0f;
 			DirectX::XMFLOAT4   uvTransform{ 0.0f, 0.0f, 1.0f, 1.0f };  // offset, then scale
+			DirectX::XMFLOAT3   skinTint{ 1.0f, 1.0f, 1.0f };
+			std::uint32_t       useSkinTint      = 0;
 		};
 		static_assert(sizeof(Params) % 16 == 0);
 
@@ -691,6 +700,7 @@ cbuffer Params : register(b0)
     float4   FalloffData;
     float    EffectScale; float Exposure; float Saturation; float Contrast;
     float4   UVTransform;
+    float3   SkinTint;   uint UseSkinTint;
 };
 Texture2D    Diffuse   : register(t0);
 Texture2D    FaceTint  : register(t1);
@@ -795,6 +805,11 @@ float4 ModelPS(VS_OUT i, bool front : SV_IsFrontFace) : SV_Target
         float3 t = FaceTint.Sample(Samp, i.UV).rgb;
         float3 d = UseDetail ? 3.984375 * (Detail.Sample(Samp, i.UV).rgb + float3(0.00392156886, 0.0, 0.00392156886)) : 1.0;
         c.rgb    = saturate((c.rgb * c.rgb + 2.0 * t * c.rgb * (1.0 - c.rgb)) * d);
+    }
+    // Skin's tone the same soft light with one flat colour, as the game's skin shader lays it, so a body meets its face at the neck.
+    // Its odd scale is the game's own
+    else if (UseSkinTint) {
+        c.rgb = saturate(float3(1.01171875, 0.99609375, 1.01171875) * (c.rgb * c.rgb + 2.0 * SkinTint * c.rgb * (1.0 - c.rgb)));
     }
     // Hair takes its tint where its vertices' green says, and everything else its vertex colour, as the game's hair shader does
     c.rgb *= UseTint ? lerp(1.0, Tint, i.Colour.g) : i.Colour.rgb;
@@ -1268,6 +1283,8 @@ float4 BackdropPS(BG_OUT i) : SV_Target
 				params.effectColour     = { a_mesh.effectColour[0], a_mesh.effectColour[1], a_mesh.effectColour[2], a_mesh.effectColour[3] };
 				params.effectScale      = a_mesh.effectScale;
 				params.falloffData      = { a_mesh.falloffData[0], a_mesh.falloffData[1], a_mesh.falloffData[2], a_mesh.falloffData[3] };
+				params.useSkinTint      = a_mesh.skinTint && !a_mesh.effect ? 1u : 0u;
+				params.skinTint         = { a_mesh.skinTintColour[0], a_mesh.skinTintColour[1], a_mesh.skinTintColour[2] };
 				for (int r = 0; r < 3; ++r)
 					params.turn[r] = { a_mesh.normalTurn[r * 3], a_mesh.normalTurn[r * 3 + 1], a_mesh.normalTurn[r * 3 + 2], 0.0f };
 				if (!upload(params))
@@ -1604,6 +1621,17 @@ float4 BackdropPS(BG_OUT i) : SV_Target
 				a_out.tint[2] = finite(c.blue, 0.0f, 1.0f, 1.0f);
 				break;
 			}
+		case RE::BSShaderMaterial::Feature::kFaceGenRGBTint:
+			{
+				// Skin takes the actor's skin tone from its material, as the game's skin shader does. Fitting Room's classic dye swaps
+				// an armour's material for this one and writes the dye here, so a piece dyed that way draws dyed
+				const auto& c           = static_cast<RE::BSLightingShaderMaterialFacegenTint*>(material)->tintColor;
+				a_out.skinTint          = true;
+				a_out.skinTintColour[0] = finite(c.red, 0.0f, 1.0f, 1.0f);
+				a_out.skinTintColour[1] = finite(c.green, 0.0f, 1.0f, 1.0f);
+				a_out.skinTintColour[2] = finite(c.blue, 0.0f, 1.0f, 1.0f);
+				break;
+			}
 		case RE::BSShaderMaterial::Feature::kEnvironmentMap:
 			{
 				// A cube map reflected where its mask says, so metal shines as it does in game. With no mask, the normal map's
@@ -1717,6 +1745,8 @@ float4 BackdropPS(BG_OUT i) : SV_Target
 			mesh.tangentNormals   = !in.normalMapModelSpace;
 			std::ranges::copy(in.normalTurn, mesh.normalTurn.begin());
 			mesh.uvTransform      = { in.uvOffset[0], in.uvOffset[1], in.uvScale[0], in.uvScale[1] };
+			mesh.skinTint         = in.skinTint;
+			mesh.skinTintColour   = { in.skinTintColour[0], in.skinTintColour[1], in.skinTintColour[2] };
 			CopyEffect(in, mesh);
 			meshes.push_back(std::move(mesh));
 		}
