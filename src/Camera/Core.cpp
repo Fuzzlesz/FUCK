@@ -738,12 +738,12 @@ namespace Camera
 
 		// A framed part that comes to rest somewhere else, a weapon drawn from its sheath to the hand, is framed where it ended up, as the
 		// orbit turns about where it was framed
-		if (_followPose && measured && _host.FramesPart()) {
+		if (measured && _host.FramesPart()) {
 			const auto offset = body.centre - _host.GetAnchor().value_or(_originalTranslate);
 			const bool still  = offset.GetDistance(_partLast) <= FRAMING_PART_STILL;
 			_partLast         = offset;
 			_partStillFor     = still ? _partStillFor + a_interval : 0.0f;
-			if (_partStillFor >= FRAMING_PART_HOLD && offset.GetDistance(_framingPivotDeltaTo) > FRAMING_PART_SETTLE)
+			if (_followPose && _partStillFor >= FRAMING_PART_HOLD && offset.GetDistance(_framingPivotDeltaTo) > FRAMING_PART_SETTLE)
 				UpdateFraming(_host.GetPivot().value_or(_originalTranslate), true);
 		}
 
@@ -754,7 +754,8 @@ namespace Camera
 		const auto facing = _host.GetFacing();
 		const bool turned = facing && _framingFacing &&
 		                    std::abs(std::remainder(*facing - *_framingFacing, 2.0f * std::numbers::pi_v<float>)) > FRAMING_PART_TURN;
-		if (measured && turned && _host.FramesPart()) {
+		// At rest only, as a held item swapped shows the real one for a frame, and after any turn that frame was framed (11-22h)
+		if (measured && turned && _host.FramesPart() && _partStillFor >= FRAMING_PART_HOLD) {
 			const auto   anchor = _host.GetAnchor().value_or(_originalTranslate);
 			const auto   offset = body.centre - anchor;
 			RE::NiPoint3 moved  = offset - _framingPivotDeltaTo;
