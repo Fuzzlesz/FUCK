@@ -1322,7 +1322,8 @@ namespace FUCK::Host
 			if (layer.mask && *layer.mask)
 				queued.faceTint.push_back({ layer.mask, { layer.colour[0], layer.colour[1], layer.colour[2], layer.colour[3] } });
 		}
-		queued.frameFace = options.frameFace;
+		queued.frameFace   = options.frameFace;
+		queued.supersample = options.supersample;
 		ModelRender::Queue(std::move(queued));
 		return true;
 	}
@@ -1339,9 +1340,19 @@ namespace FUCK::Host
 
 	static bool ReadMeshMaterial_Impl(void* shaderProperty, void* alphaProperty, FUCK::MeshDraw* out)
 	{
-		if (!shaderProperty || !out)
+		// Read into one of this version's own and handed back as far as the caller's reaches, so a later MeshDraw's options never write
+		// past an older caller's. A size this version never had isn't a MeshDraw it knows, e.g. one built before MeshDraw carried its size
+		if (!shaderProperty || !out || out->size != sizeof(FUCK::MeshDraw))
 			return false;
-		return ModelRender::ReadMeshMaterial(static_cast<RE::NiProperty*>(shaderProperty), static_cast<RE::NiProperty*>(alphaProperty), *out);
+
+		FUCK::MeshDraw local;
+		std::memcpy(&local, out, std::min<std::size_t>(out->size, sizeof(local)));
+		if (!ModelRender::ReadMeshMaterial(static_cast<RE::NiProperty*>(shaderProperty), static_cast<RE::NiProperty*>(alphaProperty), local))
+			return false;
+		const std::uint32_t size = out->size;
+		local.size               = size;
+		std::memcpy(out, &local, std::min<std::size_t>(size, sizeof(local)));
+		return true;
 	}
 
 	// ==================================================
