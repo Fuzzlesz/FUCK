@@ -357,6 +357,7 @@ namespace Camera
 		bool  _wasMouseSubjRot  = false;
 		bool  _orbitHead        = true;
 		bool  _followHead       = true;
+		RE::NiPoint3 _headFollow{ 0.0f, 0.0f, 0.0f };  // followHead: eased, so a pose that snaps (a weapon swap) doesn't jerk the camera
 		float _turnSpeed        = 0.0f;  // turnCoast: radians a second the drag was turning at
 		float _turnCoast        = 0.0f;  // turnCoast: radians a second still carried after release
 

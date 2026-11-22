@@ -239,6 +239,11 @@ namespace Camera
 
 		UpdateFramingBlend(a_interval);
 		FollowFramedPose(a_interval);
+		{
+			constexpr float HEAD_FOLLOW_SPEED = 6.0f;
+			const auto followTo = _hasFraming ? HeadFollow(_host.GetAnchor().value_or(_originalTranslate)) : RE::NiPoint3{};
+			_headFollow = _headFollow + (followTo - _headFollow) * SmoothFactor(HEAD_FOLLOW_SPEED, a_interval);
+		}
 		if (!_framingHeld && !_keepView && _heldRotateEase < 1.0f)
 			_heldRotateEase = std::min(1.0f, _heldRotateEase + a_interval / FRAMING_HELD_TURN_TIME);
 
@@ -944,7 +949,7 @@ namespace Camera
 		a_camBase = a_baseTranslate;
 		if (_hasFraming && _framingBlend > 0.0f) {
 			const auto   anchor    = _host.GetAnchor().value_or(a_baseTranslate);
-			const auto   follow    = HeadFollow(anchor);
+			const auto&  follow    = _headFollow;
 			RE::NiPoint3 bodyPivot = anchor + _framingPivotDelta + follow;
 			a_pivot                = a_pivot + (bodyPivot - a_pivot) * _framingBlend;
 			a_camBase              = a_baseTranslate + (anchor + _framingCamDelta + follow - a_baseTranslate) * _framingBlend;
