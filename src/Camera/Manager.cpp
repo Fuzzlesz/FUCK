@@ -1628,6 +1628,11 @@ namespace Camera
 		if (!subject)
 			return false;
 
+		// The hold is kept in the subject's own frame, so turning them turns it too rather than leaving it where they stood
+		const float  heading = subject->GetAngleZ();
+		const float  c = std::cos(heading), sn = std::sin(heading);
+		const auto   toLocal = [&](const RE::NiPoint3& v) { return RE::NiPoint3{ v.x * c - v.y * sn, v.x * sn + v.y * c, v.z }; };
+		const auto   toWorld = [&](const RE::NiPoint3& v) { return RE::NiPoint3{ v.x * c + v.y * sn, -v.x * sn + v.y * c, v.z }; };
 		RE::NiPoint3 centre;
 		float        half  = session.partSize * 0.5f;
 		bool         found = node != nullptr;
@@ -1635,16 +1640,20 @@ namespace Camera
 			centre = node->world.translate;
 			if (half <= 0.0f) {
 				const auto& bound = node->worldBound;
-				found             = bound.radius >= 1.0f;
-				centre            = bound.center;
-				half              = bound.radius;
+				if (bound.radius >= 1.0f) {
+					centre = bound.center;
+					half   = bound.radius;
+				} else {
+					// An empty node (a sheath with nothing on it) is still a point on the body, which turns with it
+					half = session.partHeldOffset ? session.partHeldHalf : 20.0f;
+				}
 			}
 		}
 		if (found) {
-			session.partHeldOffset = centre - subject->GetPosition();
+			session.partHeldOffset = toLocal(centre - subject->GetPosition());
 			session.partHeldHalf   = half;
 		} else if (session.partHeldOffset) {
-			centre = subject->GetPosition() + *session.partHeldOffset;
+			centre = subject->GetPosition() + toWorld(*session.partHeldOffset);
 			half   = session.partHeldHalf;
 		} else {
 			TracePart(session.framedPart, subject, node, false, false, subject->GetPosition(), 0.0f);
