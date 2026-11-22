@@ -450,6 +450,7 @@ namespace ModelRender
 					a_out.emissive         = { shared.emissive[0], shared.emissive[1], shared.emissive[2] };
 					a_out.emissiveStrength = shared.emissiveStrength;
 				}
+				a_out.additive       = shared.additive;
 				CopyEffect(shared, a_out);
 			}
 
@@ -1333,7 +1334,7 @@ float4 BackdropPS(BG_OUT i) : SV_Target
 
 			a_ctx->OMSetDepthStencilState(p.depthTest.Get(), 0);
 			for (const auto& [away, mesh] : blended) {
-				// An additive shell, as many effect shaders are, adds its light to what's behind it
+				// An additive shell, as many effect shaders and an eye's glossy outer layer are, adds its light to what's behind it
 				a_ctx->OMSetBlendState(mesh->additive ? p.additive.Get() : p.blend.Get(), nullptr, 0xFFFFFFFF);
 				drawMesh(*mesh, true);
 			}
@@ -1681,6 +1682,10 @@ float4 BackdropPS(BG_OUT i) : SV_Target
 			const bool plainBlend = static_cast<int>(alpha->GetSrcBlendMode()) == 6 && static_cast<int>(alpha->GetDestBlendMode()) == 7;
 			a_out.useAlpha   = a_out.useAlpha || testing || blending;
 			a_out.blendAlpha = a_out.blendAlpha || (blending && (plainBlend || !testing));
+			// Added onto what's behind it when it blends onto it at full, the NIF format's ONE (0) as its far side's factor, as an
+			// eye's glossy outer shell does (AdvancedEyes' LDD_Eye_Outer). Blended over instead, its dark texture laid a black shell over
+			// the eye
+			a_out.additive   = a_out.blendAlpha && blending && static_cast<int>(alpha->GetDestBlendMode()) == 0;
 			if (testing)
 				a_out.cutoff = std::clamp(alpha->alphaThreshold > 0 ? alpha->alphaThreshold / 255.0f : 0.04f, 0.005f, 0.95f);
 			else if (blending)
@@ -1751,6 +1756,7 @@ float4 BackdropPS(BG_OUT i) : SV_Target
 			mesh.uvTransform      = { in.uvOffset[0], in.uvOffset[1], in.uvScale[0], in.uvScale[1] };
 			mesh.skinTint         = in.skinTint;
 			mesh.skinTintColour   = { in.skinTintColour[0], in.skinTintColour[1], in.skinTintColour[2] };
+			mesh.additive         = in.additive && in.blendAlpha;
 			CopyEffect(in, mesh);
 			meshes.push_back(std::move(mesh));
 		}
