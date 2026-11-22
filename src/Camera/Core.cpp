@@ -894,6 +894,10 @@ namespace Camera
 			_framingDistance   = _framingDistanceTo;
 		}
 		_hasFraming = true;
+		logger::info("Camera: TRACE {} ms reframe, ease {}, part {}, pivot from anchor ({:.0f},{:.0f},{:.0f}), distance {:.0f}, height {:.0f}",
+			std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count() % 10000000,
+			a_ease, _host.FramesPart(), _framingPivotDeltaTo.x, _framingPivotDeltaTo.y, _framingPivotDeltaTo.z, _framingDistanceTo,
+			_framingHeight);
 	}
 
 	bool Core::Compose(const RE::NiPoint3& a_baseTranslate, const RE::NiMatrix3& a_baseRotate, RE::NiPoint3& a_outTranslate, RE::NiMatrix3& a_outRotate)
