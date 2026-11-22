@@ -329,6 +329,8 @@ namespace Camera
 		float                  _framingHeight     = 0.0f;
 		float                  _poseHeight        = 0.0f;  // kFollowPose: the body's height last frame
 		float                  _poseStillFor      = 0.0f;  // kFollowPose: seconds it's held still
+		RE::NiPoint3           _partLast{};               // kFollowPose: a framed part's place last frame, from the anchor
+		float                  _partStillFor      = 0.0f;  // kFollowPose: seconds it's been at rest
 		float                  _framingSpread     = 0.0f;  // the space between two framed together, as framed
 		float                  _cameraDistance    = 0.0f;  // camera to pivot as last composed, which speeds scale by
 		bool                   _startedFramed     = false; // the session opened framed, which the reset gesture goes back to

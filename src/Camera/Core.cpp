@@ -21,6 +21,9 @@ namespace
 	constexpr float FRAMING_POSE_STILL        =  0.02f;  // kFollowPose: how little the body's height may change between frames, as a share, to count as holding still
 	constexpr float FRAMING_POSE_HOLD         =  0.4f;   // kFollowPose: seconds a changed pose must hold still before it's framed, so an animation (an equip, a draw) plays out first
 	constexpr float FRAMING_POSE_HOLD_SMALLER =  1.5f;   // and before it's framed smaller, as swapping a drawn weapon puts it away for a moment before drawing the next
+	constexpr float FRAMING_PART_HOLD         =  0.15f;  // kFollowPose, for a framed part: a held item swapped or drawn is framed this soon after it stops
+	constexpr float FRAMING_PART_SETTLE       = 15.0f;   // how far a framed part must come to rest from where it was framed, so an idle's sway can't drag a close-up
+	constexpr float FRAMING_PART_STILL        =  1.0f;   // how little a framed part may move between frames to count as at rest
 	constexpr float FRAMING_PAIR_CHANGE       =  0.1f;   // how much the space between two framed together must change, as a share, before the framing follows
 	constexpr float FRAMING_KEEP_VIEW_MAX     = 60.0f;   // KeepView(): how far the view may be from the framing and still be kept, so a far one (the whole body, say) is framed afresh
 	constexpr float FRAMING_PART_MOVE         =  5.0f;
@@ -727,10 +730,21 @@ namespace Camera
 			const bool  still  = std::abs(height - _poseHeight) <= _poseHeight * FRAMING_POSE_STILL;
 			_poseHeight        = height;
 			_poseStillFor      = still ? _poseStillFor + a_interval : 0.0f;
-			const float hold = height < _framingHeight ? FRAMING_POSE_HOLD_SMALLER : FRAMING_POSE_HOLD;
+			const float hold = _host.FramesPart() ? FRAMING_PART_HOLD : height < _framingHeight ? FRAMING_POSE_HOLD_SMALLER : FRAMING_POSE_HOLD;
 			if (_poseStillFor >= hold && std::abs(height - _framingHeight) > _framingHeight * FRAMING_POSE_CHANGE) {
 				UpdateFraming(_host.GetPivot().value_or(_originalTranslate), true);
 			}
+		}
+
+		// A framed part that comes to rest somewhere else, a weapon drawn from its sheath to the hand, is framed where it ended up, as the
+		// orbit turns about where it was framed
+		if (_followPose && measured && _host.FramesPart()) {
+			const auto offset = body.centre - _host.GetAnchor().value_or(_originalTranslate);
+			const bool still  = offset.GetDistance(_partLast) <= FRAMING_PART_STILL;
+			_partLast         = offset;
+			_partStillFor     = still ? _partStillFor + a_interval : 0.0f;
+			if (_partStillFor >= FRAMING_PART_HOLD && offset.GetDistance(_framingPivotDeltaTo) > FRAMING_PART_SETTLE)
+				UpdateFraming(_host.GetPivot().value_or(_originalTranslate), true);
 		}
 
 		// A framed part is followed as it moves round the subject, e.g. a hand as they're turned, as its framing is kept relative to where
