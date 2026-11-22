@@ -907,6 +907,8 @@ namespace Camera
 			session.core.RequestSideView(PartWantsSideView(part));
 			ResetSubject();
 		}
+		if (changed)
+			session.partHeldOffset.reset();
 		session.framedPart = part;
 		session.partSize   = a_size;
 		session.core.Reframe(session.flags & FUCK::CameraSessionFlags::kInstantMoves);
@@ -1591,19 +1593,32 @@ namespace Camera
 		if (!_current || _current->framedPart.empty())
 			return false;
 
-		auto subject = GetSubject();
-		auto node    = subject ? subject->GetNodeByName(_current->framedPart.c_str()) : nullptr;
-		if (!node)
+		auto& session = *_current;
+		auto  subject = GetSubject();
+		auto  node    = subject ? subject->GetNodeByName(session.framedPart.c_str()) : nullptr;
+		if (!subject)
 			return false;
 
-		RE::NiPoint3 centre = node->world.translate;
-		float        half   = _current->partSize * 0.5f;
-		if (half <= 0.0f) {
-			const auto& bound = node->worldBound;
-			if (bound.radius < 1.0f)
-				return false;
-			centre = bound.center;
-			half   = bound.radius;
+		RE::NiPoint3 centre;
+		float        half  = session.partSize * 0.5f;
+		bool         found = node != nullptr;
+		if (found) {
+			centre = node->world.translate;
+			if (half <= 0.0f) {
+				const auto& bound = node->worldBound;
+				found             = bound.radius >= 1.0f;
+				centre            = bound.center;
+				half              = bound.radius;
+			}
+		}
+		if (found) {
+			session.partHeldOffset = centre - subject->GetPosition();
+			session.partHeldHalf   = half;
+		} else if (session.partHeldOffset) {
+			centre = subject->GetPosition() + *session.partHeldOffset;
+			half   = session.partHeldHalf;
+		} else {
+			return false;
 		}
 
 		a_part = { centre, { centre.x, centre.y, centre.z + half }, { centre.x, centre.y, centre.z - half } };

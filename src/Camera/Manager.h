@@ -26,6 +26,9 @@ namespace Camera
 		RE::ActorHandle          alsoFramed;  // framed beside the subject (CameraSessionOptions::alsoFramed)
 		std::string              framedPart;  // SetPartFraming(): the node body framing aims at, empty for the whole body
 		float                    partSize = 0.0f;
+		// Where the part was last found, from the subject, held while a held item's 3D is swapped so the framing doesn't drop to the body
+		std::optional<RE::NiPoint3> partHeldOffset;
+		float                       partHeldHalf = 0.0f;
 
 		bool            paused        = false;
 		Session*        continued     = nullptr;  // kContinueView: the paused session whose view it carried on, to hand back to
