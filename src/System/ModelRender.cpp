@@ -490,6 +490,10 @@ namespace ModelRender
 		bool ExtractOne(ID3D11Device* a_device, ID3D11DeviceContext* a_context, const Part& a_part, Mesh& a_out)
 		{
 			auto& rt = a_part.geometry->GetGeometryRuntimeData();
+			// The game draws a shape through its shader, so one without is never seen, e.g. the bodies physics hair collides with,
+			// which drew as grey solids round the head
+			if (!rt.shaderProperty)
+				return false;
 			bool  ok = false;
 			// A skinned shape's buffer holds it unposed, so its skin's CPU copy is used even when it has one
 			if (auto* skin = rt.skinInstance.get(); skin && skin->skinPartition && skin->skinPartition->numPartitions > 0) {
