@@ -184,6 +184,7 @@ namespace ImGui::Renderer
 		}
 		EndFrame();
 		Render();
+		manager->DrawClosingWindows(GetDrawData());
 		// One output call: helper connected (VR) → render only to its flat panel
 		// (the helper composites it in-scene); helper absent → the normal draw.
 		// Never both, so we don't paint a second, sheared copy onto VR's curved HUD.

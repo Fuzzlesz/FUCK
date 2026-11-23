@@ -116,6 +116,7 @@ public:
 	// the VR HUD panel); the main menu, tool overlays, and other windows are
 	// skipped since they belong on the exclusive-focus panel instead.
 	void Draw(bool a_passthroughOnly = false);
+	void DrawClosingWindows(ImDrawData* a_drawData);  // kFadeIn windows fading out, after Render()
 	bool ProcessAsyncInput(const RE::InputEvent* const* a_event);
 
 	// --- State Queries ---

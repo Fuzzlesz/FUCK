@@ -22,6 +22,9 @@ struct EditHandles
 struct WindowState
 {
 	bool   wasOpen      = false;
+	double openedAt     = -1.0;  // when it last opened, for kFadeIn
+	ImVec2 shownAt{};            // where it was on its first frame open, so a fade out goes back the way a slide in came
+	bool   shownAtSet   = false;
 	bool   isCollapsed  = false;
 	bool   wasCollapsed = false;
 	ImVec2 preCollapseSize{};

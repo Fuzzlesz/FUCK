@@ -60,6 +60,134 @@ static void ScaleWindowAlpha(ImGuiWindow* a_window, float a_alpha)
 	}
 }
 
+// kFadeIn's length, linear: half a second, as RaceMenu's panels' tweens, and the quick one's 8 frames at 60, as SkyUI's inventory
+// and magic panels' PanelShow. 0 without either
+static double FadeSeconds(FUCK::WindowFlags a_flags)
+{
+	if (a_flags & FUCK::WindowFlags::kFadeInQuick)
+		return 8.0 / 60.0;
+	return (a_flags & FUCK::WindowFlags::kFadeIn) ? 0.5 : 0.0;
+}
+
+// A closed kFadeIn window fading out: copies of what it and its child windows drew on their last frame, as a closed window isn't
+// drawn again, so its plugin needn't keep drawing it. Pictures and draw callbacks are left out, as what they point at may already be
+// let go. Each copy's colours, places and clips are kept as drawn, so the fade scales from them, and it moves back the way it slid in
+struct ClosingWindow
+{
+	struct Copy
+	{
+		ImDrawList*         list = nullptr;
+		std::vector<ImU32>  colours;
+		std::vector<ImVec2> places;
+		std::vector<ImVec4> clips;
+	};
+	std::vector<Copy> copies;
+	double            closedAt = 0.0;
+	double            seconds  = 0.0;
+	ImVec2            away{};  // where it goes by the end, from where it was: back to where it first showed
+};
+
+static StringMap<bool>          s_fadeOpen;  // each kFadeIn window's open state as last seen, to catch it closing
+static StringMap<ClosingWindow> s_closing;
+
+static void CopyWindowDrawing(ImGuiWindow* a_window, int a_frame, std::vector<ClosingWindow::Copy>& a_copies)
+{
+	if (!a_window || !a_window->DrawList || a_window->LastFrameActive != a_frame || a_window->DrawList->CmdBuffer.empty())
+		return;
+
+	// Its write position at the end, as ImGui checks a list added to the frame's was written through
+	ImDrawList* list     = a_window->DrawList->CloneOutput();
+	list->_VtxWritePtr   = list->VtxBuffer.Data + list->VtxBuffer.Size;
+	list->_IdxWritePtr   = list->IdxBuffer.Data + list->IdxBuffer.Size;
+	list->_VtxCurrentIdx = a_window->DrawList->_VtxCurrentIdx;
+	for (auto& cmd : list->CmdBuffer) {
+		if (cmd.UserCallback || !cmd.TexRef._TexData) {
+			cmd.UserCallback = nullptr;
+			cmd.ElemCount    = 0;
+		}
+	}
+	ClosingWindow::Copy copy{ list, {}, {}, {} };
+	copy.colours.reserve(list->VtxBuffer.Size);
+	copy.places.reserve(list->VtxBuffer.Size);
+	for (const auto& vtx : list->VtxBuffer) {
+		copy.colours.push_back(vtx.col);
+		copy.places.push_back(vtx.pos);
+	}
+	for (const auto& cmd : list->CmdBuffer)
+		copy.clips.push_back(cmd.ClipRect);
+	a_copies.push_back(std::move(copy));
+
+	for (auto* child : a_window->DC.ChildWindows)
+		CopyWindowDrawing(child, a_frame, a_copies);
+}
+
+static void FreeCopies(ClosingWindow& a_closing)
+{
+	for (auto& copy : a_closing.copies)
+		IM_DELETE(copy.list);
+	a_closing.copies.clear();
+}
+
+void FUCKMan::DrawClosingWindows(ImDrawData* a_drawData)
+{
+	const double now   = ImGui::GetTime();
+	const int    frame = ImGui::GetFrameCount();
+
+	for (auto* win : _windows) {
+		const double seconds = FadeSeconds(win->GetFlags());
+		if (seconds <= 0.0)
+			continue;
+		const std::string key  = std::format("{}|{}", win->PluginName(), win->Id());
+		const bool        open = win->IsOpen();
+		bool&             was  = s_fadeOpen[key];
+
+		// Back open, so its own drawing takes over
+		if (open) {
+			if (auto it = s_closing.find(key); it != s_closing.end()) {
+				FreeCopies(it->second);
+				s_closing.erase(it);
+			}
+		} else if (was) {
+			// Only what it drew last frame, so not if it was hidden then, e.g. by 'tm'
+			ClosingWindow closing{ {}, now, seconds, {} };
+			ImGuiWindow*  window = ImGui::FindWindowByName(std::format("###{}", key).c_str());
+			CopyWindowDrawing(window, frame - 1, closing.copies);
+			if (const auto state = s_windowStates.find(key); window && state != s_windowStates.end() && state->second.shownAtSet)
+				closing.away = state->second.shownAt - window->Pos;
+			if (auto it = s_closing.find(key); it != s_closing.end())
+				FreeCopies(it->second);
+			s_closing[key] = std::move(closing);
+		}
+		was = open;
+	}
+
+	for (auto it = s_closing.begin(); it != s_closing.end();) {
+		auto&       closing = it->second;
+		const float alpha   = 1.0f - static_cast<float>((now - closing.closedAt) / closing.seconds);
+		if (alpha <= 0.0f || !a_drawData) {
+			FreeCopies(closing);
+			it = s_closing.erase(it);
+			continue;
+		}
+		const ImVec2 shift = closing.away * (1.0f - alpha);
+		for (auto& copy : closing.copies) {
+			for (int i = 0; i < copy.list->VtxBuffer.Size; ++i) {
+				const ImU32 col = copy.colours[i];
+				const ImU32 a   = (col >> IM_COL32_A_SHIFT) & 0xFF;
+				auto&       vtx = copy.list->VtxBuffer[i];
+				vtx.col         = (col & ~IM_COL32_A_MASK) | (static_cast<ImU32>(a * alpha + 0.5f) << IM_COL32_A_SHIFT);
+				vtx.pos         = copy.places[i] + shift;
+			}
+			for (int i = 0; i < copy.list->CmdBuffer.Size && i < static_cast<int>(copy.clips.size()); ++i) {
+				const ImVec4& clip              = copy.clips[i];
+				copy.list->CmdBuffer[i].ClipRect = ImVec4(clip.x + shift.x, clip.y + shift.y, clip.z + shift.x, clip.w + shift.y);
+			}
+			a_drawData->AddDrawList(copy.list);
+		}
+		++it;
+	}
+}
+
 // ==================================================
 // Editable Windows
 // ==================================================
@@ -305,6 +433,10 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 		bool wasOpen     = winState.wasOpen;
 		if (currentOpen != winState.wasOpen) {
 			winState.wasOpen = currentOpen;
+			if (currentOpen) {
+				winState.openedAt   = ImGui::GetTime();
+				winState.shownAtSet = false;
+			}
 			DispatchWindowEvent(win->PluginName(), win->Id(), currentOpen);
 		}
 
@@ -766,9 +898,17 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 				UpdateEditableWindow(winState, curPos, fullSize, editMargin, scalable, rotatable);
 			}
 
-			// Fade everything it drew this frame, chrome and content alike
-			if (hudAlpha < 1.0f) {
-				ScaleWindowAlpha(ImGui::GetCurrentWindow(), hudAlpha);
+			if (!winState.shownAtSet) {
+				winState.shownAt    = ImGui::GetCurrentWindow()->Pos;
+				winState.shownAtSet = true;
+			}
+
+			// Fade everything it drew this frame, chrome and content alike: a HUD manager's fade, and kFadeIn's as it opens
+			float alpha = hudAlpha;
+			if (const double fade = FadeSeconds(userFlags); fade > 0.0 && winState.openedAt >= 0.0)
+				alpha *= static_cast<float>(std::clamp((ImGui::GetTime() - winState.openedAt) / fade, 0.0, 1.0));
+			if (alpha < 1.0f) {
+				ScaleWindowAlpha(ImGui::GetCurrentWindow(), alpha);
 			}
 		}
 		FUCK::EndWindow();
