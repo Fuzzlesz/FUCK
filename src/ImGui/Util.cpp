@@ -295,6 +295,34 @@ namespace ImGui
 		window->DrawList->PathStroke(ColorConvertFloat4ToU32(color), false, thickness);
 	}
 
+	void PlaceTooltipBesideItem(const ImRect& a_item)
+	{
+		// On its right, else its left when the right lacks the room and the left has more, else under it, or over it near the bottom.
+		// Sized from the tooltip as last drawn, as this one isn't yet, so a change of size settles a frame late
+		ImGuiContext& g       = *GImGui;
+		const ImVec2  workMin = GetMainViewport()->WorkPos;
+		const ImVec2  workMax = workMin + GetMainViewport()->WorkSize;
+		char          name[16];
+		ImFormatString(name, IM_ARRAYSIZE(name), "##Tooltip_%02d", g.TooltipOverrideCount);
+		const ImGuiWindow* last = FindWindowByName(name);
+		const ImVec2       size = last ? last->SizeFull : ImVec2(0.0f, 0.0f);
+		const float        gap  = g.Style.ItemSpacing.x;
+
+		const float right = workMax.x - a_item.Max.x - gap;
+		const float left  = a_item.Min.x - workMin.x - gap;
+		if (size.x <= right || size.x <= left || size.x <= 0.0f) {
+			const bool  onLeft = size.x > right && left > right;
+			const float y      = size.y > 0.0f ? std::clamp(a_item.Min.y, workMin.y, std::max(workMin.y, workMax.y - size.y)) : a_item.Min.y;
+			SetNextWindowPos(ImVec2(onLeft ? a_item.Min.x - gap : a_item.Max.x + gap, y), ImGuiCond_Always, ImVec2(onLeft ? 1.0f : 0.0f, 0.0f));
+			return;
+		}
+
+		// Too wide an item for either side, such as a row across its panel
+		const bool  above = a_item.Max.y + gap + size.y > workMax.y && a_item.Min.y - workMin.y > workMax.y - a_item.Max.y;
+		const float x     = std::clamp(a_item.Min.x, workMin.x, std::max(workMin.x, workMax.x - size.x));
+		SetNextWindowPos(ImVec2(x, above ? a_item.Min.y - gap : a_item.Max.y + gap), ImGuiCond_Always, ImVec2(0.0f, above ? 1.0f : 0.0f));
+	}
+
 	void HelpMarker(const char* desc)
 	{
 		ImGuiWindow* window = GetCurrentWindow();
@@ -365,22 +393,8 @@ namespace ImGui
 			PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(tooltipPad, tooltipPad));
 
 			// Following the mouse, ImGui's own offset clears the cursor (see MouseCursorScale), so only the gamepad's needs placing
-			ImVec2 origMousePos = GetIO().MousePos;
-			if (!anchorToMouse) {
-				float  wrap_width  = GetFontSize() * 35.0f;
-				ImVec2 textSizeEst = CalcTextSize(desc, nullptr, false, wrap_width);
-				float  expectedH   = textSizeEst.y + (tooltipPad * 2.0f);
-
-				ImVec2 screenMax = GetMainViewport()->WorkPos + GetMainViewport()->WorkSize;
-
-				GetIO().MousePos.x = bbVisual.Min.x;
-
-				if (bbVisual.Max.y + expectedH > screenMax.y) {
-					GetIO().MousePos.y = bbVisual.Min.y - (5.0f * scale);
-				} else {
-					GetIO().MousePos.y = bbVisual.Max.y;
-				}
-			}
+			if (!anchorToMouse)
+				PlaceTooltipBesideItem(bbVisual);
 
 			if (BeginTooltipThemed()) {
 				PushTextWrapPos(GetFontSize() * 35.0f);
@@ -389,7 +403,6 @@ namespace ImGui
 				EndTooltip();
 			}
 
-			GetIO().MousePos = origMousePos;
 			PopStyleVar();
 		}
 	}
@@ -453,21 +466,8 @@ namespace ImGui
 			PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(tooltipPad, tooltipPad));
 
 			// Following the mouse, ImGui's own offset clears the cursor (see MouseCursorScale), so only the gamepad's needs placing
-			ImVec2 origMousePos = GetIO().MousePos;
-			if (!anchorToMouse) {
-				ImRect itemBB      = GImGui->LastItemData.Rect;
-				ImVec2 textSizeEst = CalcTextSize(fmt, nullptr, false, -1.0f);
-				float  expectedH   = textSizeEst.y + (tooltipPad * 2.0f);
-				ImVec2 screenMax   = GetMainViewport()->WorkPos + GetMainViewport()->WorkSize;
-
-				GetIO().MousePos.x = itemBB.Min.x;
-
-				if (itemBB.Max.y + expectedH > screenMax.y) {
-					GetIO().MousePos.y = itemBB.Min.y - (5.0f * scale);
-				} else {
-					GetIO().MousePos.y = itemBB.Max.y;
-				}
-			}
+			if (!anchorToMouse)
+				PlaceTooltipBesideItem(GImGui->LastItemData.Rect);
 
 			if (BeginTooltipThemed()) {
 				// Wrapped at the picture's edge when there is one, else at a readable width, so a long tip is a few lines rather
@@ -479,7 +479,6 @@ namespace ImGui
 				EndTooltip();
 			}
 
-			GetIO().MousePos = origMousePos;
 			PopStyleVar();
 		}
 	}

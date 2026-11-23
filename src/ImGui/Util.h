@@ -23,6 +23,8 @@ namespace ImGui
 	void Spinner(const char* label, float radius, float thickness, const ImVec4& color);
 	void HelpMarker(const char* desc);
 	void SetTooltipEx(const char* fmt);
+	// The next tooltip beside an item the pad's on, rather than under it where it can cover it. Call before BeginTooltip()
+	void PlaceTooltipBesideItem(const ImRect& a_item);
 
 	// A picture shown large over the text of a tooltip opened this frame, e.g. a hovered card's, so it can be seen properly
 	void  SetTooltipPicture(ImTextureID a_texture, const ImVec2& a_size);

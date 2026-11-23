@@ -915,6 +915,10 @@ namespace FUCK::Host
 
 	static bool BeginTooltip_Impl()
 	{
+		// Beside the item the pad's on, as FUCK's own tooltips are
+		const auto* input = MANAGER(Input);
+		if (input->IsInputGamepad() && !input->IsCursorMovedByJoystick() && ImGui::IsItemFocused())
+			ImGui::PlaceTooltipBesideItem(GImGui->LastItemData.Rect);
 		if (!ImGui::BeginTooltipThemed())
 			return false;
 		// Wrapped text stops at the picture's edge, as the tooltip is as wide as the picture
