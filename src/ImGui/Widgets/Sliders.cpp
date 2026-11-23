@@ -439,14 +439,16 @@ namespace ImGui
 	{
 		ImGuiWindow* window = GetCurrentWindow();
 		ImGuiID      id     = window->GetID(label);
-		ImRect       widgetBounds(window->DC.CursorPos, window->DC.CursorPos + ImVec2(CalcItemWidth(), GetFrameHeight()));
+		float        scale  = GetDynamicWidgetScale();
+
+		// As tall as the styled input boxes, sliders and drags, which pad 7px above and below, so it lines up with them on a row
+		ImRect widgetBounds(window->DC.CursorPos, window->DC.CursorPos + ImVec2(CalcItemWidth(), GetFontSize() + 7.0f * scale * 2.0f));
 		ItemSize(widgetBounds);
 
 		if (!ItemAdd(widgetBounds, id))
 			return { false, false, false };
 
-		auto  arrowIcon = MANAGER(IconFont)->GetStepperRight();
-		float scale     = GetDynamicWidgetScale();
+		auto arrowIcon = MANAGER(IconFont)->GetStepperRight();
 
 		// Extract ratio (steppers always point left/right, so height is height)
 		float targetH = 30.0f * scale;
@@ -642,7 +644,10 @@ namespace ImGui
 
 	void Stepper(const char* label, const char* text, bool* outLeft, bool* outRight)
 	{
+		// Its label on the same middle as the taller stepper, as the styled input boxes do theirs
+		PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(GetStyle().FramePadding.x, 7.0f * GetDynamicWidgetScale()));
 		LeftLabel(label);
+		PopStyleVar();
 		auto [hovered, l, r] = CenteredTextWithArrows(label, text);
 		*outLeft             = false;
 		*outRight            = false;

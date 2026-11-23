@@ -531,14 +531,39 @@ namespace ImGui
 			if (tokens.empty()) {
 				TextUnformatted("");
 			} else {
-				for (size_t i = 0; i < tokens.size(); ++i) {
-					PushStyleColor(ImGuiCol_Text, tokens[i].second ? cHighlight : cNormal);
-					TextUnformatted(tokens[i].first.c_str());
-					PopStyleColor();
+				// Word by word, each with the spaces after it, so the line wraps between words at the wrap width as plain text does. Drawn
+				// a token at a time, a word that came after another on the line would wrap a letter at a time in the little room left
+				const float wrapPos   = GetCurrentWindow()->DC.TextWrapPos;
+				bool        lineStart = true;
+				for (const auto& [run, highlight] : tokens) {
+					PushStyleColor(ImGuiCol_Text, highlight ? cHighlight : cNormal);
+					size_t at = 0;
+					while (at < run.size()) {
+						size_t wordEnd = run.find(' ', at);
+						if (wordEnd == std::string::npos)
+							wordEnd = run.size();
+						size_t pieceEnd = run.find_first_not_of(' ', wordEnd);
+						if (pieceEnd == std::string::npos)
+							pieceEnd = run.size();
+						const char* word = run.c_str() + at;
 
-					if (i < tokens.size() - 1) {
-						SameLine(0.0f, 0.0f);  // Zero spacing keeps the highlighted word attached to punctuation
+						if (!lineStart) {
+							SameLine(0.0f, 0.0f);  // Zero spacing keeps the highlighted word attached to punctuation
+							const float room = wrapPos >= 0.0f ? CalcWrapWidthForPos(GetCursorScreenPos(), wrapPos) : FLT_MAX;
+							if (CalcTextSize(word, run.c_str() + wordEnd).x > room) {
+								NewLine();
+								lineStart = true;
+							}
+						}
+						// A new line doesn't start with the spaces that came before its word
+						if (lineStart)
+							while (*word == ' ' && word < run.c_str() + pieceEnd)
+								++word;
+						TextUnformatted(word, run.c_str() + pieceEnd);
+						lineStart = false;
+						at        = pieceEnd;
 					}
+					PopStyleColor();
 				}
 			}
 

@@ -2003,6 +2003,7 @@ namespace Camera
 		} else {
 			std::vector<std::string>   names;
 			std::vector<std::uint32_t> badges;
+			Set<std::string>           favourites;
 			int                        current = -1;
 
 			names.reserve(all.size());
@@ -2013,16 +2014,21 @@ namespace Camera
 
 				names.push_back(preset.name);
 				badges.push_back(preset.hotkey > 0 ? static_cast<std::uint32_t>(KEY::kNum1) + preset.hotkey - 1 : 0);
+				if (preset.favourite)
+					favourites.insert(preset.name);
 			}
 
 			const char* deleteLabel = "$FUCK_Camera_PresetDelete"_T;
 			float       deleteW     = buttonWidth(deleteLabel, _deleteButtonW);
 
-			int hovered = -1;
+			int         hovered = -1;
+			std::string favToggled;
 			FUCK::SetNextItemWidth(std::max(width - deleteW - spacing, 1.0f));
-			if (ImGui::ComboWithFilter("##Presets", &current, names, -1, nullptr, nullptr, badges, &hovered) && current >= 0) {
+			if (ImGui::ComboWithFilter("##Presets", &current, names, -1, &favourites, &favToggled, badges, &hovered) && current >= 0) {
 				loaded = ApplyPreset(all[current]);
 			}
+			if (!favToggled.empty())
+				session.presets.SetFavourite(favToggled, !favourites.contains(favToggled));
 
 			bool hotkeys = session.flags & FUCK::CameraSessionFlags::kPresetHotkeys;
 			if (hotkeys && hovered < 0 && FUCK::IsItemHovered(0)) {

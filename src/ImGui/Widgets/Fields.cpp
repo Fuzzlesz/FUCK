@@ -244,6 +244,17 @@ namespace ImGui
 		bool             filtering      = s_comboFilterStates[id].pattern[0] != '\0';
 		const bool       has_favourites = a_favourites != nullptr;
 
+		// The badges' slot, as wide as the widest of their icons for the row's height, kept at every row's end whenever any row has one,
+		// so the badges and the favourite stars beside them line up down the list whichever rows have them
+		float badgeAspect = 0.0f;
+		for (const auto key : a_badgeKeys) {
+			if (key == 0)
+				continue;
+			const auto* icon = MANAGER(IconFont)->GetIcon(key);
+			if (icon && icon->IsLoaded() && icon->imageSize.y > 0.0f)
+				badgeAspect = std::max(badgeAspect, icon->imageSize.x / icon->imageSize.y);
+		}
+
 		if (filtering) {
 			std::string        lowerFilter = clib_util::string::tolower(s_comboFilterStates[id].pattern);
 			static std::string lowerItemBuffer;
@@ -396,22 +407,15 @@ namespace ImGui
 							*a_hovered = idx;
 						}
 
-						// Badge at the row's end, left of the favourites star when there is one
+						// Badge centred in its slot at the row's end, the favourites star to the slot's left
+						const float rowH   = GetItemRectSize().y;
+						const float badgeH = std::round(rowH * 0.8f);
+						const float slotW  = std::round(badgeH * badgeAspect);
 						if (idx < static_cast<int>(a_badgeKeys.size()) && a_badgeKeys[idx] != 0) {
 							auto icon = MANAGER(IconFont)->GetIcon(a_badgeKeys[idx]);
 							if (icon && icon->IsLoaded()) {
-								float rowH   = GetItemRectSize().y;
-								float badgeH = std::round(rowH * 0.8f);
-								float badgeW = std::round(badgeH * (icon->imageSize.y > 0.0f ? (icon->imageSize.x / icon->imageSize.y) : 1.0f));
-
-								float starRoom = 0.0f;
-								if (has_favourites) {
-									PushFont(nullptr, GetFontSize() * 0.75f);
-									starRoom = CalcTextSize(ICON_FA_STAR).x + (5.0f * scale);
-									PopFont();
-								}
-
-								ImVec2 badgeMin(GetItemRectMin().x + availW - badgeW - padX - starRoom, GetItemRectMin().y + std::round((rowH - badgeH) * 0.5f));
+								const float  badgeW = std::round(badgeH * (icon->imageSize.y > 0.0f ? (icon->imageSize.x / icon->imageSize.y) : 1.0f));
+								const ImVec2 badgeMin(std::round(GetItemRectMin().x + availW - padX - slotW + (slotW - badgeW) * 0.5f), GetItemRectMin().y + std::round((rowH - badgeH) * 0.5f));
 								GetWindowDrawList()->AddImage(reinterpret_cast<ImTextureID>(icon->GetSRView()), badgeMin, badgeMin + ImVec2(badgeW, badgeH));
 							}
 						}
@@ -435,33 +439,19 @@ namespace ImGui
 							}
 
 							if (isFav || itemHovered) {
-								const char* starIcon     = ICON_FA_STAR;
-								float       starScale    = 0.75f;
-								float       starFontSize = GetFontSize() * starScale;
+								// Hit-tested by hand, bypassing ImGui's item overlap, as the star sits on the row's own item
+								const ImRect row(GetItemRectMin(), ImVec2(GetItemRectMin().x + availW, GetItemRectMax().y));
+								const float  inset = padX + (slotW > 0.0f ? slotW + 5.0f * scale : 0.0f);
+								const auto   star  = PlaceFavouriteStar(row, GetFontSize() * 0.85f, inset, 5.0f * scale);
 
-								PushFont(nullptr, starFontSize);
-								ImVec2 starSize = CalcTextSize(starIcon);
-								PopFont();
-
-								float rowH  = GetItemRectSize().y;
-								float starX = GetItemRectMin().x + availW - starSize.x - padX;
-								float starY = GetItemRectMin().y + (rowH - starSize.y) * 0.5f;
-
-								// Hit-testing logic bypassing ImGui Item overlap clashing
-								ImRect starBB(
-									ImVec2(starX - (5.0f * scale), GetItemRectMin().y),
-									ImVec2(starX + starSize.x + (5.0f * scale), GetItemRectMin().y + rowH));
-
-								starHovered = IsMouseHoveringRect(starBB.Min, starBB.Max);
+								starHovered = star.hovered;
 								if (starHovered && IsMouseClicked(0)) {
 									if (a_favToggled) {
 										*a_favToggled = items[idx];
 									}
 									PlayAudio(Audio::kFocus);
 								}
-
-								ImU32 starCol = starHovered ? IM_COL32(255, 255, 100, 255) : (isFav ? IM_COL32(255, 215, 0, 255) : GetColorU32(ImGuiCol_TextDisabled));
-								GetWindowDrawList()->AddText(GetFont(), starFontSize, ImVec2(starX, starY), starCol, starIcon);
+								DrawFavouriteStar(GetWindowDrawList(), star, isFav);
 							}
 						}
 

@@ -1265,6 +1265,7 @@ namespace FUCK::Host
 	static bool BeginTabBarWithTrailing_Impl(const char* s, float w, int f) { return ImGui::BeginTabBarWithTrailing(s, w, f); }
 	static bool BeginComboStyled_Impl(const char* id, const char* preview, float width, int itemCount) { return ImGui::BeginComboStyled(id, preview, width, itemCount); }
 	static void EndCombo_Impl() { ImGui::EndCombo(); }
+	static bool FavouriteSelectable_Impl(const char* label, bool selected, bool* favourite, int flags, const ImVec2& size) { return ImGui::FavouriteSelectable(label, selected, favourite, flags, size); }
 	static void SetGamepadNavBlockedBy_Impl(const char* pluginName, bool blocked) { MANAGER(Input)->SetGamepadNavBlockedBy(pluginName, blocked); }
 
 	static bool Card_Impl(const FUCK::CardDesc* desc, FUCK::CardResult* out)
@@ -1726,6 +1727,7 @@ namespace FUCK::Host
 			.BeginTabBarWithTrailing   = BeginTabBarWithTrailing_Impl,
 			.BeginComboStyled          = BeginComboStyled_Impl,
 			.EndCombo                  = EndCombo_Impl,
+			.FavouriteSelectable       = FavouriteSelectable_Impl,
 			.SetGamepadNavBlockedBy    = SetGamepadNavBlockedBy_Impl,
 			.Card                      = Card_Impl,
 			.GetCardHeight             = GetCardHeight_Impl,

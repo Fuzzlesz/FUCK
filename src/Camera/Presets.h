@@ -46,6 +46,7 @@ namespace Camera
 		int                         version = 1;
 		std::string                 name;
 		int                         hotkey = 0;  // 1-9, 0 for none
+		bool                        favourite = false;
 		std::optional<OffsetPreset> offset;
 		std::optional<FreePreset>   free;
 	};
@@ -73,12 +74,13 @@ namespace Camera
 		const Preset*              Find(std::string_view a_name) const;
 		const Preset*              FindByHotkey(int a_hotkey) const;
 
-		// Replaces a preset of the same name, keeping its shortcut
+		// Replaces a preset of the same name, keeping its shortcut and whether it's a favourite
 		void Store(Preset a_preset);
 		bool Remove(std::string_view a_name);
 
 		// Moves the shortcut here from whichever preset had it. 0 clears it
 		bool SetHotkey(std::string_view a_name, int a_hotkey);
+		bool SetFavourite(std::string_view a_name, bool a_favourite);
 
 		// The base name followed by the lowest number not already taken, e.g. "Preset 3"
 		std::string MakeUniqueName(std::string_view a_base) const;

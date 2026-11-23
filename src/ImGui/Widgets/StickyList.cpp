@@ -48,6 +48,16 @@ namespace ImGui
 			return std::max(GImGui->Style.FramePadding.x, 10.0f * GetDynamicWidgetScale());
 		}
 
+		// The room a count takes at a header's right end, so its label is cut short to clear it
+		float CountReserve(int a_count)
+		{
+			if (a_count < 0)
+				return 0.0f;
+			char buf[16];
+			snprintf(buf, sizeof(buf), "%d", a_count);
+			return CalcTextSize(buf).x + GImGui->Style.ItemInnerSpacing.x;
+		}
+
 		// Count dimmed on the right of the last header. Drawn rather than added to the label, so the ID never changes
 		void DrawCount(int a_count)
 		{
@@ -135,7 +145,7 @@ namespace ImGui
 			const ImGuiID stuckId = GetID(sec.label.c_str());
 			KeepNavItemClear(window, y + sec.height, stuckId);
 			storage->SetInt(stuckId, 1);
-			const bool stillOpen = CollapsingHeaderIcon(sec.label.c_str());
+			const bool stillOpen = CollapsingHeaderIcon(sec.label.c_str(), 0, CountReserve(sec.count));
 			DrawCount(sec.count);
 			PopID();
 
@@ -179,7 +189,7 @@ namespace ImGui
 		if (s_lists.empty() || s_lists.back().window != window) {
 			if (open)
 				SetNextItemOpen(*open);
-			const bool result = CollapsingHeaderIcon(label, flags);
+			const bool result = CollapsingHeaderIcon(label, flags, CountReserve(count));
 			DrawCount(count);
 			if (open)
 				*open = result;
@@ -224,7 +234,7 @@ namespace ImGui
 			list.clipPushed = true;
 		}
 
-		const bool result = CollapsingHeaderIcon(label, flags);
+		const bool result = CollapsingHeaderIcon(label, flags, CountReserve(count));
 		DrawCount(count);
 		if (open)
 			*open = result;

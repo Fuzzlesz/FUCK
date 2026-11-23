@@ -791,10 +791,15 @@ void FUCKMan::DrawSidebar(const SidebarMetrics& a_metrics, float a_height)
 			ImGui::PopFont();
 		}
 
+		// A row's star, 15px in from its right end, taking clicks 5px either side, as FUCK's other favourite rows place theirs
+		auto PlaceStar = [&](float a_rowRight, float a_rowTop) {
+			const ImRect row(ImVec2(a_rowRight - starReserve, a_rowTop), ImVec2(a_rowRight, a_rowTop + m.sidebarItemH));
+			return ImGui::PlaceFavouriteStar(row, m.sidebarFontSize * 0.85f, 15.0f * m.uiScale, 5.0f * m.uiScale, regularFont);
+		};
+
 		// Whether the mouse is on a row's star, matching where the star takes its click
 		auto IsOverStar = [&](float a_rowRight, float a_rowTop) {
-			return _cfg.showSidebarFavourites &&
-			       ImGui::IsMouseHoveringRect(ImVec2(a_rowRight - starWidth - 20.0f * m.uiScale, a_rowTop), ImVec2(a_rowRight - 10.0f * m.uiScale, a_rowTop + m.sidebarItemH));
+			return _cfg.showSidebarFavourites && PlaceStar(a_rowRight, a_rowTop).hovered;
 		};
 
 		// Draws a name in the current font, cut short with "..." when it's wider than a_maxW. Returns whether it was cut
@@ -855,38 +860,13 @@ void FUCKMan::DrawSidebar(const SidebarMetrics& a_metrics, float a_height)
 				ImGui::SetTooltipEx(label);
 
 			if (_cfg.showSidebarFavourites && (over.isFavourited || itemHovered)) {
-				const char* starIcon     = ICON_FA_STAR;
-				float       starScale    = 0.85f;
-				float       starFontSize = m.sidebarFontSize * starScale;
-
-				// Centred on the glyph's own ink, as an icon sits on the middle of the capitals rather than of the line
-				ImGui::PushFont(regularFont, starFontSize);
-				ImVec2             starSize = ImGui::CalcTextSize(starIcon);
-				unsigned int       starChar = 0;
-				ImTextCharFromUtf8(&starChar, starIcon, nullptr);
-				const ImFontGlyph* glyph    = ImGui::GetFontBaked()->FindGlyph(static_cast<ImWchar>(starChar));
-				const float        inkMid   = glyph && glyph->Visible ? (glyph->Y0 + glyph->Y1) * 0.5f : starFontSize * 0.5f;
-				ImGui::PopFont();
-
-				float starX = startScreenPos.x + rowW - starSize.x - (15.0f * m.uiScale);
-				float starY = std::round(startScreenPos.y + m.sidebarItemH * 0.5f - inkMid);
-
 				// Hit-tested by hand, as the star sits on top of the row's own item
-				ImRect starBB(
-					ImVec2(starX - (5.0f * m.uiScale), startScreenPos.y),
-					ImVec2(starX + starSize.x + (5.0f * m.uiScale), startScreenPos.y + m.sidebarItemH));
-				bool starHovered = ImGui::IsMouseHoveringRect(starBB.Min, starBB.Max);
-
-				if (starHovered && ImGui::IsMouseClicked(0)) {
+				const auto star = PlaceStar(startScreenPos.x + rowW, startScreenPos.y);
+				if (star.hovered && ImGui::IsMouseClicked(0)) {
 					over.isFavourited = !over.isFavourited;
 					OnOverridesChanged();
 				}
-
-				ImU32 starCol = starHovered ? IM_COL32(255, 255, 100, 255) : (over.isFavourited ? IM_COL32(255, 215, 0, 255) : IM_COL32(150, 150, 150, 150));
-
-				ImGui::GetWindowDrawList()->AddText(regularFont, starFontSize,
-					ImVec2(starX, starY),
-					starCol, starIcon);
+				ImGui::DrawFavouriteStar(ImGui::GetWindowDrawList(), star, over.isFavourited, regularFont);
 			}
 
 			ImGui::PopFont();
@@ -959,34 +939,14 @@ void FUCKMan::DrawSidebar(const SidebarMetrics& a_metrics, float a_height)
 					bool isFav = it != _groupOverrides.end() && it->second.isFavourited;
 
 					if (_cfg.showSidebarFavourites && (isFav || hovered)) {
-						const char* starIcon     = ICON_FA_STAR;
-						float       starScale    = 0.85f;
-						float       starFontSize = m.sidebarFontSize * starScale;
-
-						ImGui::PushFont(regularFont, starFontSize);
-						ImVec2 starSize = ImGui::CalcTextSize(starIcon);
-						ImGui::PopFont();
-
-						float starX = bb.Max.x - starSize.x - (15.0f * m.uiScale);
-						float starY = bb.Min.y + (m.sidebarItemH - starFontSize) * 0.5f - (1.0f * m.uiScale);
-
 						// Hit-tested by hand, as the star sits on top of the row's own item
-						ImRect starBB(
-							ImVec2(starX - (5.0f * m.uiScale), bb.Min.y),
-							ImVec2(starX + starSize.x + (5.0f * m.uiScale), bb.Min.y + m.sidebarItemH));
-						bool starHovered = ImGui::IsMouseHoveringRect(starBB.Min, starBB.Max);
-
-						if (starHovered && ImGui::IsMouseClicked(0)) {
+						const auto star = PlaceStar(bb.Max.x, bb.Min.y);
+						if (star.hovered && ImGui::IsMouseClicked(0)) {
 							isFav                              = !isFav;
 							_groupOverrides[path].isFavourited = isFav;
 							OnOverridesChanged();
 						}
-
-						ImU32 starCol = starHovered ? IM_COL32(255, 255, 100, 255) : (isFav ? IM_COL32(255, 215, 0, 255) : IM_COL32(150, 150, 150, 150));
-
-						ImGui::GetWindowDrawList()->AddText(regularFont, starFontSize,
-							ImVec2(starX, starY),
-							starCol, starIcon);
+						ImGui::DrawFavouriteStar(ImGui::GetWindowDrawList(), star, isFav, regularFont);
 					}
 				}
 			}

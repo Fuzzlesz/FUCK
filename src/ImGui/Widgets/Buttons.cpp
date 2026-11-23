@@ -28,6 +28,9 @@ namespace ImGui
 			return result;
 		}
 
+		// Set around a hotkey drawn with HotkeyFlags::kRegularLabel, so its label's in the regular face
+		bool s_regularLabel = false;
+
 		// Lays out a label and a widget on one row. drawContent is given the whole row, so a widget can take clicks anywhere along it.
 		// labelLit keeps the label lit, as a hotkey with kAlwaysHighlight has it
 		template <typename TDrawFunc>
@@ -70,7 +73,7 @@ namespace ImGui
 			if (doubleHash != std::string_view::npos)
 				labelView = labelView.substr(0, doubleHash);
 
-			ImFont* labelFont  = GetLabelFont();
+			ImFont* labelFont  = s_regularLabel ? GetFont() : GetLabelFont();
 			float   labelWidth = labelFont->CalcTextSizeA(GetFontSize(), FLT_MAX, 0.0f, labelView.data(), labelView.data() + labelView.size()).x;
 
 			// Calculate true dynamic centring, supporting widgets (like Icons) that are taller than a standard frame
@@ -814,13 +817,10 @@ namespace ImGui
 
 	bool DrawManagedHotkey(const char* label, FUCK::ManagedHotkey& h, FUCK::HotkeyFlags flags, float iconScale, float labelScale)
 	{
-		auto* regularFont = IconFont::Manager::GetSingleton()->GetRegularFont();
-		bool  popFont     = false;
-
+		// The current font at a fraction of its size, as fonts scale freely, so a label's size follows labelScale evenly from 1 down
+		bool popFont = false;
 		if (labelScale != 1.0f) {
-			float globalScale = FUCKMan::GetSingleton()->GetActiveScale() * Renderer::GetResolutionScale();
-			float targetSize  = regularFont->LegacySize * labelScale * globalScale;
-			PushFont(regularFont, targetSize);
+			PushFont(nullptr, GetFontSize() * labelScale);
 			popFont = true;
 		}
 
@@ -829,6 +829,7 @@ namespace ImGui
 		bool ctrlToRebind    = (flags & FUCK::HotkeyFlags::kCtrlToRebind);
 		bool alwaysHighlight = (flags & FUCK::HotkeyFlags::kAlwaysHighlight);
 		bool noModifiers     = (flags & FUCK::HotkeyFlags::kNoModifiers);
+		bool regularLabel    = (flags & FUCK::HotkeyFlags::kRegularLabel);
 
 		h.disallowModifiers = noModifiers;
 
@@ -855,9 +856,11 @@ namespace ImGui
 		if (disabled)
 			BeginDisabled();
 
+		s_regularLabel = regularLabel;
 		if (Hotkey(finalLabel, k, m1, m2, alignFar, labelLeft, h.isBinding, alwaysHighlight, iconScale)) {
 			clicked = true;
 		}
+		s_regularLabel = false;
 
 		if (disabled)
 			EndDisabled();
@@ -972,7 +975,7 @@ namespace ImGui
 
 		// The star, hit-tested by hand as it sits on the card's own item
 		if (a_desc.showStar) {
-			const float  size = GetFontSize();
+			const float  size = GetFontSize() * CardNameScale(a_desc.side);  // shrinks with the card, as its name does
 			const float  pad  = std::max(2.0f, a_desc.side * 0.04f);
 			const ImVec2 sMin(picture.Min.x + pad, picture.Min.y + pad);
 			const ImRect star(sMin, ImVec2(sMin.x + size, sMin.y + size));
@@ -1042,5 +1045,80 @@ namespace ImGui
 		if (pressed)
 			PlayAudio(Audio::kFocus);
 		return pressed;
+	}
+
+	FavouriteStar PlaceFavouriteStar(const ImRect& a_row, float a_size, float a_rightInset, float a_hitPad, ImFont* a_font)
+	{
+		ImFont* font = a_font ? a_font : GetFont();
+
+		FavouriteStar star;
+		star.size  = a_size;
+		star.width = font->CalcTextSizeA(a_size, FLT_MAX, 0.0f, ICON_FA_STAR).x;
+
+		// Centred on the glyph's own ink, as an icon sits on the middle of the capitals rather than of the line
+		unsigned int starChar = 0;
+		ImTextCharFromUtf8(&starChar, ICON_FA_STAR, nullptr);
+		PushFont(font, a_size);
+		const ImFontGlyph* glyph  = GetFontBaked()->FindGlyph(static_cast<ImWchar>(starChar));
+		const float        inkMid = glyph && glyph->Visible ? (glyph->Y0 + glyph->Y1) * 0.5f : a_size * 0.5f;
+		PopFont();
+
+		star.pos     = ImVec2(std::round(a_row.Max.x - a_rightInset - star.width), std::round((a_row.Min.y + a_row.Max.y) * 0.5f - inkMid));
+		star.hovered = IsMouseHoveringRect(ImVec2(star.pos.x - a_hitPad, a_row.Min.y), ImVec2(star.pos.x + star.width + a_hitPad, a_row.Max.y));
+		return star;
+	}
+
+	void DrawFavouriteStar(ImDrawList* a_drawList, const FavouriteStar& a_star, bool a_favourite, ImFont* a_font)
+	{
+		const ImU32 col = a_star.hovered ? IM_COL32(255, 255, 100, 255) : (a_favourite ? IM_COL32(255, 215, 0, 255) : IM_COL32(150, 150, 150, 150));
+		a_drawList->AddText(a_font ? a_font : GetFont(), a_star.size, a_star.pos, col, ICON_FA_STAR);
+	}
+
+	bool FavouriteSelectable(const char* label, bool selected, bool* a_favourite, int flags, const ImVec2& size)
+	{
+		if (!a_favourite)
+			return SelectableStyled(label, selected, flags, size);
+
+		ImGuiWindow* window = GetCurrentWindow();
+		if (window->SkipItems)
+			return false;
+
+		// The star a little under the text, as the sidebar's are, with room kept for it whether it shows or not, so a name doesn't
+		// change length as the row's hovered
+		const float scale    = GetDynamicWidgetScale();
+		const float starSize = GetFontSize() * 0.85f;
+		const float starW    = GetFont()->CalcTextSizeA(starSize, FLT_MAX, 0.0f, ICON_FA_STAR).x;
+		const float inset    = 10.0f * scale;
+		const float rowW     = size.x > 0.0f ? size.x : GetContentRegionAvail().x + std::min(size.x, 0.0f);
+		const float textW    = std::max(0.0f, rowW - starW - inset * 2.0f);
+
+		// "###" keeps the ID off the shown text, so the row stays the same item as it's cut, as SelectableStyled has it
+		const char* shownEnd = FindRenderedTextEnd(label);
+		bool        pressed  = false;
+		if (CalcTextSize(label, shownEnd).x > textW) {
+			const char* ownId  = std::strstr(label, "###");
+			std::string fitted = FitTextToWidth(label, shownEnd, textW);
+			fitted += "###";
+			fitted += ownId ? ownId + 3 : label;
+			pressed = Selectable(fitted.c_str(), selected, flags, size);
+		} else {
+			pressed = Selectable(label, selected, flags, size);
+		}
+
+		const bool hovered = IsItemHovered();
+		const bool focused = IsItemFocused();
+
+		// Hit-tested by hand, as the star sits on the row's own item
+		FavouriteStar star = PlaceFavouriteStar(ImRect(GetItemRectMin(), GetItemRectMax()), starSize, inset, inset * 0.5f);
+		star.hovered       = star.hovered && hovered;
+		const bool toggled = (pressed && star.hovered) || ((hovered || focused) && IsKeyPressed(ImGuiKey_GamepadFaceUp, false));
+		if (toggled)
+			*a_favourite = !*a_favourite;
+		if (pressed || toggled)
+			PlayAudio(Audio::kFocus);
+
+		if (*a_favourite || hovered || focused || selected)
+			DrawFavouriteStar(window->DrawList, star, *a_favourite);
+		return pressed && !star.hovered;
 	}
 }

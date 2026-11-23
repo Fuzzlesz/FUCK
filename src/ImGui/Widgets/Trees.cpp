@@ -70,7 +70,7 @@ namespace ImGui
 		}
 	}
 
-	bool CollapsingHeaderIcon(const char* label, int flags)
+	bool CollapsingHeaderIcon(const char* label, int flags, float a_rightReserve)
 	{
 		// A row like the labelled widgets, spaced as they are, so a column of headers lines up with one of checkboxes beside it
 		AddRowSpacing();
@@ -150,11 +150,17 @@ namespace ImGui
 			DrawTreeIcon(window->DrawList, { bb.Min.x + padX, bb.Min.y }, frameHeight, is_open, h, baseArrowSize);
 		}
 
-		// Vertically centre text
-		ImVec2 textSize = CalcTextSize(label);
-		float  textY    = bb.Min.y + (frameHeight - textSize.y) * 0.5f;
+		// Vertically centre text, cut short with "..." to clear the right end and any room kept there, the whole of it in a tooltip
+		const char*       labelEnd = FindRenderedTextEnd(label);
+		const float       textMaxW = bb.Max.x - (bb.Min.x + textOff) - padX - a_rightReserve;
+		bool              cut      = false;
+		const std::string shown    = FitTextToWidth(label, labelEnd, std::max(0.0f, textMaxW), &cut);
+		ImVec2            textSize = CalcTextSize(shown.c_str());
+		float             textY    = bb.Min.y + (frameHeight - textSize.y) * 0.5f;
 
-		RenderText({ bb.Min.x + textOff, textY }, label);
+		RenderText({ bb.Min.x + textOff, textY }, shown.c_str());
+		if (cut && h)
+			SetTooltipEx(std::string(label, labelEnd).c_str());
 		return is_open && !is_leaf;
 	}
 

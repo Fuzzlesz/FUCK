@@ -157,6 +157,22 @@ namespace ImGui
 
 	// Core Widgets
 	bool SelectableStyled(const char* label, bool selected = false, int flags = 0, const ImVec2& size = ImVec2(0, 0));
+	// SelectableStyled with a favourite star at its end, toggling *a_favourite. Returns a click on the row, not on its star
+	bool FavouriteSelectable(const char* label, bool selected, bool* a_favourite, int flags = 0, const ImVec2& size = ImVec2(0, 0));
+
+	// A row's favourite star, as the sidebar, combo rows and FavouriteSelectable draw it: where it sits, a_rightInset in from the row's
+	// right end with its glyph's ink on the row's middle, and whether the mouse is on it, a little either side taking its click too.
+	// Placed before drawing the row's own item, so a click there can be kept from the row
+	struct FavouriteStar
+	{
+		ImVec2 pos;
+		float  size    = 0.0f;
+		float  width   = 0.0f;
+		bool   hovered = false;
+	};
+	FavouriteStar PlaceFavouriteStar(const ImRect& a_row, float a_size, float a_rightInset, float a_hitPad, ImFont* a_font = nullptr);
+	// Gold for a favourite, yellow under the mouse, else faint
+	void DrawFavouriteStar(ImDrawList* a_drawList, const FavouriteStar& a_star, bool a_favourite, ImFont* a_font = nullptr);
 
 	// FUCK::Card(), with the desc's image already turned into a texture, or none while it isn't ready
 	bool  Card(const FUCK::CardDesc& a_desc, ImTextureID a_tex, FUCK::CardResult& a_out);
@@ -194,7 +210,8 @@ namespace ImGui
 	bool BeginTabBarWithTrailing(const char* str_id, float a_trailingWidth, ImGuiTabBarFlags flags = 0);
 	bool BeginTabItemEx(const char* label, ImGuiTabItemFlags flags = 0);
 	bool OutlineButton(const char* label, bool* wasFocused = nullptr, bool selected = false, float minTextWidth = 0.0f);
-	bool CollapsingHeaderIcon(const char* label, int flags = 0);
+	// a_rightReserve keeps room at the row's right end, e.g. for a count, which a long label is cut short with "..." to clear
+	bool CollapsingHeaderIcon(const char* label, int flags = 0, float a_rightReserve = 0.0f);
 	bool TreeNodeIcon(const char* label, int flags = 0);
 
 	// Helpers

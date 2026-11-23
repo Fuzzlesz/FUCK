@@ -223,8 +223,9 @@ namespace Camera
 
 		auto it = std::ranges::find(_presets, a_preset.name, &Preset::name);
 		if (it != _presets.end()) {
-			a_preset.hotkey = it->hotkey;
-			*it             = std::move(a_preset);
+			a_preset.hotkey    = it->hotkey;
+			a_preset.favourite = it->favourite;
+			*it                = std::move(a_preset);
 			Write(static_cast<std::size_t>(it - _presets.begin()));
 			return;
 		}
@@ -281,6 +282,16 @@ namespace Camera
 
 		// The list file holds them all, so one write covers both changes
 		it->hotkey = a_hotkey;
+		Write(static_cast<std::size_t>(it - _presets.begin()));
+		return true;
+	}
+
+	bool Presets::SetFavourite(std::string_view a_name, bool a_favourite)
+	{
+		auto it = std::ranges::find(_presets, a_name, &Preset::name);
+		if (it == _presets.end())
+			return false;
+		it->favourite = a_favourite;
 		Write(static_cast<std::size_t>(it - _presets.begin()));
 		return true;
 	}
