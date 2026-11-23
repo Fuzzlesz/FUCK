@@ -1649,6 +1649,17 @@ float4 BackdropPS(BG_OUT i) : SV_Target
 					a_out.envMask        = TextureSrv(material->normalTexture.get());
 					a_out.envMaskInAlpha = a_out.envMask != nullptr;
 				}
+				// An eye drawn with the environment shader rather than the eye's, as Complete Vanilla Eye Overhaul's are, its cube map
+				// and mask the eye's own: a cornea, reflecting untinted, not metal, which took the iris's colour and darkened the eye
+				const auto eyeTexture = [](RE::NiSourceTexture* a_texture) {
+					const char* name = a_texture ? a_texture->name.c_str() : nullptr;
+					if (!name)
+						return false;
+					std::string lower(name);
+					std::ranges::transform(lower, lower.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+					return lower.find("eye") != std::string::npos;
+				};
+				a_out.envUntinted = eyeTexture(env->envTexture.get()) || eyeTexture(env->envMaskTexture.get());
 				break;
 			}
 		case RE::BSShaderMaterial::Feature::kEye:
