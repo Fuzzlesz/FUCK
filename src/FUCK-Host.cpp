@@ -721,7 +721,44 @@ namespace FUCK::Host
 		if (y)
 			*y = s.y;
 	}
-	static void SetWindowPos_Impl(float x, float y, int c) { ImGui::SetWindowPos(GetTargetWindow(), { x, y }, c); }
+	// What ImGui leaves where it was when a window moves while it's drawn: its rects, which the space left to items is measured to, and
+	// what it's drawn so far. Moved with it, so a window placed from its own Draw() lays out and draws this frame as if it had begun there
+	static void CarryWindow(ImGuiWindow* a_window, const ImVec2& a_offset)
+	{
+		for (ImRect* rect : { &a_window->OuterRectClipped, &a_window->InnerRect, &a_window->InnerClipRect, &a_window->WorkRect, &a_window->ParentWorkRect,
+				 &a_window->ClipRect, &a_window->ContentRegionRect })
+			rect->Translate(a_offset);
+		a_window->DC.CursorPosPrevLine += a_offset;
+
+		ImDrawList* list = a_window->DrawList;
+		if (!list)
+			return;
+		for (auto& vertex : list->VtxBuffer)
+			vertex.pos += a_offset;
+		const ImVec4 shift(a_offset.x, a_offset.y, a_offset.x, a_offset.y);
+		for (auto& cmd : list->CmdBuffer)
+			cmd.ClipRect = cmd.ClipRect + shift;
+		for (auto& clip : list->_ClipRectStack)
+			clip = clip + shift;
+		list->_CmdHeader.ClipRect = list->_CmdHeader.ClipRect + shift;
+	}
+
+	static void SetWindowPos_Impl(float x, float y, int c)
+	{
+		ImGuiWindow* target = GetTargetWindow();
+		const ImVec2 before = target->Pos;
+		ImGui::SetWindowPos(target, { x, y }, c);
+		const ImVec2 offset = target->Pos - before;
+		if (offset.x == 0.0f && offset.y == 0.0f)
+			return;
+		CarryWindow(target, offset);
+
+		// A decorated window's content child, begun before Draw() moved the window, goes with it
+		if (ImGuiWindow* current = ImGui::GetCurrentWindow(); current != target) {
+			ImGui::SetWindowPos(current, current->Pos + offset, ImGuiCond_Always);
+			CarryWindow(current, offset);
+		}
+	}
 	static void SetWindowSize_Impl(float x, float y, int c) { ImGui::SetWindowSize(GetTargetWindow(), { x, y }, c); }
 	// Corners follow the theme, for the host's windows and any a plugin begins itself
 	static bool BeginWindow_Impl(const char* n, bool* o, int f)
