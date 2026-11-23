@@ -1081,7 +1081,7 @@ void FUCKMan::Draw(bool a_passthroughOnly)
 
 	DrawPluginWindows(m, a_passthroughOnly, globalMouseClick);
 
-	if (a_passthroughOnly || !_isOpen || menusHidden)
+	if (a_passthroughOnly || !_isOpen)
 		return;
 
 	DrawMainWindow(m);
@@ -1138,8 +1138,6 @@ void FUCKMan::DrawMainWindow(const LayoutMetrics& a_m)
 	auto chromeArrow = [&](bool pointsDown, float rowH) {
 		return ImGui::CalcArrowIconParams(a_m.iconAspect, pointsDown, rowH, a_m.chromeIconBaseH);
 	};
-
-	ImGui::GetIO().MouseDrawCursor = false;
 
 	const float collapsedH = a_m.titleH * 1.02f;
 

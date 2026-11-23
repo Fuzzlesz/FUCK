@@ -263,12 +263,94 @@ namespace ImGui::Renderer
 		static inline WNDPROC func;
 	};
 
+	// Every other menu's PostDisplay, hooked per menu class as each first opens. With neither the HUD nor the cursor menu
+	// drawing (a controller in RaceMenu, say), the UI is drawn right after the last menu that drew the frame before, into the
+	// same target the menus use, so Community Shaders converts it along with them in HDR
+	namespace MenuHooks
+	{
+		struct Hooked
+		{
+			std::uintptr_t* vtable;
+			std::uintptr_t  original;
+		};
+
+		static std::array<Hooked, 128>  s_hooked;
+		static std::atomic<std::size_t> s_hookedCount{ 0 };
+		static RE::IMenu*               s_lastCaller = nullptr;
+		static RE::IMenu*               s_drawAfter  = nullptr;
+
+		void Thunk(RE::IMenu* a_menu)
+		{
+			// Not while 'tm' hides the menus, which the HUD or Present draw through instead
+			const auto ui    = RE::UI::GetSingleton();
+			const bool shown = ui && ui->IsShowingMenus();
+
+			// The console stays above the UI, so its typing keeps working: drawn just beneath it if nothing lower drew
+			const auto        vtable    = *reinterpret_cast<std::uintptr_t**>(a_menu);
+			static const auto console   = REL::Relocation<std::uintptr_t>{ RE::Console::VTABLE[0] }.address();
+			const bool        isConsole = reinterpret_cast<std::uintptr_t>(vtable) == console;
+			if (isConsole && shown && !s_renderedThisFrame.exchange(true)) {
+				Draw();
+			}
+
+			const auto count = s_hookedCount.load(std::memory_order_acquire);
+			for (std::size_t i = 0; i < count; ++i) {
+				if (s_hooked[i].vtable == vtable) {
+					reinterpret_cast<void (*)(RE::IMenu*)>(s_hooked[i].original)(a_menu);
+					break;
+				}
+			}
+
+			if (isConsole) {
+				return;
+			}
+			s_lastCaller = a_menu;
+			if (a_menu == s_drawAfter && shown && !s_renderedThisFrame.exchange(true)) {
+				Draw();
+			}
+		}
+
+		// Hooks PostDisplay for any open menu's class not hooked yet
+		void Scan()
+		{
+			const auto ui = RE::UI::GetSingleton();
+			if (!ui) {
+				return;
+			}
+			const auto hud    = REL::Relocation<std::uintptr_t>{ RE::HUDMenu::VTABLE[0] }.address();
+			const auto cursor = REL::Relocation<std::uintptr_t>{ RE::CursorMenu::VTABLE[0] }.address();
+			for (auto& menu : ui->menuStack) {
+				if (!menu) {
+					continue;
+				}
+				const auto vtable  = *reinterpret_cast<std::uintptr_t**>(menu.get());
+				const auto address = reinterpret_cast<std::uintptr_t>(vtable);
+				if (address == hud || address == cursor || vtable[6] == reinterpret_cast<std::uintptr_t>(&Thunk)) {
+					continue;
+				}
+				const auto count = s_hookedCount.load(std::memory_order_relaxed);
+				if (count >= s_hooked.size()) {
+					return;
+				}
+				s_hooked[count] = { vtable, vtable[6] };
+				s_hookedCount.store(count + 1, std::memory_order_release);
+
+				DWORD oldProtect;
+				VirtualProtect(&vtable[6], sizeof(std::uintptr_t), PAGE_EXECUTE_READWRITE, &oldProtect);
+				vtable[6] = reinterpret_cast<std::uintptr_t>(&Thunk);
+				VirtualProtect(&vtable[6], sizeof(std::uintptr_t), oldProtect, &oldProtect);
+			}
+		}
+	}
+
 	using  Present_t                 = HRESULT(WINAPI*)(IDXGISwapChain*, UINT, UINT);
 	static Present_t OriginalPresent = nullptr;
 
 	HRESULT WINAPI Present_Hook(IDXGISwapChain* pSwapChain, UINT SyncInterval, UINT Flags)
 	{
-		// Fallback rendering pass for unhandled frames. (e.g. when 'tm' used to hide menus)
+		MenuHooks::Scan();
+
+		// Fallback rendering pass for frames no menu drew. (e.g. when 'tm' used to hide menus)
 		if (!s_renderedThisFrame.exchange(false)) {
 			const auto renderer = RE::BSGraphics::Renderer::GetSingleton();
 			auto       device   = reinterpret_cast<ID3D11Device*>(renderer->GetRuntimeData().forwarder);
@@ -305,6 +387,7 @@ namespace ImGui::Renderer
 			}
 		}
 
+		MenuHooks::s_drawAfter = std::exchange(MenuHooks::s_lastCaller, nullptr);
 		return OriginalPresent(pSwapChain, SyncInterval, Flags);
 	}
 
@@ -404,8 +487,10 @@ namespace ImGui::Renderer
 	{
 		static void thunk(RE::IMenu* a_menu)
 		{
-			// Only draw ImGui on the HUDMenu if the CursorMenu isn't going to do it for us
-			if (!s_renderedThisFrame.exchange(true)) {
+			// Only draw ImGui on the HUDMenu if the CursorMenu isn't going to do it for us, which it can't while 'tm' hides the menus
+			const auto ui = RE::UI::GetSingleton();
+			const bool cursorDraws = ui && ui->IsShowingMenus() && ui->IsMenuOpen(RE::CursorMenu::MENU_NAME);
+			if (ui && !cursorDraws && !s_renderedThisFrame.exchange(true)) {
 				Draw();
 			}
 
