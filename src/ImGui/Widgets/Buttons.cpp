@@ -935,7 +935,8 @@ namespace ImGui
 		const ImVec2 max(min.x + a_desc.side, min.y + height);
 		const ImRect picture(min, ImVec2(max.x, min.y + pictureH));
 
-		a_out.clicked    = InvisibleButton(a_desc.id, ImVec2(a_desc.side, height));
+		// Reachable by the keys and the pad, which an invisible button isn't unless asked
+		a_out.clicked    = InvisibleButton(a_desc.id, ImVec2(a_desc.side, height), ImGuiButtonFlags_EnableNav);
 		a_out.hovered    = IsItemHovered();
 		const bool focus = IsItemFocused();
 		a_out.pictureMin = picture.Min;
