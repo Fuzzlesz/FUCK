@@ -1,4 +1,5 @@
 #include "Camera/Core.h"
+#include "Camera/Manager.h"
 
 #include "System/InputMap.h"
 
@@ -273,10 +274,10 @@ namespace Camera
 		in.altDown      = FUCK::IsModifierPressed(FUCK::Modifier::kAlt);
 
 		in.lbDown       = FUCK::IsInputDown(Keys::kGP_LB);
-		in.rbDown       = FUCK::IsInputDown(Keys::kGP_RB);
+		in.rbDown       = Manager::GetSingleton()->ButtonDown(Keys::kGP_RB);
 
-		in.mmbDown      = FUCK::IsInputDown(Keys::kMouse_Middle);
-		in.rmbDown      = FUCK::IsInputDown(Keys::kMouse_Right);
+		in.mmbDown      = Manager::GetSingleton()->ButtonDown(Keys::kMouse_Middle);
+		in.rmbDown      = Manager::GetSingleton()->ButtonDown(Keys::kMouse_Right);
 
 		in.isPopupOpen  = FUCK::IsPopupOpen(nullptr, FUCK::PopupFlags::kAnyPopup);
 
@@ -539,7 +540,7 @@ namespace Camera
 		}
 
 		// Block mouse rotation over ImGui windows or client UI that owns the mouse
-		bool allowMouseRot = FUCK::IsInputDown(Keys::kMouse_Right) && !a_in.mmbDown && !a_in.isUIHovered && !a_in.isPopupOpen && !a_in.mouseLocked;
+		bool allowMouseRot = a_in.rmbDown && !a_in.mmbDown && !a_in.isUIHovered && !a_in.isPopupOpen && !a_in.mouseLocked;
 		bool allowGPRot    = a_in.rbDown && (gpY || gpX) && !_lockoutGPSubjRot;
 
 		float rotAmount = 0.0f;

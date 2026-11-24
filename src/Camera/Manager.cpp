@@ -287,6 +287,15 @@ namespace Camera
 		_sessions.push_back(std::move(session));
 		_current = _sessions.back().get();
 
+		if (_sessions.size() == 1) {
+			namespace Keys = Input::Keymap;
+			_heldAtBegin.clear();
+			for (const auto key : { Keys::kMouse_Right, Keys::kMouse_Middle, Keys::kGP_RB }) {
+				if (FUCK::IsInputDown(key))
+					_heldAtBegin.push_back(key);
+			}
+		}
+
 		EnterBase(*_current);
 
 		// The client has set the camera up by now, so this is the pose the third-person base holds, unless it's carried on
@@ -734,7 +743,13 @@ namespace Camera
 		_cameraMoves   = state.cameraMoves;
 
 		UpdatePresetHotkeys(state.inputAllowed);
+		std::erase_if(_heldAtBegin, [](std::uint32_t a_key) { return !FUCK::IsInputDown(a_key); });
 		_current->core.Update(state, _config, a_interval);
+	}
+
+	bool Manager::ButtonDown(std::uint32_t a_key) const
+	{
+		return FUCK::IsInputDown(a_key) && std::ranges::find(_heldAtBegin, a_key) == _heldAtBegin.end();
 	}
 
 	bool Manager::IsBlockingInput() const
@@ -754,8 +769,8 @@ namespace Camera
 		// A held mouse button or RB blocks on its own, and Ctrl and Shift are then just modifiers. Right-drag and RB turn the subject, so they still block with cameraMoves off,
 		// unless the session doesn't turn it
 		const bool turns = !(_current->flags & FUCK::CameraSessionFlags::kNoTurning);
-		bool       mouse = !_mouseLocked && ((turns && FUCK::IsInputDown(Keys::kMouse_Right)) || (_cameraMoves && FUCK::IsInputDown(Keys::kMouse_Middle)));
-		if (mouse || FUCK::IsInputDown(Keys::kGP_RB))
+		bool       mouse = !_mouseLocked && ((turns && ButtonDown(Keys::kMouse_Right)) || (_cameraMoves && ButtonDown(Keys::kMouse_Middle)));
+		if (mouse || ButtonDown(Keys::kGP_RB))
 			return true;
 
 		if (!_cameraMoves)
