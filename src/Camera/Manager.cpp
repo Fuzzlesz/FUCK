@@ -1148,7 +1148,7 @@ namespace Camera
 		node->local.rotate            = rotate;
 		session.nodeAppliedTranslate  = translate;
 		session.nodeAppliedRotate     = rotate;
-		session.nodeModified          = true;
+		session.nodeModifiedRoot      = node;
 
 		// The whole branch, so the camera under the root moves too even when nothing else updates the scene, e.g. in a paused menu
 		RE::NiUpdateData ctx;
@@ -1157,23 +1157,27 @@ namespace Camera
 
 	void Manager::RevertNode()
 	{
-		if (!_current || !_current->nodeModified)
+		if (!_current)
 			return;
 
 		auto& session = *_current;
+		const auto* appliedRoot = std::exchange(session.nodeModifiedRoot, nullptr);
+		auto* camera = RE::PlayerCamera::GetSingleton();
+		auto* node   = camera ? camera->cameraRoot.get() : nullptr;
+		if (!appliedRoot || node != appliedRoot)
+			return;
 
-		// Only if the node still holds what FUCK applied, as the game may have placed it again since
-		auto camera = RE::PlayerCamera::GetSingleton();
-		if (auto node = camera ? camera->cameraRoot.get() : nullptr) {
-			if (node->local.translate == session.nodeAppliedTranslate && node->local.rotate == session.nodeAppliedRotate) {
-				node->local.translate = session.nodeOriginalTranslate;
-				node->local.rotate    = session.nodeOriginalRotate;
-
-				RE::NiUpdateData ctx;
-				node->Update(ctx);
-			}
+		// The engine can replace position and rotation separately during a camera transition.
+		const bool restorePosition = node->local.translate == session.nodeAppliedTranslate;
+		const bool restoreRotation = node->local.rotate == session.nodeAppliedRotate;
+		if (restorePosition)
+			node->local.translate = session.nodeOriginalTranslate;
+		if (restoreRotation)
+			node->local.rotate = session.nodeOriginalRotate;
+		if (restorePosition || restoreRotation) {
+			RE::NiUpdateData ctx;
+			node->Update(ctx);
 		}
-		session.nodeModified = false;
 	}
 
 	void Manager::OnThirdPersonUpdate(RE::ThirdPersonState* a_state)
@@ -1187,7 +1191,7 @@ namespace Camera
 
 		// The game has just placed the camera, replacing anything FUCK applied, so this is the new base. ApplyNode() sets the FOV again too, as
 		// a mod can change it during the game's update (ACC eases its own)
-		_current->nodeModified = false;
+		_current->nodeModifiedRoot = nullptr;
 		ApplyNode();
 		MatchMovementToView(a_state);
 	}
@@ -1331,7 +1335,7 @@ namespace Camera
 			return false;
 
 		const bool session = _current && IsOffsetBase(_current->base);
-		const bool applied = session && _current->nodeModified;
+		const bool applied = session && _current->nodeModifiedRoot == node;
 		a_view.position   = applied ? _current->nodeAppliedTranslate : node->local.translate;
 		Maths::AnglesFromRotation(applied ? _current->nodeAppliedRotate : node->local.rotate, a_view.pitch, a_view.yaw, a_view.roll);
 
@@ -1435,20 +1439,18 @@ namespace Camera
 			return true;
 		}
 
-		// Once the offsets are applied the node holds them, so the base is the transform they replaced
-		if (_current->nodeModified) {
-			a_translate = _current->nodeOriginalTranslate;
-			a_rotate    = _current->nodeOriginalRotate;
-			return true;
-		}
-
 		auto camera = RE::PlayerCamera::GetSingleton();
 		auto node   = camera ? camera->cameraRoot.get() : nullptr;
 		if (!node)
 			return false;
 
-		a_translate = node->local.translate;
-		a_rotate    = node->local.rotate;
+		// For components we still own, the base is what was there before the offsets.
+		const auto& session = *_current;
+		const bool sameRoot = session.nodeModifiedRoot == node;
+		a_translate = sameRoot && node->local.translate == session.nodeAppliedTranslate ?
+			session.nodeOriginalTranslate : node->local.translate;
+		a_rotate = sameRoot && node->local.rotate == session.nodeAppliedRotate ?
+			session.nodeOriginalRotate : node->local.rotate;
 		return true;
 	}
 

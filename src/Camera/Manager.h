@@ -37,7 +37,7 @@ namespace Camera
 		RE::NiMatrix3 nodeOriginalRotate;
 		RE::NiPoint3  nodeAppliedTranslate;
 		RE::NiMatrix3 nodeAppliedRotate;
-		bool          nodeModified = false;
+		RE::NiNode*   nodeModifiedRoot = nullptr;
 
 		// kFree: this frame's pose before and after FUCK's moves, worked out once per update
 		struct FreePose
