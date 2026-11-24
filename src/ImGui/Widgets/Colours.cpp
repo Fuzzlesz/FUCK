@@ -4,6 +4,41 @@ namespace ImGui
 {
 	using namespace WidgetsDetail;
 
+	// Use native outward rounding for colour popups and tooltips. Pad their rectangular previews
+	// clear of the curved border when the rest of the theme uses inverted corners.
+	class ColourPopupStyle
+	{
+	public:
+		ColourPopupStyle() : _pushed(UseInvertedCorners())
+		{
+			if (_pushed) {
+				const auto& style = GetStyle();
+				const ImVec2 padding = style.WindowPadding;
+				const float fallbackRounding = std::max(2.0f, GetFrameRounding());
+				const float popupRounding = style.PopupRounding > 0.0f ? style.PopupRounding : fallbackRounding;
+				const float tooltipRounding = style.WindowRounding > 0.0f ? style.WindowRounding : fallbackRounding;
+
+				// At the diagonal, a rounded corner needs about 30% of its radius in padding on both axes.
+				const float inset = std::ceil(std::max(popupRounding, tooltipRounding) * 0.3f) +
+				                    std::ceil(style.PopupBorderSize) + 1.0f;
+				PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(std::max(padding.x, inset), std::max(padding.y, inset)));
+				PushStyleVar(ImGuiStyleVar_PopupRounding, popupRounding);
+				PushStyleVar(ImGuiStyleVar_WindowRounding, tooltipRounding);
+			}
+		}
+		~ColourPopupStyle()
+		{
+			if (_pushed)
+				PopStyleVar(3);
+		}
+
+		ColourPopupStyle(const ColourPopupStyle&) = delete;
+		ColourPopupStyle& operator=(const ColourPopupStyle&) = delete;
+
+	private:
+		bool _pushed;
+	};
+
 	// Colour edits fire every frame while dragging, so only play on grab and release (popup picker included)
 	static void PlayGrabReleaseAudio()
 	{
@@ -24,30 +59,33 @@ namespace ImGui
 
 	bool ColorEdit3Styled(const char* label, float col[3], int flags)
 	{
+		const ColourPopupStyle popupStyle;
 		auto drawEdit = [&](const char* id) {
 			return ColorEdit3(id, col, flags | ImGuiColorEditFlags_NoLabel);
 		};
 		bool hasSwatch = !(flags & ImGuiColorEditFlags_NoSmallPreview);
 
-		bool res = OutsetFramedWidget(label, drawEdit, true, hasSwatch);
+		bool res = OutsetFramedWidget(label, drawEdit, true, hasSwatch, false);
 		PlayGrabReleaseAudio();
 		return res;
 	}
 
 	bool ColorEdit4Styled(const char* label, float col[4], int flags)
 	{
+		const ColourPopupStyle popupStyle;
 		auto drawEdit = [&](const char* id) {
 			return ColorEdit4(id, col, WithAlphaBar(flags) | ImGuiColorEditFlags_NoLabel);
 		};
 		bool hasSwatch = !(flags & ImGuiColorEditFlags_NoSmallPreview);
 
-		bool res = OutsetFramedWidget(label, drawEdit, true, hasSwatch);
+		bool res = OutsetFramedWidget(label, drawEdit, true, hasSwatch, false);
 		PlayGrabReleaseAudio();
 		return res;
 	}
 
 	bool ColorButtonStyled(const char* desc_id, const ImVec4& col, int flags, const ImVec2& size, bool selected)
 	{
+		const ColourPopupStyle popupStyle;
 		float borderSize   = GetUserStyleVar(USER_STYLE::kButtonBorderSize);
 		bool  customBorder = borderSize > 0.0f && !(flags & ImGuiColorEditFlags_NoBorder);
 
@@ -73,7 +111,7 @@ namespace ImGui
 			PopStyleColor();
 
 			bool highlighted = selected || IsItemHovered() || IsItemActive() || IsWidgetFocused(GetItemID());
-			DrawWidgetBorder(GetWindowDrawList(), ImRect(GetItemRectMin(), GetItemRectMax()), highlighted, GetFrameRounding());
+			DrawWidgetBorder(GetWindowDrawList(), ImRect(GetItemRectMin(), GetItemRectMax()), highlighted, GetFrameRounding(), false);
 		}
 
 		if (pressed)
@@ -83,6 +121,7 @@ namespace ImGui
 
 	bool ColorPicker3Styled(const char* label, float col[3], int flags)
 	{
+		const ColourPopupStyle popupStyle;
 		bool res = ColorPicker3(label, col, static_cast<ImGuiColorEditFlags>(flags));
 		PlayGrabReleaseAudio();
 		return res;
@@ -90,6 +129,7 @@ namespace ImGui
 
 	bool ColorPicker4Styled(const char* label, float col[4], int flags, const float* ref_col)
 	{
+		const ColourPopupStyle popupStyle;
 		bool res = ColorPicker4(label, col, WithAlphaBar(flags), ref_col);
 		PlayGrabReleaseAudio();
 		return res;

@@ -40,7 +40,7 @@ namespace ImGui::WidgetsDetail
 
 	// --- Colours.cpp, Sliders.cpp ---
 	template <typename TWidgetFunc>
-	bool OutsetFramedWidget(const char* label, TWidgetFunc drawWidget, bool insetSides = false, bool trailingSwatch = false)
+	bool OutsetFramedWidget(const char* label, TWidgetFunc drawWidget, bool insetSides = false, bool trailingSwatch = false, bool allowInverted = true)
 	{
 		std::string id = std::format("##{}", label);
 
@@ -116,10 +116,14 @@ namespace ImGui::WidgetsDetail
 			bgFlags = ImDrawFlags_RoundCornersLeft;
 		}
 
-		AddThemedRectFilled(drawList, bgRect, GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox), rounding, bgFlags);
+		const ImU32 bg = GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox);
+		if (allowInverted)
+			AddThemedRectFilled(drawList, bgRect, bg, rounding, bgFlags);
+		else
+			drawList->AddRectFilled(bgRect.Min, bgRect.Max, bg, rounding, bgFlags);
 
 		if (borderSize > 0.0f) {
-			DrawWidgetBorder(drawList, bb, hovered || active || focused, rounding);
+			DrawWidgetBorder(drawList, bb, hovered || active || focused, rounding, allowInverted);
 		}
 
 		drawList->ChannelsMerge();

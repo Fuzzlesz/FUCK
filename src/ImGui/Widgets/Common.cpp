@@ -73,14 +73,14 @@ namespace ImGui
 		}
 	}
 
-	void DrawWidgetBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered, float rounding)
+	void DrawWidgetBorder(ImDrawList* drawList, const ImRect& bb, bool isActiveOrHovered, float rounding, bool allowInverted)
 	{
 		float borderSize = GetUserStyleVar(USER_STYLE::kButtonBorderSize);
 
 		if (borderSize <= 0.0f)
 			return;
 
-		bool inverted = UseInvertedCorners();
+		bool inverted = allowInverted && UseInvertedCorners();
 		if (inverted)
 			rounding = CapInvertedRounding(bb, rounding);
 
