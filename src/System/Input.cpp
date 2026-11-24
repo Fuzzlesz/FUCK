@@ -644,6 +644,7 @@ namespace Input
 					if (std::abs(mouse->mouseInputX) > 2.0f || std::abs(mouse->mouseInputY) > 2.0f) {
 						meaningful = true;
 					}
+					AddRawMouseMove(mouse);
 				}
 			}
 
@@ -709,6 +710,45 @@ namespace Input
 		constexpr float kImGuiCursorSize = 24.0f;
 		_cursorScale                     = std::max(1.0f, std::max(widthPx, heightPx) / kImGuiCursorSize);
 		return true;
+	}
+
+	static RE::Setting* FindINISetting(std::string_view a_name)
+	{
+		if (auto prefs = RE::INIPrefSettingCollection::GetSingleton()) {
+			if (auto setting = prefs->GetSetting(a_name))
+				return setting;
+		}
+		auto ini = RE::INISettingCollection::GetSingleton();
+		return ini ? ini->GetSetting(a_name) : nullptr;
+	}
+
+	// With bBackgroundMouse the cursor follows the Windows one, which the game can't hold still
+	static bool IsBackgroundMouse()
+	{
+		static const auto setting = FindINISetting("bBackgroundMouse:Controls");
+		return setting && setting->data.b;
+	}
+
+	// Under _dataLock
+	void Manager::AddRawMouseMove(const RE::MouseMoveEvent* a_event)
+	{
+		// Scaled as MenuCursor moves the cursor, so a drag goes as far as it did when it followed the cursor
+		static const auto cursorSpeed = FindINISetting("fMouseCursorSpeed:Interface");
+		const auto*       menuCursor  = RE::MenuCursor::GetSingleton();
+		if (!menuCursor)
+			return;
+
+		const auto& cursor = menuCursor->GetRuntimeData();
+		const float scale  = cursor.defaultMouseSpeed * cursor.cursorSensitivity * (cursorSpeed ? cursorSpeed->data.f : 1.0f);
+
+		_rawMouseDelta.x += static_cast<float>(a_event->mouseInputX) * scale;
+		_rawMouseDelta.y += static_cast<float>(a_event->mouseInputY) * scale;
+	}
+
+	ImVec2 Manager::TakeRawMouseDelta()
+	{
+		std::unique_lock lock(_dataLock);
+		return std::exchange(_rawMouseDelta, ImVec2(0.0f, 0.0f));
 	}
 
 	void Manager::UpdateInputDevice(RE::INPUT_DEVICE a_device)
@@ -984,7 +1024,8 @@ namespace Input
 						if (std::abs(mouseEvent->mouseInputX) > 2.0f || std::abs(mouseEvent->mouseInputY) > 2.0f) {
 							_cursorMovedByJoystick = false;
 						}
-						if (cursorMenuOpen) {
+						// The camera's drags take the mouse's own movement (see CacheInputState), and the cursor stays where the drag began
+						if (cursorMenuOpen && !(MANAGER(Camera)->IsDragging() && !IsBackgroundMouse())) {
 							if (auto cursorMenu = RE::UI::GetSingleton()->GetMenu<RE::CursorMenu>()) {
 								cursorMenu->AsMenuEventHandler()->ProcessMouseMove(mouseEvent);
 							}

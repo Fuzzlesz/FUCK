@@ -76,10 +76,16 @@ namespace
 		{ "GPRollSpeed",    &Camera::Config::gpRollSpeed     },
 		{ "GPFovSpeed",     &Camera::Config::gpFovSpeed      },
 		{ "GPCharRotSpeed", &Camera::Config::gpCharRotSpeed  },
+		{ "KBMCharRotSpeed", &Camera::Config::kbmCharRotSpeed },
 		{ "GPDeadzone",     &Camera::Config::gpDeadzone      },
 		{ "Cinematic",      &Camera::Config::cinematic       },
 		{ "InvertTilt",     &Camera::Config::invertTilt      },
 		{ "InvertTurn",     &Camera::Config::invertTurn      },
+		{ "InvertOrbit",    &Camera::Config::invertOrbit     },
+		{ "ZoomToFocus",    &Camera::Config::zoomToFocus     },
+		{ "TurnCoast",      &Camera::Config::turnCoast       },
+		{ "OrbitHead",      &Camera::Config::orbitHead       },
+		{ "FollowHead",     &Camera::Config::followHead      },
 	} };
 
 	std::string GetConfigPath()
@@ -286,6 +292,15 @@ namespace Camera
 
 		_sessions.push_back(std::move(session));
 		_current = _sessions.back().get();
+
+		if (_sessions.size() == 1) {
+			namespace Keys = Input::Keymap;
+			_heldAtBegin.clear();
+			for (const auto key : { Keys::kMouse_Right, Keys::kMouse_Middle, Keys::kGP_RB }) {
+				if (FUCK::IsInputDown(key))
+					_heldAtBegin.push_back(key);
+			}
+		}
 
 		EnterBase(*_current);
 
@@ -732,7 +747,13 @@ namespace Camera
 		_cameraMoves   = state.cameraMoves;
 
 		UpdatePresetHotkeys(state.inputAllowed);
+		std::erase_if(_heldAtBegin, [](std::uint32_t a_key) { return !FUCK::IsInputDown(a_key); });
 		_current->core.Update(state, _config, a_interval);
+	}
+
+	bool Manager::ButtonDown(std::uint32_t a_key) const
+	{
+		return FUCK::IsInputDown(a_key) && std::ranges::find(_heldAtBegin, a_key) == _heldAtBegin.end();
 	}
 
 	bool Manager::IsBlockingInput() const
@@ -752,8 +773,8 @@ namespace Camera
 		// A held mouse button or RB blocks on its own, and Ctrl and Shift are then just modifiers. Right-drag and RB turn the subject, so they still block with cameraMoves off,
 		// unless the session doesn't turn it
 		const bool turns = !(_current->flags & FUCK::CameraSessionFlags::kNoTurning);
-		bool       mouse = !_mouseLocked && ((turns && FUCK::IsInputDown(Keys::kMouse_Right)) || (_cameraMoves && FUCK::IsInputDown(Keys::kMouse_Middle)));
-		if (mouse || FUCK::IsInputDown(Keys::kGP_RB))
+		bool       mouse = !_mouseLocked && ((turns && ButtonDown(Keys::kMouse_Right)) || (_cameraMoves && ButtonDown(Keys::kMouse_Middle)));
+		if (mouse || ButtonDown(Keys::kGP_RB))
 			return true;
 
 		if (!_cameraMoves)
@@ -781,6 +802,15 @@ namespace Camera
 
 		constexpr std::array cameraKeys{ Keys::kKB_W, Keys::kKB_A, Keys::kKB_S, Keys::kKB_D, Keys::kKB_Q, Keys::kKB_E, Keys::kKB_R, Keys::kKB_F };
 		return std::ranges::any_of(cameraKeys, [](std::uint32_t a_key) { return FUCK::IsInputDown(a_key); });
+	}
+
+	bool Manager::IsDragging() const
+	{
+		namespace Keys = Input::Keymap;
+
+		// Checked against the buttons too, as the core only updates once a frame
+		return _current && _inputAllowed && _current->core.IsDragging() &&
+		       (ButtonDown(Keys::kMouse_Middle) || ButtonDown(Keys::kMouse_Right));
 	}
 
 	void Manager::Move(const FUCK::CameraMoveEx& a_move, FUCK::InputDevice a_device, float a_mult)
@@ -882,16 +912,37 @@ namespace Camera
 
 		auto&             session = *_current;
 		const std::string part    = a_node ? a_node : "";
+		const bool        changed = part != session.framedPart;
 		// A new part is framed from the view and facing the session began with: the subject turned back and every camera move eased
 		// away, as framing measures from those and a turned body or moved camera carries the part out of where it's placed
 		// Unless the view's kept, as then nothing should move
-		if (part != session.framedPart && !session.core.KeepsView()) {
+		const bool reframes = changed && !session.core.KeepsView();
+		if (reframes) {
 			session.core.ClearMovesForFraming();
+			session.core.RequestSideView(PartWantsSideView(part));
 			ResetSubject();
 		}
+		if (changed)
+			session.partHeldOffset.reset();
 		session.framedPart = part;
 		session.partSize   = a_size;
 		session.core.Reframe(session.flags & FUCK::CameraSessionFlags::kInstantMoves);
+		if (reframes && !(session.flags & FUCK::CameraSessionFlags::kInstantMoves))
+			session.core.EasePartChange();
+	}
+
+	// Parts that read flat from the front: hands, forearms, calves and feet, and anything that isn't a body bone, such as a weapon or shield node
+	bool Manager::PartWantsSideView(const std::string& a_part)
+	{
+		if (a_part.empty())
+			return false;
+		if (!a_part.starts_with("NPC "))
+			return true;
+		for (const auto bit : { "Hand", "Finger", "Forearm", "Calf", "Foot", "Toe" }) {
+			if (a_part.find(bit) != std::string::npos)
+				return true;
+		}
+		return false;
 	}
 
 	void Manager::SetUpperBody(FUCK::ICameraClient* a_client, bool a_upperBody)
@@ -1058,12 +1109,16 @@ namespace Camera
 		// A session waiting on its camera to come back, e.g. for the free camera to be left
 		TryResume();
 
+		// Taken every frame, so movement from before a session doesn't arrive all at once
+		const ImVec2 drag = Input::Manager::GetSingleton()->TakeRawMouseDelta();
+
 		if (!_current)
 			return;
 
 		if (float wheel = FUCK::GetMouseWheel(); wheel != 0.0f) {
 			_current->core.AccumulateScroll(wheel);
 		}
+		_current->core.AccumulateDrag(drag);
 	}
 
 	// ==================================================
@@ -1553,19 +1608,41 @@ namespace Camera
 		if (!_current || _current->framedPart.empty())
 			return false;
 
-		auto subject = GetSubject();
-		auto node    = subject ? subject->GetNodeByName(_current->framedPart.c_str()) : nullptr;
-		if (!node)
+		auto& session = *_current;
+		auto  subject = GetSubject();
+		auto  node    = subject ? subject->GetNodeByName(session.framedPart.c_str()) : nullptr;
+		if (!subject)
 			return false;
 
-		RE::NiPoint3 centre = node->world.translate;
-		float        half   = _current->partSize * 0.5f;
-		if (half <= 0.0f) {
-			const auto& bound = node->worldBound;
-			if (bound.radius < 1.0f)
-				return false;
-			centre = bound.center;
-			half   = bound.radius;
+		// The hold is kept in the subject's own frame, so turning them turns it too rather than leaving it where they stood
+		const float  heading = subject->GetAngleZ();
+		const float  c = std::cos(heading), sn = std::sin(heading);
+		const auto   toLocal = [&](const RE::NiPoint3& v) { return RE::NiPoint3{ v.x * c - v.y * sn, v.x * sn + v.y * c, v.z }; };
+		const auto   toWorld = [&](const RE::NiPoint3& v) { return RE::NiPoint3{ v.x * c + v.y * sn, -v.x * sn + v.y * c, v.z }; };
+		RE::NiPoint3 centre;
+		float        half  = session.partSize * 0.5f;
+		bool         found = node != nullptr;
+		if (found) {
+			centre = node->world.translate;
+			if (half <= 0.0f) {
+				const auto& bound = node->worldBound;
+				if (bound.radius >= 1.0f) {
+					centre = bound.center;
+					half   = bound.radius;
+				} else {
+					// An empty node (a sheath with nothing on it) is still a point on the body, which turns with it
+					half = session.partHeldOffset ? session.partHeldHalf : 20.0f;
+				}
+			}
+		}
+		if (found) {
+			session.partHeldOffset = toLocal(centre - subject->GetPosition());
+			session.partHeldHalf   = half;
+		} else if (session.partHeldOffset) {
+			centre = subject->GetPosition() + toWorld(*session.partHeldOffset);
+			half   = session.partHeldHalf;
+		} else {
+			return false;
 		}
 
 		a_part = { centre, { centre.x, centre.y, centre.z + half }, { centre.x, centre.y, centre.z - half } };
@@ -1664,6 +1741,70 @@ namespace Camera
 
 		a_body = Maths::MakeBodyPoints(pelvis->world.translate, head->world.translate, floor);
 		return true;
+	}
+
+	// zoomToFocus: the head, chest, pelvis and feet. None when the camera orbits itself, as there's no subject it's looking at
+	std::optional<RE::NiPoint3> Manager::GetFocusPoint(FocusPoint a_point)
+	{
+		if (_current && (_current->flags & FUCK::CameraSessionFlags::kPivotAtCamera))
+			return std::nullopt;
+
+		auto subject = GetSubject();
+		if (!subject)
+			return std::nullopt;
+
+		auto bone = [&](const char* a_name) -> std::optional<RE::NiPoint3> {
+			if (auto node = subject->GetNodeByName(a_name))
+				return node->world.translate;
+			return std::nullopt;
+		};
+
+		switch (a_point) {
+		case FocusPoint::kHead:
+			return bone("NPC Head [Head]");
+		case FocusPoint::kChest:
+			return bone("NPC Spine2 [Spn2]");
+		case FocusPoint::kPelvis:
+			return bone("NPC Pelvis [Pelv]");
+		case FocusPoint::kFeet:
+			{
+				const auto left  = bone("NPC L Foot [Lft ]");
+				const auto right = bone("NPC R Foot [Rft ]");
+				if (left && right)
+					return (*left + *right) * 0.5f;
+				return std::nullopt;
+			}
+		default:
+			return std::nullopt;
+		}
+	}
+
+	// The face mesh's authored bound, as skinned geometry's worldBound isn't kept up. Hair is left out, as long hair would hold the camera
+	// well back from the face
+	float Manager::GetHeadRadius()
+	{
+		constexpr float HEAD_RADIUS_FALLBACK = 12.0f;
+		constexpr float HEAD_RADIUS_MIN      = 6.0f;
+		constexpr float HEAD_RADIUS_MAX      = 25.0f;
+
+		if (_current && (_current->flags & FUCK::CameraSessionFlags::kPivotAtCamera))
+			return 0.0f;
+
+		auto subject = GetSubject();
+		if (!subject || !subject->GetNodeByName("NPC Head [Head]"))
+			return 0.0f;
+
+		const float scale = std::max(subject->GetScale(), 0.1f);
+		auto        npc   = subject->GetActorBase();
+		auto        part  = npc ? npc->GetCurrentHeadPartByType(RE::BGSHeadPart::HeadPartType::kFace) : nullptr;
+		auto        face  = subject->GetFaceNodeSkinned();
+		auto        mesh  = part && face && !part->formEditorID.empty() ? face->GetObjectByName(part->formEditorID) : nullptr;
+		auto        geom  = mesh ? mesh->AsGeometry() : nullptr;
+		if (!geom)
+			return HEAD_RADIUS_FALLBACK * scale;
+
+		const float radius = geom->GetModelData().modelBound.radius * geom->world.scale;
+		return std::clamp(radius, HEAD_RADIUS_MIN * scale, HEAD_RADIUS_MAX * scale);
 	}
 
 	bool Manager::IsScrollBlocked()
@@ -2097,6 +2238,17 @@ namespace Camera
 			changed |= FUCK::Checkbox("$FUCK_Camera_Cinematic"_T, &_config.cinematic, true, true);
 			changed |= FUCK::Checkbox("$FUCK_Camera_InvertTilt"_T, &_config.invertTilt, true, true);
 			changed |= FUCK::Checkbox("$FUCK_Camera_InvertTurn"_T, &_config.invertTurn, true, true);
+			changed |= FUCK::Checkbox("$FUCK_Camera_InvertOrbit"_T, &_config.invertOrbit, true, true);
+			changed |= FUCK::Checkbox("$FUCK_Camera_ZoomToFocus"_T, &_config.zoomToFocus, true, true);
+			FUCK::SetTooltip("$FUCK_Camera_ZoomToFocusTT"_T);
+			changed |= FUCK::Checkbox("$FUCK_Camera_TurnCoast"_T, &_config.turnCoast, true, true);
+			FUCK::SetTooltip("$FUCK_Camera_TurnCoastTT"_T);
+			changed |= FUCK::Checkbox("$FUCK_Camera_OrbitHead"_T, &_config.orbitHead, true, true);
+			FUCK::SetTooltip("$FUCK_Camera_OrbitHeadTT"_T);
+			FUCK::BeginDisabled(!_config.orbitHead);
+			changed |= FUCK::Checkbox("$FUCK_Camera_FollowHead"_T, &_config.followHead, true, true);
+			FUCK::EndDisabled();
+			FUCK::SetTooltip("$FUCK_Camera_FollowHeadTT"_T);
 		}
 
 		// The speeds under a node, as few want them. A fixed ID, so its state isn't the label's
@@ -2121,6 +2273,8 @@ namespace Camera
 						changed |= SpeedSlider("$FUCK_Camera_SpeedOrbit"_T,   &_config.kbmRotSpeed,     def.kbmRotSpeed);
 						changed |= SpeedSlider("$FUCK_Camera_SpeedRoll"_T,    &_config.kbmRollSpeed,    def.kbmRollSpeed);
 						changed |= SpeedSlider("$FUCK_Camera_SpeedFovZoom"_T, &_config.kbmZoomFovSpeed, def.kbmZoomFovSpeed);
+						changed |= SpeedSlider("$FUCK_Camera_SpeedCharacter"_T, &_config.kbmCharRotSpeed, def.kbmCharRotSpeed);
+						FUCK::SetTooltip("$FUCK_Camera_SpeedCharacterKbmTT"_T);
 
 						FUCK::PopID();
 						FUCK::EndTabItem();
@@ -2162,12 +2316,17 @@ namespace Camera
 
 				if (resetPressed) {
 					// Only the speeds, as the toggles sit outside the tabs
-					const Config kept  = _config;
-					_config            = def;
-					_config.cinematic  = kept.cinematic;
-					_config.invertTilt = kept.invertTilt;
-					_config.invertTurn = kept.invertTurn;
-					changed            = true;
+					const Config kept   = _config;
+					_config             = def;
+					_config.cinematic   = kept.cinematic;
+					_config.invertTilt  = kept.invertTilt;
+					_config.invertTurn  = kept.invertTurn;
+					_config.invertOrbit = kept.invertOrbit;
+					_config.zoomToFocus = kept.zoomToFocus;
+					_config.turnCoast   = kept.turnCoast;
+					_config.orbitHead   = kept.orbitHead;
+					_config.followHead  = kept.followHead;
+					changed             = true;
 				}
 
 				FUCK::SetCursorPos(afterTabs);

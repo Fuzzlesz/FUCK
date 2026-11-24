@@ -26,6 +26,9 @@ namespace Camera
 		RE::ActorHandle          alsoFramed;  // framed beside the subject (CameraSessionOptions::alsoFramed)
 		std::string              framedPart;  // SetPartFraming(): the node body framing aims at, empty for the whole body
 		float                    partSize = 0.0f;
+		// Where the part was last found, from the subject, held while a held item's 3D is swapped so the framing doesn't drop to the body
+		std::optional<RE::NiPoint3> partHeldOffset;
+		float                       partHeldHalf = 0.0f;
 
 		bool            paused        = false;
 		Session*        continued     = nullptr;  // kContinueView: the paused session whose view it carried on, to hand back to
@@ -156,6 +159,11 @@ namespace Camera
 
 		// Folded into FUCK's own input blocking and pausing. Input is blocked with kBlockControls, or while the camera's controls are held
 		bool IsBlockingInput() const;
+		// A mouse drag of the camera or the subject is under way, which holds the cursor still
+		bool IsDragging() const;
+		// A drag button (right, middle, RB) is down. One already held as the first session began, such as a held cast's, counts only once it's
+		// let go and pressed again
+		bool ButtonDown(std::uint32_t a_key) const;
 		// Whether a tap of RB, the camera's gamepad modifier, should reach the game. Not with kBlockControls, as the game then gets nothing
 		bool PassesModifierTaps() const { return _current && _inputAllowed && !(_current->flags & FUCK::CameraSessionFlags::kBlockControls); }
 		bool IsPausing() const { return _current && (_current->flags & FUCK::CameraSessionFlags::kFreezeTime); }
@@ -178,9 +186,12 @@ namespace Camera
 		bool                        GetBodyPoints(Maths::BodyPoints& a_body) override;
 		bool                        FramesPart() override { return _current && !_current->framedPart.empty(); }
 		std::optional<float>        GetFacing() override { return GetSubjectYaw(); }
+		std::optional<RE::NiPoint3> GetFocusPoint(FocusPoint a_point) override;
+		float                       GetHeadRadius() override;
 		bool                        GetBodyPointsOf(RE::Actor* a_actor, Maths::BodyPoints& a_body);
 		bool                        GetWholeBodyPoints(RE::Actor* a_actor, Maths::BodyPoints& a_body);
 		bool                        GetPartPoints(Maths::BodyPoints& a_part);
+		static bool                 PartWantsSideView(const std::string& a_part);
 		void                        MoveBaseToFront();
 		void                        MoveBaseBehind();
 		static RE::NiPoint3         BodyMiddle(RE::Actor& a_subject);
@@ -251,6 +262,8 @@ namespace Camera
 		bool _inputAllowed  = true;
 		bool _mouseLocked   = false;
 		bool _cameraMoves   = true;
+
+		std::vector<std::uint32_t> _heldAtBegin;  // drag buttons held as the first session began, until released
 
 		bool GetShownView(FUCK::CameraPose& a_view) const;
 
