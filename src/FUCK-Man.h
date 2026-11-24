@@ -120,7 +120,7 @@ public:
 	bool ProcessAsyncInput(const RE::InputEvent* const* a_event);
 
 	// --- State Queries ---
-	bool IsInputBlocked() const;
+	bool IsInputBlocked(bool a_includeCamera = true) const;
 
 	// Applies pause, HUD and blur requests now, for changes made while nothing FUCK draws may be open
 	void RefreshGameState() { UpdateGameState(); }

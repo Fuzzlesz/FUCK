@@ -439,10 +439,13 @@ void FUCKMan::UpdateGameState()
 		RE::PlayerCamera::GetSingleton()->GetRuntimeData2().idleTimer = 0.0f;
 	}
 
-	// Scaleform Movie Pausing (to prevent background hover detection)
-	bool blockInput = IsInputBlocked();
+	// Pause background hover while an overlay has input. RaceMenu's movie still needs to advance during camera-only input capture,
+	// as it updates the sculpt wireframe and handles the mouse release. The input hook still filters the drag itself
+	const bool blockInput = IsInputBlocked();
 	if (auto ui = RE::UI::GetSingleton()) {
 		if (blockInput) {
+			const bool keepRaceMenuRunning = ui->IsMenuOpen(RE::RaceSexMenu::MENU_NAME) &&
+				MANAGER(Camera)->IsBlockingInput() && !IsInputBlocked(false);
 			for (auto& [name, entry] : ui->menuMap) {
 				if (entry.menu && entry.menu->OnStack() && entry.menu->uiMovie) {
 					if (name == RE::CursorMenu ::MENU_NAME ||
@@ -450,6 +453,11 @@ void FUCKMan::UpdateGameState()
 						name == RE::LoadingMenu::MENU_NAME ||
 						name == RE::HUDMenu ::MENU_NAME ||
 						name == RE::FaderMenu ::MENU_NAME) {
+						continue;
+					}
+					if (keepRaceMenuRunning && name == RE::RaceSexMenu::MENU_NAME) {
+						if (_pausedMenus.erase(name.c_str()) != 0)
+							entry.menu->uiMovie->SetPause(false);
 						continue;
 					}
 					if (_pausedMenus.find(name.c_str()) == _pausedMenus.end()) {
@@ -683,9 +691,9 @@ bool FUCKMan::ShouldRenderPassthrough() const
 	return false;
 }
 
-bool FUCKMan::IsInputBlocked() const
+bool FUCKMan::IsInputBlocked(bool a_includeCamera) const
 {
-	if (_isOpen || MANAGER(Camera)->IsBlockingInput())
+	if (_isOpen || (a_includeCamera && MANAGER(Camera)->IsBlockingInput()))
 		return true;
 
 	ImVec2 mouse = ImGui::GetMousePos();
