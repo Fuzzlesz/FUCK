@@ -626,8 +626,7 @@ namespace Camera
 		}
 	}
 
-	// A framed part turns in place: the camera moves with it as the subject turns, so the part stays where it's framed and the body turns round
-	// it, rather than the part swinging out of frame for the framing to catch up with after
+	// A framed part turns in place: the camera moves with it as the subject turns, so the part stays framed and the body turns round it
 	void Core::FollowTurnedPart()
 	{
 		if (!_hasFraming || _framingHeld || !_host.FramesPart())
@@ -737,8 +736,7 @@ namespace Camera
 			}
 		}
 
-		// A framed part that comes to rest somewhere else, a weapon drawn from its sheath to the hand, is framed where it ended up, as the
-		// orbit turns about where it was framed
+		// A part that comes to rest elsewhere (a weapon drawn to the hand) is framed again there, as the orbit turns about where it was framed
 		if (measured && _host.FramesPart()) {
 			const auto offset = body.centre - _host.GetAnchor().value_or(_originalTranslate);
 			const bool still  = offset.GetDistance(_partLast) <= FRAMING_PART_STILL;
@@ -755,7 +753,7 @@ namespace Camera
 		const auto facing = _host.GetFacing();
 		const bool turned = facing && _framingFacing &&
 		                    std::abs(std::remainder(*facing - *_framingFacing, 2.0f * std::numbers::pi_v<float>)) > FRAMING_PART_TURN;
-		// At rest only, as a held item swapped shows the real one for a frame, and after any turn that frame was framed (11-22h)
+		// At rest only, as a held item being swapped shows the real one for a frame
 		if (measured && turned && _host.FramesPart() && _partStillFor >= FRAMING_PART_HOLD) {
 			const auto   anchor = _host.GetAnchor().value_or(_originalTranslate);
 			const auto   offset = body.centre - anchor;
@@ -778,8 +776,7 @@ namespace Camera
 		_framingDistance   = std::lerp(_framingDistance, _framingDistanceTo, t);
 	}
 
-	// The framing follows on its own at FRAMING_FOLLOW_SPEED and the moves at CINEMATIC_SPEED, so the orbit came round well before the camera
-	// reached the part and it slid on sideways after. Here both set out together and land together
+	// One ease for the framing and the moves, as at their own speeds the orbit lands before the camera reaches the part
 	void Core::EasePartChange()
 	{
 		if (!_hasFraming || _framingProgress < 1.0f)
@@ -829,8 +826,8 @@ namespace Camera
 		return _orbitHead && !a_pair && !_host.FramesPart();
 	}
 
-	// Framing holds the head where it was measured, relative to where the subject stands, so the wide shot doesn't sway with an idle.
-	// Zoomed in that drift leaves the frame, so the camera takes up the live head's movement as it closes in, all of it by halfway
+	// Framing holds the head where it was measured, so a wide shot doesn't sway with an idle. Zoomed in, that drift leaves the frame,
+	// so the live head is followed more as the camera closes in, fully by halfway
 	RE::NiPoint3 Core::HeadFollow(const RE::NiPoint3& a_anchor) const
 	{
 		constexpr float HEAD_FOLLOW_FULL = 0.5f;  // share of the way in at which the head's followed fully
@@ -910,10 +907,6 @@ namespace Camera
 			_framingDistance   = _framingDistanceTo;
 		}
 		_hasFraming = true;
-		logger::info("Camera: TRACE {} ms reframe, ease {}, part {}, pivot from anchor ({:.0f},{:.0f},{:.0f}), distance {:.0f}, height {:.0f}",
-			std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count() % 10000000,
-			a_ease, _host.FramesPart(), _framingPivotDeltaTo.x, _framingPivotDeltaTo.y, _framingPivotDeltaTo.z, _framingDistanceTo,
-			_framingHeight);
 	}
 
 	bool Core::Compose(const RE::NiPoint3& a_baseTranslate, const RE::NiMatrix3& a_baseRotate, RE::NiPoint3& a_outTranslate, RE::NiMatrix3& a_outRotate)
@@ -1036,10 +1029,8 @@ namespace Camera
 		return best;
 	}
 
-	// Zooms by a_amount, in when positive, along the line to the subject, so they stay where they're framed on screen. Framing puts the body
-	// off centre, so going straight ahead would carry them out of frame. With zoomToFocus, zooming in also moves the camera sideways so the
-	// focus point comes to where the subject is framed as the camera nears it (what's left of its offset falls with the square of the
-	// distance left), and zooming back out takes that off again over the same distance, back to where the zoom began
+	// In when positive, along the line to the subject, as framing puts them off centre and straight ahead would carry them out of frame.
+	// With zoomToFocus, zooming in shifts the camera so the focus point reaches the subject's place on screen; zooming out takes it off
 	void Core::Zoom(float a_amount, bool a_atCursor)
 	{
 		if (a_amount == 0.0f)
@@ -1159,7 +1150,7 @@ namespace Camera
 		return radius + worldCam->GetRuntimeData2().viewFrustum.fNear + HEAD_CLEARANCE_MARGIN;
 	}
 
-	// Pushed straight out from the head, as old Menu Studio's camera floor did, whichever move brought it in
+	// Pushed straight out from the head, whichever move brought it in
 	void Core::KeepOutOfHead(RE::NiPoint3& a_translate, const RE::NiMatrix3& a_rotate)
 	{
 		const auto head = _host.GetFocusPoint(FocusPoint::kHead);

@@ -924,7 +924,6 @@ namespace Camera
 		}
 		if (changed)
 			session.partHeldOffset.reset();
-		logger::info("Camera: TRACE {} ms SetPartFraming '{}' -> '{}' size {:.0f}", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count() % 10000000, session.framedPart, part, a_size);
 		session.framedPart = part;
 		session.partSize   = a_size;
 		session.core.Reframe(session.flags & FUCK::CameraSessionFlags::kInstantMoves);
@@ -1603,34 +1602,6 @@ namespace Camera
 		return true;
 	}
 
-	// TRACE (11-22e): the framed part's node and bound each time they change, with a millisecond clock as the log has seconds
-	static long long TraceMs()
-	{
-		using namespace std::chrono;
-		return duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count() % 10000000;
-	}
-
-	static void TracePart(const std::string& a_part, RE::Actor* a_subject, RE::NiAVObject* a_node, bool a_found, bool a_held,
-		const RE::NiPoint3& a_centre, float a_half)
-	{
-		static std::string last;
-		const auto         pos = a_subject ? a_subject->GetPosition() : RE::NiPoint3{};
-		std::string        children;
-		if (auto* n = a_node ? a_node->AsNode() : nullptr) {
-			for (auto& c : n->GetChildren())
-				if (c)
-					children += fmt::format("'{}' ", c->name.c_str());
-		}
-		auto line = fmt::format("'{}' node {} {}, children [{}], {} centre-from-subject ({:.0f},{:.0f},{:.0f}) half {:.0f}", a_part,
-			fmt::ptr(a_node), a_node ? a_node->name.c_str() : "-", children,
-			a_found ? "found" : a_held ? "HELD" : "LOST, so the whole body", a_centre.x - pos.x, a_centre.y - pos.y, a_centre.z - pos.z,
-			a_half);
-		if (line != last) {
-			logger::info("Camera: TRACE {} ms part {}", TraceMs(), line);
-			last = std::move(line);
-		}
-	}
-
 	// SetPartFraming(): the part's span round its node, or round what hangs off it (a worn or held item) by its bounds
 	bool Manager::GetPartPoints(Maths::BodyPoints& a_part)
 	{
@@ -1671,10 +1642,8 @@ namespace Camera
 			centre = subject->GetPosition() + toWorld(*session.partHeldOffset);
 			half   = session.partHeldHalf;
 		} else {
-			TracePart(session.framedPart, subject, node, false, false, subject->GetPosition(), 0.0f);
 			return false;
 		}
-		TracePart(session.framedPart, subject, node, found, !found, centre, half);
 
 		a_part = { centre, { centre.x, centre.y, centre.z + half }, { centre.x, centre.y, centre.z - half } };
 		return true;
