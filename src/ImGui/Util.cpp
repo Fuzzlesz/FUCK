@@ -397,9 +397,7 @@ namespace ImGui
 				PlaceTooltipBesideItem(bbVisual);
 
 			if (BeginTooltipThemed()) {
-				PushTextWrapPos(GetFontSize() * 35.0f);
 				DrawFormattedText(desc);
-				PopTextWrapPos();
 				EndTooltip();
 			}
 
@@ -470,12 +468,13 @@ namespace ImGui
 				PlaceTooltipBesideItem(GImGui->LastItemData.Rect);
 
 			if (BeginTooltipThemed()) {
-				// Wrapped at the picture's edge when there is one, else at a readable width, so a long tip is a few lines rather
-				// than one across the screen
+				// Wrap the text at the picture's right edge so it stays aligned with the image.
 				const float picture = DrawTooltipPicture();
-				PushTextWrapPos(picture > 0.0f ? GetCursorPosX() + picture : GetFontSize() * 22.0f);
+				if (picture > 0.0f)
+					PushTextWrapPos(GetCursorPosX() + picture);
 				DrawFormattedText(fmt);
-				PopTextWrapPos();
+				if (picture > 0.0f)
+					PopTextWrapPos();
 				EndTooltip();
 			}
 
