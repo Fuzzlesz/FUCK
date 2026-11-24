@@ -161,6 +161,9 @@ namespace Camera
 		bool IsBlockingInput() const;
 		// A mouse drag of the camera or the subject is under way, which holds the cursor still
 		bool IsDragging() const;
+		// A drag button (right, middle, RB) is down. One already held as the first session began, such as a held cast's, counts only once it's
+		// let go and pressed again
+		bool ButtonDown(std::uint32_t a_key) const;
 		// Whether a tap of RB, the camera's gamepad modifier, should reach the game. Not with kBlockControls, as the game then gets nothing
 		bool PassesModifierTaps() const { return _current && _inputAllowed && !(_current->flags & FUCK::CameraSessionFlags::kBlockControls); }
 		bool IsPausing() const { return _current && (_current->flags & FUCK::CameraSessionFlags::kFreezeTime); }
@@ -259,6 +262,8 @@ namespace Camera
 		bool _inputAllowed  = true;
 		bool _mouseLocked   = false;
 		bool _cameraMoves   = true;
+
+		std::vector<std::uint32_t> _heldAtBegin;  // drag buttons held as the first session began, until released
 
 		bool GetShownView(FUCK::CameraPose& a_view) const;
 

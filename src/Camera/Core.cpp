@@ -1,4 +1,5 @@
 #include "Camera/Core.h"
+#include "Camera/Manager.h"
 
 #include "System/InputMap.h"
 
@@ -302,10 +303,10 @@ namespace Camera
 		in.altDown      = FUCK::IsModifierPressed(FUCK::Modifier::kAlt);
 
 		in.lbDown       = FUCK::IsInputDown(Keys::kGP_LB);
-		in.rbDown       = FUCK::IsInputDown(Keys::kGP_RB);
+		in.rbDown       = Manager::GetSingleton()->ButtonDown(Keys::kGP_RB);
 
-		in.mmbDown      = FUCK::IsInputDown(Keys::kMouse_Middle);
-		in.rmbDown      = FUCK::IsInputDown(Keys::kMouse_Right);
+		in.mmbDown      = Manager::GetSingleton()->ButtonDown(Keys::kMouse_Middle);
+		in.rmbDown      = Manager::GetSingleton()->ButtonDown(Keys::kMouse_Right);
 
 		in.isPopupOpen  = FUCK::IsPopupOpen(nullptr, FUCK::PopupFlags::kAnyPopup);
 
@@ -580,13 +581,13 @@ namespace Camera
 		}
 
 		// Block mouse rotation over ImGui windows or client UI that owns the mouse
-		bool allowMouseRot = FUCK::IsInputDown(Keys::kMouse_Right) && !a_in.mmbDown && !a_in.isUIHovered && !a_in.isPopupOpen && !a_in.mouseLocked;
+		bool allowMouseRot = a_in.rmbDown && !a_in.mmbDown && !a_in.isUIHovered && !a_in.isPopupOpen && !a_in.mouseLocked;
 		bool allowGPRot    = a_in.rbDown && (gpY || gpX) && !_lockoutGPSubjRot;
 
 		float rotAmount = 0.0f;
 
 		// Any click or pad turn ends a coast at once, so it never fights the next input
-		const bool released = _wasMouseSubjRot && !allowMouseRot && !FUCK::IsInputDown(Keys::kMouse_Right);
+		const bool released = _wasMouseSubjRot && !allowMouseRot && !a_in.rmbDown;
 		if (allowMouseRot || allowGPRot || a_in.mmbDown || FUCK::IsInputDown(Keys::kMouse_Left))
 			_turnCoast = 0.0f;
 
