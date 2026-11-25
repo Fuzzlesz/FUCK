@@ -211,7 +211,7 @@ namespace ImGui
 	bool BeginTabItemEx(const char* label, ImGuiTabItemFlags flags = 0);
 	bool OutlineButton(const char* label, bool* wasFocused = nullptr, bool selected = false, float minTextWidth = 0.0f);
 	// a_rightReserve keeps room at the row's right end, e.g. for a count, which a long label is cut short with "..." to clear
-	bool CollapsingHeaderIcon(const char* label, int flags = 0, float a_rightReserve = 0.0f);
+	bool CollapsingHeaderIcon(const char* label, int flags = 0, float a_rightReserve = 0.0f, bool a_addRowSpacing = true);
 	bool TreeNodeIcon(const char* label, int flags = 0);
 
 	// Helpers

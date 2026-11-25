@@ -70,10 +70,11 @@ namespace ImGui
 		}
 	}
 
-	bool CollapsingHeaderIcon(const char* label, int flags, float a_rightReserve)
+	bool CollapsingHeaderIcon(const char* label, int flags, float a_rightReserve, bool a_addRowSpacing)
 	{
 		// A row like the labelled widgets, spaced as they are, so a column of headers lines up with one of checkboxes beside it
-		AddRowSpacing();
+		if (a_addRowSpacing)
+			AddRowSpacing();
 		ImGuiWindow* window = GetCurrentWindow();
 		ImGuiID      id     = window->GetID(label);
 

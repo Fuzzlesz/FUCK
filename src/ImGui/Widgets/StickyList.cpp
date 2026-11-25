@@ -13,6 +13,13 @@ namespace ImGui
 			bool*       userOpen = nullptr;  // The caller's own open state, if they passed one
 			ImVec2      min;                 // Top left of the header
 			float       height = 0.0f;       // Height of the header
+
+			// The caller can pop these before EndStickyList draws the pinned copy.
+			ImFont*     font = nullptr;
+			float       fontSizeBase = 0.0f;
+			ImVec2      framePadding;
+			ImVec2      itemInnerSpacing;
+			float       frameRounding = 0.0f;
 		};
 
 		struct StickyList
@@ -139,15 +146,23 @@ namespace ImGui
 
 			dc.CursorPos = ImVec2(sec.min.x, y);
 
+			PushFont(sec.font, sec.fontSizeBase);
+			PushStyleVar(ImGuiStyleVar_FramePadding, sec.framePadding);
+			PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, sec.itemInnerSpacing);
+			PushStyleVar(ImGuiStyleVar_FrameRounding, sec.frameRounding);
+
 			// Under its own ID, as the real header may still be partly in view.
 			// The copy is always open, and closing it closes the real section
 			PushID("StuckHeader");
 			const ImGuiID stuckId = GetID(sec.label.c_str());
 			KeepNavItemClear(window, y + sec.height, stuckId);
 			storage->SetInt(stuckId, 1);
-			const bool stillOpen = CollapsingHeaderIcon(sec.label.c_str(), 0, CountReserve(sec.count));
+			const bool stillOpen = CollapsingHeaderIcon(sec.label.c_str(), 0, CountReserve(sec.count), false);
 			DrawCount(sec.count);
 			PopID();
+
+			PopStyleVar(3);
+			PopFont();
 
 			dc.CursorPos              = cursor;
 			dc.CursorMaxPos           = cursorMax;
@@ -216,6 +231,8 @@ namespace ImGui
 		const bool isLeaf = (flags & ImGuiTreeNodeFlags_Leaf) != 0;
 		const bool isOpen = storage->GetInt(id, (flags & ImGuiTreeNodeFlags_DefaultOpen) != 0) != 0;
 
+		// Measure the inline header after its row gap. A pinned header has no gap above it.
+		AddRowSpacing();
 		Section& sec = list.current;
 		sec.label    = label;
 		sec.count    = count;
@@ -223,6 +240,11 @@ namespace ImGui
 		sec.userOpen = open;
 		sec.min      = window->DC.CursorPos;
 		sec.height   = CalcHeaderHeight(label);
+		sec.font             = GetFont();
+		sec.fontSizeBase     = g.FontSizeBase;
+		sec.framePadding     = g.Style.FramePadding;
+		sec.itemInnerSpacing = g.Style.ItemInnerSpacing;
+		sec.frameRounding    = g.Style.FrameRounding;
 
 		list.inSection = true;
 		list.canStick  = isOpen && !isLeaf && sec.min.y < list.viewTop;
@@ -234,7 +256,7 @@ namespace ImGui
 			list.clipPushed = true;
 		}
 
-		const bool result = CollapsingHeaderIcon(label, flags, CountReserve(count));
+		const bool result = CollapsingHeaderIcon(label, flags, CountReserve(count), false);
 		DrawCount(count);
 		if (open)
 			*open = result;
