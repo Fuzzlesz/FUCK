@@ -339,7 +339,7 @@ private:
 	void WriteWorkspace();
 
 	// --- Sidebar (FUCK-Sidebar.cpp) ---
-	void                    DrawSidebar(const SidebarMetrics& a_metrics, float a_height);
+	ImGuiID                 DrawSidebar(const SidebarMetrics& a_metrics, float a_height);
 	void                    RebuildToolLayout();
 	Sidebar::LevelBaselines ComputeLevelBaselines(const std::string& a_level, const std::vector<Sidebar::Entry>& a_entries);
 	void                    RenumberLevel(const std::vector<Sidebar::Entry>& a_entries, const Sidebar::LevelBaselines& a_baselines);

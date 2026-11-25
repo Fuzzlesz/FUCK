@@ -688,7 +688,7 @@ bool FUCKMan::MoveGroupInto(const std::string& a_path, const std::string& a_pare
 // Drawing
 // ==================================================
 
-void FUCKMan::DrawSidebar(const SidebarMetrics& a_metrics, float a_height)
+ImGuiID FUCKMan::DrawSidebar(const SidebarMetrics& a_metrics, float a_height)
 {
 	const auto& m           = a_metrics;
 	const float availHeight = a_height;
@@ -731,6 +731,7 @@ void FUCKMan::DrawSidebar(const SidebarMetrics& a_metrics, float a_height)
 
 	// The header and footer stay put while the list between them scrolls, so a long list can't push Settings out of view
 	ImGui::BeginChildThemed("Sidebar", ImVec2(m.sidebarWidth, availHeight), ImGuiChildFlags_Borders, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+	const ImGuiID navPane = FUCK::BeginNavPane();
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
 		ImVec2 headerStart = ImGui::GetCursorPos();
@@ -1345,4 +1346,5 @@ void FUCKMan::DrawSidebar(const SidebarMetrics& a_metrics, float a_height)
 		ImGui::PopStyleVar();
 	}
 	ImGui::EndChild();
+	return navPane;
 }

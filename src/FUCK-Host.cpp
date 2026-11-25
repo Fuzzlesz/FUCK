@@ -1309,6 +1309,67 @@ namespace FUCK::Host
 	static bool FavouriteSelectable_Impl(const char* label, bool selected, bool* favourite, int flags, const ImVec2& size) { return ImGui::FavouriteSelectable(label, selected, favourite, flags, size); }
 	static void SetGamepadNavBlockedBy_Impl(const char* pluginName, bool blocked) { MANAGER(Input)->SetGamepadNavBlockedBy(pluginName, blocked); }
 
+	static void BeginChildEx_Impl(const char* id, float w, float h, int childFlags, int windowFlags)
+	{
+		ImGui::BeginChildClearOfCorners(id, ImVec2(w, h), childFlags, windowFlags);
+	}
+
+	static ImGuiID NavPaneFocusKey() { return ImHashStr("##FUCK_NavPaneFocus"); }
+	static ImGuiID NavPaneRequestKey() { return ImHashStr("##FUCK_NavPaneRequest"); }
+
+	static ImGuiID BeginNavPane_Impl()
+	{
+		auto*     pane           = ImGui::GetCurrentWindow();
+		auto&     g              = *ImGui::GetCurrentContext();
+		auto&     storage        = pane->StateStorage;
+		const int requestedFrame = storage.GetInt(NavPaneRequestKey(), -1);
+		if (requestedFrame == g.FrameCount && g.NavWindow && !g.ActiveId && g.OpenPopupStack.empty() &&
+			!pane->SkipItems && ImGui::IsWindowChildOf(g.NavWindow, pane->RootWindow, false)) {
+			auto* remembered = ImGui::FindWindowByID(static_cast<ImGuiID>(storage.GetInt(NavPaneFocusKey())));
+			auto* target     = remembered && remembered->WasActive ? remembered : pane;
+			ImGui::FocusWindow(target);
+			ImGui::NavInitWindow(target, false);
+			ImGui::SetNavCursorVisible(true);
+		}
+		return pane->ID;
+	}
+
+	static void NavHandoff_Impl(ImGuiID left, ImGuiID right)
+	{
+		auto* leftPane  = ImGui::FindWindowByID(left);
+		auto* rightPane = ImGui::FindWindowByID(right);
+		auto& g         = *ImGui::GetCurrentContext();
+		if (!leftPane || !rightPane || !g.NavWindow || !g.OpenPopupStack.empty())
+			return;
+
+		const bool onLeft  = ImGui::IsWindowChildOf(g.NavWindow, leftPane, false);
+		const bool onRight = ImGui::IsWindowChildOf(g.NavWindow, rightPane, false);
+		if (!onLeft && !onRight)
+			return;
+
+		auto* from = onLeft ? leftPane : rightPane;
+		auto* to   = onLeft ? rightPane : leftPane;
+		from->StateStorage.SetInt(NavPaneFocusKey(), static_cast<int>(g.NavWindow->ID));
+
+		// If filtering or a tool change removed the restored item, let the pane pick a fresh default.
+		if (from->StateStorage.GetInt(NavPaneRequestKey(), -1) == g.FrameCount && g.NavId && !g.NavIdIsAlive) {
+			g.NavWindow->NavLastIds[ImGuiNavLayer_Main] = 0;
+			from->StateStorage.SetInt(NavPaneRequestKey(), g.FrameCount + 1);
+			return;
+		}
+
+		// Let controls and local navigation handle the key first. Only cross at the inside edge.
+		if (g.ActiveId || g.IO.KeyMods || g.NavLayer != ImGuiNavLayer_Main ||
+			g.NavMoveDir != (onLeft ? ImGuiDir_Right : ImGuiDir_Left) ||
+			!ImGui::NavMoveRequestButNoResultYet() || !to->Active || to->SkipItems ||
+			!(to->DC.NavLayersActiveMaskNext & (1 << ImGuiNavLayer_Main)))
+			return;
+
+		ImGui::NavMoveRequestCancel();
+		// Restore before drawing the destination next frame, so a pane without focus history can pick a default.
+		to->StateStorage.SetInt(NavPaneRequestKey(), g.FrameCount + 1);
+	}
+
 	static bool Card_Impl(const FUCK::CardDesc* desc, FUCK::CardResult* out)
 	{
 		if (!desc || desc->size == 0)
@@ -1770,6 +1831,9 @@ namespace FUCK::Host
 			.EndCombo                  = EndCombo_Impl,
 			.FavouriteSelectable       = FavouriteSelectable_Impl,
 			.SetGamepadNavBlockedBy    = SetGamepadNavBlockedBy_Impl,
+			.BeginChildEx              = BeginChildEx_Impl,
+			.BeginNavPane              = BeginNavPane_Impl,
+			.NavHandoff                = NavHandoff_Impl,
 			.Card                      = Card_Impl,
 			.GetCardHeight             = GetCardHeight_Impl,
 			.CaptureFrame              = CaptureFrame_Impl,

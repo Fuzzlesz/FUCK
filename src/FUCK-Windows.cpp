@@ -510,6 +510,8 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 			flags |= ImGuiWindowFlags_NoScrollbar;
 		}
 
+		if (userFlags & FUCK::WindowFlags::kNoFocusOnAppearing)
+			flags |= ImGuiWindowFlags_NoFocusOnAppearing;
 		if (noResize)
 			flags |= ImGuiWindowFlags_NoResize;
 		if (autoResize)
@@ -650,6 +652,7 @@ void FUCKMan::DrawPluginWindows(const LayoutMetrics& a_m, bool a_passthroughOnly
 
 		// Use the formatted string instead of raw title
 		const bool visible = FUCK::BeginWindow(windowLabel.c_str(), &open, flags);
+		ImGui::GetCurrentWindow()->StateStorage.SetInt(ImHashStr("##FUCK_MenuKeys"), static_cast<int>(userFlags));
 
 		if (visible) {
 			if (poppedInvisibleBg) {

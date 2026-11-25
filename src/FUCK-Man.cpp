@@ -1314,8 +1314,12 @@ void FUCKMan::DrawMainWindow(const LayoutMetrics& a_m)
 			float availHeight = ImGui::GetContentRegionAvail().y;
 
 			// -- Sidebar (unscaled), drawn in FUCK-Sidebar.cpp --
+			ImGuiID sidebarPane = 0;
+			ImGuiID contentPane = 0;
+
 			auto renderSidebar = [&]() {
-				DrawSidebar({ a_m.uiScale, a_m.iconAspect, a_m.chromeIconBaseH, a_m.sidebarWidth, a_m.sidebarItemH, a_m.sidebarFontSize, a_m.sidebarIndent }, availHeight);
+				sidebarPane = DrawSidebar({ a_m.uiScale, a_m.iconAspect, a_m.chromeIconBaseH, a_m.sidebarWidth,
+				                            a_m.sidebarItemH, a_m.sidebarFontSize, a_m.sidebarIndent }, availHeight);
 			};
 
 			// -- Content (scaled) --
@@ -1323,6 +1327,7 @@ void FUCKMan::DrawMainWindow(const LayoutMetrics& a_m)
 				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, a_m.pad);
 				// Padded even when the theme's border size is 0, as ImGui drops a child's padding when it has no border
 				ImGui::BeginChildThemed("Content", ImVec2(width, availHeight), ImGuiChildFlags_Borders | ImGuiChildFlags_AlwaysUseWindowPadding);
+				contentPane = FUCK::BeginNavPane();
 				{
 					PushContentScale(a_m);
 					if (_activeTool)
@@ -1346,6 +1351,10 @@ void FUCKMan::DrawMainWindow(const LayoutMetrics& a_m)
 				ImGui::SameLine();
 				renderContent(0.0f);
 			}
+			if (_cfg.sidebarOnRight)
+				FUCK::NavHandoff(contentPane, sidebarPane);
+			else
+				FUCK::NavHandoff(sidebarPane, contentPane);
 		}
 	}
 	ImGui::End();

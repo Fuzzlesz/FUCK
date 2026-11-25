@@ -32,6 +32,88 @@ namespace Input
 		kGPBase + SKSE::InputMap::kGamepadButtonOffset_RT
 	};
 
+	namespace
+	{
+		struct MenuKey
+		{
+			ImGuiKey          key;
+			ImGuiKey          equivalent;
+			FUCK::WindowFlags flag;
+			bool              redirected   = false;
+			bool              physicalDown = false;
+		};
+
+		MenuKey menuKeys[] = {
+			{ ImGuiKey_W, ImGuiKey_UpArrow,    FUCK::WindowFlags::kWASDNavigation },
+			{ ImGuiKey_S, ImGuiKey_DownArrow,  FUCK::WindowFlags::kWASDNavigation },
+			{ ImGuiKey_A, ImGuiKey_LeftArrow,  FUCK::WindowFlags::kWASDNavigation },
+			{ ImGuiKey_D, ImGuiKey_RightArrow, FUCK::WindowFlags::kWASDNavigation },
+			{ ImGuiKey_E, ImGuiKey_Enter,      FUCK::WindowFlags::kEActivate }
+		};
+
+		FUCK::WindowFlags FocusedMenuKeys()
+		{
+			const auto& g = *ImGui::GetCurrentContext();
+			if (!g.NavWindow || !g.NavWindow->Active || g.IO.WantTextInput ||
+				(g.ActiveId != 0 && g.InputTextState.ID == g.ActiveId))
+				return FUCK::WindowFlags::kNone;
+			// The focused child or popup can be several levels inside the registered window.
+			for (auto* window = g.NavWindow; window; window = window->ParentWindow) {
+				if (const auto flags = window->StateStorage.GetInt(ImHashStr("##FUCK_MenuKeys")); flags != 0)
+					return static_cast<FUCK::WindowFlags>(flags);
+			}
+			return FUCK::WindowFlags::kNone;
+		}
+
+		bool ShouldRedirect(const MenuKey& a_key, FUCK::WindowFlags a_flags)
+		{
+			return (a_flags & a_key.flag) && ImGui::TestKeyOwner(a_key.key, ImGuiKeyOwner_NoOwner);
+		}
+
+		void ForwardKeyboardKey(ImGuiIO& a_io, ImGuiKey a_key, bool a_down, bool a_initialPress, FUCK::WindowFlags a_flags)
+		{
+			// Latch the translation through key-up. An arrow and its WASD alias can be held together.
+			for (auto& mapping : menuKeys) {
+				if (a_key == mapping.equivalent) {
+					mapping.physicalDown = a_down;
+					a_io.AddKeyEvent(a_key, a_down || mapping.redirected);
+					return;
+				}
+				if (a_key != mapping.key)
+					continue;
+				if (a_initialPress)
+					mapping.redirected = ShouldRedirect(mapping, a_flags);
+				if (mapping.redirected) {
+					mapping.redirected = a_down;
+					a_io.AddKeyEvent(mapping.equivalent, a_down || mapping.physicalDown);
+					return;
+				}
+				break;
+			}
+			a_io.AddKeyEvent(a_key, a_down);
+		}
+
+		void StopMenuKeyRepeats(ImGuiIO& a_io, FUCK::WindowFlags a_flags)
+		{
+			for (auto& mapping : menuKeys) {
+				if (mapping.redirected && !ShouldRedirect(mapping, a_flags)) {
+					mapping.redirected = false;
+					a_io.AddKeyEvent(mapping.equivalent, mapping.physicalDown);
+				}
+			}
+		}
+
+		void ReleaseMenuKeys()
+		{
+			for (auto& mapping : menuKeys) {
+				if ((mapping.redirected || mapping.physicalDown) && ImGui::GetCurrentContext())
+					ImGui::GetIO().AddKeyEvent(mapping.equivalent, false);
+				mapping.redirected   = false;
+				mapping.physicalDown = false;
+			}
+		}
+	}
+
 	void Manager::Register()
 	{
 		logger::info("Input Manager Initialized");
@@ -42,6 +124,7 @@ namespace Input
 		std::unique_lock lock(_dataLock);
 		_keyStateCache.clear();
 		_rebindCtx.Reset();
+		ReleaseMenuKeys();
 	}
 
 	DEVICE Manager::GetInputDevice() const
@@ -750,7 +833,8 @@ namespace Input
 				io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
 			} else {
 				io.ConfigFlags  |= ImGuiConfigFlags_NavEnableKeyboard;
-				if (_lastInputDevice != DEVICE::kNone) {
+				if (_lastInputDevice != DEVICE::kNone && !(FocusedMenuKeys() & FUCK::WindowFlags::kWASDNavigation)) {
+					ReleaseMenuKeys();
 					ImGui::ClearNavState();
 				}
 			}
@@ -775,6 +859,7 @@ namespace Input
 
 		// Keys aren't forwarded to ImGui while the console has them, rather than a FUCK menu opened over it
 		if (ConsoleHasInput()) {
+			ReleaseMenuKeys();
 			return;
 		}
 
@@ -892,13 +977,21 @@ namespace Input
 		const bool isBinding              = IsBinding();
 		const bool passKeyboardAndGamepad = shouldRender && blockInput && !isBinding;
 		const bool passMouse              = (shouldRender || cameraControls) && (blockInput || forceCursor);
+		const auto menuKeyFlags           = passKeyboardAndGamepad && !menuOpen && !cameraControls &&
+			!IsModifierPressed(FUCK::Modifier::kCtrl) && !IsModifierPressed(FUCK::Modifier::kAlt) &&
+			!IsModifierPressed(FUCK::Modifier::kShift) && !IsInputDown(AsKey(KEY::kLeftWin)) &&
+			!IsInputDown(AsKey(KEY::kRightWin)) ? FocusedMenuKeys() : FUCK::WindowFlags::kNone;
+		StopMenuKeyRepeats(io, menuKeyFlags);
 
 		if (a_events && *a_events) {
 			for (auto event = *a_events; event; event = event->next) {
 				if (const auto charEvent = event->AsCharEvent()) {
-					if (passKeyboardAndGamepad) {
-						io.AddInputCharacter(charEvent->keyCode);
-					}
+					const auto letter         = charEvent->keyCode;
+					const bool navLetter      = (menuKeyFlags & FUCK::WindowFlags::kWASDNavigation) &&
+					                            (letter == 'w' || letter == 'a' || letter == 's' || letter == 'd');
+					const bool activateLetter = (menuKeyFlags & FUCK::WindowFlags::kEActivate) && letter == 'e';
+					if (passKeyboardAndGamepad && !navLetter && !activateLetter)
+						io.AddInputCharacter(letter);
 				} else if (const auto buttonEvent = event->AsButtonEvent()) {
 					const auto  key    = buttonEvent->GetIDCode();
 					const float value  = buttonEvent->Value();
@@ -912,7 +1005,7 @@ namespace Input
 						if (isDown && buttonEvent->IsDown() && FUCKMan::GetSingleton()->TakeScaleKey(static_cast<KEY>(key)))
 							break;
 						if (passKeyboardAndGamepad || !isDown)
-							io.AddKeyEvent(Keymap::ToImGuiKey(static_cast<KEY>(key)), isDown);
+							ForwardKeyboardKey(io, Keymap::ToImGuiKey(static_cast<KEY>(key)), isDown, isDown && buttonEvent->IsDown(), menuKeyFlags);
 						break;
 					case RE::INPUT_DEVICE::kMouse:
 						if (passMouse || !isDown) {

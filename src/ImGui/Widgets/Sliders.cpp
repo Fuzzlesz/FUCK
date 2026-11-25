@@ -86,18 +86,23 @@ namespace ImGui
 		}
 
 		// Helper function for adjusting hovered sliders with WASD
-		bool ApplyWASDNudge(ImGuiDataType type, void* data, const void* min, const void* max, float speed)
+		bool ApplyWASDNudge(ImGuiID id, ImGuiDataType type, void* data, const void* min, const void* max, float speed)
 		{
+			// Hovered sliders own these keys before the menu can turn them into arrow presses.
+			constexpr ImGuiKey keys[]{ ImGuiKey_W, ImGuiKey_A, ImGuiKey_S, ImGuiKey_D };
+			for (const ImGuiKey key : keys)
+				SetKeyOwner(key, id);
+
 			float moveX = 0.0f;
 			float moveY = 0.0f;
 
-			if (IsKeyPressed(ImGuiKey_A, true))
+			if (IsKeyPressed(ImGuiKey_A, ImGuiInputFlags_Repeat, id))
 				moveX -= 1.0f;
-			if (IsKeyPressed(ImGuiKey_D, true))
+			if (IsKeyPressed(ImGuiKey_D, ImGuiInputFlags_Repeat, id))
 				moveX += 1.0f;
-			if (IsKeyPressed(ImGuiKey_W, true))
+			if (IsKeyPressed(ImGuiKey_W, ImGuiInputFlags_Repeat, id))
 				moveY += 1.0f;
-			if (IsKeyPressed(ImGuiKey_S, true))
+			if (IsKeyPressed(ImGuiKey_S, ImGuiInputFlags_Repeat, id))
 				moveY -= 1.0f;
 
 			if (moveX == 0.0f && moveY == 0.0f)
@@ -171,7 +176,7 @@ namespace ImGui
 		}
 
 		if (h && !temp_input_is_active && MANAGER(Input)->IsInputKBM()) {
-			if (ApplyWASDNudge(type, data, min, max, speed)) {
+			if (ApplyWASDNudge(id, type, data, min, max, speed)) {
 				changed = true;
 				MarkItemEdited(id);
 			}
@@ -256,7 +261,7 @@ namespace ImGui
 				inferredSpeed = std::max(1.0f, (*(const int*)max - *(const int*)min) * 0.01f);
 			}
 
-			if (ApplyWASDNudge(type, data, min, max, inferredSpeed)) {
+			if (ApplyWASDNudge(id, type, data, min, max, inferredSpeed)) {
 				changed = true;
 				MarkItemEdited(id);
 			}
@@ -369,7 +374,7 @@ namespace ImGui
 				inferredSpeed = std::max(1.0f, (*(const int*)max - *(const int*)min) * 0.01f);
 			}
 
-			if (ApplyWASDNudge(type, data, min, max, inferredSpeed)) {
+			if (ApplyWASDNudge(id, type, data, min, max, inferredSpeed)) {
 				changed = true;
 				MarkItemEdited(id);
 			}
