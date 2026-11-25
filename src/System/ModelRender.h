@@ -27,6 +27,9 @@ namespace ModelRender
 		std::vector<TintLayer> faceTint;
 		bool                   frameFace = false;  // framed on the face alone, so hair or a beard doesn't change its size
 		std::uint32_t          supersample = 2;    // drawn this many times the size a side, then scaled down
+		RE::NiPointer<RE::NiNode> geometrySource;
+		std::string              geometrySourceNode;
+		std::string              geometryReferenceBone;
 	};
 
 	void Queue(Request a_request);

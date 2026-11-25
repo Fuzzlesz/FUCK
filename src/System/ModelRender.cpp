@@ -177,6 +177,107 @@ namespace ModelRender
 			return { first, first + a_count };
 		}
 
+		// Match the part and its vertex ordering before borrowing positions from the source.
+		bool SameTopology(RE::NiSkinPartition& a_target, RE::NiSkinPartition& a_source)
+		{
+			if (a_target.vertexCount != a_source.vertexCount || a_target.numPartitions != a_source.numPartitions)
+				return false;
+			for (std::uint32_t i = 0; i < a_target.numPartitions; ++i) {
+				const auto& target = a_target.partitions[i];
+				const auto& source = a_source.partitions[i];
+				if (target.triangles != source.triangles)
+					return false;
+				if (target.triangles && (!target.triList || !source.triList ||
+					!std::equal(target.triList, target.triList + target.triangles * 3u, source.triList)))
+					return false;
+			}
+			return true;
+		}
+
+		// Bring source and target into a common skin space, using a caller-supplied bone when there is one.
+		RE::NiTransform ReferenceSpace(RE::BSGeometry& a_geometry, RE::NiSkinInstance& a_skin, const RE::BSFixedString& a_referenceBone)
+		{
+			auto transform = a_geometry.local;
+			if (auto* data = a_skin.skinData.get()) {
+				transform = transform * data->rootParentToSkin;
+				for (std::uint32_t i = 0; !a_referenceBone.empty() && a_skin.bones && i < data->GetBoneCount(); ++i) {
+					if (auto* bone = a_skin.bones[i]; bone && bone->name == a_referenceBone) {
+						transform = transform * data->GetBoneDataSkinToBone(i);
+						break;
+					}
+				}
+			}
+			return transform;
+		}
+
+		std::vector<DirectX::XMFLOAT4> ReadSourcePositions(RE::BSTriShape& a_shape, RE::NiSkinPartition& a_partition, std::uint32_t a_count)
+		{
+			if (a_shape.AsDynamicTriShape())
+				return DynamicPositions(&a_shape, a_count);
+			if (a_partition.numPartitions == 0 || a_partition.vertexCount != a_count)
+				return {};
+
+			// A static source stores its global vertex buffer on the first skin partition.
+			const auto* buffer = a_partition.partitions[0].buffData;
+			if (!buffer || !buffer->rawVertexData)
+				return {};
+
+			auto desc = buffer->vertexDesc;
+			if (!desc.HasFlag(RE::BSGraphics::Vertex::Flags::VF_VERTEX))
+				return {};
+
+			const auto stride = desc.GetSize();
+			const auto offset = desc.GetAttributeOffset(RE::BSGraphics::Vertex::VA_POSITION);
+			const bool full   = FullPrecision(desc, offset);
+			if (offset >= stride || stride - offset < (full ? 3 * sizeof(float) : 3 * sizeof(std::uint16_t)))
+				return {};
+
+			std::vector<DirectX::XMFLOAT4> positions;
+			positions.reserve(a_count);
+			for (std::uint32_t i = 0; i < a_count; ++i) {
+				const auto p = ReadPosition(buffer->rawVertexData + static_cast<std::size_t>(i) * stride, offset, full);
+				positions.emplace_back(p.x, p.y, p.z, 0.0f);
+			}
+			return positions;
+		}
+
+		std::vector<DirectX::XMFLOAT4> ReplacementPositions(RE::BSGeometry& a_target, RE::NiSkinInstance& a_skin, RE::NiNode& a_source,
+			const RE::BSFixedString& a_referenceBone)
+		{
+			if (a_target.name.empty())
+				return {};
+			auto* target = a_target.AsTriShape();
+			auto* object = a_source.GetObjectByName(a_target.name);
+			auto* source = object ? object->AsGeometry() : nullptr;
+			auto* shape  = source ? source->AsTriShape() : nullptr;
+			if (!target || !target->AsDynamicTriShape() || !shape)
+				return {};
+
+			const auto count = target->GetTrishapeRuntimeData().vertexCount;
+			auto*      skin  = source->GetGeometryRuntimeData().skinInstance.get();
+			if (count == 0 || count != shape->GetTrishapeRuntimeData().vertexCount || count != a_skin.skinPartition->vertexCount ||
+				!skin || !skin->skinPartition || !SameTopology(*a_skin.skinPartition, *skin->skinPartition))
+				return {};
+
+			auto positions = ReadSourcePositions(*shape, *skin->skinPartition, count);
+			if (positions.empty())
+				return {};
+
+			const auto targetSpace = ReferenceSpace(a_target, a_skin, a_referenceBone);
+			if (std::abs(targetSpace.scale) < 1e-6f)
+				return {};
+			const auto toTarget = targetSpace.Invert() * ReferenceSpace(*source, *skin, a_referenceBone);
+			for (auto& vertex : positions) {
+				const auto p = toTarget * RE::NiPoint3{ vertex.x, vertex.y, vertex.z };
+				if (!std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z))
+					return {};
+				vertex.x = p.x;
+				vertex.y = p.y;
+				vertex.z = p.z;
+			}
+			return positions;
+		}
+
 		bool Upload(ID3D11Device* a_device, const std::vector<Vertex>& a_vertices, const std::vector<std::uint32_t>& a_indices, Mesh& a_out)
 		{
 			if (a_vertices.empty() || a_indices.empty())
@@ -197,9 +298,13 @@ namespace ModelRender
 
 		// A skinned shape keeps a CPU copy of its vertices in its skin partition, which a head's are read from. Each vertex is posed
 		// as the game poses it, by its bones' places blended by its weights
-		bool FromSkinPartition(ID3D11Device* a_device, const Part& a_part, RE::NiSkinInstance& a_instance, RE::NiSkinPartition& a_skin, Mesh& a_out)
+		bool FromSkinPartition(ID3D11Device* a_device, const Part& a_part, RE::NiSkinInstance& a_instance, RE::NiSkinPartition& a_skin,
+			Mesh& a_out, RE::NiNode* a_source, const RE::BSFixedString& a_referenceBone, bool& a_usedSource)
 		{
-			const auto dynamic     = DynamicPositions(a_part.geometry, a_skin.vertexCount);
+			auto dynamic = a_source ? ReplacementPositions(*a_part.geometry, a_instance, *a_source, a_referenceBone) : std::vector<DirectX::XMFLOAT4>{};
+			a_usedSource = !dynamic.empty();
+			if (!a_usedSource)
+				dynamic = DynamicPositions(a_part.geometry, a_skin.vertexCount);
 
 			const bool takesColour = TakesVertexColours(a_part.geometry);
 
@@ -488,7 +593,8 @@ namespace ModelRender
 			}
 		}
 
-		bool ExtractOne(ID3D11Device* a_device, ID3D11DeviceContext* a_context, const Part& a_part, Mesh& a_out)
+		bool ExtractOne(ID3D11Device* a_device, ID3D11DeviceContext* a_context, const Part& a_part, Mesh& a_out,
+			RE::NiNode* a_source, const RE::BSFixedString& a_referenceBone, bool& a_usedSource)
 		{
 			auto& rt = a_part.geometry->GetGeometryRuntimeData();
 			// The game draws a shape through its shader, so one without is never seen, e.g. the bodies physics hair collides with,
@@ -498,7 +604,7 @@ namespace ModelRender
 			bool  ok = false;
 			// A skinned shape's buffer holds it unposed, so its skin's CPU copy is used even when it has one
 			if (auto* skin = rt.skinInstance.get(); skin && skin->skinPartition && skin->skinPartition->numPartitions > 0) {
-				ok = FromSkinPartition(a_device, a_part, *skin, *skin->skinPartition, a_out);
+				ok = FromSkinPartition(a_device, a_part, *skin, *skin->skinPartition, a_out, a_source, a_referenceBone, a_usedSource);
 			} else if (rt.rendererData) {
 				ok = FromRendererData(a_device, a_context, a_part, a_out);
 			}
@@ -508,10 +614,11 @@ namespace ModelRender
 		}
 
 		// A model is someone else's memory, so a bad one is skipped rather than taking the game down
-		__declspec(noinline) bool ExtractOneSEH(ID3D11Device* a_device, ID3D11DeviceContext* a_context, const Part* a_part, Mesh* a_out)
+		__declspec(noinline) bool ExtractOneSEH(ID3D11Device* a_device, ID3D11DeviceContext* a_context, const Part* a_part, Mesh* a_out,
+			RE::NiNode* a_source, const RE::BSFixedString& a_referenceBone, bool* a_usedSource)
 		{
 			__try {
-				return ExtractOne(a_device, a_context, *a_part, *a_out);
+				return ExtractOne(a_device, a_context, *a_part, *a_out, a_source, a_referenceBone, *a_usedSource);
 			} __except (EXCEPTION_EXECUTE_HANDLER) {
 				return false;
 			}
@@ -1447,17 +1554,37 @@ float4 BackdropPS(BG_OUT i) : SV_Target
 			std::vector<Part> parts;
 			Collect(request.model.get(), request.model->world.Invert(), parts);
 
-			std::vector<Mesh> meshes;
+			std::vector<Mesh>       meshes;
+			const RE::BSFixedString referenceBone(request.geometryReferenceBone.c_str());
+			auto*                   source   = request.geometrySource.get();
+			std::size_t             replaced = 0;
+			if (source && !request.geometrySourceNode.empty()) {
+				auto* node = source->GetObjectByName(request.geometrySourceNode.c_str());
+				source     = node ? node->AsNode() : nullptr;
+			}
 			for (const auto& part : parts) {
 				Mesh mesh;
-				if (!ExtractOneSEH(a_device, a_context, &part, &mesh))
-					continue;
+				bool usedPart = false;
+				if (!ExtractOneSEH(a_device, a_context, &part, &mesh, source, referenceBone, &usedPart)) {
+					if (!source)
+						continue;
+					mesh     = {};
+					usedPart = false;
+					if (!ExtractOneSEH(a_device, a_context, &part, &mesh, nullptr, referenceBone, &usedPart))
+						continue;
+				}
 				// A see-through layer whose texture isn't there, which would draw as a solid patch of its tint, e.g. a beard over the
 				// jaw, so it's left out: its texture is what shapes it
 				if (mesh.useAlpha && !mesh.diffuse && !mesh.effect)
 					continue;
 				meshes.push_back(std::move(mesh));
+				if (usedPart)
+					++replaced;
 			}
+			if (replaced)
+				logger::debug("RenderModel: used source positions for {} shapes in {}", replaced, request.pathUtf8);
+			else if (request.geometrySource)
+				logger::warn("RenderModel: no compatible position source for {}, using the model's geometry", request.pathUtf8);
 			// The face's tint from the layers asked for, in place of the game's
 			if (!request.faceTint.empty()) {
 				if (auto tint = BuildFaceTint(a_device, request.faceTint)) {

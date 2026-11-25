@@ -1427,6 +1427,13 @@ namespace FUCK::Host
 		}
 		queued.frameFace   = options.frameFace;
 		queued.supersample = options.supersample;
+		if (const auto* source = options.geometrySource; source && source->root) {
+			queued.geometrySource.reset(source->root);
+			if (source->node)
+				queued.geometrySourceNode = source->node;
+			if (source->referenceBone)
+				queued.geometryReferenceBone = source->referenceBone;
+		}
 		ModelRender::Queue(std::move(queued));
 		return true;
 	}
