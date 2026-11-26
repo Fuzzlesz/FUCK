@@ -1258,7 +1258,7 @@ namespace FUCK::Host
 	// ==================================================
 	// Version 9
 	// ==================================================
-	static void SetCameraPartFraming_Impl(ICameraClient* client, const char* node, float size) { MANAGER(Camera)->SetPartFraming(client, node, size); }
+	static void SetCameraPartFraming_Impl(ICameraClient* client, const char* node, float size, bool sideView) { MANAGER(Camera)->SetPartFraming(client, node, size, sideView); }
 	static void SetCameraUpperBody_Impl(ICameraClient* client, bool upperBody) { MANAGER(Camera)->SetUpperBody(client, upperBody); }
 	static void SetCameraFramingHeld_Impl(ICameraClient* client, bool held) { MANAGER(Camera)->SetFramingHeld(client, held); }
 	static void SetCameraFramingKeepsView_Impl(ICameraClient* client, bool keep) { MANAGER(Camera)->SetFramingKeepsView(client, keep); }

@@ -1,7 +1,9 @@
 #include "FUCK-Host.h"
 #include "FUCK-Man.h"
 
+#include "Camera/Effects.h"
 #include "Camera/Manager.h"
+#include "Camera/Physics.h"
 
 #include "ImGui/Renderer.h"
 #include "ImGui/Styles.h"
@@ -13,7 +15,6 @@
 #include "System/Hotkeys.h"
 #include "System/Input.h"
 #include "System/Papyrus.h"
-#include "System/Physics.h"
 #include "System/Settings.h"
 
 // ==================================================
@@ -57,7 +58,9 @@ void OnInit(SKSE::MessagingInterface::Message* a_msg)
 		logger::info("FUCK Data Loaded & Hotkeys Enabled");
 		break;
 
+	case SKSE::MessagingInterface::kNewGame:
 	case SKSE::MessagingInterface::kPreLoadGame:
+		Effects::Reset();
 		ImGui::ClearFormCaches();
 		MANAGER(Freeze)->ReleaseAll();
 		break;

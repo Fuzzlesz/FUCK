@@ -24,8 +24,12 @@ namespace Camera
 		RE::ActorHandle          subject;
 		bool                     hasSubject = false;
 		RE::ActorHandle          alsoFramed;  // framed beside the subject (CameraSessionOptions::alsoFramed)
+		bool                     partSideView = false;
 		std::string              framedPart;  // SetPartFraming(): the node body framing aims at, empty for the whole body
 		float                    partSize = 0.0f;
+		// Where the part was last found, from the subject, held while a held item's 3D is swapped so the framing doesn't drop to the body
+		std::optional<RE::NiPoint3> partHeldOffset;
+		float                       partHeldHalf = 0.0f;
 
 		bool            paused        = false;
 		Session*        continued     = nullptr;  // kContinueView: the paused session whose view it carried on, to hand back to
@@ -116,7 +120,7 @@ namespace Camera
 		bool IsModified(const FUCK::ICameraClient* a_client) const;
 		void SetBodyFraming(FUCK::ICameraClient* a_client, bool a_framed, const FUCK::CameraScreenRect* a_rect, float a_margin);
 		bool SetSubject(FUCK::ICameraClient* a_client, RE::Actor* a_subject, RE::Actor* a_alsoFramed);
-		void SetPartFraming(FUCK::ICameraClient* a_client, const char* a_node, float a_size);
+		void SetPartFraming(FUCK::ICameraClient* a_client, const char* a_node, float a_size, bool a_sideView);
 		void SetUpperBody(FUCK::ICameraClient* a_client, bool a_upperBody);
 		void SetFramingHeld(FUCK::ICameraClient* a_client, bool a_held);
 		void SetFramingKeepsView(FUCK::ICameraClient* a_client, bool a_keep);
@@ -156,6 +160,11 @@ namespace Camera
 
 		// Folded into FUCK's own input blocking and pausing. Input is blocked with kBlockControls, or while the camera's controls are held
 		bool IsBlockingInput() const;
+		// A mouse drag of the camera or the subject is under way, which holds the cursor still
+		bool IsDragging() const;
+		// A drag button (right, middle, RB) is down. One already held as the first session began, such as a held cast's, counts only once it's
+		// let go and pressed again
+		bool ButtonDown(std::uint32_t a_key) const;
 		// Whether a tap of RB, the camera's gamepad modifier, should reach the game. Not with kBlockControls, as the game then gets nothing
 		bool PassesModifierTaps() const { return _current && _inputAllowed && !(_current->flags & FUCK::CameraSessionFlags::kBlockControls); }
 		bool IsPausing() const { return _current && (_current->flags & FUCK::CameraSessionFlags::kFreezeTime); }
@@ -178,9 +187,12 @@ namespace Camera
 		bool                        GetBodyPoints(Maths::BodyPoints& a_body) override;
 		bool                        FramesPart() override { return _current && !_current->framedPart.empty(); }
 		std::optional<float>        GetFacing() override { return GetSubjectYaw(); }
+		std::optional<RE::NiPoint3> GetFocusPoint(FocusPoint a_point) override;
+		float                       GetHeadRadius() override;
 		bool                        GetBodyPointsOf(RE::Actor* a_actor, Maths::BodyPoints& a_body);
 		bool                        GetWholeBodyPoints(RE::Actor* a_actor, Maths::BodyPoints& a_body);
 		bool                        GetPartPoints(Maths::BodyPoints& a_part);
+		
 		void                        MoveBaseToFront();
 		void                        MoveBaseBehind();
 		static RE::NiPoint3         BodyMiddle(RE::Actor& a_subject);
@@ -204,6 +216,7 @@ namespace Camera
 
 		void RunControls(float a_interval);
 		void LandIfInstant();  // kInstantMoves, after a move the client asked for
+		void UpdateEffects(float a_interval);
 		void UpdateObstructions(float a_interval);  // kHideObstructions, once the camera's placed
 		void HoldHead();  // kHoldHeadStill, each update
 		void ReleaseHead(Session& a_session);
@@ -251,6 +264,8 @@ namespace Camera
 		bool _inputAllowed  = true;
 		bool _mouseLocked   = false;
 		bool _cameraMoves   = true;
+
+		std::vector<std::uint32_t> _heldAtBegin;  // drag buttons held as the first session began, until released
 
 		bool GetShownView(FUCK::CameraPose& a_view) const;
 

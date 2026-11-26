@@ -16,14 +16,24 @@ namespace Camera
 		float gpRotSpeed     = 2.0f;
 		float gpRollSpeed    = 2.0f;
 		float gpFovSpeed     = 30.0f;
-		float gpCharRotSpeed = 3.0f;
 		float gpDeadzone     = 0.25f;
 
 		bool cinematic   = true;
 		bool invertTilt  = false;  // tilting up and down the other way round, on every device
 		bool invertTurn  = false;  // turning the subject the other way round, on every device
+		bool invertOrbit = false;  // orbiting round the subject the other way round, on every device
 
 		bool HasCustomSpeeds() const;
+	};
+
+	// Points on the subject that zoomToFocus can head for
+	enum class FocusPoint : std::uint32_t
+	{
+		kHead,
+		kChest,
+		kPelvis,
+		kFeet,
+		kTotal
 	};
 
 	// What the core needs from the camera it's moving and the subject it's looking at
@@ -41,8 +51,14 @@ namespace Camera
 		// The body's top, bottom and centre, for body framing
 		virtual bool GetBodyPoints(Maths::BodyPoints& a_body) = 0;
 
+		// A point on the subject for zoomToFocus, or none to zoom straight ahead
+		virtual std::optional<RE::NiPoint3> GetFocusPoint(FocusPoint a_point) = 0;
+
 		// Where the subject stands, which body framing is kept relative to
 		virtual std::optional<RE::NiPoint3> GetAnchor() = 0;
+
+		// The head mesh's radius round the head node, or 0 when there's no head to measure
+		virtual float GetHeadRadius() = 0;
 
 		// Whether the body points are one part's (SetPartFraming), which moves round the subject as they turn
 		virtual bool FramesPart() = 0;
@@ -110,11 +126,15 @@ namespace Camera
 		// Eases away the orbit, pan, zoom, tilt, roll and FOV, which would otherwise carry a newly framed part off where framing places it
 		void ClearMovesForFraming();
 
+		void RequestSideView(bool a_side) { _sideViewPending = a_side; }
+
 		// Framing kept where it is, not following the part or pose as they change, nor the base camera's turn, then framed again easing
 		// over once let go
 		void HoldFraming(bool a_held);
 		void KeepView(bool a_keep);
 		bool KeepsView() const { return _keepView; }
+		// A newly framed part is eased onto as one move, the framing and the eased-away moves together
+		void EasePartChange();
 
 		// The FOV the session opens at, and the reset gesture goes back to, rather than the player's
 		void  SetStartFov(float a_fov);
@@ -143,6 +163,8 @@ namespace Camera
 		void    SetTargetOffsets(const Offsets& a_offsets);
 
 		void AccumulateScroll(float a_delta) { _pendingScroll += a_delta; }
+		void AccumulateDrag(const ImVec2& a_delta) { _pendingDrag.x += a_delta.x; _pendingDrag.y += a_delta.y; }
+		bool IsDragging() const { return _isDragging; }
 
 		bool HasAnyCamera() const { return IsModified() || _framingBlend > 0.001f; }
 		bool IsModified() const;
@@ -151,6 +173,7 @@ namespace Camera
 		static bool GetCurrentFov(float& a_horizontal, float& a_vertical);
 		static float GetScreenFov();  // worldFOV with the game's modifier, the FOV on screen
 		static float Tilt(const Config& a_settings);
+		static float Orbit(const Config& a_settings);
 
 		// The FOV the last frame was drawn at, which the view frustum is built for till the game's next camera update. Noted each frame, so
 		// a session beginning before then (one swapped for another) measures its framing against the frustum as it is
@@ -186,12 +209,17 @@ namespace Camera
 			bool isItemActive = false;
 			bool mouseLocked  = false;
 
+			ImVec2 mouseDelta{ 0.0f, 0.0f };  // the mouse's own movement this frame, which doesn't stop at the screen's edge
+
 			SpeedScales scale;
 		};
 
 		FrameInput GatherInput(const FUCK::CameraControlState& a_state) const;
 
 		void UpdateFramingBlend(float a_interval);
+		void UpdatePartEase(float a_interval);
+		void FollowTurnedPart();
+		RE::NiPoint3 FramedPivot(const Maths::BodyPoints& a_body);
 		void ClearInputState();
 		void HandleControls(const FUCK::CameraControlState& a_state, const Config& a_settings, float a_interval);
 		void HandleMouse(const FrameInput& a_in, const Config& a_settings, float a_interval);
@@ -213,6 +241,16 @@ namespace Camera
 		void        UpdateFraming(const RE::NiPoint3& a_pivot, bool a_ease = false);
 		void        FollowFramedPose(float a_interval);
 		RE::NiMatrix3 HeldRotate(const RE::NiMatrix3& a_baseRotate);
+		void        GetFramedBase(const RE::NiPoint3& a_baseTranslate, const std::optional<RE::NiPoint3>& a_hostPivot, RE::NiPoint3& a_pivot, RE::NiPoint3& a_camBase) const;
+		bool        GetTargetView(RE::NiPoint3& a_translate, RE::NiMatrix3& a_rotate, RE::NiPoint3* a_subject = nullptr);
+		void        Zoom(float a_amount, bool a_atCursor);
+		void        ClearFocus();
+		float       HeadClearance();
+		bool        PivotsOnHead(bool a_pair) const;
+		RE::NiPoint3 HeadFollow(const RE::NiPoint3& a_anchor) const;
+		void        KeepOutOfHead(RE::NiPoint3& a_translate, const RE::NiMatrix3& a_rotate);
+
+		std::optional<FocusPoint> PickFocus(const RE::NiPoint3& a_translate, const RE::NiMatrix3& a_rotate, bool a_atCursor);
 
 		Host& _host;
 
@@ -259,6 +297,7 @@ namespace Camera
 		bool                   _hasHeldRotate     = false;
 		float                  _heldRotateEase    = 1.0f;   // 0 to 1 through the turn back once let go
 		RE::NiMatrix3          _heldRotate;
+		bool                   _sideViewPending   = false;  // orbit once when an off-axis part is framed
 		bool                   _hasFraming        = false;
 		FUCK::CameraScreenRect _framingRect;
 		float                  _framingMargin     = 1.0f;
@@ -272,9 +311,21 @@ namespace Camera
 		RE::NiPoint3           _framingPivotDeltaTo{ 0.0f, 0.0f, 0.0f };
 		std::optional<float>   _framingFacing;  // the subject's facing as framed, which a framed part follows only when it changes
 		float                  _framingDistanceTo = 0.0f;
+
+		// EasePartChange(): how far through, and where the framing and the moves set out from
+		float                  _partEase = 1.0f;
+		RE::NiPoint3           _easeFromCam{ 0.0f, 0.0f, 0.0f };
+		RE::NiPoint3           _easeFromPivot{ 0.0f, 0.0f, 0.0f };
+		RE::NiPoint3           _easeFromOffset{ 0.0f, 0.0f, 0.0f };
+		float                  _easeFromDistance = 0.0f;
+		float                  _easeFromRotZ     = 0.0f;
+		float                  _easeFromRotX     = 0.0f;
+		float                  _easeFromRoll     = 0.0f;
 		float                  _framingHeight     = 0.0f;
 		float                  _poseHeight        = 0.0f;  // kFollowPose: the body's height last frame
 		float                  _poseStillFor      = 0.0f;  // kFollowPose: seconds it's held still
+		RE::NiPoint3           _partLast{};               // kFollowPose: a framed part's place last frame, from the anchor
+		float                  _partStillFor      = 0.0f;  // kFollowPose: seconds it's been at rest
 		float                  _framingSpread     = 0.0f;  // the space between two framed together, as framed
 		float                  _cameraDistance    = 0.0f;  // camera to pivot as last composed, which speeds scale by
 		bool                   _startedFramed     = false; // the session opened framed, which the reset gesture goes back to
@@ -286,9 +337,23 @@ namespace Camera
 		float _smoothScrollZoom = 0.0f;
 		float _smoothScrollFov  = 0.0f;
 
+		ImVec2 _pendingDrag{ 0.0f, 0.0f };
+		bool   _isDragging = false;
+		// zoomToFocus: the point zooming in heads for, how far it's zoomed in towards it, and the sideways shift that brought it to the middle,
+		// which zooming back out takes off again
+		std::optional<FocusPoint> _focus;
+		float                     _focusDepth  = 0.0f;
+		float                     _focusShiftX = 0.0f;
+		float                     _focusShiftZ = 0.0f;
+		float                     _sinceZoomIn = 0.0f;
+		float                     _focusBlend  = 0.0f;  // 0 = speeds go by the pivot's distance, 1 = by the focus point's
+
 		float _kbmAcceleration  = 1.0f;
 		bool  _lockoutGPSubjRot = false;
 		bool  _wasMouseSubjRot  = false;
+		RE::NiPoint3 _headFollow{ 0.0f, 0.0f, 0.0f };  // followHead: eased, so a pose that snaps (a weapon swap) doesn't jerk the camera
+		float _turnSpeed        = 0.0f;  // turnCoast: radians a second the drag was turning at
+		float _turnCoast        = 0.0f;  // turnCoast: radians a second still carried after release
 
 		// The reset gesture: a double middle click, or RB + R3
 		float _sinceMiddleClick  = 0.0f;  // seconds since middle mouse last went down

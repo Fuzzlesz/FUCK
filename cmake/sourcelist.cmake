@@ -1,6 +1,9 @@
 set(sources ${sources}
+	src/Camera/CameraEffects.cpp
 	src/Camera/Core.cpp
+	src/Camera/Effects.cpp
 	src/Camera/Manager.cpp
+	src/Camera/Physics.cpp
 	src/Camera/Presets.cpp
 	src/FUCK-Host.cpp
 	src/FUCK-Man.cpp
@@ -38,7 +41,6 @@ set(sources ${sources}
 	src/System/ModelRender.cpp
 	src/System/Obstructions.cpp
 	src/System/Papyrus.cpp
-	src/System/Physics.cpp
 	src/System/Settings.cpp
 	src/System/Translation.cpp
 	src/main.cpp

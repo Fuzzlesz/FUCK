@@ -1,16 +1,16 @@
 #include "FUCK-Man.h"
 
 #include "Camera/Manager.h"
+#include "Camera/Physics.h"
 
 #include "Graphics.h"
 #include "IconsFonts.h"
 #include "Renderer.h"
 #include "Styles.h"
 
-#include "System\Freeze.h"
-#include "System\ModelRender.h"
-#include "System\Physics.h"
-#include "System\Input.h"
+#include "System/Freeze.h"
+#include "System/Input.h"
+#include "System/ModelRender.h"
 
 #include <d3d11.h>
 

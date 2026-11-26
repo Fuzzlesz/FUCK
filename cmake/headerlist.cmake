@@ -2,13 +2,17 @@ set(headers ${headers}
 	src/API/FUCK_API.h
 	src/API/FUCK_Camera.h
 	src/API/FUCK_ColorPalette.h
+	src/API/FUCK_ModelRender.h
 	src/API/IconsFontAwesome6.h
 	src/API/IconsGameIcons.h
 	src/Camera/API/CinemacamAPI.h
 	src/Camera/API/SmoothCamAPI.h
+	src/Camera/CameraEffects.h
 	src/Camera/Core.h
+	src/Camera/Effects.h
 	src/Camera/Manager.h
 	src/Camera/Maths.h
+	src/Camera/Physics.h
 	src/Camera/Presets.h
 	src/FUCK-Ass.h
 	src/FUCK-Host.h
@@ -44,7 +48,6 @@ set(headers ${headers}
 	src/System/ModelRender.h
 	src/System/Obstructions.h
 	src/System/Papyrus.h
-	src/System/Physics.h
 	src/System/Settings.h
 	src/System/Translation.h
 	src/System/Utils.h
