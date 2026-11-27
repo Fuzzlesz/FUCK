@@ -59,6 +59,13 @@ namespace Camera
 		RE::NiMatrix3 fixedRotate;
 		RE::NiPoint3  fixedSubjectPos;  // where the subject stood then, so the held camera moves with it (see HeldTranslate)
 		bool          hasFixedBase = false;
+		// The last displayed pose, eased into the new front view when a subject turns after stopping
+		struct FrontViewEase
+		{
+			FUCK::CameraPose from;
+			float            elapsed = 0.0f;
+		};
+		std::optional<FrontViewEase> frontViewEase;
 		bool          turnsHeading = false;  // see TurnsHeading()
 
 		// The game camera's own look round the player before it was turned to the view, put back after (see MatchMovementToView)
@@ -220,7 +227,7 @@ namespace Camera
 		void UpdateObstructions(float a_interval);  // kHideObstructions, once the camera's placed
 		void HoldHead();  // kHoldHeadStill, each update
 		void ReleaseHead(Session& a_session);
-		void ApplyNode();
+		void ApplyNode(float a_interval = 0.0f);
 		void RevertNode();
 		void UpdatePresetHotkeys(bool a_allowed);
 		bool CapturePreset(bool a_withSubject, Preset& a_preset);

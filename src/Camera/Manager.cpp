@@ -453,6 +453,7 @@ namespace Camera
 	{
 		Effects::Reset();
 		auto& session = *_current;
+		session.frontViewEase.reset();
 
 		// Remembered now, as the newer session owns the base camera until this one resumes. What it hid and its held head go on to a
 		// session carrying on its view
@@ -824,6 +825,7 @@ namespace Camera
 		if (IsActive(a_client)) {
 			RevertNode();
 			_current->pendingPose.reset();
+			_current->frontViewEase.reset();
 			const float startFov = _current->core.GetStartFov();
 			_current->core.Reset();
 
@@ -892,8 +894,10 @@ namespace Camera
 
 		// The held third-person camera stays where it is, then follows the new subject as it followed the last
 		auto after = GetSubject();
-		if (before.get() != after)
+		if (before.get() != after) {
+			session.frontViewEase.reset();
 			Effects::Reset();
+		}
 		if (before && after) {
 			session.fixedSubjectPos = session.fixedSubjectPos + (after->GetPosition() - before->GetPosition());
 		}
@@ -987,10 +991,17 @@ namespace Camera
 		probe.SetEulerAnglesXYZ(0.0f, 0.0f, -1.0f);
 		const float sign   = Maths::YawOf(probe) > 0.0f ? 1.0f : -1.0f;
 		const float facing = std::atan2(to.x, to.y);
-		RotateSubject(std::remainder(facing - *yaw, 2.0f * std::numbers::pi_v<float>) * sign);
-
 		auto& session = *_current;
-		if (a_afresh && session.hasFixedBase) {
+		const bool freshView = a_afresh && session.hasFixedBase;
+		if (freshView) {
+			FUCK::CameraPose shown;
+			session.frontViewEase.reset();
+			if (!(session.flags & FUCK::CameraSessionFlags::kInstantMoves) && GetShownView(shown))
+				session.frontViewEase = Session::FrontViewEase{ shown };
+		}
+
+		RotateSubject(std::remainder(facing - *yaw, 2.0f * std::numbers::pi_v<float>) * sign);
+		if (freshView) {
 			Maths::FrontView(session.fixedTranslate, session.fixedRotate, BodyMiddle(*subject), facing, FRESH_PITCH);
 			session.fixedSubjectPos = subject->GetPosition();
 			session.core.Reframe(true);
@@ -1134,7 +1145,7 @@ namespace Camera
 		TurnPlayerToView(a_interval);
 		RunControls(a_interval);
 		if (IsActive(a_client)) {
-			ApplyNode();
+			ApplyNode(a_interval);
 			UpdateObstructions(a_interval);
 			UpdateEffects(a_interval);
 		}
@@ -1163,7 +1174,7 @@ namespace Camera
 		}
 	}
 
-	void Manager::ApplyNode()
+	void Manager::ApplyNode(float a_interval)
 	{
 		auto camera = RE::PlayerCamera::GetSingleton();
 		auto node   = camera ? camera->cameraRoot.get() : nullptr;
@@ -1190,8 +1201,29 @@ namespace Camera
 		// Without offsets there's nothing to apply, unless the base is held, as the game's camera may have moved from it, or the client moves it
 		RE::NiPoint3  translate;
 		RE::NiMatrix3 rotate;
-		const bool    composed   = session.core.Compose(baseTranslate, baseRotate, translate, rotate);
-		const auto    composedAt = translate;
+		const bool composed = session.core.Compose(baseTranslate, baseRotate, translate, rotate);
+		if (auto& ease = session.frontViewEase; ease) {
+			constexpr float FRONT_VIEW_DURATION = 0.4f;
+			const float progress = std::clamp(ease->elapsed / FRONT_VIEW_DURATION, 0.0f, 1.0f);
+			if (progress >= 1.0f) {
+				ease.reset();
+			} else {
+				const float blend = progress * progress * (3.0f - 2.0f * progress);
+				translate = ease->from.position + (translate - ease->from.position) * blend;
+
+				float pitch, yaw, roll;
+				Maths::AnglesFromRotation(rotate, pitch, yaw, roll);
+				const auto angle = [blend](float a_from, float a_to) {
+					return a_from + std::remainder(a_to - a_from, 2.0f * std::numbers::pi_v<float>) * blend;
+				};
+				rotate = Maths::RotationFromAngles(angle(ease->from.pitch, pitch),
+				                                  angle(ease->from.yaw, yaw), angle(ease->from.roll, roll));
+
+				// Only the client tick advances the ease. The game can also reapply the camera between ticks.
+				ease->elapsed += std::clamp(a_interval, 0.0f, 0.1f);
+			}
+		}
+		const auto composedAt = translate;
 
 		// The FOV with the view it's for, as it may have been held back earlier this frame till the framing could be measured, or a pose
 		// has just landed with its own
@@ -1436,6 +1468,7 @@ namespace Camera
 
 		// Offset bases land on it at the next update, solved against the base as it is then
 		if (IsOffsetBase(_current->base)) {
+			_current->frontViewEase.reset();
 			_current->pendingPose      = *a_pose;
 			_current->pendingPoseEases = false;
 			return true;
