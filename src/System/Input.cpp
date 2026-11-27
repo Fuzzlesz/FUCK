@@ -43,6 +43,48 @@ namespace Input
 			bool              physicalDown = false;
 		};
 
+		struct GamepadClick
+		{
+			std::uint32_t key;
+			int           button;
+			bool          down = false;
+		};
+
+		GamepadClick gamepadClicks[] = {
+			{ kGP_A,  ImGuiMouseButton_Left },
+			{ kGP_L3, ImGuiMouseButton_Left },
+			{ kGP_R3, ImGuiMouseButton_Left },
+			{ kGP_X,  ImGuiMouseButton_Right }
+		};
+
+		bool ForwardGamepadClick(ImGuiIO& a_io, std::uint32_t a_key, bool a_down, bool a_pressed, bool a_pointer)
+		{
+			for (auto& click : gamepadClicks) {
+				if (click.key != a_key)
+					continue;
+				// Keep a press and its release on the same route if the player switches modes with it held.
+				if (a_pressed)
+					click.down = a_pointer;
+				if (!click.down)
+					return false;
+				click.down = a_down;
+				const bool down = std::ranges::any_of(gamepadClicks, [&](const GamepadClick& a_other) {
+					return a_other.button == click.button && a_other.down;
+				});
+				a_io.AddMouseButtonEvent(click.button, down);
+				return true;
+			}
+			return false;
+		}
+
+		void ReleaseGamepadClicks()
+		{
+			for (auto& click : gamepadClicks) {
+				if (std::exchange(click.down, false) && ImGui::GetCurrentContext())
+					ImGui::GetIO().AddMouseButtonEvent(click.button, false);
+			}
+		}
+
 		MenuKey menuKeys[] = {
 			{ ImGuiKey_W, ImGuiKey_UpArrow,    FUCK::WindowFlags::kWASDNavigation },
 			{ ImGuiKey_S, ImGuiKey_DownArrow,  FUCK::WindowFlags::kWASDNavigation },
@@ -124,6 +166,7 @@ namespace Input
 		std::unique_lock lock(_dataLock);
 		_keyStateCache.clear();
 		_rebindCtx.Reset();
+		ReleaseGamepadClicks();
 		ReleaseMenuKeys();
 	}
 
@@ -899,6 +942,7 @@ namespace Input
 
 		// Keys aren't forwarded to ImGui while the console has them, rather than a FUCK menu opened over it
 		if (ConsoleHasInput()) {
+			ReleaseGamepadClicks();
 			ReleaseMenuKeys();
 			return;
 		}
@@ -1071,17 +1115,13 @@ namespace Input
 								_cursorMovedByJoystick = false;  // Revert to standard D-Pad Nav
 							}
 
-							const bool pointerMode         = _cursorMovedByJoystick || navBlocked;
-							bool       isMouseClickOverride = (unifiedKey == kGP_L3) || (unifiedKey == kGP_R3) || (unifiedKey == kGP_A && pointerMode);
+							// A hidden RaceMenu cursor can still receive stick input. Use gamepad buttons there.
+							const bool pointerMode = cursorMenuOpen && (menuOpen || forceCursor) && (_cursorMovedByJoystick || navBlocked);
+							if (ForwardGamepadClick(io, unifiedKey, isDown, isDown && buttonEvent->IsDown(), pointerMode))
+								break;
 
-							// X right-clicks while the stick drives the cursor, for context menus
-							const bool isRightClickOverride = unifiedKey == kGP_X && pointerMode;
-
-							if (isMouseClickOverride) {
-								// Inject mouse click AND suppress native gamepad button
-								io.AddMouseButtonEvent(0, isDown);
-							} else if (isRightClickOverride) {
-								io.AddMouseButtonEvent(1, isDown);
+							if (unifiedKey == kGP_L3 || unifiedKey == kGP_R3) {
+								io.AddKeyEvent(unifiedKey == kGP_L3 ? ImGuiKey_GamepadL3 : ImGuiKey_GamepadR3, isDown);
 							} else {
 								// Pass native gamepad button to ImGui
 								if (RE::ControlMap::GetSingleton()->GetGamePadType() == RE::PC_GAMEPAD_TYPE::kOrbis) {

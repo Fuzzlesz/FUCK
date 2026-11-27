@@ -293,6 +293,7 @@ namespace Camera
 		bool                   _keepViewPending   = false;  // KeepView(): the next framing measures how far it is from the view
 		RE::NiPoint3           _framingAdjust;              // KeepView(): added to every framing, so the first lands where the camera is
 		RE::NiPoint3           _lastOutTranslate;           // where Compose() last put the camera, before the orbit and moves
+		RE::NiPoint3           _lastOutPivot;               // the corresponding orbit pivot
 		bool                   _hasLastOut        = false;
 		bool                   _hasHeldRotate     = false;
 		float                  _heldRotateEase    = 1.0f;   // 0 to 1 through the turn back once let go

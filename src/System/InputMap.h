@@ -309,7 +309,7 @@ namespace Input::Keymap
 
 		// Tweak Slower / Focus Previous (in Windowing mode)
 		case GAMEPAD_ORBIS::kPS3_LB:
-			return { ImGuiKey_NavKeyboardTweakSlow, false };
+			return { ImGuiKey_GamepadL1, false };
 		// Tweak Faster / Focus Next (in Windowing mode)
 		case GAMEPAD_ORBIS::kPS3_RB:
 			return { ImGuiKey_NavKeyboardTweakFast, false };

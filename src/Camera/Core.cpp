@@ -27,9 +27,9 @@ namespace
 	constexpr float FRAMING_PART_STILL        =  1.0f;   // how little a framed part may move between frames to count as at rest
 	constexpr float FRAMING_PAIR_CHANGE       =  0.1f;   // how much the space between two framed together must change, as a share, before the framing follows
 	constexpr float FRAMING_KEEP_VIEW_MAX     = 60.0f;   // KeepView(): how far the view may be from the framing and still be kept, so a far one (the whole body, say) is framed afresh
-	constexpr float FRAMING_PART_MOVE         =  5.0f;   // how far a framed part may move round where the subject stands, in units, before the framing follows
+	constexpr float FRAMING_PART_MOVE         =  5.0f;
 	constexpr float FRAMING_PART_TURN         =  0.02f;  // radians the subject's turned since a part was framed before it's followed
-	constexpr float FRAMING_PART_AXIS         = 15.0f;   // how far a framed part may sit from the line the subject turns about and still count as on it
+	constexpr float FRAMING_PART_AXIS         = 15.0f;   // how far a framed part may sit from the line the subject turns about and still count as on it   // how far a framed part may move round where the subject stands, in units, before the framing follows
 	constexpr float ACCEL_RATE                =  1.5f;   // per second held, for pan and zoom acceleration
 	constexpr float ACCEL_MAX                 = 15.0f;
 	constexpr float CINEMATIC_SPEED           = 10.0f;
@@ -672,7 +672,7 @@ namespace Camera
 
 		// Not until the framing's measured, which can take a few frames as a menu opens, as a narrower FOV on the unframed camera would show
 		// a close-up of whatever's in front of it before the framing lands
-		if (_isFramed && !_hasFraming)
+		if (_isFramed && !_hasFraming && !(_keepViewPending && _hasLastOut))
 			return;
 
 		// The FOV on screen is held, so a mod changing worldFOV mid-session (a conversation camera easing in its zoom) doesn't change
@@ -865,19 +865,28 @@ namespace Camera
 		float pivotDepth = (a_pivot - _originalTranslate).Dot(ForwardAxis(_originalRotate));
 
 		// Relative to where the subject stands, so neither idle animation nor the game's camera easing on can drag it around
-		const auto anchor    = _host.GetAnchor().value_or(_originalTranslate);
-		_framingCamDeltaTo   = framing->camPos - anchor;
+		const auto anchor      = _host.GetAnchor().value_or(_originalTranslate);
+		const auto framedPivot = FramedPivot(body);
+		_framingCamDeltaTo     = framing->camPos - anchor;
 		// Kept at the view it began from, so turning framing on doesn't move the camera, and later framings move it only as the part moves
 		if (_keepView) {
-			if (_keepViewPending && _hasLastOut) {
-				_framingAdjust   = _lastOutTranslate - (anchor + _framingCamDeltaTo);
-				_keepViewPending = false;
-				if (_framingAdjust.Length() > FRAMING_KEEP_VIEW_MAX)
+			if (std::exchange(_keepViewPending, false) && _hasLastOut) {
+				// Changing the orbit pivot must leave the camera where the old pivot put it.
+				const auto orbited = OrbitAroundZ(_lastOutPivot, _lastOutTranslate, _camRotZ);
+				const auto pivot   = framedPivot + _headFollow;
+				const auto base    = OrbitAroundZ(pivot, orbited, -_camRotZ);
+				_framingAdjust     = base - (anchor + _framingCamDeltaTo + _headFollow);
+				if (_framingAdjust.Length() > FRAMING_KEEP_VIEW_MAX) {
 					_framingAdjust = {};
+				} else {
+					// The new framing already lands on the old view. Blending in from the native pose would show its tab reset.
+					_framingProgress = _framingBlend = 1.0f;
+					a_ease = false;
+				}
 			}
 			_framingCamDeltaTo = _framingCamDeltaTo + _framingAdjust;
 		}
-		_framingPivotDeltaTo = FramedPivot(body) - anchor;
+		_framingPivotDeltaTo = framedPivot - anchor;
 		_framingFacing       = _host.GetFacing();
 		_framingDistanceTo   = std::max(framing->depth - pivotDepth, 0.0f);
 		_framingHeight       = body.top.GetDistance(body.bottom);  // along the body, so it holds for one lying down too
@@ -910,7 +919,9 @@ namespace Camera
 		a_outRotate    = a_baseRotate;
 
 		if (!HasAnyCamera()) {
+			_originalRotate   = a_baseRotate;
 			_lastOutTranslate = a_baseTranslate;
+			_lastOutPivot     = a_baseTranslate;
 			_hasLastOut       = true;
 			return false;
 		}
@@ -929,6 +940,7 @@ namespace Camera
 		GetFramedBase(_originalTranslate, hostPivot, pivot, camBase);
 		// Before the orbit and the moves, which stay as they are, so a kept view starts from here
 		_lastOutTranslate = camBase;
+		_lastOutPivot     = pivot;
 		_hasLastOut       = true;
 
 		RE::NiPoint3  orbitedTranslate = OrbitAroundZ(pivot, camBase, _camRotZ);
@@ -955,7 +967,10 @@ namespace Camera
 	{
 		a_pivot   = a_hostPivot.value_or(a_baseTranslate);
 		a_camBase = a_baseTranslate;
-		if (_hasFraming && _framingBlend > 0.0f) {
+		if (_isFramed && _keepViewPending && _hasLastOut) {
+			a_pivot   = _lastOutPivot;
+			a_camBase = _lastOutTranslate;
+		} else if (_hasFraming && _framingBlend > 0.0f) {
 			const auto   anchor    = _host.GetAnchor().value_or(a_baseTranslate);
 			const auto&  follow    = _headFollow;
 			RE::NiPoint3 bodyPivot = anchor + _framingPivotDelta + follow;
@@ -1414,10 +1429,14 @@ namespace Camera
 		_keepViewPending = a_keep;
 		_framingAdjust   = {};
 		// The base camera's turn is held while the view's kept, and eased back to after
-		if (a_keep && !_framingHeld)
-			_hasHeldRotate = false;
-		else if (!a_keep && !_framingHeld)
+		if (a_keep && !_framingHeld) {
+			_hasHeldRotate = _hasLastOut;
+			_headFollow    = {};
+			if (_hasHeldRotate)
+				_heldRotate = _originalRotate;
+		} else if (!a_keep && !_framingHeld) {
 			_heldRotateEase = 0.0f;
+		}
 	}
 
 	void Core::HoldFraming(bool a_held)

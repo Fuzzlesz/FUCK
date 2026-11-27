@@ -48,10 +48,10 @@ namespace ImGui
 			return s_foldAll.live >= 0 && a_window->RootWindow && a_window->RootWindow->ID == s_foldAll.root ? s_foldAll.live : -1;
 		}
 
-		void FoldAllMenu(ImGuiWindow* a_window, ImGuiID a_id, bool a_hovered)
+		void FoldAllMenu(ImGuiWindow* a_window, ImGuiID a_id, bool a_openMenu)
 		{
 			PushID(static_cast<int>(a_id));
-			if (a_hovered && IsMouseClicked(ImGuiMouseButton_Right))
+			if (a_openMenu)
 				OpenPopup("##fold_all");
 			if (BeginPopupThemed("##fold_all")) {
 				int pick = -1;
@@ -102,8 +102,12 @@ namespace ImGui
 		if (!ItemAdd(bb, id))
 			return is_open && !is_leaf;
 
+		// X opens the focused header's menu during controller navigation.
+		const bool padMenu = !is_leaf && IsItemFocused() && !(GImGui->CurrentItemFlags & ImGuiItemFlags_Disabled) &&
+		                     (GImGui->IO.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) &&
+		                     !IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel) && IsKeyPressed(ImGuiKey_GamepadFaceLeft, false);
 		bool h, held;
-		if (ButtonBehavior(bb, id, &h, &held)) {
+		if (ButtonBehavior(bb, id, &h, &held) && !padMenu) {
 			if (!is_leaf) {
 				is_open = !is_open;
 				window->DC.StateStorage->SetInt(id, is_open);
@@ -111,7 +115,7 @@ namespace ImGui
 			}
 		}
 		if (!is_leaf)
-			FoldAllMenu(window, id, h);
+			FoldAllMenu(window, id, padMenu || (h && IsMouseClicked(ImGuiMouseButton_Right)));
 
 		// Check selection flag
 		bool is_selected = (flags & ImGuiTreeNodeFlags_Selected) != 0;

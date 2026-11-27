@@ -34,7 +34,7 @@ namespace ImGui
 		// Lays out a label and a widget on one row. drawContent is given the whole row, so a widget can take clicks anywhere along it.
 		// labelLit keeps the label lit, as a hotkey with kAlwaysHighlight has it
 		template <typename TDrawFunc>
-		void AlignedWidgetLayout(const char* label, bool alignFar, bool labelLeft, float contentWidth, TDrawFunc drawContent, float targetHeight = -1.0f, bool labelLit = false)
+		void AlignedWidgetLayout(const char* label, bool alignFar, bool labelLeft, float contentWidth, TDrawFunc drawContent, float targetHeight = -1.0f, bool labelLit = false, bool regularLabel = false)
 		{
 			if (label && label[0] && !std::string_view(label).starts_with("##"))
 				AddRowSpacing();
@@ -73,7 +73,7 @@ namespace ImGui
 			if (doubleHash != std::string_view::npos)
 				labelView = labelView.substr(0, doubleHash);
 
-			ImFont* labelFont  = s_regularLabel ? GetFont() : GetLabelFont();
+			ImFont* labelFont  = (s_regularLabel || regularLabel) ? GetFont() : GetLabelFont();
 			float   labelWidth = labelFont->CalcTextSizeA(GetFontSize(), FLT_MAX, 0.0f, labelView.data(), labelView.data() + labelView.size()).x;
 
 			// Calculate true dynamic centring, supporting widgets (like Icons) that are taller than a standard frame
@@ -654,7 +654,7 @@ namespace ImGui
 			window->DrawList->AddImage((ImTextureID)tex, drawPos, drawPos + size, ImVec2(0, 0), ImVec2(1, 1), ColorConvertFloat4ToU32(tint));
 		};
 
-		AlignedWidgetLayout(label, alignFar, labelLeft, size.x, DrawContent, actualLayoutH);
+		AlignedWidgetLayout(label, alignFar, labelLeft, size.x, DrawContent, actualLayoutH, true, true);
 
 		if (clicked)
 			PlayAudio(Audio::kOk);

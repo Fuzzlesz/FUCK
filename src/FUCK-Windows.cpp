@@ -149,7 +149,8 @@ void FUCKMan::DrawClosingWindows(ImDrawData* a_drawData)
 			}
 		} else if (was) {
 			// Only what it drew last frame, so not if it was hidden then, e.g. by 'tm'
-			ClosingWindow closing{ {}, now, seconds, {} };
+			// The snapshot is last frame's drawing, so its first step out is already one frame along
+			ClosingWindow closing{ {}, now - ImGui::GetIO().DeltaTime, seconds, {} };
 			ImGuiWindow*  window = ImGui::FindWindowByName(std::format("###{}", key).c_str());
 			CopyWindowDrawing(window, frame - 1, closing.copies);
 			if (const auto state = s_windowStates.find(key); window && state != s_windowStates.end() && state->second.shownAtSet)

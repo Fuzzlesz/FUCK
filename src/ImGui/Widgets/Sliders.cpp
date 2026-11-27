@@ -653,21 +653,25 @@ namespace ImGui
 		PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(GetStyle().FramePadding.x, 7.0f * GetDynamicWidgetScale()));
 		LeftLabel(label);
 		PopStyleVar();
-		auto [hovered, l, r] = CenteredTextWithArrows(label, text);
-		*outLeft             = false;
-		*outRight            = false;
-		if (hovered || IsWidgetFocused(label)) {
-			bool pL = l || IsKeyPressed(ImGuiKey_A, false) || IsKeyPressed(ImGuiKey_GamepadDpadLeft, false);
-			bool pR = r || IsKeyPressed(ImGuiKey_D, false) || IsKeyPressed(ImGuiKey_GamepadDpadRight, false);
-			if (pL) {
-				*outLeft = true;
-				PlayAudio(Audio::kPrevNext);
-			}
-			if (pR) {
-				*outRight = true;
-				PlayAudio(Audio::kPrevNext);
+		auto [hovered, left, right] = CenteredTextWithArrows(label, text);
+		ImGuiContext& g = *GImGui;
+		if (!(g.CurrentItemFlags & ImGuiItemFlags_Disabled) && !g.IO.WantTextInput) {
+			// A horizontal move from this stepper edits its value. Let ImGui take the other directions and Tab.
+			if (IsItemFocused() && g.NavWindow == GetCurrentWindow() && g.NavMoveSubmitted &&
+			    (g.NavMoveDir == ImGuiDir_Left || g.NavMoveDir == ImGuiDir_Right)) {
+				left  |= g.NavMoveDir == ImGuiDir_Left;
+				right |= g.NavMoveDir == ImGuiDir_Right;
+				NavMoveRequestCancel();
+			} else if (hovered && !g.NavMoveSubmitted) {
+				// Direct tweaks still work where WASD isn't mapped to navigation, and in cursor mode
+				left  |= IsKeyPressed(ImGuiKey_A, false) || IsKeyPressed(ImGuiKey_GamepadDpadLeft, false);
+				right |= IsKeyPressed(ImGuiKey_D, false) || IsKeyPressed(ImGuiKey_GamepadDpadRight, false);
 			}
 		}
+		*outLeft  = left;
+		*outRight = right;
+		if (left || right)
+			PlayAudio(Audio::kPrevNext);
 	}
 
 	void PushGamepadTweakFastDisabled() { ++g_gamepadTweakFastDisabled; }
