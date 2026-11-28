@@ -703,7 +703,10 @@ namespace ImGui
 		bool cleared = false;
 		if (showIcon) {
 			SameLine(0.0f, 0.0f);
-			const ImVec2 slot         = GetCursorScreenPos();
+			// SameLine restores the outer row's Y, which may differ from the field's top.
+			const ImVec2 slot(GetCursorScreenPos().x, frame.Min.y);
+			SetCursorScreenPos(slot);
+
 			const bool   canClear     = buf[0] != '\0' && !(flags & ImGuiInputTextFlags_ReadOnly);
 			bool         clearHovered = false;
 			if (canClear) {
