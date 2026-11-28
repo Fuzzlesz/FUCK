@@ -1465,6 +1465,11 @@ namespace FUCK::Host
 		return true;
 	}
 
+	static bool FilterBox_Impl(const char* label, const char* hint, char* buf, size_t bufSize, int flags)
+	{
+		return ImGui::FilterBox(label, hint, buf, bufSize, flags);
+	}
+
 	// ==================================================
 	// CreateInterface
 	// ==================================================
@@ -1846,7 +1851,8 @@ namespace FUCK::Host
 			.CaptureFrame              = CaptureFrame_Impl,
 			.RenderModel               = RenderModel_Impl,
 			.DrawMeshes                = DrawMeshes_Impl,
-			.ReadMeshMaterial          = ReadMeshMaterial_Impl
+			.ReadMeshMaterial          = ReadMeshMaterial_Impl,
+			.FilterBox                 = FilterBox_Impl
 		};
 		return &api;
 	}

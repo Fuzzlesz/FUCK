@@ -184,6 +184,7 @@ namespace ImGui
 	bool  DrawManagedHotkey(const char* label, FUCK::ManagedHotkey& h, FUCK::HotkeyFlags flags, float iconScale = 1.0f, float labelScale = 1.0f);
 
 	// Specialised Inputs
+	bool FilterBox(const char* label, const char* hint, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0);
 	bool InputTextStyled(const char* label, char* buf, size_t buf_size, int flags = 0);
 	bool ColorEdit3Styled(const char* label, float col[3], int flags = 0);
 	bool ColorEdit4Styled(const char* label, float col[4], int flags = 0);

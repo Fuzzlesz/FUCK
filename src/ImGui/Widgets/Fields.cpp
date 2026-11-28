@@ -70,6 +70,8 @@ namespace ImGui
 		PopStyleColor();
 	}
 
+	static bool FilterBoxImpl(const char* label, const char* hint, char* buf, size_t buf_size, ImGuiInputTextFlags flags, bool* inputFocused);
+
 	bool ComboWithFilter(const char* label, int* current_item, std::span<const std::string> items, int popup_max_height_in_items, const Set<std::string>* a_favourites, std::string* a_favToggled, std::span<const std::uint32_t> a_badgeKeys, int* a_hovered)
 	{
 		if (a_hovered)
@@ -198,36 +200,10 @@ namespace ImGui
 		if (IsWindowAppearing())
 			SetKeyboardFocusHere();
 
-		// Filter input styling
-		PushStyleColor(ImGuiCol_FrameBg, GetColorU32(ImVec4(0.1f, 0.1f, 0.1f, 1.0f)));
-		PushStyleColor(ImGuiCol_Text, GetUserStyleColorU32(USER_STYLE::kComboBoxText));
-		PushStyleColor(ImGuiCol_NavCursor, ImVec4(0, 0, 0, 0));
-		PushItemWidth(GetContentRegionAvail().x);
-		
-		if (ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_F, false)) {
-			ImGui::SetKeyboardFocusHere();
-		}
-		
-		InputText("##filter", s_comboFilterStates[id].pattern, 256, ImGuiInputTextFlags_AutoSelectAll);
-		bool isInputFocused = IsItemFocused() || IsItemActive();
-
-		// Draw Magnifying Glass inside the input box
-		const char* searchIcon     = ICON_FA_MAGNIFYING_GLASS;
-		float       searchScale    = 0.75f;
-		float       searchFontSize = GetFontSize() * searchScale;
-
-		PushFont(nullptr, searchFontSize);
-		ImVec2 searchSize = CalcTextSize(searchIcon);
-		PopFont();
-
-		float itemH   = GetItemRectSize().y;
-		float searchX = GetItemRectMax().x - searchSize.x - padX;
-		float searchY = GetItemRectMin().y + (itemH - searchSize.y) * 0.5f;
-
-		GetWindowDrawList()->AddText(GetFont(), searchFontSize, ImVec2(searchX, searchY), GetColorU32(ImGuiCol_TextDisabled), searchIcon);
-
-		PopItemWidth();
-		PopStyleColor(3);
+		auto& pattern        = s_comboFilterStates[id].pattern;
+		bool  isInputFocused = false;
+		SetNextItemWidth(GetContentRegionAvail().x);
+		FilterBoxImpl("##filter", nullptr, pattern, sizeof(pattern), ImGuiInputTextFlags_AutoSelectAll, &isInputFocused);
 
 		bool navigateToItems = false;
 		bool enterPressed    = false;
@@ -241,7 +217,7 @@ namespace ImGui
 		}
 
 		std::vector<int> displayIndices;
-		bool             filtering      = s_comboFilterStates[id].pattern[0] != '\0';
+		bool             filtering      = pattern[0] != '\0';
 		const bool       has_favourites = a_favourites != nullptr;
 
 		// The badges' slot, as wide as the widest of their icons for the row's height, kept at every row's end whenever any row has one,
@@ -256,7 +232,7 @@ namespace ImGui
 		}
 
 		if (filtering) {
-			std::string        lowerFilter = clib_util::string::tolower(s_comboFilterStates[id].pattern);
+			std::string        lowerFilter = clib_util::string::tolower(pattern);
 			static std::string lowerItemBuffer;
 
 			std::vector<std::pair<int, double>> scoredItems;
@@ -428,8 +404,8 @@ namespace ImGui
 						if (has_favourites) {
 							bool isFav = a_favourites->contains(items[idx]);
 
-							bool pressedFavGamepad  = IsKeyPressed(ImGuiKey_GamepadFaceUp, false);
-							bool pressedFavKeyboard = IsKeyPressed(ImGuiKey_F, false) && GetIO().KeyCtrl;
+							const bool pressedFavGamepad  = IsKeyPressed(ImGuiKey_GamepadFaceUp, false);
+							const bool pressedFavKeyboard = IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_F);
 
 							if ((itemHovered || itemFocused) && (pressedFavGamepad || pressedFavKeyboard)) {
 								if (a_favToggled) {
@@ -679,6 +655,96 @@ namespace ImGui
 		if (isOpen)
 			SetWindowFontScale(currentFontScale);
 		return isOpen;
+	}
+
+	static bool FilterBoxImpl(const char* label, const char* hint, char* buf, size_t buf_size, ImGuiInputTextFlags flags, bool* inputFocused)
+	{
+		if (GetCurrentWindow()->SkipItems || !buf || buf_size == 0)
+			return false;
+
+		const auto   id           = LeftAlignedText(label);
+		const float  width        = CalcItemWidth();
+		const float  height       = GetFrameHeight();
+		const float  rounding     = GetFrameRounding();
+		const float  iconFontSize = GetFontSize() * 0.75f;
+		const float  iconWidth    = std::min(std::floor(width * 0.5f), std::ceil(height));
+		const bool   showIcon     = iconWidth >= std::ceil(iconFontSize + GetStyle().FramePadding.x);
+		const ImVec2 pos          = GetCursorScreenPos();
+		const ImRect frame(pos, pos + ImVec2(width, height));
+		auto*        drawList     = GetWindowDrawList();
+		AddThemedRectFilled(drawList, frame, GetUserStyleColorU32(USER_STYLE::kComboBoxTextBox), rounding);
+
+		// A focused results child belongs to its filter's panel. An open popup owns its own focus.
+		// Lock the key to the first eligible field in a shared focus scope.
+		constexpr auto focusFlags = ImGuiFocusedFlags_ChildWindows | ImGuiFocusedFlags_NoPopupHierarchy;
+		if (GetActiveID() == 0 && !(GImGui->CurrentItemFlags & ImGuiItemFlags_Disabled) &&
+			!(flags & ImGuiInputTextFlags_ReadOnly) && IsWindowFocused(focusFlags) &&
+			IsRectVisible(frame.Min, frame.Max) && Shortcut(ImGuiMod_Ctrl | ImGuiKey_F, ImGuiInputFlags_RouteFocused)) {
+			SetKeyOwner(ImGuiKey_F, GetID(id.c_str()), ImGuiInputFlags_LockThisFrame);
+			SetKeyboardFocusHere();
+		}
+
+		BeginGroup();
+		PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
+		PushStyleColor(ImGuiCol_FrameBg,   ImVec4(0, 0, 0, 0));
+		PushStyleColor(ImGuiCol_Text,      GetUserStyleColorU32(USER_STYLE::kComboBoxText));
+		PushStyleColor(ImGuiCol_NavCursor, ImVec4(0, 0, 0, 0));
+		SetNextItemWidth(showIcon ? width - iconWidth : width);
+		const bool changed     = InputTextWithHint(id.c_str(), hint ? hint : TRANSLATE("$FUCK_Sidebar_FilterHint"), buf, buf_size, flags);
+		bool       highlighted = IsItemHovered() || IsItemActive() || IsWidgetFocused(GetID(id.c_str()));
+		// Read the field's focus before submitting the clear button, which has its own navigation ID.
+		if (inputFocused)
+			*inputFocused = IsItemFocused() || IsItemActive();
+		if (IsItemActivated())
+			PlayAudio(Audio::kFocus);
+		PopStyleColor(3);
+		PopStyleVar();
+
+		bool cleared = false;
+		if (showIcon) {
+			SameLine(0.0f, 0.0f);
+			const ImVec2 slot         = GetCursorScreenPos();
+			const bool   canClear     = buf[0] != '\0' && !(flags & ImGuiInputTextFlags_ReadOnly);
+			bool         clearHovered = false;
+			if (canClear) {
+				PushID(id.c_str());
+				cleared      = InvisibleButton("##Clear", ImVec2(iconWidth, height), ImGuiButtonFlags_EnableNav);
+				clearHovered = IsItemHovered() || IsItemFocused();
+				PopID();
+				if (cleared)
+					buf[0] = '\0';
+			} else {
+				Dummy(ImVec2(iconWidth, height));
+			}
+			highlighted |= clearHovered;
+
+			// Centre the visible glyph, as the icon sits higher than the middle of the text line.
+			const bool   showClear = canClear && !cleared;
+			const char*  icon      = showClear ? ICON_FA_XMARK : ICON_FA_MAGNIFYING_GLASS;
+			unsigned int codepoint = 0;
+			ImTextCharFromUtf8(&codepoint, icon, nullptr);
+			PushFont(nullptr, iconFontSize);
+			const auto* glyph = GetFontBaked()->FindGlyph(static_cast<ImWchar>(codepoint));
+			if (glyph && glyph->Visible) {
+				const ImVec2 middle = slot + ImVec2(iconWidth, height) * 0.5f;
+				const ImVec2 at(std::round(middle.x - (glyph->X0 + glyph->X1) * 0.5f), std::round(middle.y - (glyph->Y0 + glyph->Y1) * 0.5f));
+				const ImU32 color = showClear ?
+					GetColorU32(clearHovered ? ImVec4(1.0f, 0.46f, 0.46f, 1.0f) : ImVec4(0.88f, 0.27f, 0.27f, 1.0f)) :
+					GetColorU32(ImGuiCol_TextDisabled);
+				drawList->AddText(GetFont(), GetFontSize(), at, color, icon);
+			}
+			PopFont();
+		}
+		EndGroup();
+		DrawWidgetBorder(drawList, frame, highlighted, rounding);
+		if (inputFocused && cleared)
+			*inputFocused = false;
+		return changed || cleared;
+	}
+
+	bool FilterBox(const char* label, const char* hint, char* buf, size_t buf_size, ImGuiInputTextFlags flags)
+	{
+		return FilterBoxImpl(label, hint, buf, buf_size, flags, nullptr);
 	}
 
 	bool InputTextStyled(const char* label, char* buf, size_t buf_size, int flags)

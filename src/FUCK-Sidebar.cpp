@@ -761,16 +761,10 @@ ImGuiID FUCKMan::DrawSidebar(const SidebarMetrics& a_metrics, float a_height)
 			ImGui::PushFont(regularFont, m.sidebarFontSize * 0.8f);
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8.0f * m.uiScale, 6.0f * m.uiScale));
 			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f * m.uiScale);
-			ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f * m.uiScale);
-
-			// Sync background with the active theme's input box styling
-			ImGui::PushStyleColor(ImGuiCol_FrameBg, ImGui::GetUserStyleColorVec4(ImGui::USER_STYLE::kComboBoxTextBox));
-
 			ImGui::SetNextItemWidth(-1.0f);
-			ImGui::InputTextWithHint("##SidebarFilter", "$FUCK_Sidebar_FilterHint"_T, filterBuf, sizeof(filterBuf));
+			ImGui::FilterBox("##SidebarFilter", nullptr, filterBuf, sizeof(filterBuf));
 
-			ImGui::PopStyleColor(1);
-			ImGui::PopStyleVar(3);
+			ImGui::PopStyleVar(2);
 			ImGui::PopFont();
 
 			ImGui::Dummy(ImVec2(0.0f, 4.0f * m.uiScale));
